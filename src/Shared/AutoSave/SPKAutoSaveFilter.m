@@ -1,6 +1,7 @@
 #import "SPKAutoSaveFilter.h"
 
 #import "../../Utils.h"
+#import "../Account/SPKAccountManager.h"
 #import "../ActionButton/ActionButtonLookupUtils.h"
 #import "../UI/SPKNotificationCenter.h"
 
@@ -80,12 +81,32 @@ static NSArray<NSDictionary *> *SPKAutoSaveFilterEntriesFromRawValue(SPKAutoSave
     return entries.copy;
 }
 
+static NSString *SPKAutoSaveFilterResolvedListKey(SPKAutoSaveFilterConfig *config, NSString *key) {
+    if (!config.alwaysAccountScopedLists)
+        return SPKEffectivePreferenceKey(key);
+    NSString *pk = [SPKAccountManager preferenceNamespacePK];
+    return pk.length > 0 ? [NSString stringWithFormat:@"u_%@_%@", pk, key] : nil;
+}
+
 NSArray<NSDictionary *> *SPKAutoSaveFilterList(SPKAutoSaveFilterConfig *config) {
-    return SPKAutoSaveFilterEntriesFromRawValue(config, SPKPreferenceObjectForKey(SPKAutoSaveFilterActiveListKey(config)));
+    NSString *baseKey = SPKAutoSaveFilterActiveListKey(config);
+    if (!config.alwaysAccountScopedLists)
+        return SPKAutoSaveFilterEntriesFromRawValue(config, SPKPreferenceObjectForKey(baseKey));
+    NSString *resolvedKey = SPKAutoSaveFilterResolvedListKey(config, baseKey);
+    id raw = resolvedKey.length > 0 ? [NSUserDefaults.standardUserDefaults objectForKey:resolvedKey] : nil;
+    return SPKAutoSaveFilterEntriesFromRawValue(config, raw);
 }
 
 void SPKAutoSaveFilterSetList(SPKAutoSaveFilterConfig *config, NSArray<NSDictionary *> *entries) {
-    SPKPreferenceSetObject(SPKAutoSaveFilterEntriesFromRawValue(config, entries), SPKAutoSaveFilterActiveListKey(config));
+    NSArray *normalized = SPKAutoSaveFilterEntriesFromRawValue(config, entries);
+    NSString *baseKey = SPKAutoSaveFilterActiveListKey(config);
+    if (!config.alwaysAccountScopedLists) {
+        SPKPreferenceSetObject(normalized, baseKey);
+        return;
+    }
+    NSString *resolvedKey = SPKAutoSaveFilterResolvedListKey(config, baseKey);
+    if (resolvedKey.length > 0)
+        [NSUserDefaults.standardUserDefaults setObject:normalized forKey:resolvedKey];
 }
 
 BOOL SPKAutoSaveFilterListContains(SPKAutoSaveFilterConfig *config, NSString *identity) {

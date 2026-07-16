@@ -127,6 +127,19 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"msgs_auto_save" : @(NO),
         @"msgs_unlock_preview" : @(NO),
         @"msgs_auto_save_filter_mode" : @"all",
+        @"msgs_presence_notifications" : @(NO),
+        @"msgs_presence_notify_online" : @(YES),
+        @"msgs_presence_notify_offline" : @(NO),
+        @"msgs_presence_notify_typing" : @(NO),
+        @"msgs_presence_notify_read" : @(YES),
+        @"msgs_presence_mirror_notification_center" : @(YES),
+        // Unlike the auto-save surfaces, this defaults to Selected: "All Users" here
+        // would notify about everyone Instagram streams presence for, not just the
+        // few the user cares about.
+        @"msgs_presence_filter_mode" : @"selected",
+        @"msgs_presence_cooldown" : @(60),
+        @"msgs_presence_accurate_status" : @(NO),
+        @"msgs_presence_refresh_interval" : @(20),
         @"instants_auto_save" : @(NO),
         @"instants_auto_save_filter_mode" : @"all",
         @"downloads_autosave_destination" : @"gallery",

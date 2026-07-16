@@ -85,6 +85,8 @@ FOUNDATION_EXPORT void SPKInstallFullLastActiveHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallShhConfirmHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallHideFriendsMapHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallKeepDeletedMessagesHooksIfEnabled(void);
+FOUNDATION_EXPORT void SPKInstallPresenceNotificationsHooksIfEnabled(void);
+FOUNDATION_EXPORT void SPKInstallAccurateActiveStatusHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallCallConfirmHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallDMAudioMsgConfirmHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallDMInteractionConfirmHooksIfEnabled(void);
@@ -136,6 +138,10 @@ void SPKInstallLaunchCriticalHooks(void) {
         return;
     }
     SPKHookBisectSetCurrentSurface(@"Launch");
+    // The presence scheduler is constructed while Instagram builds the user
+    // session. Installing this with the delayed Messages surface misses that
+    // one-time initializer, leaving the configured refresh interval inert.
+    SPK_INSTALL(SPKInstallAccurateActiveStatusHooksIfEnabled);
     // Progressive blur relies on UIScrollEdgeEffect (iOS 26+ only).
     if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"26.0")) {
         if ([SPKUtils getBoolPref:@"interface_progressive_blur"]) {
@@ -252,6 +258,7 @@ void SPKInstallMessagesSurfaceHooksIfNeeded(void) {
     SPK_INSTALL(SPKInstallFollowRequestConfirmHooksIfEnabled);
     SPK_INSTALL(SPKInstallDisableTypingStatusHooksIfEnabled);
     SPK_INSTALL(SPKInstallFullLastActiveHooksIfEnabled);
+    SPK_INSTALL(SPKInstallPresenceNotificationsHooksIfEnabled);
     SPK_INSTALL(SPKInstallShhConfirmHooksIfNeeded);
     SPK_INSTALL(SPKInstallHideFriendsMapHooksIfEnabled);
     SPK_INSTALL(SPKInstallKeepDeletedMessagesHooksIfEnabled);

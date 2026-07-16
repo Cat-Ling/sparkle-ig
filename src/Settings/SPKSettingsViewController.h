@@ -21,6 +21,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (UITableViewStyle)preferredTableViewStyle;
 
 - (void)switchChanged:(UISwitch *)sender;
+- (void)stepperChanged:(UIStepper *)sender;
 /// Applies a menu selection to its `defaultsKey`. Exposed so pages whose rows depend
 /// on a menu's value (titles, footers) can override, call super, and rebuild.
 - (void)menuChanged:(UICommand *)command;

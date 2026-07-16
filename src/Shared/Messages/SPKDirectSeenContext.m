@@ -1,6 +1,7 @@
 #import "SPKDirectSeenContext.h"
 
 #import <objc/message.h>
+#import <objc/runtime.h>
 
 #import "../../AssetUtils.h"
 #import "../../Networking/SPKInstagramAPI.h"
@@ -112,7 +113,7 @@ static NSString *SPKDirectFirstStringForSelectors(id target, NSArray<NSString *>
 static NSString *SPKDirectThreadIdDirectlyFromObject(id object) {
     if (!object)
         return nil;
-    NSString *threadId = SPKDirectFirstStringForSelectors(object, @[ @"threadId", @"threadID", @"thread_id" ]);
+    NSString *threadId = SPKDirectFirstStringForSelectors(object, @[ @"threadId", @"threadID", @"thread_id", @"threadIdV2ForInboxPaging" ]);
     if (threadId.length == 0 && [object isKindOfClass:[NSDictionary class]]) {
         NSDictionary *dict = (NSDictionary *)object;
         threadId = SPKDirectStringFromValue(dict[@"threadId"] ?: dict[@"thread_id"]);
@@ -196,6 +197,20 @@ static NSArray<NSDictionary *> *SPKDirectUsersFromObject(id object) {
     return users.copy;
 }
 
+static NSString *SPKDirectGroupCustomNameFromTarget(id target) {
+    if (!target)
+        return nil;
+    id groupMetadata = SPKDirectObjectForSelector(target, @"groupMetadata")
+                           ?: SPKDirectKVCObject(target, @"groupMetadata")
+                           ?: [SPKUtils getIvarForObj:target name:"_groupMetadata"];
+    if (!groupMetadata)
+        return nil;
+    NSString *customName = SPKDirectFirstStringForSelectors(groupMetadata, @[ @"customName" ]);
+    if (customName.length == 0)
+        customName = SPKDirectStringFromValue([SPKUtils getIvarForObj:groupMetadata name:"_customName"]);
+    return customName;
+}
+
 // Pulls the group's custom photo URL from a thread / metadata object via
 // groupMetadata → groupPhotoIdentifier → groupImageSpecifier → remoteImageURL.
 // `target` may be the thread, its provider, or the thread metadata itself.
@@ -250,6 +265,63 @@ static NSString *SPKDirectCleanFullName(NSString *fullName, NSString *username) 
 
 static SPKDirectThreadContext *SPKDirectThreadContextFromSourceInternal(id source, NSMutableSet<NSValue *> *visited, BOOL allowActiveFallback);
 
+static id SPKDirectFindThreadMetadata(id object, NSUInteger depth, NSMutableSet<NSValue *> *visited) {
+    if (!object || depth == 0)
+        return nil;
+    Class metadataClass = NSClassFromString(@"IGDirectThreadMetadata");
+    if (metadataClass && [object isKindOfClass:metadataClass])
+        return object;
+    if ([object isKindOfClass:NSString.class] ||
+        [object isKindOfClass:NSNumber.class] ||
+        [object isKindOfClass:NSDate.class] ||
+        [object isKindOfClass:NSURL.class])
+        return nil;
+
+    if ([object isKindOfClass:NSDictionary.class]) {
+        for (id value in [(NSDictionary *)object allValues]) {
+            id metadata = SPKDirectFindThreadMetadata(value, depth - 1, visited);
+            if (metadata)
+                return metadata;
+        }
+        return nil;
+    }
+    if ([object isKindOfClass:NSArray.class] || [object isKindOfClass:NSSet.class]) {
+        for (id value in (id<NSFastEnumeration>)object) {
+            id metadata = SPKDirectFindThreadMetadata(value, depth - 1, visited);
+            if (metadata)
+                return metadata;
+        }
+        return nil;
+    }
+
+    NSValue *identity = [NSValue valueWithNonretainedObject:object];
+    if ([visited containsObject:identity])
+        return nil;
+    [visited addObject:identity];
+
+    for (Class currentClass = [object class]; currentClass && currentClass != NSObject.class; currentClass = class_getSuperclass(currentClass)) {
+        unsigned int count = 0;
+        Ivar *ivars = class_copyIvarList(currentClass, &count);
+        for (unsigned int index = 0; index < count; index++) {
+            const char *type = ivar_getTypeEncoding(ivars[index]);
+            if (!type || type[0] != '@')
+                continue;
+            id value = nil;
+            @try {
+                value = object_getIvar(object, ivars[index]);
+            } @catch (__unused NSException *exception) {
+            }
+            id metadata = SPKDirectFindThreadMetadata(value, depth - 1, visited);
+            if (metadata) {
+                free(ivars);
+                return metadata;
+            }
+        }
+        free(ivars);
+    }
+    return nil;
+}
+
 static SPKDirectThreadContext *SPKDirectContextDirectlyFromObject(id object) {
     if (!object)
         return nil;
@@ -281,14 +353,20 @@ static SPKDirectThreadContext *SPKDirectContextDirectlyFromObject(id object) {
         target = provider;
     }
 
-    id metadata = nil;
-    if ([target respondsToSelector:NSSelectorFromString(@"threadMetadata")]) {
-        id meta = SPKDirectObjectForSelector(target, @"threadMetadata");
-        if (meta) {
-            metadata = meta;
-            target = meta;
-        }
+    id metadata = SPKDirectObjectForSelector(target, @"threadMetadata")
+                      ?: [SPKUtils getIvarForObj:target name:"_threadMetadata"];
+    if (!metadata && target != object) {
+        metadata = SPKDirectObjectForSelector(object, @"threadMetadata")
+                       ?: [SPKUtils getIvarForObj:object name:"_threadMetadata"];
     }
+    // Published IGDirectDjangoUIThread values expose only their paging id in
+    // dumped headers. Their IGDirectThreadMetadata still lives in the inherited
+    // devirtualized field cache, so locate that typed value when direct accessors
+    // are unavailable.
+    if (!metadata)
+        metadata = SPKDirectFindThreadMetadata(object, 6, [NSMutableSet set]);
+    if (metadata)
+        target = metadata;
 
     NSString *threadId = SPKDirectThreadIdDirectlyFromObject(target);
     if (threadId.length == 0 && target != object) {
@@ -331,6 +409,12 @@ static SPKDirectThreadContext *SPKDirectContextDirectlyFromObject(id object) {
     }
     if (!isGroupValue && target != object) {
         isGroupValue = SPKDirectFirstNumberForSelectors(object, @[ @"isGroup", @"isGroupThread", @"groupThread" ]);
+    }
+    if (isGroupValue.boolValue) {
+        NSString *customName = SPKDirectGroupCustomNameFromTarget(target)
+                                   ?: SPKDirectGroupCustomNameFromTarget(object);
+        if (customName.length > 0)
+            threadName = customName;
     }
 
     if (SPKDirectSeenDebugPrintEnabled) {
@@ -572,9 +656,9 @@ static SPKDirectThreadContext *SPKDirectContextFromShallowInboxObject(id object)
             target = meta;
     }
 
-    NSString *threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(target, @[ @"threadId", @"threadID", @"thread_id" ]));
+    NSString *threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(target, @[ @"threadId", @"threadID", @"thread_id", @"threadIdV2ForInboxPaging" ]));
     if (threadId.length == 0 && target != object) {
-        threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(object, @[ @"threadId", @"threadID", @"thread_id" ]));
+        threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(object, @[ @"threadId", @"threadID", @"thread_id", @"threadIdV2ForInboxPaging" ]));
     }
     if (threadId.length == 0)
         return nil;

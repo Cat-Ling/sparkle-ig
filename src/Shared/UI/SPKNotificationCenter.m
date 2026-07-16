@@ -6,13 +6,14 @@
 #import "../Instants/SPKInstantsAutoSave.h"
 #import "../Messages/SPKDirectAutoSave.h"
 #import "../Messages/SPKDirectSeenContext.h"
+#import "../Messages/SPKPresenceTracking.h"
 #import "../Stories/SPKStoryAutoSave.h"
 #import "../Stories/SPKStoryContext.h"
 
-// Every auto-save list-change notification offers the same "tap to open the list"
+// Every filter list-change notification offers the same "tap to open the list"
 // affordance, so they live in one table rather than a branch per surface. Returns nil
 // when there's nothing to offer -- unknown identifier, or the user is already looking
-// at an auto-save list.
+// at a filter list.
 static UIViewController *SPKAutoSaveListViewControllerForRuleIdentifier(NSString *identifier) {
     if (identifier.length == 0 || SPKAutoSaveFilterListUIVisible())
         return nil;
@@ -22,6 +23,8 @@ static UIViewController *SPKAutoSaveListViewControllerForRuleIdentifier(NSString
         return SPKDirectAutoSaveListViewController();
     if ([identifier isEqualToString:kSPKNotificationInstantsAutoSaveUserRule])
         return SPKInstantsAutoSaveListViewController();
+    if ([identifier isEqualToString:kSPKNotificationPresenceUserRule])
+        return SPKPresenceListViewController();
     return nil;
 }
 
@@ -63,6 +66,11 @@ SPK_NOTIF_CONST(kSPKNotificationDirectThreadSeenRule, "direct_thread_seen_rule")
 SPK_NOTIF_CONST(kSPKNotificationDirectAutoSave, "direct_auto_save");
 SPK_NOTIF_CONST(kSPKNotificationDirectAutoSaveThreadRule, "toggle_direct_auto_save_thread_rule");
 SPK_NOTIF_CONST(kSPKNotificationUnsentMessage, "unsent_message");
+SPK_NOTIF_CONST(kSPKNotificationPresenceOnline, "presence_online");
+SPK_NOTIF_CONST(kSPKNotificationPresenceOffline, "presence_offline");
+SPK_NOTIF_CONST(kSPKNotificationPresenceTyping, "presence_typing");
+SPK_NOTIF_CONST(kSPKNotificationPresenceRead, "presence_read");
+SPK_NOTIF_CONST(kSPKNotificationPresenceUserRule, "presence_user_rule");
 SPK_NOTIF_CONST(kSPKNotificationUnsentReaction, "unsent_reaction");
 SPK_NOTIF_CONST(kSPKNotificationInstantsCaptureBlocked, "instants_capture_blocked");
 SPK_NOTIF_CONST(kSPKNotificationInstantsUpload, "instants_upload");
@@ -223,6 +231,11 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
               SPKNotificationItem(kSPKNotificationDirectThreadSeenRule, @"Chat Seen List Changes", @"eye"),
               SPKNotificationItem(kSPKNotificationUnsentMessage, @"Unsent Message", @"undo"),
               SPKNotificationItem(kSPKNotificationUnsentReaction, @"Removed Reaction", @"reactions"),
+              SPKNotificationItem(kSPKNotificationPresenceOnline, @"User Came Online", @"circle_check_filled"),
+              SPKNotificationItem(kSPKNotificationPresenceOffline, @"User Went Offline", @"circle_xmark_filled"),
+              SPKNotificationItem(kSPKNotificationPresenceTyping, @"User Started Typing", @"keyboard"),
+              SPKNotificationItem(kSPKNotificationPresenceRead, @"Message Read", @"eye"),
+              SPKNotificationItem(kSPKNotificationPresenceUserRule, @"Activity Tracking List Changes", @"activity"),
           ]},
         @{@"title" : @"Instants",
           @"items" : @[
@@ -696,6 +709,8 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
                        [identifier isEqualToString:kSPKNotificationProfileMessagesSeenUserRule]) {
                 BOOL manualSeenEnabled = [SPKUtils getBoolPref:@"msgs_manual_seen"];
                 resolvedSubtitle = [NSString stringWithFormat:@"Tap to open %@", manualSeenEnabled ? @"excluded list" : @"included list"];
+            } else if ([identifier isEqualToString:kSPKNotificationPresenceUserRule]) {
+                resolvedSubtitle = @"Tap to open activity tracking list";
             } else if (SPKAutoSaveListViewControllerForRuleIdentifier(identifier)) {
                 resolvedSubtitle = @"Tap to open auto-save list";
             }

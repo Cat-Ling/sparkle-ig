@@ -1,8 +1,10 @@
 #import "SPKMessagesSettingsProvider.h"
 
+#import "../../Features/Messages/AccurateActiveStatus.h"
 #import "../../Features/Messages/DeletedMessagesLog/SPKDeletedMessagesViewController.h"
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../../Shared/Messages/SPKDirectSeenContext.h"
+#import "../../Shared/Messages/SPKPresenceTracking.h"
 #import "../../Utils.h"
 #import "../SPKSettingsViewController.h"
 #import "../SPKTopicSettingsSupport.h"
@@ -13,6 +15,7 @@ static NSString *const kSPKMessagesAudioCallConfirmKey = @"msgs_confirm_audio_ca
 static NSString *const kSPKMessagesVideoCallConfirmKey = @"msgs_confirm_video_call";
 
 static NSArray *SPKMessagesSettingsSections(void);
+static NSArray *SPKActivityNotificationsSettingsSections(void);
 
 // A switch cell that stays visible but is disabled while the "Audio Downloads"
 // master toggle is off (keeping its stored value).
@@ -22,6 +25,117 @@ static SPKSetting *SPKAudioGatedSwitch(NSString *title, UIImage *icon, NSString 
         return [SPKUtils getBoolPref:@"downloads_audio_enabled"];
     };
     return setting;
+}
+
+@interface SPKActivityNotificationsSettingsViewController : SPKSettingsViewController
+@end
+
+@implementation SPKActivityNotificationsSettingsViewController
+- (instancetype)init {
+    return [super initWithTitle:@"Activity Notifications" sections:SPKActivityNotificationsSettingsSections() reduceMargin:NO];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    [self replaceSections:SPKActivityNotificationsSettingsSections()];
+}
+
+- (void)switchChanged:(UISwitch *)sender {
+    SPKSetting *row = [self settingForSender:sender];
+    [super switchChanged:sender];
+    if ([row.defaultsKey isEqualToString:@"msgs_presence_notifications"]) {
+        if (SPKPresenceNotificationsEnabled())
+            SPKPresenceRequestNotificationAuthorization();
+        [self replaceSections:SPKActivityNotificationsSettingsSections()];
+    }
+    if ([row.defaultsKey isEqualToString:@"msgs_presence_accurate_status"])
+        SPKRefreshAccurateActiveStatusScheduler();
+}
+
+- (void)stepperChanged:(UIStepper *)sender {
+    SPKSetting *row = [self settingForSender:sender];
+    [super stepperChanged:sender];
+    if ([row.defaultsKey isEqualToString:@"msgs_presence_refresh_interval"])
+        SPKRefreshAccurateActiveStatusScheduler();
+}
+@end
+
+static NSArray *SPKActivityNotificationsSettingsSections(void) {
+    BOOL (^masterEnabled)(void) = ^BOOL {
+        return SPKPresenceNotificationsEnabled();
+    };
+
+    SPKSetting *notifyOnline = [SPKSetting switchCellWithTitle:@"Online" icon:SPKSettingsIcon(@"circle_check_filled") defaultsKey:@"msgs_presence_notify_online"];
+    SPKSetting *notifyOffline = [SPKSetting switchCellWithTitle:@"Offline" icon:SPKSettingsIcon(@"circle_xmark_filled") defaultsKey:@"msgs_presence_notify_offline"];
+    SPKSetting *notifyTyping = [SPKSetting switchCellWithTitle:@"Typing" icon:SPKSettingsIcon(@"keyboard") defaultsKey:@"msgs_presence_notify_typing"];
+    SPKSetting *notifyRead = [SPKSetting switchCellWithTitle:@"Read" icon:SPKSettingsIcon(@"eye") defaultsKey:@"msgs_presence_notify_read"];
+    SPKSetting *mirrorToNotificationCenter = [SPKSetting switchCellWithTitle:@"Notify Outside the App"
+                                                                       icon:SPKSettingsIcon(@"notifications")
+                                                                defaultsKey:@"msgs_presence_mirror_notification_center"];
+    for (SPKSetting *setting in @[ notifyOnline, notifyOffline, notifyTyping, notifyRead, mirrorToNotificationCenter ])
+        setting.enabledProvider = masterEnabled;
+
+    SPKSetting *trackedUsers = [SPKSetting navigationCellWithTitle:@"Tracked Users"
+                                                          subtitle:@""
+                                                              icon:SPKSettingsIcon(@"users")
+                                                    viewController:SPKPresenceListViewController()];
+    trackedUsers.userInfo = @{ @"accessoryText" : [NSString stringWithFormat:@"%lu", (unsigned long)SPKPresenceUserList().count] };
+    trackedUsers.enabledProvider = masterEnabled;
+
+    SPKSetting *accurateStatus = [SPKSetting switchCellWithTitle:@"Accurate Active Status"
+                                                            icon:SPKSettingsIcon(@"check")
+                                                     defaultsKey:@"msgs_presence_accurate_status"];
+    SPKSetting *refreshInterval = [SPKSetting stepperCellWithTitle:@"Refresh Interval"
+                                                          subtitle:@"Refresh every %@ %@"
+                                                              icon:SPKSettingsIcon(@"clock")
+                                                       defaultsKey:@"msgs_presence_refresh_interval"
+                                                               min:10
+                                                               max:300
+                                                              step:5
+                                                             label:@"seconds"
+                                                     singularLabel:@"second"];
+    refreshInterval.enabledProvider = ^BOOL {
+        return [SPKUtils getBoolPref:@"msgs_presence_accurate_status"];
+    };
+
+    return @[
+        SPKTopicSection(@"", @[
+            [SPKSetting switchCellWithTitle:@"Activity Notifications"
+                                       icon:SPKSettingsIcon(@"activity")
+                                defaultsKey:@"msgs_presence_notifications"],
+        ],
+                        @"Master switch for tracked-user activity alerts.\n\n"
+                        @"Activity events only arrive while Instagram is running and stop when iOS suspends it."),
+        SPKTopicSection(@"Notifications", @[
+            notifyOnline,
+            notifyOffline,
+            notifyTyping,
+            notifyRead,
+        ],
+                        @"1. Notifies you when a tracked user comes online.\n"
+                        @"2. Notifies you when a tracked user goes offline.\n"
+                        @"3. Notifies you when a tracked user starts typing.\n"
+                        @"4. Notifies you when a tracked user reads a message you sent."),
+        SPKTopicSection(@"", @[
+            mirrorToNotificationCenter,
+        ],
+                        @"Sends a push notification when Instagram is not in front. In the app, Sparkle uses a pill instead."),
+        SPKTopicSection(@"Tracking", @[
+            trackedUsers,
+            [SPKSetting navigationCellWithTitle:@"Activity Diagnostics"
+                                       subtitle:@""
+                                           icon:SPKSettingsIcon(@"info")
+                                 viewController:SPKPresenceDiagnosticsViewController()],
+        ],
+                        @"1. Manage the users tracked by this Instagram account. Lists are never shared between accounts.\n"
+                        @"2. Inspect Instagram's live activity state and clear Sparkle's transition memory and cooldowns."),
+        SPKTopicSection(@"Accuracy", @[
+            accurateStatus,
+            refreshInterval,
+        ],
+                        @"1. Removes Instagram's activity grace period and refreshes its native status more often.\n"
+                        @"2. Controls the refresh frequency. Shorter intervals update sooner and use more battery.")
+    ];
 }
 
 @interface SPKMessagesSettingsViewController : SPKSettingsViewController
@@ -108,6 +222,15 @@ static NSArray *SPKMessagesSettingsSections(void) {
         return [SPKUtils getBoolPref:kSPKMessagesActionButtonEnabledKey];
     };
 
+    SPKSetting *activityNotifications = [SPKSetting navigationCellWithTitle:@"Activity Notifications"
+                                                                   subtitle:@""
+                                                                       icon:SPKSettingsIcon(@"activity")
+                                                             viewController:[[SPKActivityNotificationsSettingsViewController alloc] init]];
+    activityNotifications.userInfo = @{ @"accessoryText" : SPKPresenceSettingsSummary() };
+    activityNotifications.searchSectionsProvider = ^NSArray * {
+        return SPKActivityNotificationsSettingsSections();
+    };
+
     return @[
         SPKTopicSection(@"Action Button", @[
             [SPKSetting switchCellWithTitle:@"Messages Action Button"
@@ -149,6 +272,10 @@ static NSArray *SPKMessagesSettingsSections(void) {
                                      @"6. Marks a chat as seen when you react.\n"
                                      @"7. Marks a chat as seen when you start typing a reply.\n\n"
                                      @"Included Chats require the eye button or the auto-seen triggers above. Manage them from the eye button, an inbox long press, or the list above."),
+        SPKTopicSection(@"Activity", @[
+            activityNotifications,
+        ],
+                        @"Configure tracked users, activity events, background notifications, diagnostics, and active-status accuracy."),
         SPKTopicSection(@"Deleted Messages", @[
             [SPKSetting switchCellWithTitle:@"Keep Deleted Messages"
                                        icon:SPKSettingsIcon(@"undo_circle")

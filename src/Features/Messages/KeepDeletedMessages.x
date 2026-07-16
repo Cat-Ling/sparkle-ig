@@ -2,6 +2,7 @@
 #import "../../InstagramHeaders.h"
 #import "../../Shared/Messages/SPKDirectSeenContext.h"
 #import "../../Shared/Messages/SPKDirectUserResolver.h"
+#import "../../Shared/Messages/SPKPresenceTracking.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
 #import "DeletedMessagesLog/SPKDeletedMessagesCapture.h"
@@ -1155,7 +1156,8 @@ static void spkHandleApplyUpdates(id self, id updates, void (^invokeOriginal)(vo
     BOOL toastOn = SPKNotificationIsEnabled(kSPKNotificationUnsentMessage);
     BOOL reactionOn = spkReactionLogEnabled() || SPKNotificationIsEnabled(kSPKNotificationUnsentReaction);
 
-    if (!keepOn && !logOn && !toastOn && !reactionOn) {
+    BOOL activityOn = SPKPresenceNotificationsEnabled();
+    if (!keepOn && !logOn && !toastOn && !reactionOn && !activityOn) {
         invokeOriginal();
         return;
     }
@@ -1183,6 +1185,8 @@ static void spkHandleApplyUpdates(id self, id updates, void (^invokeOriginal)(vo
         spkSavePreservedIds();
 
     invokeOriginal();
+    if (activityOn && ownerPk.length)
+        SPKPresenceHandleDirectThreadUpdates(self, updates, ownerPk);
     if (logOn && ownerPk.length)
         spkDMCaptureRetryPendingRemovals(self, ownerPk);
 

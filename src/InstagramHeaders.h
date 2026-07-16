@@ -336,6 +336,73 @@
 - (id)rawVideo;
 @end
 
+// Receives every realtime presence update for users IG tracks. The selector is
+// unchanged across 410.1.0 through 438.0.0; only the owning framework moved.
+//
+// Note this is only the realtime *push* path. IG also populates presence by
+// fetching (see the periodic scheduler and inbox fetch), and those updates never
+// reach this callback, so it is not a complete view of what IG knows.
+@interface IGPresenceManager : NSObject
+- (void)presenceRealtimeDataProvider:(id)provider
+             didReceiveUpdateForUserPk:(id)pk
+                              isActive:(BOOL)isActive
+                      lastActivityAtMs:(double)lastActivityAtMs
+                          capabilities:(unsigned long long)capabilities
+                         correlationId:(id)correlationId
+                         isCloseFriend:(BOOL)isCloseFriend;
+// The store IG itself reads to draw activity dots, regardless of how the state
+// got there. Values are IGPresenceState, an opaque value object.
+- (id)presenceStatesByUserPk;
+- (id)presenceStateForUser:(id)user;
+@end
+
+// Presence poll timer owned by IGPresenceManager. IG picks the interval at
+// session setup; Sparkle updates the stored interval and restarts this timer
+// when the active account's accuracy settings change.
+@interface IGPresencePeriodicScheduler : NSObject
+- (id)initWithIntervalInSeconds:(unsigned long long)seconds block:(id)block;
+- (void)stop;
+- (void)start;
+@end
+
+// Server-driven gating values for Direct. `activeNowGracePeriod` is how long IG
+// keeps drawing someone as active after their last activity, which is why the
+// green dot outlives the actual session. Absent before 411, where the grace
+// period is not exposed as a gate at all.
+@interface IGDirectGatingService : NSObject
+- (long long)activeNowGracePeriod;
+// Some builds synthesize this cached getter at runtime even though it is omitted
+// from their dumped declaration. The selector is probed before its hook group
+// is installed.
+- (NSNumber *)activeNowGracePeriodCacheValue;
+@end
+
+// One typing event. Carries the sender pk directly, so typing does not have to be
+// resolved through the thread it arrived on. Identical across 410.1.0 and 443.0.0.
+@interface IGDirectTypingStatus : NSObject
+@property (readonly, nonatomic) NSString *threadId;
+@property (readonly, nonatomic) NSString *userPk;
+@property (readonly, nonatomic) NSDate *sentDate;
+@property (readonly, nonatomic) BOOL isActive;
+@property (readonly, nonatomic) double lifetime;
+@end
+
+// Instagram's UNUserNotificationCenterDelegate. Decides what happens to a
+// notification that arrives while the app is in the foreground; it recognizes only
+// its own, so anything else is presented as nothing at all.
+@interface IGAppCoordinator : NSObject
+- (void)userNotificationCenter:(id)center willPresentNotification:(id)notification withCompletionHandler:(id)handler;
+@end
+
+// Holds the live typing state for every thread. The dictionary is replaced
+// wholesale on each change, so its setter is the one funnel every incoming typing
+// update passes through. Value shape is not contractual, hence the defensive walk
+// in the hook.
+@interface IGDirectTypingStatusService : NSObject
+@property (copy) NSDictionary *threadIdToTypingStatuses;
+- (id)updatedTypingStatusesForThreadId:(id)threadId;
+@end
+
 @interface IGUser : NSObject
 @property NSInteger followStatus;
 @property (copy) NSString *username;
@@ -360,6 +427,9 @@
 
 @interface IGUserSession : NSObject
 @property (readonly, nonatomic) IGUser *user;
+// Category on IGUserSession in IG, so it is only present once the presence
+// subsystem is linked in; always respondsToSelector: before calling.
+- (id)presenceManager;
 @end
 
 @interface IGWindow : UIWindow

@@ -6,6 +6,7 @@
 #import "../../InstagramHeaders.h"
 #import "../../Shared/Messages/SPKDirectAutoSave.h"
 #import "../../Shared/Messages/SPKDirectSeenContext.h"
+#import "../../Shared/Messages/SPKPresenceTracking.h"
 #import "../../Shared/Stories/SPKStoryContext.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Tweak.h"
@@ -421,6 +422,20 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
                                                          SPKDirectPresentAutoSaveThreadRuleToggle(context);
                                                      }];
         [children addObject:autoSaveAction];
+    }
+
+    // Only offered when activity notifications are on and the thread is a 1:1: presence
+    // is reported per user, so a group has nothing to track.
+    NSString *presenceTitle = SPKPresenceNotificationsEnabled() ? SPKPresenceCurrentChatActionTitle(context) : nil;
+    if (presenceTitle.length > 0) {
+        BOOL isTracked = [presenceTitle isEqualToString:@"Stop Tracking Activity"];
+        UIAction *presenceAction = [UIAction actionWithTitle:presenceTitle
+                                                       image:[SPKAssetUtils menuIconNamed:isTracked ? @"activity_filled" : @"activity"]
+                                                  identifier:nil
+                                                     handler:^(__unused UIAction *action) {
+                                                         SPKPresencePresentChatRuleToggle(context);
+                                                     }];
+        [children addObject:presenceAction];
     }
 
     UIImage *logImage = [SPKAssetUtils menuIconNamed:@"channels"];

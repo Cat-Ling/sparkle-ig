@@ -52,6 +52,8 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
   - An optional feed-header shortcut button for one-tap access to Gallery, Profile Analyzer, Deleted Messages, Downloads or Settings.
 - **Keep deleted messages**:
   - Preserve unsent DMs, log removed reactions, and recover view-once media, with a browsable log.
+- **Activity notifications**:
+  - Get notified when a tracked user comes online, goes offline, starts typing, or reads a message you sent, and make Instagram's own green dot accurate with an early-installed presence refresh and no grace period.
 - **Profile Analyzer**:
   - Fetches your followers/following and surfaces mutuals, non-followbacks, and a durable change log (new/lost followers, profile updates) across scans.
 - **Per-account settings**:
