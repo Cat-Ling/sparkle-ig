@@ -411,8 +411,10 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
                                   ? SPKDirectAutoSaveCurrentThreadActionTitle(context)
                                   : nil;
     if (autoSaveTitle.length > 0) {
+        BOOL autoSaveApplies = SPKDirectAutoSaveAppliesToCurrentThread(context);
+        UIImage *autoSaveImage = [SPKAssetUtils menuIconNamed:autoSaveApplies ? @"download_off" : @"download"];
         UIAction *autoSaveAction = [UIAction actionWithTitle:autoSaveTitle
-                                                       image:[SPKAssetUtils menuIconNamed:@"sparkle_gallery"]
+                                                       image:autoSaveImage
                                                   identifier:nil
                                                      handler:^(__unused UIAction *action) {
                                                          SPKDirectPresentAutoSaveThreadRuleToggle(context);

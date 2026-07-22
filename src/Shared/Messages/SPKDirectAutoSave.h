@@ -29,6 +29,7 @@ void SPKDirectAutoSaveConsiderController(UIViewController *_Nullable controller)
 void SPKDirectAutoSaveViewerSessionDidEnd(void);
 
 /// Current-thread rule, for the DM viewer's action menu.
+BOOL SPKDirectAutoSaveAppliesToCurrentThread(SPKDirectThreadContext *_Nullable context);
 NSString *_Nullable SPKDirectAutoSaveCurrentThreadActionTitle(SPKDirectThreadContext *_Nullable context);
 NSString *_Nullable SPKDirectAutoSaveCurrentThreadConfirmationTitle(SPKDirectThreadContext *_Nullable context);
 NSString *_Nullable SPKDirectAutoSaveCurrentThreadConfirmationMessage(SPKDirectThreadContext *_Nullable context);

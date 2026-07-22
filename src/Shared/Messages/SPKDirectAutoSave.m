@@ -143,6 +143,13 @@ static NSString *SPKDirectAutoSaveThreadDisplayName(SPKDirectThreadContext *cont
     return context.isGroup ? @"this group" : @"this chat";
 }
 
+BOOL SPKDirectAutoSaveAppliesToCurrentThread(SPKDirectThreadContext *context) {
+    NSString *threadId = SPKStringFromValue(context.threadId);
+    if (threadId.length == 0)
+        return NO;
+    return SPKDirectAutoSaveAppliesToThread(threadId);
+}
+
 // The menu action reads as "does auto-save currently apply to this chat?", which in All
 // Chats mode means removing it from the exclusion list and in Selected Chats mode means
 // adding it to the inclusion list. Both are the same toggle underneath.
@@ -150,7 +157,7 @@ NSString *SPKDirectAutoSaveCurrentThreadActionTitle(SPKDirectThreadContext *cont
     NSString *threadId = SPKStringFromValue(context.threadId);
     if (threadId.length == 0)
         return nil;
-    return SPKDirectAutoSaveAppliesToThread(threadId) ? @"Stop Auto-Saving This Chat" : @"Auto-Save This Chat";
+    return SPKDirectAutoSaveAppliesToCurrentThread(context) ? @"Stop Auto-Saving This Chat" : @"Auto-Save This Chat";
 }
 
 NSString *SPKDirectAutoSaveCurrentThreadConfirmationTitle(SPKDirectThreadContext *context) {
@@ -164,7 +171,7 @@ NSString *SPKDirectAutoSaveCurrentThreadConfirmationMessage(SPKDirectThreadConte
     NSString *name = SPKDirectAutoSaveThreadDisplayName(context);
     return SPKDirectAutoSaveAppliesToThread(threadId)
                ? [NSString stringWithFormat:@"Do you want to stop auto-saving view-once media from %@?", name]
-               : [NSString stringWithFormat:@"Do you want to auto-save every view-once photo and video from %@ to your Gallery?", name];
+               : [NSString stringWithFormat:@"Do you want to auto-save every view-once photo and video from %@?", name];
 }
 
 BOOL SPKDirectToggleAutoSaveCurrentThread(SPKDirectThreadContext *context,

@@ -166,6 +166,13 @@ static BOOL SPKStoryAutoSaveResolveCurrentUser(SPKStoryContext *context, NSStrin
     return YES;
 }
 
+BOOL SPKStoryAutoSaveAppliesToCurrentUser(SPKStoryContext *context) {
+    NSString *pk = nil;
+    if (!SPKStoryAutoSaveResolveCurrentUser(context, NULL, &pk) || pk.length == 0)
+        return NO;
+    return SPKStoryAutoSaveAppliesToUser(pk);
+}
+
 // The menu action reads as "does auto-save currently apply to this user?", which in
 // All Users mode means removing them from the exclusion list and in Selected Users
 // mode means adding them to the inclusion list. Both are the same toggle underneath.
@@ -173,7 +180,7 @@ NSString *SPKStoryAutoSaveCurrentUserActionTitle(SPKStoryContext *context) {
     NSString *pk = nil;
     if (!SPKStoryAutoSaveResolveCurrentUser(context, NULL, &pk))
         return nil;
-    return SPKStoryAutoSaveAppliesToUser(pk) ? @"Stop Auto-Saving Stories" : @"Auto-Save Stories";
+    return SPKStoryAutoSaveAppliesToCurrentUser(context) ? @"Stop Auto-Saving Stories" : @"Auto-Save Stories";
 }
 
 NSString *SPKStoryAutoSaveCurrentUserConfirmationTitle(SPKStoryContext *context) {
@@ -187,7 +194,7 @@ NSString *SPKStoryAutoSaveCurrentUserConfirmationMessage(SPKStoryContext *contex
         return nil;
     return SPKStoryAutoSaveAppliesToUser(pk)
                ? [NSString stringWithFormat:@"Do you want to stop auto-saving stories from @%@?", username]
-               : [NSString stringWithFormat:@"Do you want to auto-save every story from @%@ to your Gallery?", username];
+               : [NSString stringWithFormat:@"Do you want to auto-save every story from @%@?", username];
 }
 
 BOOL SPKStoryToggleAutoSaveCurrentUser(SPKStoryContext *context, NSString **notificationTitle, NSString **notificationSubtitle) {

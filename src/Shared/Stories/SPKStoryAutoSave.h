@@ -33,6 +33,7 @@ NSString *SPKStoryAutoSaveSettingsSummary(void);
 
 /// Dynamic action-menu title for the currently displayed story's user, or nil
 /// when no user resolves.
+BOOL SPKStoryAutoSaveAppliesToCurrentUser(SPKStoryContext *_Nullable context);
 NSString *_Nullable SPKStoryAutoSaveCurrentUserActionTitle(SPKStoryContext *_Nullable context);
 NSString *_Nullable SPKStoryAutoSaveCurrentUserConfirmationTitle(SPKStoryContext *_Nullable context);
 NSString *_Nullable SPKStoryAutoSaveCurrentUserConfirmationMessage(SPKStoryContext *_Nullable context);

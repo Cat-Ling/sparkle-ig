@@ -140,6 +140,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"donate" : @{@"candidates" : @[ @"ig_icon_donations_outline_44" ]},
             @"download" : @{@"candidates" : @[ @"ig_icon_download_outline_24" ]},
             @"download_filled" : @{@"candidates" : @[ @"ig_icon_download_filled_24" ]},
+            @"download_off" : @{@"candidates" : @[ @"ig_icon_download_off_outline_24" ]},
             @"download_reels" : @{@"candidates" : @[ @"ig_icon_download_outline_44" ]},
             @"duplicate" : @{@"candidates" : @[ @"ig_icon_photo_dump_outline_24" ]},
             @"edit" : @{@"candidates" : @[ @"ig_icon_edit_outline_24" ]},

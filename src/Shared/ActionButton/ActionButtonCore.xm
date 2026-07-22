@@ -1067,9 +1067,15 @@ static UIImage *SPKIconForActionIdentifier(NSString *identifier, SPKActionButton
         BOOL applies = storyCtx ? SPKStoryManualSeenAppliesToContext(storyCtx) : YES;
         return [SPKAssetUtils instagramIconNamed:applies ? @"eye_off" : @"eye" pointSize:size];
     }
-    if ([identifier isEqualToString:kSPKActionToggleStoryAutoSaveUserRule] ||
-        [identifier isEqualToString:kSPKActionToggleDirectAutoSaveThreadRule]) {
-        return [SPKAssetUtils instagramIconNamed:@"sparkle_gallery" pointSize:size];
+    if ([identifier isEqualToString:kSPKActionToggleStoryAutoSaveUserRule]) {
+        SPKStoryContext *storyCtx = SPKStoryContextForActionButtonContext(context);
+        BOOL applies = storyCtx ? SPKStoryAutoSaveAppliesToCurrentUser(storyCtx) : NO;
+        return [SPKAssetUtils instagramIconNamed:applies ? @"download_off" : @"download" pointSize:size];
+    }
+    if ([identifier isEqualToString:kSPKActionToggleDirectAutoSaveThreadRule]) {
+        SPKDirectThreadContext *threadCtx = SPKDirectThreadContextFromSource(context.controller);
+        BOOL applies = threadCtx ? SPKDirectAutoSaveAppliesToCurrentThread(threadCtx) : NO;
+        return [SPKAssetUtils instagramIconNamed:applies ? @"download_off" : @"download" pointSize:size];
     }
     if ([identifier isEqualToString:kSPKActionToggleProfileStorySeenUserRule]) {
         id user = context ? SPKResolveMediaForContext(context) : nil;
