@@ -78,6 +78,9 @@
 
 @interface IGDirectInboxNavigationHeaderView : UIView
 @property (readonly, nonatomic) UIButton *messageButton;
+// v410's legacy Obj-C header additionally exposes cameraButton; used to detect
+// that older header shape (v439's Swift header does not respond to this).
+@property (readonly, nonatomic) UIButton *cameraButton;
 @end
 
 @interface IGTableViewCell : UITableViewCell

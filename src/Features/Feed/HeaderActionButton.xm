@@ -594,8 +594,14 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
     [button addTarget:button action:@selector(spk_primaryTapped) forControlEvents:UIControlEventTouchUpInside];
 
     objc_setAssociatedObject(self, kSPKInboxHeaderButtonAssocKey, button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    [self addSubview:button];
-    SPKLog(@"HeaderButton", @"[Sparkle] Installed inbox header action button into %@", NSStringFromClass(self.class));
+    // v410's IGCustomHeaderView keeps its real content (title, buttons, search
+    // bar) inside a dedicated contentView, not as direct subviews of self —
+    // self typically only has 1-2 direct children. Host our button there too,
+    // so it's a true sibling of the native controls instead of sitting outside
+    // whatever compositing/backing contentView itself uses.
+    UIView *host = SPKHeaderSubview(self, @[ @"contentView" ]) ?: self;
+    [host addSubview:button];
+    SPKLog(@"HeaderButton", @"[Sparkle] Installed inbox header action button into %@ (host=%@)", NSStringFromClass(self.class), NSStringFromClass(host.class));
 
     [self spk_configureHeaderActionButton:button];
 }
@@ -645,8 +651,16 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
         expectedFrame = CGRectMake(floor(leftX), floor(CGRectGetHeight(self.bounds) / 2.0 - side / 2.0), side, side);
     }
 
+    // v410's inbox header is the legacy Obj-C IGCustomHeaderView subclass,
+    // which exposes cameraButton alongside messageButton and never fades or
+    // hides those buttons on this screen — unlike v439's Swift header, which
+    // can collapse behind a scroll-driven glass effect (that's what the
+    // ancestor alpha/hidden walk below exists for). Skip that walk on the
+    // legacy header: mirroring it there did nothing but risk hiding Sparkle's
+    // button if some transient ancestor state briefly reported hidden/alpha 0.
+    BOOL legacyHeader = [self respondsToSelector:@selector(cameraButton)];
     CGFloat effectiveAlpha = 1.0;
-    if (composer && composer.window) {
+    if (!legacyHeader && composer && composer.window) {
         BOOL anyHidden = NO;
         for (UIView *v = composer; v && v != self; v = v.superview) {
             effectiveAlpha *= v.alpha;
@@ -661,16 +675,37 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
     button.hidden = NO;
     button.alpha = effectiveAlpha;
 
+    // Mirror the install-time host choice: reparent onto contentView (when the
+    // header exposes one) so we're a true sibling of the native controls
+    // rather than sitting outside whatever compositing contentView itself
+    // uses — the frame math above stays in self's coordinate space and gets
+    // converted only for the final assignment.
+    UIView *host = SPKHeaderSubview(self, @[ @"contentView" ]) ?: self;
+    if (button.superview != host) {
+        [host addSubview:button];
+    }
+    CGRect hostFrame = (host == self) ? expectedFrame : [self convertRect:expectedFrame toView:host];
+
     NSValue *lastVal = objc_getAssociatedObject(button, kSPKInboxHeaderButtonLastFrameAssocKey);
     CGRect lastFrame = lastVal ? [lastVal CGRectValue] : CGRectNull;
-    if (button.superview == self && !CGRectIsNull(lastFrame) && CGRectEqualToRect(expectedFrame, lastFrame)) {
+    if (button.superview == host && !CGRectIsNull(lastFrame) && CGRectEqualToRect(expectedFrame, lastFrame)) {
+        // Frame is unchanged, but the native header may have re-inserted its
+        // own subviews above ours on this pass (list reload, scroll-driven
+        // relayout, etc.) without ever changing our frame. Always re-assert
+        // z-order — cheap no-op if we're already frontmost — so Sparkle's
+        // button can't silently end up buried behind native chrome.
+        [host bringSubviewToFront:button];
         [self spk_updateInboxHeaderGlass:button];
         return;
     }
 
-    button.frame = expectedFrame;
+    button.frame = hostFrame;
     objc_setAssociatedObject(button, kSPKInboxHeaderButtonLastFrameAssocKey, [NSValue valueWithCGRect:expectedFrame], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    [self bringSubviewToFront:button];
+    [host bringSubviewToFront:button];
+    SPKLog(@"HeaderButton", @"[Sparkle] Laid out inbox header button legacy=%@ frame=%@ host=%@ hostFrame=%@ siblingCount=%lu iconImage=%@ iconHidden=%@",
+           legacyHeader ? @"YES" : @"NO", NSStringFromCGRect(expectedFrame), NSStringFromClass(host.class),
+           NSStringFromCGRect(hostFrame), (unsigned long)host.subviews.count,
+           button.iconView.image ? @"YES" : @"NO", button.iconView.hidden ? @"YES" : @"NO");
 
     [self spk_updateInboxHeaderGlass:button];
 }
