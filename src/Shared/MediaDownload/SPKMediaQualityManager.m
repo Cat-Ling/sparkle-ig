@@ -802,13 +802,18 @@ SPKMediaBuildPhotoOptions(id mediaObject, NSURL *fallbackURL,
         }
     }
 
-    // Identify max long edge for mobile variants
+    // Identify max long edge for web variants and mobile variants
+    NSInteger maxWebLongEdge = 0;
     NSInteger maxMobileLongEdge = 0;
     for (NSDictionary *variant in variants) {
-        if (![variant[@"isWeb"] boolValue]) {
-            NSInteger w = [variant[@"width"] integerValue];
-            NSInteger h = [variant[@"height"] integerValue];
-            NSInteger longEdge = MAX(w, h);
+        NSInteger w = [variant[@"width"] integerValue];
+        NSInteger h = [variant[@"height"] integerValue];
+        NSInteger longEdge = MAX(w, h);
+        if ([variant[@"isWeb"] boolValue]) {
+            if (longEdge > maxWebLongEdge) {
+                maxWebLongEdge = longEdge;
+            }
+        } else {
             if (longEdge > maxMobileLongEdge) {
                 maxMobileLongEdge = longEdge;
             }
@@ -865,7 +870,18 @@ SPKMediaBuildPhotoOptions(id mediaObject, NSURL *fallbackURL,
 
         NSString *tier = nil;
         if (isWeb) {
-            tier = @"Max";
+            NSInteger itemLongEdge = MAX(width, height);
+            if (maxWebLongEdge > 0 && itemLongEdge >= (NSInteger)(maxWebLongEdge * 0.9)) {
+                tier = @"Max";
+            } else if (itemLongEdge >= 1080) {
+                tier = @"High";
+            } else if (itemLongEdge >= 720) {
+                tier = @"Medium";
+            } else if (itemLongEdge > 0) {
+                tier = @"Low";
+            } else {
+                tier = @"Max";
+            }
         } else if (maxMobileLongEdge > 0) {
             double fraction = (double)MAX(width, height) / (double)maxMobileLongEdge;
             if (fraction >= 0.9) {
