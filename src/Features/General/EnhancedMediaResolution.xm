@@ -41,7 +41,7 @@ static NSString *SPKHighResUserAgentStringFromString(NSString *userAgent) {
                                            withTemplate:scaleTemplate];
 }
 
-static NSString *SPKHighResHeaderValueIfNeeded(NSString *value, NSString *field) {
+static NSString *SPKHighResHeaderValueIfNeeded(NSURLRequest *request, NSString *value, NSString *field) {
     if (!SPKEnhancedMediaResolutionEnabled()) {
         return value;
     }
@@ -51,6 +51,13 @@ static NSString *SPKHighResHeaderValueIfNeeded(NSString *value, NSString *field)
     if ([field caseInsensitiveCompare:@"User-Agent"] != NSOrderedSame) {
         return value;
     }
+    
+    // Crucial: Bypass User-Agent spoofing for Direct Messages and Share Sheet.
+    // The iPad Pro UA causes the backend to fallback to 750pt Instants.
+    if ([request.URL.path containsString:@"direct_v2"] || [request.URL.path containsString:@"banyan"]) {
+        return value;
+    }
+    
     return SPKHighResUserAgentStringFromString(value);
 }
 
@@ -59,7 +66,7 @@ static NSString *SPKHighResHeaderValueIfNeeded(NSString *value, NSString *field)
 %hook NSMutableURLRequest
 
 - (void)setValue:(NSString *)value forHTTPHeaderField:(NSString *)field {
-    %orig(SPKHighResHeaderValueIfNeeded(value, field), field);
+    %orig(SPKHighResHeaderValueIfNeeded(self, value, field), field);
 }
 
 - (void)setAllHTTPHeaderFields:(NSDictionary *)headerFields {
@@ -78,7 +85,7 @@ static NSString *SPKHighResHeaderValueIfNeeded(NSString *value, NSString *field)
         }
         id existing = headers[key];
         if ([existing isKindOfClass:[NSString class]]) {
-            headers[key] = SPKHighResUserAgentStringFromString((NSString *)existing);
+            headers[key] = SPKHighResHeaderValueIfNeeded(self, existing, key);
         }
         break;
     }
@@ -90,7 +97,7 @@ static NSString *SPKHighResHeaderValueIfNeeded(NSString *value, NSString *field)
 %hook IGURLRequest
 
 - (void)setValue:(NSString *)value forHTTPHeaderField:(NSString *)field {
-    %orig(SPKHighResHeaderValueIfNeeded(value, field), field);
+    %orig(SPKHighResHeaderValueIfNeeded(self, value, field), field);
 }
 
 %end
