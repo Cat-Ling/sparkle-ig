@@ -740,6 +740,18 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
                                                     onCancel:(void (^)(void))onCancel {
     __block SPKNotificationPillView *pill = nil;
     dispatch_block_t create = ^{
+        for (SPKNotificationSlot *slot in self.visible) {
+            if (slot.progress && slot.pill && slot.pill.superview) {
+                pill = slot.pill;
+                if (title.length > 0) {
+                    [pill updateProgressTitle:title subtitle:nil];
+                }
+                if (onCancel) {
+                    pill.onCancel = onCancel;
+                }
+                return;
+            }
+        }
         pill = [SPKNotificationPillView progressPill];
         [pill updateProgressTitle:title ?: @"Downloading..." subtitle:nil];
         pill.onCancel = onCancel;
@@ -767,7 +779,7 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
     if (NSThread.isMainThread)
         create();
     else
-        dispatch_async(dispatch_get_main_queue(), create);
+        dispatch_sync(dispatch_get_main_queue(), create);
     return pill;
 }
 

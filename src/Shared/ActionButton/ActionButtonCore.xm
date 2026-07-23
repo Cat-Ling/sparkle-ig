@@ -2574,36 +2574,21 @@ static void SPKShowExtractedVideoCover(NSURL *videoURL, SPKGallerySaveMetadata *
     });
 }
 
-static BOOL SPKExecuteBulkChildAction(NSString *identifier,
-                                      SPKActionButtonContext *context,
-                                      NSArray<SPKResolvedMediaEntry *> *entries,
-                                      NSString *username,
-                                      id media) {
-    NSArray<SPKResolvedMediaEntry *> *downloadableEntries = SPKDownloadableEntries(entries);
-    if (downloadableEntries.count < 2) {
-        SPKNotify(identifier, @"No bulk media available", nil, @"error_filled", SPKNotificationToneError);
-        return YES;
-    }
-
-    if ([identifier isEqualToString:kSPKActionDownloadAllLinks]) {
-        NSArray<NSString *> *bulkLinks = SPKBulkDownloadLinksFromEntries(downloadableEntries, media);
-        if (bulkLinks.count == 0) {
-            SPKNotify(identifier, @"No links available", nil, @"error_filled", SPKNotificationToneError);
-            return YES;
-        }
-        [UIPasteboard generalPasteboard].string = [bulkLinks componentsJoinedByString:@"\n"];
-        SPKNotify(identifier, SPKCopiedDownloadURLTitleForSource(context.source, YES), [NSString stringWithFormat:@"%lu item%@", (unsigned long)bulkLinks.count, bulkLinks.count == 1 ? @"" : @"s"], @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
-        return YES;
-    }
-
-    UIViewController *presenter = SPKActionContextPresenter(context);
-    UIView *anchorView = SPKActionContextAnchorView(context);
-    SPKDownloadSourceSurface surface = [SPKDownloadHelpers sourceSurfaceForActionButtonSource:context.source];
-    SPKDownloadDestination destination = [identifier isEqualToString:kSPKActionDownloadAllGallery] ? SPKDownloadDestinationGallery : SPKDownloadDestinationPhotos;
+static void SPKPerformBatchDownloadWithQualityPrompt(NSArray<SPKResolvedMediaEntry *> *selectedEntries,
+                                                      SPKActionButtonSource source,
+                                                      NSString *username,
+                                                      id media,
+                                                      SPKDownloadDestination destination,
+                                                      NSString *identifier,
+                                                      UIViewController *presenter,
+                                                      UIView *anchorView,
+                                                      SPKDownloadSourceSurface surface) {
+    if (selectedEntries.count == 0)
+        return;
 
     void (^performBatchDownloadWithQuality)(NSString *) = ^(NSString *qualityOverride) {
         void (^startDownload)(void) = ^{
-            NSArray<SPKDownloadItemRequest *> *bulkItems = SPKBulkDownloadItemsFromEntries(downloadableEntries, context.source, username, media, qualityOverride, destination);
+            NSArray<SPKDownloadItemRequest *> *bulkItems = SPKBulkDownloadItemsFromEntries(selectedEntries, source, username, media, qualityOverride, destination);
             [SPKDownloadHelpers performBulkDownloadIdentifier:identifier
                                                          items:bulkItems
                                                      presenter:presenter
@@ -2611,11 +2596,12 @@ static BOOL SPKExecuteBulkChildAction(NSString *identifier,
                                                  sourceSurface:surface];
         };
 
-        if ([qualityOverride isEqualToString:@"max"] && [SPKUtils getBoolPref:@"downloads_fetch_4k_images"]) {
+        NSString *effectiveQuality = qualityOverride.length > 0 ? qualityOverride : [SPKUtils getStringPref:@"downloads_photo_quality"];
+        if ([effectiveQuality isEqualToString:@"max"] && [SPKUtils getBoolPref:@"downloads_fetch_4k_images"]) {
             NSString *topPK = SPKMediaPKForMediaObject(media);
             if (topPK.length > 0 && ![SPKMediaQualityManager hasWebPhotoCandidatesFetchedForPK:topPK]) {
                 if (SPKNotificationIsEnabled(identifier)) {
-                    SPKNotify(identifier, @"Fetching 4K candidates...", nil, @"web", SPKNotificationToneInfo);
+                    [[SPKNotificationCenter shared] beginUnmanagedProgressWithTitle:@"Fetching 4K candidates..." onCancel:nil];
                 }
                 [SPKInstagramAPI fetchWebMediaInfoForPK:topPK completion:^(NSDictionary *response, NSError *error) {
                     [SPKMediaQualityManager markWebPhotoCandidatesFetchedForPK:topPK];
@@ -2655,12 +2641,42 @@ static BOOL SPKExecuteBulkChildAction(NSString *identifier,
 
         [SPKIGAlertPresenter presentActionSheetFromViewController:presenter
                                                              title:@"Batch Download Quality"
-                                                           message:[NSString stringWithFormat:@"Select quality for all %lu items:", (unsigned long)downloadableEntries.count]
+                                                           message:[NSString stringWithFormat:@"Select quality for all %lu items:", (unsigned long)selectedEntries.count]
                                                            actions:actions];
-        return YES;
+        return;
     }
 
     performBatchDownloadWithQuality(nil);
+}
+
+static BOOL SPKExecuteBulkChildAction(NSString *identifier,
+                                      SPKActionButtonContext *context,
+                                      NSArray<SPKResolvedMediaEntry *> *entries,
+                                      NSString *username,
+                                      id media) {
+    NSArray<SPKResolvedMediaEntry *> *downloadableEntries = SPKDownloadableEntries(entries);
+    if (downloadableEntries.count < 2) {
+        SPKNotify(identifier, @"No bulk media available", nil, @"error_filled", SPKNotificationToneError);
+        return YES;
+    }
+
+    if ([identifier isEqualToString:kSPKActionDownloadAllLinks]) {
+        NSArray<NSString *> *bulkLinks = SPKBulkDownloadLinksFromEntries(downloadableEntries, media);
+        if (bulkLinks.count == 0) {
+            SPKNotify(identifier, @"No links available", nil, @"error_filled", SPKNotificationToneError);
+            return YES;
+        }
+        [UIPasteboard generalPasteboard].string = [bulkLinks componentsJoinedByString:@"\n"];
+        SPKNotify(identifier, SPKCopiedDownloadURLTitleForSource(context.source, YES), [NSString stringWithFormat:@"%lu item%@", (unsigned long)bulkLinks.count, bulkLinks.count == 1 ? @"" : @"s"], @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
+        return YES;
+    }
+
+    UIViewController *presenter = SPKActionContextPresenter(context);
+    UIView *anchorView = SPKActionContextAnchorView(context);
+    SPKDownloadSourceSurface surface = [SPKDownloadHelpers sourceSurfaceForActionButtonSource:context.source];
+    SPKDownloadDestination destination = [identifier isEqualToString:kSPKActionDownloadAllGallery] ? SPKDownloadDestinationGallery : SPKDownloadDestinationPhotos;
+
+    SPKPerformBatchDownloadWithQualityPrompt(downloadableEntries, context.source, username, media, destination, identifier, presenter, anchorView, surface);
     return YES;
 }
 
@@ -3240,7 +3256,7 @@ BOOL SPKExecuteActionIdentifier(NSString *identifier, SPKActionButtonContext *co
                 SPKPausePlaybackForPreviewContext(context);
             }
             if (SPKNotificationIsEnabled(identifier)) {
-                SPKNotify(identifier, @"Fetching 4K candidates...", nil, @"web", SPKNotificationToneInfo);
+                [[SPKNotificationCenter shared] beginUnmanagedProgressWithTitle:@"Fetching 4K candidates..." onCancel:nil];
             }
             [SPKInstagramAPI fetchWebMediaInfoForPK:topPK completion:^(NSDictionary *response, NSError *error) {
                 [SPKMediaQualityManager markWebPhotoCandidatesFetchedForPK:topPK];
@@ -3497,18 +3513,6 @@ static NSArray<UIMenuElement *> *SPKBuildBulkMenuChildren(SPKActionButtonConfigu
                                                                                                                     NSArray<SPKResolvedMediaEntry *> *selectedEntries = [tapBulkEntries objectsAtIndexes:selectedIndexes];
                                                                                                                     if (selectedEntries.count == 0)
                                                                                                                         return;
-                                                                                                                    SPKDownloadDestination dest = [destinationIdentifier isEqualToString:kSPKActionDownloadAllGallery] ? SPKDownloadDestinationGallery : SPKDownloadDestinationPhotos;
-                                                                                                                    NSArray<SPKDownloadItemRequest *> *selectedItems = SPKBulkDownloadItemsFromEntries(selectedEntries, context.source, tapBulkUsername, tapBulkMedia, nil, dest);
-                                                                                                                    UIViewController *presenter = SPKActionContextPresenter(context);
-                                                                                                                    UIView *anchorView = SPKActionContextAnchorView(context);
-                                                                                                                    SPKDownloadSourceSurface surface = [SPKDownloadHelpers sourceSurfaceForActionButtonSource:context.source];
-                                                                                                                    if ([SPKDownloadHelpers performBulkDownloadIdentifier:destinationIdentifier
-                                                                                                                                                                    items:selectedItems
-                                                                                                                                                                presenter:presenter
-                                                                                                                                                               anchorView:anchorView
-                                                                                                                                                            sourceSurface:surface]) {
-                                                                                                                        return;
-                                                                                                                    }
                                                                                                                     if ([destinationIdentifier isEqualToString:kSPKActionDownloadAllLinks]) {
                                                                                                                         NSArray<NSString *> *links = SPKBulkDownloadLinksFromEntries(selectedEntries, tapBulkMedia);
                                                                                                                         if (links.count == 0) {
@@ -3517,7 +3521,13 @@ static NSArray<UIMenuElement *> *SPKBuildBulkMenuChildren(SPKActionButtonConfigu
                                                                                                                         }
                                                                                                                         [UIPasteboard generalPasteboard].string = [links componentsJoinedByString:@"\n"];
                                                                                                                         SPKNotify(destinationIdentifier, SPKCopiedDownloadURLTitleForSource(context.source, YES), [NSString stringWithFormat:@"%lu item%@", (unsigned long)links.count, links.count == 1 ? @"" : @"s"], @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
+                                                                                                                        return;
                                                                                                                     }
+                                                                                                                    SPKDownloadDestination dest = [destinationIdentifier isEqualToString:kSPKActionDownloadAllGallery] ? SPKDownloadDestinationGallery : SPKDownloadDestinationPhotos;
+                                                                                                                    UIViewController *presenter = SPKActionContextPresenter(context);
+                                                                                                                    UIView *anchorView = SPKActionContextAnchorView(context);
+                                                                                                                    SPKDownloadSourceSurface surface = [SPKDownloadHelpers sourceSurfaceForActionButtonSource:context.source];
+                                                                                                                    SPKPerformBatchDownloadWithQualityPrompt(selectedEntries, context.source, tapBulkUsername, tapBulkMedia, dest, destinationIdentifier, presenter, anchorView, surface);
                                                                                                                 }];
                                                         }];
         [children addObject:[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ selectMediaAction ]]];
