@@ -9,6 +9,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// Posted by the settings toggle so live instances can refresh `secureTextEntry`.
 FOUNDATION_EXPORT NSNotificationName const SPKHideUIOnCapturePreferenceDidChangeNotification;
 
+/// Opts a custom button/icon hierarchy into the runtime EDR compositing path when
+/// the installed OS supports it. Uses runtime lookup because Sparkle builds with
+/// the iOS 16.2 SDK, where this CALayer property is not declared on CALayer.
+FOUNDATION_EXPORT void SPKChromeEnableExtendedDynamicRangeContent(UIView *view);
+
 // MARK: - SPKChromeCanvas
 
 @interface SPKChromeCanvas : UIView

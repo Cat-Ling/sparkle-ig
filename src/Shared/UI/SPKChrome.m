@@ -1,11 +1,51 @@
 #import "SPKChrome.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
+#import <objc/message.h>
 #import <objc/runtime.h>
 
 NSNotificationName const SPKHideUIOnCapturePreferenceDidChangeNotification = @"SPKHideUIOnCapturePreferenceDidChangeNotification";
 
 static char kSPKChromeOwnedSecureFieldKey;
+
+static void spkEnableExtendedDynamicRangeLayer(CALayer *layer) {
+    if (!layer)
+        return;
+
+    // The iOS 16.2 SDK used by Sparkle does not declare this newer CALayer
+    // property, so use the runtime selector when the installed OS supports it.
+    SEL selector = NSSelectorFromString(@"setWantsExtendedDynamicRangeContent:");
+    if ([layer respondsToSelector:selector])
+        ((void (*)(id, SEL, BOOL))objc_msgSend)(layer, selector, YES);
+}
+
+void SPKChromeEnableExtendedDynamicRangeContent(UIView *view) {
+    if (!view)
+        return;
+
+    spkEnableExtendedDynamicRangeLayer(view.layer);
+
+    // SPKChromeButton keeps its icon outside UIButton's normal imageView path.
+    // Handle both forms so this helper also remains useful for regular UIButtons.
+    UIImageView *imageView = nil;
+    if ([view isKindOfClass:[SPKChromeButton class]]) {
+        imageView = ((SPKChromeButton *)view).iconView;
+    } else if ([view isKindOfClass:[UIButton class]]) {
+        imageView = ((UIButton *)view).imageView;
+    } else if ([view isKindOfClass:[UIImageView class]]) {
+        imageView = (UIImageView *)view;
+    }
+
+    if (!imageView)
+        return;
+
+    spkEnableExtendedDynamicRangeLayer(imageView.layer);
+    UIView *ancestor = imageView.superview;
+    for (NSInteger depth = 0; ancestor && depth < 4; depth++) {
+        spkEnableExtendedDynamicRangeLayer(ancestor.layer);
+        ancestor = ancestor.superview;
+    }
+}
 
 BOOL SPKChromeCanvasOwnsSecureField(UITextField *field) {
     if (!field)

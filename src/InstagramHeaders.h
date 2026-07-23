@@ -287,6 +287,7 @@
 @end
 
 @interface IGTapButton : UIButton
+- (void)setEDR:(_Bool)edr;
 @end
 
 // Your-own-story viewer list (swipe up on your story). `_item` is the

@@ -4,6 +4,7 @@
 #import "../../InstagramHeaders.h"
 #import "../../Shared/ActionButton/ActionButtonCore.h"
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
+#import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
 
 static NSInteger const kSPKReelsActionButtonTag = 921342;
@@ -36,17 +37,6 @@ static UIColor *SPKReelsNativeUFIColor(UIView *verticalUFIView) {
     return tint ?: UIColor.whiteColor;
 }
 
-static void SPKReelsEnableExtendedRangeLayer(CALayer *layer) {
-    if (!layer)
-        return;
-
-    // The iOS 16.2 SDK used by Sparkle does not declare this newer CALayer
-    // property, so use the runtime selector when the installed OS supports it.
-    SEL selector = NSSelectorFromString(@"setWantsExtendedDynamicRangeContent:");
-    if ([layer respondsToSelector:selector])
-        ((void (*)(id, SEL, BOOL))objc_msgSend)(layer, selector, YES);
-}
-
 static void SPKApplyReelsNativeUFIColor(UIButton *button, UIColor *color) {
     if (![button isKindOfClass:[UIButton class]])
         return;
@@ -54,13 +44,13 @@ static void SPKApplyReelsNativeUFIColor(UIButton *button, UIColor *color) {
     color = color ?: UIColor.whiteColor;
     // Instagram's UFI icon is EDR-capable. Sparkle's icon is nested inside
     // SPKChromeCanvas, so opt the custom layers into the same compositing path.
-    SPKReelsEnableExtendedRangeLayer(button.layer);
+    SPKChromeEnableExtendedDynamicRangeContent(button);
     button.tintAdjustmentMode = UIViewTintAdjustmentModeNormal;
     button.tintColor = color;
 
     UIImageView *buttonImageView = button.imageView;
     if (buttonImageView) {
-        SPKReelsEnableExtendedRangeLayer(buttonImageView.layer);
+
         buttonImageView.tintAdjustmentMode = UIViewTintAdjustmentModeNormal;
         buttonImageView.tintColor = color;
         UIImage *image = buttonImageView.image;
@@ -73,20 +63,12 @@ static void SPKApplyReelsNativeUFIColor(UIButton *button, UIColor *color) {
     if ([button isKindOfClass:[SPKChromeButton class]]) {
         SPKChromeButton *chromeButton = (SPKChromeButton *)button;
         chromeButton.iconTint = color;
-        SPKReelsEnableExtendedRangeLayer(chromeButton.iconView.layer);
+
         chromeButton.iconView.tintAdjustmentMode = UIViewTintAdjustmentModeNormal;
         chromeButton.iconView.tintColor = color;
         UIImage *image = chromeButton.iconView.image;
         if (image && image.renderingMode != UIImageRenderingModeAlwaysTemplate)
             chromeButton.iconView.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-
-        // The icon is hosted in the secure canvas and can have one or more
-        // intermediate views between the UIImageView and the button layer.
-        UIView *ancestor = chromeButton.iconView.superview;
-        for (NSInteger depth = 0; ancestor && depth < 4; depth++) {
-            SPKReelsEnableExtendedRangeLayer(ancestor.layer);
-            ancestor = ancestor.superview;
-        }
     }
 }
 

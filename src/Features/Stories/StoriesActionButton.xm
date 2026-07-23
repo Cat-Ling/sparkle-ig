@@ -5,6 +5,7 @@
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../../Shared/Stories/SPKStoryButtonPlacement.h"
 #import "../../Shared/Stories/SPKStoryContext.h"
+#import "../../Shared/Stories/SPKStoryDynamicRange.h"
 #import "../../Utils.h"
 
 static NSInteger const kSPKStoriesActionButtonTag = 921343;
@@ -227,6 +228,7 @@ static void SPKInstallStoriesActionButton(UIView *overlayView) {
 
     button.frame = expectedFrame;
     SPKApplyButtonStyle(button, SPKActionButtonSourceStories);
+    SPKStoryApplyDynamicRangeToButton(button);
 }
 
 %group SPKStoriesActionButtonHooks
@@ -236,6 +238,30 @@ static void SPKInstallStoriesActionButton(UIView *overlayView) {
     %orig;
     SPKStorySetActiveOverlay((UIView *)self);
     SPKInstallStoriesActionButton((UIView *)self);
+}
+%end
+
+%hook IGStoryFullscreenHeaderView
+- (void)layoutSubviews {
+    %orig;
+    UIView *overlay = [(UIView *)self superview];
+    if ([NSStringFromClass(overlay.class) containsString:@"IGStoryFullscreenOverlayView"]) {
+        SPKInstallStoriesActionButton(overlay);
+    }
+}
+%end
+
+%hook IGTapButton
+- (void)setEDR:(_Bool)edr {
+    %orig;
+    if (edr) {
+        for (UIView *w = (UIView *)self; w; w = w.superview) {
+            if ([NSStringFromClass(w.class) containsString:@"IGStoryFullscreenOverlayView"]) {
+                SPKInstallStoriesActionButton(w);
+                break;
+            }
+        }
+    }
 }
 %end
 
