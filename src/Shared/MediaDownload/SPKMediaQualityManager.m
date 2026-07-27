@@ -1113,6 +1113,16 @@ static SPKMediaAnalysis *SPKMediaAnalyze(id mediaObject, NSURL *photoURL,
                                          SPKDownloadDestination destination,
                                          BOOL includeAudioOptions) {
     (void)destination;
+
+    // Unwrap Sparkle's resolved-media wrappers (e.g. SPKInstantsResolvedSnap) to the real
+    // IGMedia they carry. The wrapper only exposes single `sparkle*URL` properties, so
+    // analysing it directly finds no imageVersions2/videoVersions candidates and the sheet
+    // degrades to the lone "Fallback source" entry. The gallery origin controller unwraps
+    // the same way.
+    id backingMedia = SPKObjectForSelector(mediaObject, @"backingMedia") ?: SPKKVCObject(mediaObject, @"backingMedia");
+    if (backingMedia)
+        mediaObject = backingMedia;
+
     SPKMediaAnalysis *analysis = [[SPKMediaAnalysis alloc] init];
     analysis.ffmpegAvailable = [SPKMediaFFmpeg isAvailable];
     analysis.duration = SPKMediaDurationForObject(mediaObject);
