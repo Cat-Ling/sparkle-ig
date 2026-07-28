@@ -3,6 +3,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <CommonCrypto/CommonDigest.h>
 
+#import "../Gallery/SPKGalleryFile.h"
 #import "SPKMediaItem.h"
 
 static NSString *SPKSHA256String(NSString *value) {
@@ -349,6 +350,38 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
             return;
         }
     }
+
+    // Gallery files already have a thumbnail on disk; read that instead of
+    // spinning up an AVAssetImageGenerator over the whole video.
+    if (item.galleryFile) {
+        SPKGalleryFile *file = item.galleryFile;
+        __weak typeof(self) weakSelf = self;
+        [SPKGalleryFile loadThumbnailAsyncForFile:file
+                                       completion:^(UIImage *_Nullable thumbnail) {
+                                           if (!thumbnail) {
+                                               // No thumbnail on disk and none could be
+                                               // generated: fall through to the generic path.
+                                               [weakSelf loadVideoThumbnailFromAssetForItem:item
+                                                                                   cacheKey:cacheKey
+                                                                                 completion:completion];
+                                               return;
+                                           }
+                                           item.thumbnail = thumbnail;
+                                           if (cacheKey.length > 0) {
+                                               [weakSelf.thumbnailCache setObject:thumbnail forKey:cacheKey];
+                                           }
+                                           if (completion)
+                                               completion(thumbnail);
+                                       }];
+        return;
+    }
+
+    [self loadVideoThumbnailFromAssetForItem:item cacheKey:cacheKey completion:completion];
+}
+
+- (void)loadVideoThumbnailFromAssetForItem:(SPKMediaItem *)item
+                                  cacheKey:(NSString *)cacheKey
+                                completion:(void (^)(UIImage *_Nullable image))completion {
 
     NSURL *sourceURL = [self bestAvailableFileURLForItem:item] ?: item.fileURL;
     if (!sourceURL) {

@@ -1223,8 +1223,10 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     }
 
     NSArray *allFiles = self.fetchedResultsController.fetchedObjects;
-    NSInteger idx = [allFiles indexOfObject:selectedFile];
-    if (idx == NSNotFound)
+    // filePath.item is already the index into fetchedObjects -- objectAtIndexPath:
+    // above resolved the file from it -- so there is no need to search the array.
+    NSInteger idx = filePath.item;
+    if (idx < 0 || idx >= (NSInteger)allFiles.count)
         idx = 0;
     [SPKFullScreenMediaPlayer showGalleryFiles:allFiles
                                startingAtIndex:idx

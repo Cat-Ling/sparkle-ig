@@ -302,9 +302,16 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
     NSMutableArray<SPKMediaItem *> *items =
         [NSMutableArray arrayWithCapacity:files.count];
-    for (SPKGalleryFile *file in files) {
+    // Skipped files shift everything after them, so track where the requested
+    // file ends up rather than reusing its index in the unfiltered array.
+    NSInteger mappedIndex = 0;
+    for (NSInteger i = 0; i < (NSInteger)files.count; i++) {
+        SPKGalleryFile *file = files[(NSUInteger)i];
         if (![file fileExists])
             continue;
+        if (i <= index) {
+            mappedIndex = (NSInteger)items.count;
+        }
         SPKMediaItem *item = [SPKMediaItem itemWithGalleryFile:file];
         [items addObject:item];
     }
@@ -315,7 +322,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         return;
     }
 
-    NSInteger adjustedIndex = MAX(0, MIN(index, (NSInteger)items.count - 1));
+    NSInteger adjustedIndex = MAX(0, MIN(mappedIndex, (NSInteger)items.count - 1));
     SPKNotify(kSPKNotificationMediaPreviewOpenGallery, @"Opened Gallery media",
               nil, @"media", SPKNotificationToneInfo);
 

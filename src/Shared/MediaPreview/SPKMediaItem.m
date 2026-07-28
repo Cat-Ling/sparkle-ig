@@ -41,7 +41,13 @@
     meta.sourceMediaURLString = file.sourceMediaURLString;
     item.galleryMetadata = meta;
 
-    UIImage *thumb = [SPKGalleryFile loadThumbnailForFile:file];
+    // Cache-only. The gallery builds one item per file in the folder before it
+    // presents the preview, so anything that touches the disk here is paid N
+    // times on the main thread -- and loadThumbnailForFile: additionally force
+    // decodes the JPEG, which made opening a single item in a large folder take
+    // seconds. Pages that actually need the thumbnail load it lazily
+    // (-[SPKMediaCacheManager loadThumbnailForVideoItem:]).
+    UIImage *thumb = [SPKGalleryFile cachedThumbnailForFile:file];
     if (thumb) {
         item.thumbnail = thumb;
     }
