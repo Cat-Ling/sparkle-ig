@@ -129,6 +129,13 @@ SPKNotificationPillView *_Nullable SPKNotifyProgress(NSString *identifier,
                                                         onCancel:(nullable void (^)(void))onCancel;
 - (SPKNotificationPillView *)beginUnmanagedProgressWithTitle:(nullable NSString *)title
                                                     onCancel:(nullable void (^)(void))onCancel;
+// As above, but marks the pill as transient: it covers preparatory work that runs
+// before the real flow starts (e.g. the 4K candidate fetch). It morphs into the real
+// progress pill if a download picks it up, and -dismissTransientProgressPill clears it
+// if the flow instead stops to ask the user something or bails.
+- (SPKNotificationPillView *)beginTransientProgressWithTitle:(nullable NSString *)title
+                                                    onCancel:(nullable void (^)(void))onCancel;
+- (void)dismissTransientProgressPill;
 @end
 
 NS_ASSUME_NONNULL_END

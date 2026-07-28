@@ -24,6 +24,11 @@ typedef NS_ENUM(NSUInteger, SPKNotificationTone) {
               animated:(BOOL)animated;
 - (void)updateProgressTitle:(nullable NSString *)title subtitle:(nullable NSString *)subtitle;
 
+/// Presents unmeasurable work: the ring spins and the percentage subtitle is dropped.
+/// Any progress or title update returns the pill to the determinate presentation, so
+/// call this last when setting a pill up.
+- (void)setProgressIndeterminate:(BOOL)indeterminate;
+
 /// Transitions the pill to a success state.
 - (void)showSuccess;
 - (void)showSuccessWithTitle:(nullable NSString *)title

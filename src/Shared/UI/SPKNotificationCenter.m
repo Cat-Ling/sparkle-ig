@@ -387,6 +387,10 @@ static NSString *SPKNotificationIconResourceForTone(NSString *iconResource, SPKN
 @property (nonatomic, strong) NSMutableArray<NSDictionary *> *queue;
 @property (nonatomic, strong) SPKNotificationPassthroughWindow *overlayWindow;
 @property (nonatomic, strong) SPKNotificationOverlayRootViewController *overlayRoot;
+// The pill shown for preparatory work that runs before the real flow starts (e.g.
+// the 4K candidate fetch). Weak: it's owned by its slot, and whoever adopts it as a
+// real progress pill clears this so it's no longer dismissed out from under them.
+@property (nonatomic, weak) SPKNotificationPillView *transientProgressPill;
 - (void)notifyIdentifier:(NSString *)identifier
                    title:(NSString *)title
                 subtitle:(NSString *)subtitle
@@ -738,6 +742,30 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
 
 - (SPKNotificationPillView *)beginUnmanagedProgressWithTitle:(NSString *)title
                                                     onCancel:(void (^)(void))onCancel {
+    return [self beginUnmanagedProgressWithTitle:title onCancel:onCancel transient:NO];
+}
+
+- (SPKNotificationPillView *)beginTransientProgressWithTitle:(NSString *)title
+                                                    onCancel:(void (^)(void))onCancel {
+    return [self beginUnmanagedProgressWithTitle:title onCancel:onCancel transient:YES];
+}
+
+- (void)dismissTransientProgressPill {
+    dispatch_block_t dismiss = ^{
+        SPKNotificationPillView *pill = self.transientProgressPill;
+        self.transientProgressPill = nil;
+        if (pill && pill.superview)
+            [pill dismiss];
+    };
+    if (NSThread.isMainThread)
+        dismiss();
+    else
+        dispatch_async(dispatch_get_main_queue(), dismiss);
+}
+
+- (SPKNotificationPillView *)beginUnmanagedProgressWithTitle:(NSString *)title
+                                                    onCancel:(void (^)(void))onCancel
+                                                   transient:(BOOL)transient {
     __block SPKNotificationPillView *pill = nil;
     dispatch_block_t create = ^{
         for (SPKNotificationSlot *slot in self.visible) {
@@ -749,6 +777,10 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
                 if (onCancel) {
                     pill.onCancel = onCancel;
                 }
+                // Reusing a live progress pill means a real flow now owns it (either
+                // it was already real, or a transient pill just morphed into one), so
+                // it must no longer be dismissed as transient.
+                self.transientProgressPill = nil;
                 return;
             }
         }
@@ -774,6 +806,11 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
                     [p dismiss];
             });
         };
+        self.transientProgressPill = transient ? pill : nil;
+        // Prep work is a single request with nothing to report: spin instead of
+        // sitting at 0%. The download that adopts this pill flips it back.
+        if (transient)
+            [pill setProgressIndeterminate:YES];
         [self insertPill:pill identifier:@"download_queue_aggregate" progress:YES];
     };
     if (NSThread.isMainThread)

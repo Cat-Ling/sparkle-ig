@@ -17,6 +17,7 @@
 #import "../MediaPreview/SPKMediaItem.h"
 #import "../MediaTrim/SPKTrimSourcePlan.h"
 #import "../UI/SPKMediaChrome.h"
+#import "../UI/SPKNotificationCenter.h"
 #import "../UI/SPKSwitch.h"
 #import "SPKDashParser.h"
 #import "SPKMediaFFmpeg.h"
@@ -2388,6 +2389,10 @@ SPKMediaPresentOptionsSheet(UIViewController *presenter, UIView *sourceView,
                             SPKDownloadDestination destination,
                             void (^selectionHandler)(SPKMediaOption *option),
                             void (^dismissHandler)(void)) {
+    // Any prep pill (e.g. "Fetching 4K candidates...") has done its job once we stop
+    // to ask the user: nothing downstream will adopt it, so it would otherwise hang
+    // around forever when the sheet is dismissed without a choice.
+    [[SPKNotificationCenter shared] dismissTransientProgressPill];
     SPKMediaOptionsSheetViewController *controller =
         [[SPKMediaOptionsSheetViewController alloc]
             initWithAnalysis:analysis
