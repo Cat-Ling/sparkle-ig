@@ -17,6 +17,31 @@
 #import "SPKGalleryManager.h"
 #import "SPKGallerySortViewController.h"
 
+NSNotificationName const SPKGalleryPickerDidDismissNotification = @"SPKGalleryPickerDidDismissNotification";
+
+// The picker gets its own UIWindow rather than being presented into IG's. From
+// the story composer IG keeps its editor mounted behind the picker (it presents
+// the sticker tray overFullScreen), and sharing a window with it made the
+// picker's grid scroll several times slower than the same grid opened from
+// Direct. A separate window keeps the picker's view hierarchy to itself.
+//
+// Held in a global rather than on the picker: the window retains its root, which
+// retains the navigation controller, which retains the picker, so a back
+// reference from the picker would be a cycle.
+static UIWindow *sSPKGalleryPickerWindow = nil;
+static __weak UIWindow *sSPKGalleryPickerPreviousKeyWindow = nil;
+
+static void SPKGalleryPickerTeardownWindow(void) {
+    if (!sSPKGalleryPickerWindow) {
+        return;
+    }
+    [sSPKGalleryPickerPreviousKeyWindow makeKeyWindow];
+    sSPKGalleryPickerWindow.hidden = YES;
+    sSPKGalleryPickerWindow.rootViewController = nil;
+    sSPKGalleryPickerWindow = nil;
+    sSPKGalleryPickerPreviousKeyWindow = nil;
+}
+
 static NSString *const kSPKGalleryPickerListCellID = @"SPKGalleryPickerListCell";
 static NSString *const kSPKGalleryPickerGridCellID = @"SPKGalleryPickerGridCell";
 static NSString *const kSPKGalleryPickerFolderChipHeaderID = @"SPKGalleryPickerFolderChipHeader";
@@ -57,6 +82,8 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 @property (nonatomic, assign) BOOL filterFavoritesOnly;
 @property (nonatomic, strong) NSMutableSet<NSString *> *filterUsernames;
 @property (nonatomic, strong) UIBarButtonItem *cachedSearchToolbarItem;
+
+- (void)presentInOwnWindowAbove:(UIViewController *)presenter navigationController:(UINavigationController *)nav;
 @end
 
 @implementation SPKGalleryPickerViewController
@@ -97,7 +124,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
                                                                   completion:completion];
         UINavigationController *nav = [[SPKChromeNavigationController alloc] initWithRootViewController:picker];
         nav.modalPresentationStyle = UIModalPresentationFullScreen;
-        [presenter presentViewController:nav animated:YES completion:nil];
+        [picker presentInOwnWindowAbove:presenter navigationController:nav];
     };
 
     if (mgr.isLockEnabled && !mgr.isUnlocked) {
@@ -110,6 +137,42 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     } else {
         presentPicker();
     }
+}
+
+- (void)presentInOwnWindowAbove:(UIViewController *)presenter navigationController:(UINavigationController *)nav {
+    UIWindow *presenterWindow = presenter.viewIfLoaded.window;
+
+    UIWindow *window = nil;
+    if (@available(iOS 13.0, *)) {
+        UIWindowScene *scene = presenterWindow.windowScene;
+        if (scene) {
+            window = [[UIWindow alloc] initWithWindowScene:scene];
+        }
+    }
+    if (!window) {
+        CGRect frame = CGRectGetWidth(presenterWindow.bounds) > 0.0 ? presenterWindow.bounds : UIScreen.mainScreen.bounds;
+        window = [[UIWindow alloc] initWithFrame:frame];
+    }
+
+    // Just above whatever we were launched over, so IG's own chrome stays behind
+    // the picker without competing with system windows (alerts, status bar).
+    window.windowLevel = (presenterWindow ? presenterWindow.windowLevel : UIWindowLevelNormal) + 1.0;
+    // Clear, so IG shows through during the present/dismiss transition exactly as
+    // it did when the picker was presented into IG's own window.
+    window.backgroundColor = [UIColor clearColor];
+    window.opaque = NO;
+
+    UIViewController *host = [[UIViewController alloc] init];
+    host.view.backgroundColor = [UIColor clearColor];
+    host.view.opaque = NO;
+    window.rootViewController = host;
+
+    sSPKGalleryPickerPreviousKeyWindow = presenterWindow.isKeyWindow ? presenterWindow : UIApplication.sharedApplication.keyWindow;
+    sSPKGalleryPickerWindow = window;
+    // Key, or the search field would never get the keyboard.
+    [window makeKeyAndVisible];
+
+    [host presentViewController:nav animated:YES completion:nil];
 }
 
 - (instancetype)initWithTitle:(NSString *)title
@@ -265,6 +328,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     if (self.isMovingFromParentViewController)
         return;
     if (self.isBeingDismissed || self.navigationController.isBeingDismissed) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:SPKGalleryPickerDidDismissNotification object:self];
         if ([SPKGalleryManager sharedManager].isLockEnabled) {
             [[SPKGalleryManager sharedManager] lockGallery];
         }
@@ -272,6 +336,9 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 }
 
 - (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+    // Interactive dismissal bypasses dismissPickerWithCompletion:, so the host
+    // window has to be released here too or it would linger above IG forever.
+    SPKGalleryPickerTeardownWindow();
     if ([SPKGalleryManager sharedManager].isLockEnabled) {
         [[SPKGalleryManager sharedManager] lockGallery];
     }
@@ -670,7 +737,15 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 
 - (void)dismissPickerWithCompletion:(void (^)(void))completion {
     UIViewController *controller = self.navigationController ?: self;
-    [controller dismissViewControllerAnimated:YES completion:completion];
+    [controller dismissViewControllerAnimated:YES
+                                   completion:^{
+                                       // After the transition, so the window stays
+                                       // around to host it.
+                                       SPKGalleryPickerTeardownWindow();
+                                       if (completion) {
+                                           completion();
+                                       }
+                                   }];
 }
 
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView {

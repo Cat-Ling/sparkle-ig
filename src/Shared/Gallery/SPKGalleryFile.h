@@ -156,6 +156,19 @@ typedef NS_ENUM(int16_t, SPKGallerySource) {
 
 + (nullable UIImage *)loadThumbnailForFile:(SPKGalleryFile *)file;
 
+/// Cache-only lookup: returns a ready-to-draw thumbnail if one is already in
+/// memory, otherwise nil. Never touches the disk, so it is safe to call from
+/// \c cellForItemAtIndexPath as the synchronous fast path. Must be called on the
+/// main queue (audio files return the trait-dependent placeholder).
++ (nullable UIImage *)cachedThumbnailForFile:(SPKGalleryFile *)file;
+
+/// Reads (and if needed generates) the thumbnail off the main thread, decoding it
+/// before it is handed back so the first draw does not run the JPEG decoder on
+/// the main thread. The completion is always called asynchronously, on the main
+/// queue; \c nil means no thumbnail could be produced.
++ (void)loadThumbnailAsyncForFile:(SPKGalleryFile *)file
+                       completion:(void (^)(UIImage *_Nullable thumbnail))completion;
+
 /// Crisp three-bar EQ glyph (the same shape the gallery grid draws for audio)
 /// rendered in `barColor` on a transparent background. Lets dark surfaces such
 /// as the trim editor's audio pane show the bars in white without the gray card.

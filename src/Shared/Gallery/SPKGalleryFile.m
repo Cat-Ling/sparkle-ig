@@ -18,7 +18,8 @@ static NSCache<NSString *, UIImage *> *SPKGalleryThumbnailCache(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         cache = [[NSCache alloc] init];
-        cache.countLimit = 200;
+        cache.countLimit = 2000;
+        cache.totalCostLimit = 64 * 1024 * 1024; // 64 MB
     });
     return cache;
 }
@@ -30,6 +31,86 @@ static dispatch_queue_t SPKGalleryThumbnailStateQueue(void) {
         queue = dispatch_queue_create("com.sparkle.gallery.thumbnail-state", DISPATCH_QUEUE_SERIAL);
     });
     return queue;
+}
+
+// Reads and decodes off the main thread. UIImage(contentsOfFile:) only maps the
+// file and defers the JPEG decode to the CA commit, so a grid that loads
+// thumbnails inside cellForItemAtIndexPath pays a decode per cell on the main
+// thread while scrolling. Loads run here instead.
+// Serial on purpose. A fast scroll enqueues a load for every cell that passes,
+// and each block does blocking file I/O -- on a concurrent queue GCD reacts to
+// the blocked threads by spawning more, up to dozens, which saturates every core
+// and starves the main thread that the scroll is running on. Decoding a 300px
+// thumbnail is ~1ms, so one queue drains a backlog fast enough and costs the
+// scroll nothing.
+static dispatch_queue_t SPKGalleryThumbnailLoadQueue(void) {
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL,
+                                                                             QOS_CLASS_USER_INITIATED, 0);
+        queue = dispatch_queue_create("com.sparkle.gallery.thumbnail-load", attr);
+    });
+    return queue;
+}
+
+static dispatch_queue_t SPKGalleryThumbnailRenderQueue(void) {
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL,
+                                                                             QOS_CLASS_UTILITY, 0);
+        queue = dispatch_queue_create("com.sparkle.gallery.thumbnail-render", attr);
+    });
+    return queue;
+}
+
+// Forces the decode now, so what lands in the cache is a ready-to-draw bitmap
+// and the main thread only has to blit it.
+static UIImage *SPKGalleryDecodedImage(UIImage *image) {
+    CGImageRef cgImage = image.CGImage;
+    if (!cgImage) {
+        return image;
+    }
+    size_t width = CGImageGetWidth(cgImage);
+    size_t height = CGImageGetHeight(cgImage);
+    if (width == 0 || height == 0) {
+        return image;
+    }
+
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, colorSpace,
+                                                 kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    CGColorSpaceRelease(colorSpace);
+    if (!context) {
+        return image;
+    }
+
+    CGContextDrawImage(context, CGRectMake(0, 0, (CGFloat)width, (CGFloat)height), cgImage);
+    CGImageRef decoded = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    if (!decoded) {
+        return image;
+    }
+
+    UIImage *result = [UIImage imageWithCGImage:decoded scale:image.scale orientation:image.imageOrientation];
+    CGImageRelease(decoded);
+    return result;
+}
+
+static NSUInteger SPKGalleryImageCacheCost(UIImage *image) {
+    CGImageRef cgImage = image.CGImage;
+    if (cgImage) {
+        return CGImageGetHeight(cgImage) * CGImageGetBytesPerRow(cgImage);
+    }
+    return (NSUInteger)(image.size.width * image.size.height * 4.0);
+}
+
+static void SPKGalleryCacheThumbnail(UIImage *image, NSString *thumbPath) {
+    if (!image || thumbPath.length == 0) {
+        return;
+    }
+    [SPKGalleryThumbnailCache() setObject:image forKey:thumbPath cost:SPKGalleryImageCacheCost(image)];
 }
 
 static NSMutableDictionary<NSString *, NSMutableArray<void (^)(BOOL success)> *> *SPKGalleryThumbnailCompletions(void) {
@@ -1244,7 +1325,8 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         if (!cachedThumb) {
             cachedThumb = [UIImage imageWithContentsOfFile:thumbPath];
             if (cachedThumb) {
-                [cache setObject:cachedThumb forKey:thumbPath];
+                cachedThumb = SPKGalleryDecodedImage(cachedThumb);
+                SPKGalleryCacheThumbnail(cachedThumb, thumbPath);
             }
         }
         if (completion) {
@@ -1278,7 +1360,11 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         return;
     }
 
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+    // Also serial, and for a stronger reason than the load queue: generating a
+    // video thumbnail spins up an AVAssetImageGenerator. Scrolling past a run of
+    // videos that have no thumbnail yet would otherwise start one per file at
+    // once and flatten the CPU.
+    dispatch_async(SPKGalleryThumbnailRenderQueue(), ^{
         UIImage *thumb = [self renderThumbnailForURL:[NSURL fileURLWithPath:filePath]
                                            mediaType:(SPKGalleryMediaType)mediaType
                                              maxSize:CGSizeMake(kThumbnailSize, kThumbnailSize)];
@@ -1286,7 +1372,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         if (thumb) {
             NSData *jpegData = UIImageJPEGRepresentation(thumb, 0.8);
             [jpegData writeToFile:thumbPath atomically:YES];
-            [cache setObject:thumb forKey:thumbPath];
+            SPKGalleryCacheThumbnail(thumb, thumbPath);
         }
 
         __block NSArray<void (^)(BOOL success)> *callbacks = nil;
@@ -1388,11 +1474,62 @@ static UIImage *SPKGalleryAudioPlaceholderImage(void) {
     if ([file thumbnailExists]) {
         UIImage *image = [UIImage imageWithContentsOfFile:thumbPath];
         if (image) {
-            [SPKGalleryThumbnailCache() setObject:image forKey:thumbPath];
+            image = SPKGalleryDecodedImage(image);
+            SPKGalleryCacheThumbnail(image, thumbPath);
         }
         return image;
     }
     return nil;
+}
+
++ (UIImage *)cachedThumbnailForFile:(SPKGalleryFile *)file {
+    if (file.mediaType == SPKGalleryMediaTypeAudio) {
+        return SPKGalleryAudioPlaceholderImage();
+    }
+    return [SPKGalleryThumbnailCache() objectForKey:[file thumbnailPath]];
+}
+
++ (void)loadThumbnailAsyncForFile:(SPKGalleryFile *)file completion:(void (^)(UIImage *_Nullable))completion {
+    if (!completion) {
+        return;
+    }
+    if (file.mediaType == SPKGalleryMediaTypeAudio) {
+        UIImage *placeholder = SPKGalleryAudioPlaceholderImage();
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(placeholder);
+        });
+        return;
+    }
+
+    // Snapshot the path on the caller's (main) thread: the background block must
+    // never touch the managed object, whose context is main-queue confined.
+    NSString *thumbPath = [file thumbnailPath];
+    dispatch_async(SPKGalleryThumbnailLoadQueue(), ^{
+        UIImage *cached = [SPKGalleryThumbnailCache() objectForKey:thumbPath];
+        if (!cached && [[NSFileManager defaultManager] fileExistsAtPath:thumbPath]) {
+            UIImage *image = [UIImage imageWithContentsOfFile:thumbPath];
+            if (image) {
+                cached = SPKGalleryDecodedImage(image);
+                SPKGalleryCacheThumbnail(cached, thumbPath);
+            }
+        }
+
+        if (cached) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(cached);
+            });
+            return;
+        }
+
+        // Nothing on disk yet. Generation reads the managed object, so hop back
+        // to the main queue to kick it off.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self generateThumbnailForFile:file
+                                completion:^(BOOL success) {
+                                    completion(success ? [SPKGalleryThumbnailCache() objectForKey:thumbPath] : nil);
+                                }];
+        });
+    });
 }
 
 + (UIImage *)resizeImage:(UIImage *)image toSize:(CGSize)targetSize {

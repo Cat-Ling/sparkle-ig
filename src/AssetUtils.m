@@ -446,10 +446,26 @@ static BOOL SPKAssetHasExplicitOverride(NSString *name) {
     return SPKAssetResolvedDescriptor(SPKAssetNormalizeInternalName(name)) != nil;
 }
 
+static NSCache<NSString *, id> *SPKAssetIconNameCache(void) {
+    static NSCache<NSString *, id> *cache;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        cache = [[NSCache alloc] init];
+        cache.countLimit = 512;
+    });
+    return cache;
+}
+
 static NSString *SPKAssetResolvedIconCandidateName(NSString *name, CGFloat pointSize, SPKAssetCatalogSource source) {
     NSString *normalizedName = SPKAssetNormalizeInternalName(name);
     if (normalizedName.length == 0) {
         return nil;
+    }
+
+    NSString *cacheKey = [NSString stringWithFormat:@"%@|%.2f|%ld", normalizedName, pointSize, (long)source];
+    id cachedName = [SPKAssetIconNameCache() objectForKey:cacheKey];
+    if (cachedName) {
+        return cachedName == [NSNull null] ? nil : cachedName;
     }
 
     CGFloat resolvedPointSize = SPKAssetResolvedPointSize(normalizedName, pointSize);
@@ -466,18 +482,43 @@ static NSString *SPKAssetResolvedIconCandidateName(NSString *name, CGFloat point
         for (NSString *candidate in candidates) {
             UIImage *image = [UIImage imageNamed:candidate inBundle:bundle compatibleWithTraitCollection:nil];
             if (image) {
+                [SPKAssetIconNameCache() setObject:candidate forKey:cacheKey];
                 return candidate;
             }
         }
     }
 
+    [SPKAssetIconNameCache() setObject:[NSNull null] forKey:cacheKey];
     return nil;
+}
+
+// Resolving an icon walks every candidate name across every candidate bundle and
+// then redraws the hit through UIGraphicsImageRenderer to scale it. That is far
+// too expensive to repeat per call site: collection view cells reconfigure their
+// badges on every dequeue, so an uncached lookup turns into a full off-screen
+// render pass per cell while scrolling. Results are pure functions of the four
+// lookup inputs, so memoize them (misses included, so a miss does not rescan).
+static NSCache<NSString *, id> *SPKAssetIconCache(void) {
+    static NSCache<NSString *, id> *cache;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        cache = [[NSCache alloc] init];
+        cache.countLimit = 512;
+    });
+    return cache;
 }
 
 static UIImage *SPKAssetLookupInstagramIcon(NSString *name, CGFloat pointSize, SPKAssetCatalogSource source, UIImageRenderingMode renderingMode) {
     NSString *normalizedName = SPKAssetNormalizeInternalName(name);
     if (normalizedName.length == 0) {
         return nil;
+    }
+
+    NSString *cacheKey = [NSString stringWithFormat:@"%@|%.2f|%ld|%ld",
+                                                    normalizedName, pointSize, (long)source, (long)renderingMode];
+    id cached = [SPKAssetIconCache() objectForKey:cacheKey];
+    if (cached) {
+        return cached == [NSNull null] ? nil : cached;
     }
 
     CGFloat resolvedPointSize = SPKAssetResolvedPointSize(normalizedName, pointSize);
@@ -498,10 +539,13 @@ static UIImage *SPKAssetLookupInstagramIcon(NSString *name, CGFloat pointSize, S
             }
 
             image = SPKAssetScaleImage(image, resolvedPointSize);
-            return SPKAssetApplyRenderingMode(image, renderingMode);
+            image = SPKAssetApplyRenderingMode(image, renderingMode);
+            [SPKAssetIconCache() setObject:(image ?: (id)[NSNull null]) forKey:cacheKey];
+            return image;
         }
     }
 
+    [SPKAssetIconCache() setObject:[NSNull null] forKey:cacheKey];
     return nil;
 }
 

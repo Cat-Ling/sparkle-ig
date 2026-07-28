@@ -20,6 +20,9 @@
 @property (nonatomic, strong) UIImageView *favoriteBadge;
 @property (nonatomic, strong) UIImageView *selectionBadge;
 @property (nonatomic, strong) NSLayoutConstraint *favoriteTrailingConstraint;
+/// Bumped on every reconfigure so an async thumbnail that finishes after the cell
+/// has been recycled is dropped instead of painted onto the wrong item.
+@property (nonatomic, assign) NSUInteger thumbnailToken;
 
 @end
 
@@ -212,25 +215,18 @@
 
 - (void)prepareForReuse {
     [super prepareForReuse];
+    // Deliberately minimal. Every other property this cell displays is
+    // unconditionally reassigned by configureWithGalleryFile:... immediately
+    // after dequeue, so clearing it here is redundant work on every reuse.
+    //
+    // The invariant this relies on: a dequeued cell is always configured before
+    // it is shown. If a caller ever dequeues one without configuring it, it will
+    // display the previous item's content.
+    self.thumbnailToken++;
     self.file = nil;
     self.thumbnailView.image = nil;
-    self.videoBadge.hidden = YES;
-    self.durationLabel.hidden = YES;
-    self.durationLabel.text = nil;
-    self.usernameLabel.hidden = YES;
-    self.usernameLabel.text = nil;
-    self.folderStack.hidden = YES;
-    self.folderLabel.text = nil;
-    self.sourceBadge.image = nil;
-    self.sourceBadge.hidden = YES;
-    self.bottomScrim.hidden = YES;
-    self.topScrim.hidden = YES;
-    self.favoriteBadge.hidden = YES;
-    self.selectionBadge.hidden = YES;
-    self.selectionBadge.image = nil;
-    self.selectionBadge.alpha = 0.0;
-    self.favoriteTrailingConstraint.constant = -6;
 }
+
 
 static NSString *SPKGalleryGridFormatDuration(double seconds) {
     if (seconds <= 0.0 || !isfinite(seconds))
@@ -281,27 +277,30 @@ static NSString *SPKGalleryGridFormatDuration(double seconds) {
                    showsUsername:(BOOL)showsUsername
                       folderName:(nullable NSString *)folderName {
     self.file = file;
-    UIImage *thumb = [SPKGalleryFile loadThumbnailForFile:file];
+    // Only an in-memory hit is resolved inline. Anything that needs the disk (or
+    // a render) goes to the background, so a fast scroll never blocks the main
+    // thread on a file read plus a JPEG decode per cell.
+    NSUInteger token = ++self.thumbnailToken;
+    UIImage *thumb = [SPKGalleryFile cachedThumbnailForFile:file];
     if (thumb) {
         self.thumbnailView.image = thumb;
     } else {
         self.thumbnailView.image = nil;
         __weak typeof(self) weakSelf = self;
-        [SPKGalleryFile generateThumbnailForFile:file
-                                      completion:^(BOOL success) {
-                                          if (success && weakSelf && weakSelf.file == file) {
-                                              UIImage *newThumb = [UIImage imageWithContentsOfFile:[file thumbnailPath]];
-                                              if (newThumb) {
-                                                  weakSelf.thumbnailView.image = newThumb;
-                                              }
-                                          }
-                                      }];
+        [SPKGalleryFile loadThumbnailAsyncForFile:file
+                                       completion:^(UIImage *loaded) {
+                                           if (loaded && weakSelf.thumbnailToken == token) {
+                                               weakSelf.thumbnailView.image = loaded;
+                                           }
+                                       }];
     }
 
     BOOL isVideo = (file.mediaType == SPKGalleryMediaTypeVideo);
     BOOL isAudio = (file.mediaType == SPKGalleryMediaTypeAudio);
     BOOL hasTypeBadge = isVideo || isAudio;
-    self.videoBadge.image = [SPKAssetUtils instagramIconNamed:(isAudio ? @"audio_filled" : @"video_filled") pointSize:13.0];
+    if (hasTypeBadge) {
+        self.videoBadge.image = [SPKAssetUtils instagramIconNamed:(isAudio ? @"audio_filled" : @"video_filled") pointSize:13.0];
+    }
     self.videoBadge.hidden = !hasTypeBadge;
 
     NSString *durationText = hasTypeBadge ? SPKGalleryGridFormatDuration(file.durationSeconds) : nil;

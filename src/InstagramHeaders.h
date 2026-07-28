@@ -625,9 +625,18 @@
 @property (readonly, nonatomic) id stickerController;
 - (void)didAddSticker:(id)sticker;
 - (void)setEditingControlsOverlayViewHidden:(_Bool)hidden animated:(_Bool)animated;
+/// Composition playback. Used to quiet the canvas while a Sparkle sheet covers it,
+/// since IG's overFullScreen tray presentation leaves the editor mounted and live.
+- (void)pause;
+- (void)play;
 @end
 
 @interface IGStoryStickerTrayViewController : UIViewController
+@end
+
+/// Outer container for the story editor. Hosts IGStoryMediaCompositionEditingViewController
+/// as a child and is what actually presents the sticker tray / sticker gallery.
+@interface IGStoryPostCaptureEditingViewController : UIViewController
 @end
 
 /////////////////////////////////////////////////////////////////////////////

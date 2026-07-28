@@ -4,7 +4,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// Edit-details form for a vault file: editable display name, source username and
+/// Edit-details form for a Gallery file: editable display name, source username and
 /// date, plus read-only context (type, dimensions, size, folder, media code).
 /// Replaces the old single-field "Rename".
 @interface SPKGalleryFileDetailsViewController : UITableViewController

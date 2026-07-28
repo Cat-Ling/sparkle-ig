@@ -278,16 +278,51 @@ static void SPKHandleGalleryPickerSelection(NSArray<SPKGalleryFile *> *selectedF
     }];
 }
 
-static void SPKPresentGalleryPicker(UIViewController *presenter) {
+static void SPKPresentGalleryPickerFromHost(UIViewController *host) {
     BOOL allowVideo = [SPKUtils getBoolPref:@"stories_allow_video_sticker"];
     NSSet<NSNumber *> *allowedTypes = allowVideo ? [NSSet setWithObjects:@(SPKGalleryMediaTypeImage), @(SPKGalleryMediaTypeVideo), nil] : [NSSet setWithObject:@(SPKGalleryMediaTypeImage)];
-    [SPKGalleryPickerViewController presentFromViewController:presenter
+    [SPKGalleryPickerViewController presentFromViewController:host
                                                        title:@"Sparkle Gallery"
                                            allowedMediaTypes:allowedTypes
                                      allowsMultipleSelection:NO
                                                   completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {
-        SPKHandleGalleryPickerSelection(selectedFiles, presenter);
+        SPKHandleGalleryPickerSelection(selectedFiles, host);
     }];
+}
+
+/// Quiets the story canvas for as long as the picker is up.
+///
+/// IG presents the sticker tray *overFullScreen*, which keeps the story editor
+/// mounted in the window behind it -- so the editor keeps playing its composition
+/// underneath whatever we put on top. We cannot downgrade that presentation to
+/// fullScreen without also killing the tray's own translucency (the tray and the
+/// sticker gallery share one navigation controller), so pause the composition
+/// instead and resume it once the picker is gone.
+static void SPKQuietStoryCanvasWhilePickerIsUp(UIViewController *presenter) {
+    IGStoryMediaCompositionEditingViewController *editingVC = SPKFindStoryEditingViewController(presenter);
+    if (![editingVC respondsToSelector:@selector(pause)]) {
+        return;
+    }
+
+    [editingVC pause];
+    SPKLog(kSPKCategory, @"Paused story canvas for gallery picker");
+
+    __block id token =
+        [[NSNotificationCenter defaultCenter] addObserverForName:SPKGalleryPickerDidDismissNotification
+                                                          object:nil
+                                                           queue:[NSOperationQueue mainQueue]
+                                                      usingBlock:^(__unused NSNotification *note) {
+                                                          if ([editingVC respondsToSelector:@selector(play)]) {
+                                                              [editingVC play];
+                                                              SPKLog(kSPKCategory, @"Resumed story canvas");
+                                                          }
+                                                          [[NSNotificationCenter defaultCenter] removeObserver:token];
+                                                      }];
+}
+
+static void SPKPresentGalleryPicker(UIViewController *presenter) {
+    SPKQuietStoryCanvasWhilePickerIsUp(presenter);
+    SPKPresentGalleryPickerFromHost(presenter);
 }
 
 #pragma mark - IGStickerGalleryViewController (Photo Sticker Picker)

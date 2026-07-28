@@ -178,7 +178,7 @@ static NSString *sActiveIdentityKey = nil;
 /// resolves from the view with no PK. Downstream de-duplication keys on `pk:<PK>` when a
 /// PK is present and `url:<...>` when it isn't (`SPKDuplicateKey`), so the same snap saved
 /// once live and once from the view lands in two different key spaces and is written to
-/// the Vault twice.
+/// the Gallery twice.
 ///
 /// This map holds identifiers only — no media objects, no URLs — so it cannot resurrect a
 /// consumed snap for viewing or download. Its sole purpose is keeping a snap's identity
@@ -1466,7 +1466,7 @@ static SPKInstantsResolvedSnap *SPKInstantsResolvedSnapFromView(UIView *snap) {
 
     // A snap view has no backing media, so this path normally yields no PK — which would
     // make de-duplication key this snap by URL while the live resolve keyed it by PK, and
-    // the Vault would take a second copy. Recover the PK by CDN identity when we have seen
+    // the Gallery would take a second copy. Recover the PK by CDN identity when we have seen
     // this snap earlier in the app session.
     if (pk.length == 0) {
         NSString *identityKey = SPKInstantsURLIdentityKey(photoURL ?: videoURL);
