@@ -10,6 +10,7 @@
 #import "../../Shared/Downloads/SPKDownloadService.h"
 #import "../../Shared/Gallery/SPKGalleryViewController.h"
 #import "../../Shared/UI/SPKChrome.h"
+#import "../../Shared/UI/SPKChromeGlassMirror.h"
 #import "../../Utils.h"
 #import "../Messages/DeletedMessagesLog/SPKDeletedMessagesViewController.h"
 #import "../Profile/ProfileAnalyzer/SPKProfileAnalyzerViewController.h"
@@ -204,95 +205,6 @@ static UIView *SPKHeaderSubview(id header, NSArray<NSString *> *keys) {
             return candidate;
     }
     return nil;
-}
-
-static void SPKHookTouchForwardingSetAlphaIfNeeded(UIView *touchForwardingView);
-
-static void SPKInboxAccumulateGlassAlpha(UIView *view, CGFloat *maxAlpha) {
-    if (!view)
-        return;
-    if ([NSStringFromClass([view class]) containsString:@"TouchForwardingVisualEffectView"]) {
-        CGFloat alpha = view.alpha;
-        if (alpha > *maxAlpha)
-            *maxAlpha = alpha;
-        SPKHookTouchForwardingSetAlphaIfNeeded(view);
-    }
-    for (UIView *subview in view.subviews) {
-        SPKInboxAccumulateGlassAlpha(subview, maxAlpha);
-    }
-}
-
-static CGFloat SPKInboxHeaderGlassProgress(UIView *headerView) {
-    CGFloat maxAlpha = -1.0;
-    SPKInboxAccumulateGlassAlpha(headerView, &maxAlpha);
-    return maxAlpha;
-}
-
-// Hook TouchForwardingVisualEffectView's setAlpha: so that when the glass alpha
-// changes (e.g. status-bar-tap scroll-to-top animation) the header re-layouts
-// and our glass bubble alpha stays in sync.  Without this, the header's
-// layoutSubviews isn't called during the programmatic scroll and the bubble
-// remains opaque until the user manually scrolls.
-static void (*orig_touchForwardingSetAlpha)(id, SEL, CGFloat);
-static void SPKHookedTouchForwardingSetAlpha(id self, SEL _cmd, CGFloat alpha) {
-    if (orig_touchForwardingSetAlpha)
-        orig_touchForwardingSetAlpha(self, _cmd, alpha);
-
-    // Walk up to find the nearest header ancestor and trigger its layout.
-    UIView *ancestor = [(UIView *)self superview];
-    while (ancestor) {
-        NSString *cls = NSStringFromClass([ancestor class]);
-        if ([cls containsString:@"HomeFeedHeaderView"] ||
-            [cls containsString:@"DirectInboxNavigationHeaderView"]) {
-            [ancestor setNeedsLayout];
-            break;
-        }
-        ancestor = ancestor.superview;
-    }
-}
-
-static BOOL sTouchForwardingHooked = NO;
-static void SPKHookTouchForwardingSetAlphaIfNeeded(UIView *touchForwardingView) {
-    if (sTouchForwardingHooked)
-        return;
-    sTouchForwardingHooked = YES;
-
-    Class cls = [touchForwardingView class];
-    SEL sel = @selector(setAlpha:);
-    Method method = class_getInstanceMethod(cls, sel);
-    if (!method)
-        return;
-    MSHookMessageEx(cls, sel, (IMP)SPKHookedTouchForwardingSetAlpha, (IMP *)&orig_touchForwardingSetAlpha);
-    SPKLog(@"HeaderButton", @"[Sparkle] Hooked setAlpha: on %@ for glass sync", NSStringFromClass(cls));
-}
-
-static UIVisualEffectView *SPKInboxMakeGlassBackground(void) {
-    Class glassEffectClass = NSClassFromString(@"UIGlassEffect");
-    if (!glassEffectClass)
-        return nil;
-
-    UIVisualEffect *effect = nil;
-    @try {
-        effect = [[glassEffectClass alloc] init];
-        [effect setValue:@YES forKey:@"interactive"];
-        UIColor *tint = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-            UIColor *primary = [[SPKUtils SPKColor_InstagramPrimaryText] resolvedColorWithTraitCollection:traits];
-            CGFloat r = 0.0, g = 0.0, b = 0.0;
-            [primary getRed:&r green:&g blue:&b alpha:NULL];
-            return [UIColor colorWithRed:(1.0 - r) green:(1.0 - g) blue:(1.0 - b) alpha:0.5];
-        }];
-        [effect setValue:tint forKey:@"tintColor"];
-    } @catch (__unused NSException *exception) {
-    }
-    if (![effect isKindOfClass:[UIVisualEffect class]])
-        return nil;
-
-    UIVisualEffectView *glassView = [[UIVisualEffectView alloc] initWithEffect:effect];
-    glassView.userInteractionEnabled = NO;
-    glassView.clipsToBounds = YES;
-    glassView.layer.cornerCurve = kCACornerCurveContinuous;
-    glassView.accessibilityIdentifier = @"sparkle-inbox-action-glass";
-    return glassView;
 }
 
 @interface UIView (SPKHeaderButton)
@@ -515,27 +427,19 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
 }
 
 - (void)spk_updateHeaderGlass:(SPKFeedHeaderActionButton *)button {
-    UIVisualEffectView *glassView = objc_getAssociatedObject(button, kSPKHeaderGlassViewKey);
+    UIView *glassView = objc_getAssociatedObject(button, kSPKHeaderGlassViewKey);
     if (!glassView) {
-        glassView = SPKInboxMakeGlassBackground();
+        glassView = SPKChromeGlassMirrorMakeBubble(@"sparkle-header-action-glass");
         if (!glassView) {
             return;
         }
         objc_setAssociatedObject(button, kSPKHeaderGlassViewKey, glassView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 
-    UIView *host = button.iconView.superview ?: button;
-    if (glassView.superview != host) {
-        [host insertSubview:glassView atIndex:0];
-    }
-    [host sendSubviewToBack:glassView];
+    SPKChromeGlassMirrorAttach(glassView, button);
 
-    CGRect bounds = host.bounds;
-    glassView.frame = bounds;
-    glassView.layer.cornerRadius = MIN(bounds.size.width, bounds.size.height) / 2.0;
-
-    CGFloat progress = SPKInboxHeaderGlassProgress(self);
-    glassView.alpha = progress > 0.0 ? MIN(progress, 1.0) : 0.0;
+    // Adopt the neighbouring IG nav bubble's own effect + ring, and fade with it.
+    SPKChromeGlassMirrorSync(glassView, self);
 }
 
 @end
@@ -711,27 +615,19 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
 }
 
 - (void)spk_updateInboxHeaderGlass:(SPKFeedHeaderActionButton *)button {
-    UIVisualEffectView *glassView = objc_getAssociatedObject(button, kSPKInboxHeaderGlassViewKey);
+    UIView *glassView = objc_getAssociatedObject(button, kSPKInboxHeaderGlassViewKey);
     if (!glassView) {
-        glassView = SPKInboxMakeGlassBackground();
+        glassView = SPKChromeGlassMirrorMakeBubble(@"sparkle-inbox-action-glass");
         if (!glassView) {
             return;
         }
         objc_setAssociatedObject(button, kSPKInboxHeaderGlassViewKey, glassView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
 
-    UIView *host = button.iconView.superview ?: button;
-    if (glassView.superview != host) {
-        [host insertSubview:glassView atIndex:0];
-    }
-    [host sendSubviewToBack:glassView];
+    SPKChromeGlassMirrorAttach(glassView, button);
 
-    CGRect bounds = host.bounds;
-    glassView.frame = bounds;
-    glassView.layer.cornerRadius = MIN(bounds.size.width, bounds.size.height) / 2.0;
-
-    CGFloat progress = SPKInboxHeaderGlassProgress(self);
-    glassView.alpha = progress > 0.0 ? MIN(progress, 1.0) : 0.0;
+    // Adopt the neighbouring IG nav bubble's own effect + ring, and fade with it.
+    SPKChromeGlassMirrorSync(glassView, self);
 }
 
 @end
