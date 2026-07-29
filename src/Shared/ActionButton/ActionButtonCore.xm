@@ -163,51 +163,14 @@ static BOOL SPKActionMenuButtonIsStories(UIButton *button) {
     return context.source == SPKActionButtonSourceStories;
 }
 
-static void SPKStabilizeStoriesActionButtonIcon(UIButton *button) {
-    SPKLog(@"Stories", @"SPKStabilizeStoriesActionButtonIcon called for %@ class:%@", button, NSStringFromClass(button.class));
+// Reapply the story header's EDR tint around a context-menu transition: UIKit resets
+// layer compositing while it animates, so the button would drop out of extended
+// dynamic range and stop matching IG's native header buttons.
+static void SPKReapplyStoriesActionButtonDynamicRange(UIButton *button) {
     if (!SPKActionMenuButtonIsStories(button))
         return;
 
-    if ([button isKindOfClass:[SPKChromeButton class]]) {
-        SPKLog(@"Stories", @"Stabilizing SPKChromeButton icon for %@", button);
-        SPKChromeButton *chromeButton = (SPKChromeButton *)button;
-        // Ensure the chrome icon view remains visible and above other subviews
-        chromeButton.iconView.hidden = NO;
-        chromeButton.iconView.alpha = 1.0;
-        chromeButton.iconView.layer.opacity = 1.0;
-        chromeButton.iconView.layer.hidden = NO;
-        [chromeButton.iconView.superview bringSubviewToFront:chromeButton.iconView];
-        [chromeButton setNeedsLayout];
-        [chromeButton layoutIfNeeded];
-    } else if ([button isKindOfClass:[UIButton class]]) {
-        SPKLog(@"Stories", @"Applying dynamic range tint to plain UIButton %@", button);
-        // For plain UIButtons, reapply story dynamic range tint so the preview picks up EDR
-        SPKStoryApplyDynamicRangeToButton(button);
-    }
-}
-
-static void SPKSetStoriesActionButtonMenuHidden(UIButton *button, BOOL hidden) {
-    if (!SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"26.0"))
-        return;
-    if (!SPKActionMenuButtonIsStories(button))
-        return;
-
-    if (hidden) {
-        if (!objc_getAssociatedObject(button, kSPKActionButtonMenuHiddenAlphaAssocKey)) {
-            objc_setAssociatedObject(button, kSPKActionButtonMenuHiddenAlphaAssocKey, @(button.alpha), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-        }
-        SPKLog(@"Stories", @"SPKSetStoriesActionButtonMenuHidden: hiding %@ (alpha=%f)", button, button.alpha);
-        button.alpha = 0.0;
-        button.layer.opacity = 0.0;
-        return;
-    }
-
-    NSNumber *storedAlpha = objc_getAssociatedObject(button, kSPKActionButtonMenuHiddenAlphaAssocKey);
-    CGFloat alpha = storedAlpha ? storedAlpha.doubleValue : 1.0;
-    SPKLog(@"Stories", @"SPKSetStoriesActionButtonMenuHidden: showing %@ (restoring alpha=%f)", button, alpha);
-    button.alpha = alpha;
-    button.layer.opacity = alpha;
-    objc_setAssociatedObject(button, kSPKActionButtonMenuHiddenAlphaAssocKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    SPKStoryApplyDynamicRangeToButton(button);
 }
 
 static UITargetedPreview *SPKReelsActionButtonMenuPreview(UIButton *button) {
@@ -239,43 +202,10 @@ static UITargetedPreview *SPKReelsActionButtonMenuPreview(UIButton *button) {
     return [[UITargetedPreview alloc] initWithView:previewView parameters:parameters];
 }
 
-static UITargetedPreview *SPKStoriesActionButtonMenuPreview(UIButton *button) {
-    if (!SPKActionMenuButtonIsStories(button))
-        return nil;
-
-    SPKStabilizeStoriesActionButtonIcon(button);
-    SPKLog(@"Stories", @"Creating stories targeted preview for button %@", button);
-
-    CGRect bounds = button.bounds;
-    if (CGRectIsEmpty(bounds)) {
-        CGFloat side = 44.0;
-        bounds = CGRectMake(0.0, 0.0, side, side);
-    }
-
-    UIView *previewView = [[UIView alloc] initWithFrame:bounds];
-    previewView.userInteractionEnabled = NO;
-    previewView.backgroundColor = UIColor.clearColor;
-    previewView.clipsToBounds = NO;
-
-    UIPreviewParameters *parameters = [[UIPreviewParameters alloc] init];
-    parameters.backgroundColor = UIColor.clearColor;
-    parameters.visiblePath = [UIBezierPath bezierPathWithOvalInRect:bounds];
-
-    if (button.superview) {
-        CGPoint center = [button.superview convertPoint:CGPointMake(CGRectGetMidX(button.bounds), CGRectGetMidY(button.bounds)) fromView:button];
-        UIPreviewTarget *target = [[UIPreviewTarget alloc] initWithContainer:button.superview center:center];
-        return [[UITargetedPreview alloc] initWithView:previewView parameters:parameters target:target];
-    }
-    return [[UITargetedPreview alloc] initWithView:previewView parameters:parameters];
-}
-
 static UITargetedPreview *SPKActionMenuButtonMenuPreview(UIButton *button) {
     UITargetedPreview *reelsPreview = SPKReelsActionButtonMenuPreview(button);
     if (reelsPreview)
         return reelsPreview;
-    UITargetedPreview *storiesPreview = SPKStoriesActionButtonMenuPreview(button);
-    if (storiesPreview)
-        return storiesPreview;
     return [[UITargetedPreview alloc] initWithView:button];
 }
 
@@ -320,13 +250,12 @@ static UITargetedPreview *SPKActionMenuButtonMenuPreview(UIButton *button) {
         return;
 
     SPKStabilizeReelsActionButtonIcon(self);
-    SPKStabilizeStoriesActionButtonIcon(self);
+    SPKReapplyStoriesActionButtonDynamicRange(self);
     [animator addAnimations:^{
         SPKStabilizeReelsActionButtonIcon(self);
-        SPKStabilizeStoriesActionButtonIcon(self);
+        SPKReapplyStoriesActionButtonDynamicRange(self);
     }];
     SPKSetReelsActionButtonMenuHidden(self, YES);
-    SPKSetStoriesActionButtonMenuHidden(self, YES);
 
     objc_setAssociatedObject(self, kSPKActionButtonLastMenuActionAssocKey, nil, OBJC_ASSOCIATION_COPY_NONATOMIC);
     if (context.source == SPKActionButtonSourceStories) {
@@ -344,20 +273,19 @@ static UITargetedPreview *SPKActionMenuButtonMenuPreview(UIButton *button) {
     (void)configuration;
 
     SPKStabilizeReelsActionButtonIcon(self);
-    SPKStabilizeStoriesActionButtonIcon(self);
+    SPKReapplyStoriesActionButtonDynamicRange(self);
     [animator addAnimations:^{
         SPKStabilizeReelsActionButtonIcon(self);
-        SPKStabilizeStoriesActionButtonIcon(self);
+        SPKReapplyStoriesActionButtonDynamicRange(self);
     }];
     SPKSetReelsActionButtonMenuHidden(self, NO);
-    SPKSetStoriesActionButtonMenuHidden(self, NO);
 
     [animator addCompletion:^{
         SPKActionMenuButton *strongSelf = self;
         if (!strongSelf)
             return;
         SPKStabilizeReelsActionButtonIcon(strongSelf);
-        SPKStabilizeStoriesActionButtonIcon(strongSelf);
+        SPKReapplyStoriesActionButtonDynamicRange(strongSelf);
 
         SPKActionButtonContext *context = SPKActionButtonContextFromButton(strongSelf);
         NSString *lastAction = objc_getAssociatedObject(strongSelf, kSPKActionButtonLastMenuActionAssocKey);
