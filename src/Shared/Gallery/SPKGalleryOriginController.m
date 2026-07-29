@@ -362,6 +362,11 @@ static BOOL SPKGalleryURLIsPostOrReel(NSURL *url) {
 
     if (!metadata.importPostedDate) {
         NSDate *postedDate = SPKGalleryRecursiveDateForKeys(media, @[ @"taken_at", @"takenAt", @"takenAtDate", @"device_timestamp", @"deviceTimestamp", @"created_at", @"createdAt", @"upload_time", @"uploadTime", @"published_time", @"publishedTime" ], 0);
+        // DM story replies / visual messages carry no post date, only a send time on
+        // their envelope; SPKUtils knows how to dig that out (and how to reject the
+        // non-date values those loosely-named keys also hold).
+        if (!postedDate)
+            postedDate = [SPKUtils postedDateFromMediaObject:media];
         if (postedDate)
             metadata.importPostedDate = postedDate;
     }

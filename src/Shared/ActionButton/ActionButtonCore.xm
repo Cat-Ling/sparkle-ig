@@ -3819,11 +3819,16 @@ void SPKConfigureActionButton(UIButton *button, SPKActionButtonContext *context)
     // slide). Other surfaces build eagerly — same behavior as before.
     UIMenu *fullMenu;
     NSString *menuTitle = @"";
-    if ([SPKUtils getBoolPref:@"general_action_btn_show_date"]) {
+    // Profile pictures have no posted date — the media object is an IGUser. Skip the
+    // lookup rather than walking a large user object to conclude nothing every time.
+    if ([SPKUtils getBoolPref:@"general_action_btn_show_date"] && context.source != SPKActionButtonSourceProfile) {
         id media = SPKResolveMediaForContext(context);
         NSDate *postedDate = [SPKUtils postedDateFromMediaObject:media];
         if (postedDate) {
             menuTitle = [SPKUtils spk_formattedDateHeader:postedDate] ?: @"";
+        } else {
+            SPKLog(@"ActionButton", @"menu title has no date: source=%ld media=%@", (long)context.source,
+                   media ? NSStringFromClass([media class]) : @"(nil)");
         }
     }
 

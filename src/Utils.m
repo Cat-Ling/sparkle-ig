@@ -1069,6 +1069,17 @@ static NSDate *SPKDateFromTimestampValue(id value) {
     return [NSDate dateWithTimeIntervalSince1970:timestamp];
 }
 
+// Guard for the loosely-named keys below (`timestamp`, `sentAt`, ...): those names
+// are also used for playback positions, durations and cache ages, which decode into
+// absurd dates. Anything outside "Instagram existed and it isn't tomorrow" is not a
+// posted date.
+static BOOL SPKDateIsPlausiblePostedDate(NSDate *date) {
+    if (!date)
+        return NO;
+    NSTimeInterval t = date.timeIntervalSince1970;
+    return t > 1262304000.0 /* 2010-01-01 */ && t < [NSDate date].timeIntervalSince1970 + 86400.0;
+}
+
 static id SPKFieldCacheValue(id target, NSString *key) {
     if (!target || key.length == 0)
         return nil;
@@ -1090,17 +1101,96 @@ static NSDate *SPKRecursiveDateForKeys(id target, NSArray<NSString *> *keys, NSI
         if (!value)
             value = SPKFieldCacheValue(target, key);
         NSDate *date = SPKDateFromTimestampValue(value);
-        if (date)
+        if (SPKDateIsPlausiblePostedDate(date))
             return date;
     }
 
-    for (NSString *selectorName in @[ @"media", @"item", @"storyItem", @"visualMessage", @"explorePostInFeed", @"rootItem", @"clipsItem", @"clipsMedia", @"post" ]) {
+    // `message` / `metadata` / `visualMediaInfo` reach the DM envelope: a direct
+    // story reply or view-once visual message (IGDirectVisualMessage) carries no
+    // date of its own, only its IGDirectUIMessage envelope does.
+    for (NSString *selectorName in @[ @"media", @"item", @"storyItem", @"visualMessage", @"explorePostInFeed", @"rootItem", @"clipsItem", @"clipsMedia", @"post", @"message", @"metadata", @"visualMediaInfo" ]) {
         id nested = SPKObjectForSelector(target, selectorName);
         if (!nested)
             nested = SPKKVCObject(target, selectorName);
         if (!nested || nested == target)
             continue;
         NSDate *date = SPKRecursiveDateForKeys(nested, keys, depth + 1);
+        if (date)
+            return date;
+    }
+
+    return nil;
+}
+
+// Does this key name look like it holds a send/post time? Used both to rank the
+// known-key list and to drive the last-resort property scan below.
+static BOOL SPKKeyNameLooksLikePostedDate(NSString *name) {
+    if (name.length == 0)
+        return NO;
+    NSString *lower = name.lowercaseString;
+    for (NSString *needle in @[ @"timestamp", @"takenat", @"sentdate", @"senttime", @"sentat", @"senddate", @"createdat", @"createdtime", @"createddate", @"publishtime", @"publishedtime", @"uploadtime" ]) {
+        if ([lower containsString:needle])
+            return YES;
+    }
+    return NO;
+}
+
+// Last resort for objects whose date field we don't know by name — notably IG's
+// devirtualized value objects (IGDirectUIMessage and friends), whose fields are
+// generated per build and change names between IG versions. Only object/number
+// properties declared by the class itself are read, and every candidate still has
+// to pass the plausibility guard, so a stray "timestamp" duration can't win.
+static NSDate *SPKScanObjectForPostedDate(id target, NSInteger depth) {
+    if (!target || depth > 2)
+        return nil;
+
+    id fieldCache = SPKKVCObject(target, @"_fieldCache");
+    if ([fieldCache isKindOfClass:[NSDictionary class]]) {
+        for (id key in (NSDictionary *)fieldCache) {
+            if (![key isKindOfClass:[NSString class]] || !SPKKeyNameLooksLikePostedDate(key))
+                continue;
+            NSDate *date = SPKDateFromTimestampValue(((NSDictionary *)fieldCache)[key]);
+            if (SPKDateIsPlausiblePostedDate(date))
+                return date;
+        }
+    }
+
+    for (Class cls = object_getClass(target); cls && cls != [NSObject class]; cls = class_getSuperclass(cls)) {
+        unsigned int count = 0;
+        objc_property_t *properties = class_copyPropertyList(cls, &count);
+        NSDate *found = nil;
+        for (unsigned int i = 0; i < count && !found; i++) {
+            NSString *name = @(property_getName(properties[i]));
+            if (!SPKKeyNameLooksLikePostedDate(name))
+                continue;
+
+            // Object, integer and floating-point properties only: reading a struct
+            // or C-pointer getter through KVC/objc_msgSend would misinterpret it.
+            char *type = property_copyAttributeValue(properties[i], "T");
+            BOOL readable = type && (type[0] == '@' || type[0] == 'q' || type[0] == 'Q' ||
+                                     type[0] == 'i' || type[0] == 'I' || type[0] == 'l' ||
+                                     type[0] == 'L' || type[0] == 'd' || type[0] == 'f');
+            free(type);
+            if (!readable)
+                continue;
+
+            id value = SPKKVCObject(target, name);
+            NSDate *date = SPKDateFromTimestampValue(value);
+            if (SPKDateIsPlausiblePostedDate(date))
+                found = date;
+        }
+        free(properties);
+        if (found)
+            return found;
+    }
+
+    // The interesting object is often not the one handed to us: IGDirectUIMessage
+    // declares no properties at all, and the date sits on its `metadata`.
+    for (NSString *selectorName in @[ @"message", @"metadata", @"visualMediaInfo", @"media", @"item" ]) {
+        id nested = SPKObjectForSelector(target, selectorName) ?: SPKKVCObject(target, selectorName);
+        if (!nested || nested == target)
+            continue;
+        NSDate *date = SPKScanObjectForPostedDate(nested, depth + 1);
         if (date)
             return date;
     }
@@ -1118,7 +1208,22 @@ static NSDate *SPKRecursiveDateForKeys(id target, NSArray<NSString *> *keys, NSI
     if (backingMedia && backingMedia != media)
         media = backingMedia;
 
-    return SPKRecursiveDateForKeys(media, @[ @"taken_at", @"takenAt", @"takenAtDate", @"device_timestamp", @"deviceTimestamp", @"created_at", @"createdAt", @"upload_time", @"uploadTime", @"published_time", @"publishedTime" ], 0);
+    NSDate *date = SPKRecursiveDateForKeys(media, @[
+        @"taken_at", @"takenAt", @"takenAtDate", @"device_timestamp", @"deviceTimestamp",
+        @"created_at", @"createdAt", @"upload_time", @"uploadTime", @"published_time", @"publishedTime",
+        // DM envelopes: the "posted" date of a story reply / visual message is when it
+        // was sent. `sentDate` is the live one on IG 440 — IGDirectVisualMessage.message
+        // (IGDirectUIMessage) declares nothing itself, its `.metadata`
+        // (IGDirectUIMessageMetadata) holds the NSDate. `timestamp` covers
+        // IGDirectAggregatedMedia in the aggregated viewer.
+        @"sentDate", @"timestamp", @"timestampInMicroseconds", @"timestampUs", @"timestampMs", @"timestampInMs",
+        @"timestampSeconds", @"timestampInSec", @"serverTimestamp", @"sentAt", @"sentTime"
+    ],
+                                           0);
+    if (date)
+        return date;
+
+    return SPKScanObjectForPostedDate(media, 0);
 }
 
 + (nullable NSString *)spk_formattedDateHeader:(nullable NSDate *)date {
