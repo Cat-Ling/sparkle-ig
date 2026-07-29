@@ -457,7 +457,7 @@ clearing, and more.
 
 ### Instagram
 - **Hide TestFlight Popup**: Suppresses the Instagram Beta update popup. This is always active on release builds to support sideloading (and is configurable on developer builds).
-- **Fix Duplicate Notifications**: Drops the duplicate in-app banner sideloaded Instagram posts while the notification extension is already delivering the same push. Only acts while the app is foregrounded.
+- **Fix Duplicate Notifications**: Drops the local copy Instagram re-adds for a push its notification extension is already delivering. Instagram normally handles this itself, so leave it off unless duplicates actually reach you.
 - **Disable Safe Mode**: Prevents Instagram from resetting settings after repeated crashes (use with care).
 
 ---

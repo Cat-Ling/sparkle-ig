@@ -76,6 +76,7 @@
                                             @"•  Hide UI on capture\n"
                                             @"•  Download encoding settings\n"
                                             @"•  Gallery view, sort & lock\n"
+                                            @"•  Fix duplicate notifications\n"
                                             @"•  Disable All (master switch)\n\n"
                                             @"Gallery media ownership is controlled separately in Gallery settings.";
 
