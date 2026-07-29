@@ -295,6 +295,7 @@ logs, and Profile Analyzer data live locally under `Documents/Sparkle/`.
 
 ### Browsing
 - **Show Favorites at Top**: Pins favorites within the current sort/folder.
+- **Show Files From Subfolders**: Lists everything in one grid/list instead of only the current folder's own files, so the Gallery root shows all your media without opening a single folder. Folders stay in the chip bar and still narrow the list to their own subtree, and each item shows the folder it lives in. Searching **All Folders** works as before.
 - **Grid density**: Pinch the grid to switch between 2 / 3 / 5 columns (persisted).
 - **Folder chips**: Subfolders appear as a horizontally-scrolling chip strip above the media.
 - **Source & username overlays**: Grid items can show the source-type icon and `@username` (toggleable; username shows at lower densities). Video/audio items show a duration label.

@@ -222,6 +222,10 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                                              selector:@selector(handleGalleryPreferencesChanged:)
                                                  name:SPKGalleryHiddenSourcesDidChangeNotification
                                                object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleGalleryPreferencesChanged:)
+                                                 name:kSPKGalleryBrowsingScopeChangedNotification
+                                               object:nil];
     // Re-scope when the active account changes (per-account filter).
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(handleGalleryPreferencesChanged:)
@@ -610,7 +614,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
         SPKGalleryFile *file = [self galleryFileForCollectionIndexPath:indexPath];
         if (!file)
             continue;
-        NSString *folderName = [self searchResultFolderNameForFile:file];
+        NSString *folderName = [self folderBadgeNameForFile:file];
         [(SPKGalleryGridCell *)cell configureWithGalleryFile:file
                                                selectionMode:self.selectionMode
                                                     selected:[self.selectedFileIDs containsObject:file.identifier]
@@ -736,6 +740,12 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
 #pragma mark - Fetched Results Controller
 
+/// Whether the grid lists the files inside subfolders alongside the current
+/// folder's own ones. Read on every fetch, so the settings toggle applies live.
+- (BOOL)flatBrowsingEnabled {
+    return [SPKUtils getBoolPref:kSPKGalleryFlatBrowsingKey];
+}
+
 - (void)setupFetchedResultsController {
     NSFetchRequest *request = [self currentFetchRequest];
 
@@ -763,12 +773,26 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     // "Search all folders" only applies while actually searching; otherwise stay
     // scoped to the current folder.
     BOOL searchingAllFolders = self.searchAllFolders && query.length > 0;
+    // Flat browsing widens the folder scope from "this folder" to "this folder and
+    // everything under it" (so the root lists the whole gallery). The exact-folder
+    // predicate the filter builds can't express that, so ask it not to scope and add
+    // the subtree predicate here. Folders stay browsable: descending still narrows
+    // the subtree, and searching all folders still drops the scope entirely.
+    BOOL flatBrowsing = [self flatBrowsingEnabled];
     NSPredicate *basePredicate = [SPKGalleryFilterViewController predicateForTypes:self.filterTypes
                                                                            sources:self.filterSources
                                                                      favoritesOnly:self.filterFavoritesOnly
                                                                          usernames:self.filterUsernames
                                                                         folderPath:self.currentFolderPath
-                                                                     scopeToFolder:!searchingAllFolders];
+                                                                     scopeToFolder:!searchingAllFolders && !flatBrowsing];
+    if (flatBrowsing && !searchingAllFolders && self.currentFolderPath.length > 0) {
+        NSPredicate *subtree = [NSPredicate predicateWithFormat:@"folderPath == %@ OR folderPath BEGINSWITH %@",
+                                                               self.currentFolderPath,
+                                                               [self.currentFolderPath stringByAppendingString:@"/"]];
+        basePredicate = basePredicate
+                            ? [NSCompoundPredicate andPredicateWithSubpredicates:@[ basePredicate, subtree ]]
+                            : subtree;
+    }
     NSPredicate *visibleSources = SPKGalleryVisibleSourcesPredicate();
     if (visibleSources) {
         basePredicate = basePredicate
@@ -952,7 +976,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
         BOOL showsMeta = ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryGridShowSourceUsernameDisabledKey];
         // Username caption only fits at roomy densities (2-3 columns).
         BOOL showsUsername = showsMeta && self.gridColumns <= 3;
-        NSString *folderName = [self searchResultFolderNameForFile:file];
+        NSString *folderName = [self folderBadgeNameForFile:file];
         [cell configureWithGalleryFile:file
                          selectionMode:self.selectionMode
                               selected:[self.selectedFileIDs containsObject:file.identifier]
@@ -966,15 +990,17 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     [cell configureWithGalleryFile:file
                      selectionMode:self.selectionMode
                           selected:[self.selectedFileIDs containsObject:file.identifier]];
-    [cell setFolderContextName:[self searchResultFolderNameForFile:file]];
+    [cell setFolderContextName:[self folderBadgeNameForFile:file]];
     [cell setMoreActionsMenu:self.selectionMode ? nil : [self fileActionsMenuForFile:file]];
     return cell;
 }
 
-// The folder a search result lives in, shown on the cell only while searching
-// across all folders and when the file is in a different, non-root folder.
-- (NSString *)searchResultFolderNameForFile:(SPKGalleryFile *)file {
-    if (!self.searchAllFolders || self.searchQuery.length == 0) {
+// The folder a listed file lives in, shown on the cell only when the list can
+// span folders (searching across all folders, or flat browsing) and the file is
+// in a different, non-root folder — otherwise the label is noise.
+- (NSString *)folderBadgeNameForFile:(SPKGalleryFile *)file {
+    BOOL listSpansFolders = [self flatBrowsingEnabled] || (self.searchAllFolders && self.searchQuery.length > 0);
+    if (!listSpansFolders) {
         return nil;
     }
     NSString *folderPath = file.folderPath;

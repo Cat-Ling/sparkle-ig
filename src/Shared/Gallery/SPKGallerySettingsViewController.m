@@ -101,6 +101,9 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
             [SPKSetting switchCellWithTitle:@"Show Favorites at Top"
                                        icon:SPKSettingsIcon(@"heart")
                                 defaultsKey:kFavoritesAtTopKey],
+            [SPKSetting switchCellWithTitle:@"Show Files From Subfolders"
+                                       icon:SPKSettingsIcon(@"folder")
+                                defaultsKey:kSPKGalleryFlatBrowsingKey],
             [SPKSetting navigationCellWithTitle:@"Hidden Sources"
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"eye_off")
@@ -217,7 +220,7 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
         [[NSNotificationCenter defaultCenter] postNotificationName:@"SPKGalleryFavoritesSortPreferenceChanged" object:nil];
     };
     // Defaults ON; the backing pref stores the *disabled* state, so the switch inverts.
-    SPKSetting *pinFolderRow = [SPKSetting switchCellWithTitle:@"Pin Folder Bar" icon:SPKSettingsIcon(@"folder") defaultsKey:@""];
+    SPKSetting *pinFolderRow = [SPKSetting switchCellWithTitle:@"Pin Folder Bar" icon:SPKSettingsIcon(@"pin") defaultsKey:@""];
     pinFolderRow.switchValueProvider = ^BOOL {
         return ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryFolderBarPinDisabledKey];
     };
@@ -225,9 +228,14 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
         [[NSUserDefaults standardUserDefaults] setBool:!isOn forKey:kSPKGalleryFolderBarPinDisabledKey];
         [[NSNotificationCenter defaultCenter] postNotificationName:kSPKGalleryGridControlsChangedNotification object:nil];
     };
-    [sections addObject:SPKTopicSection(@"Browsing", @[favoritesRow, pinFolderRow],
+    SPKSetting *flatBrowsingRow = [SPKSetting switchCellWithTitle:@"Show Files From Subfolders" icon:SPKSettingsIcon(@"folder") defaultsKey:kSPKGalleryFlatBrowsingKey];
+    flatBrowsingRow.action = ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:kSPKGalleryBrowsingScopeChangedNotification object:nil];
+    };
+    [sections addObject:SPKTopicSection(@"Browsing", @[favoritesRow, pinFolderRow, flatBrowsingRow],
                                         @"1. Pin favorites above other files inside the current sort and folder context.\n"
-                                        @"2. Keep the subfolder bar pinned to the top while scrolling.")];
+                                        @"2. Keep the subfolder bar pinned to the top while scrolling.\n"
+                                        @"3. Show files from all folders instead of only the current folder's files. The folders stay in the bar above and still narrow the list.")];
 
     [sections addObject:SPKTopicSection(@"Editing", @[
                   [SPKSetting switchCellWithTitle:@"Ask to Replace Original"

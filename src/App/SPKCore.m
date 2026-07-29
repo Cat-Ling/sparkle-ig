@@ -215,6 +215,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"reels_hide_repost_btn" : @(NO),
         @"stories_poll_vote_counts" : @(NO),
         @"gallery_show_favorites_top" : @(NO),
+        @"gallery_flat_browsing" : @(NO),
         @"gallery_hidden_sources" : @[],
         @"gallery_filter_current_account" : @(NO),
         @"general_per_account_settings" : @(NO),
