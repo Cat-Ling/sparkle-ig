@@ -908,14 +908,25 @@ typedef NS_ENUM(NSInteger, SPKPASectionKind) {
 // its badge — the badge tracks unseen, the grouping tracks scan recency.
 - (void)openChangeCategory:(SPKPAChangeType)type title:(NSString *)title {
     SPKProfileAnalyzerListViewController *vc;
+    // The list is handed display objects, not events, so keep the way back for
+    // swipe-to-delete: map each row's object to the event that produced it. Keyed by
+    // pointer identity — every event deserializes its own user, so two events for the
+    // same account stay distinguishable, which an eventID keyed by the row's contents
+    // could not guarantee.
+    NSMapTable<id, SPKProfileAnalyzerChangeEvent *> *eventForItem =
+        [NSMapTable mapTableWithKeyOptions:NSPointerFunctionsObjectPointerPersonality | NSPointerFunctionsStrongMemory
+                             valueOptions:NSPointerFunctionsObjectPersonality | NSPointerFunctionsStrongMemory];
+
     if (type == SPKPAChangeTypeProfileUpdate) {
         NSMutableArray *latest = [NSMutableArray array], *previous = [NSMutableArray array];
         for (SPKProfileAnalyzerChangeEvent *e in self.changeEvents) {
             if (e.type != type)
                 continue;
             SPKProfileAnalyzerProfileChange *ch = e.asProfileChange;
-            if (ch)
+            if (ch) {
+                [eventForItem setObject:e forKey:ch];
                 [([self eventIsFromLatestScan:e] ? latest : previous) addObject:ch];
+            }
         }
         vc = [[SPKProfileAnalyzerListViewController alloc] initWithTitle:title
                                                     latestProfileUpdates:latest
@@ -925,6 +936,7 @@ typedef NS_ENUM(NSInteger, SPKPASectionKind) {
         for (SPKProfileAnalyzerChangeEvent *e in self.changeEvents) {
             if (e.type != type)
                 continue;
+            [eventForItem setObject:e forKey:e.user];
             [([self eventIsFromLatestScan:e] ? latest : previous) addObject:e.user];
         }
         vc = [[SPKProfileAnalyzerListViewController alloc] initWithTitle:title
@@ -932,6 +944,17 @@ typedef NS_ENUM(NSInteger, SPKPASectionKind) {
                                                            previousUsers:previous
                                                                     kind:[self listKindForChangeType:type]];
     }
+
+    __weak typeof(self) weakSelf = self;
+    vc.onRemoveEntry = ^(id item) {
+        SPKProfileAnalyzerChangeEvent *event = [eventForItem objectForKey:item];
+        typeof(self) strongSelf = weakSelf;
+        if (!event || !strongSelf)
+            return;
+        [SPKProfileAnalyzerStorage removeChangeEventsWithIDs:@[ event.eventID ] forUserPK:strongSelf.selfPK];
+        [strongSelf loadCachedData];
+    };
+
     [self.navigationController pushViewController:vc animated:YES];
     [SPKProfileAnalyzerStorage markChangeEventsSeenForType:type forUserPK:self.selfPK];
 }

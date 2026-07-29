@@ -44,6 +44,11 @@ extern NSNotificationName const SPKProfileAnalyzerDataDidChangeNotification;
 + (NSDictionary<NSNumber *, NSNumber *> *)unseenChangeCountsForUserPK:(NSString *)userPK;
 // Marks every event of `type` as seen (clears that category's badge).
 + (void)markChangeEventsSeenForType:(SPKPAChangeType)type forUserPK:(NSString *)userPK;
+// Drops individual logged events (identified by `eventID`) — the swipe-to-delete path
+// in the change lists. A deleted event is not re-detected by a later scan (the delta is
+// computed against the rotated snapshot, which already contains the change), but
+// importing a backup that still holds it will bring it back.
++ (void)removeChangeEventsWithIDs:(NSArray<NSString *> *)eventIDs forUserPK:(NSString *)userPK;
 + (void)clearChangeLogForUserPK:(NSString *)userPK;
 
 #pragma mark - Header cache

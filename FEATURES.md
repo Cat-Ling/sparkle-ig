@@ -403,6 +403,7 @@ can't be analyzed because a single scan would hit Instagram's rate limits.
   - **You Started Following** / **You Unfollowed**: your following changes over time.
   - **Profile Updates**: username, name, or profile-picture changes for tracked accounts.
   - Each category badges the number of changes you haven't looked at yet; inside, unseen changes are grouped under **Latest** above previously-seen ones under **Previous**. Opening a category clears its badge.
+  - **Swipe any change to delete it** once you've seen it: the entry is dropped from the stored history and the category's count drops to match. Only that entry goes; the rest of the history and your snapshots are untouched.
 - Each list supports search, sorting (A–Z / Z–A / default), tapping a row to open the profile, and inline **Follow / Unfollow** with live follow-state resolution.
 
 ### Tracking

@@ -849,20 +849,35 @@ static NSString *SPKPARelativeDate(NSDate *date) {
     }
 }
 
-#pragma mark - Swipe to delete (visited list only)
+#pragma mark - Swipe to delete (visited list, and change lists with an owner)
 
 - (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
-    if (self.kind != SPKPAListKindVisited)
-        return nil;
-    if (indexPath.row >= (NSInteger)self.shownVisits.count)
+    void (^removal)(void) = nil;
+    __weak typeof(self) weakSelf = self;
+
+    if (self.kind == SPKPAListKindVisited) {
+        if (indexPath.row >= (NSInteger)self.shownVisits.count)
+            return nil;
+        SPKProfileAnalyzerVisit *visit = self.shownVisits[indexPath.row];
+        removal = ^{
+            [weakSelf removeVisit:visit];
+        };
+    } else if (self.onRemoveEntry) {
+        id item = [self entryAtIndexPath:indexPath];
+        if (!item)
+            return nil;
+        removal = ^{
+            [weakSelf removeEntry:item];
+        };
+    }
+
+    if (!removal)
         return nil;
 
-    __weak typeof(self) weakSelf = self;
-    SPKProfileAnalyzerVisit *visit = self.shownVisits[indexPath.row];
     UIContextualAction *del = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive
                                                                       title:nil
                                                                     handler:^(UIContextualAction *action, UIView *sourceView, void (^done)(BOOL)) {
-                                                                        [weakSelf removeVisit:visit];
+                                                                        removal();
                                                                         done(YES);
                                                                     }];
     del.image = [SPKAssetUtils menuIconNamed:@"trash"];
@@ -877,6 +892,60 @@ static NSString *SPKPARelativeDate(NSDate *date) {
     self.allVisits = all;
     if (self.onRemoveVisit)
         self.onRemoveVisit(visit);
+    [self applyFilterAndSort];
+}
+
+// The row's underlying item, whichever list shape we are in. Grouped lists keep it in a
+// section; flat ones in the per-kind array.
+- (id)entryAtIndexPath:(NSIndexPath *)indexPath {
+    if (self.grouped)
+        return [self itemAtIndexPath:indexPath];
+    if (self.kind == SPKPAListKindProfileUpdate)
+        return indexPath.row < (NSInteger)self.shownUpdates.count ? self.shownUpdates[indexPath.row] : nil;
+    return indexPath.row < (NSInteger)self.shownUsers.count ? self.shownUsers[indexPath.row] : nil;
+}
+
+// Drop the item locally, then let the owner persist it. Removal is by pointer identity
+// (`indexOfObjectIdenticalTo:`) rather than equality: neither model class implements
+// -isEqual:, and two entries for the same account are legitimately distinct rows.
+- (void)removeEntry:(id)item {
+    if (!item)
+        return;
+
+    if (self.grouped) {
+        NSMutableArray<SPKPAListSection *> *sections = [NSMutableArray array];
+        for (SPKPAListSection *base in self.baseSections) {
+            NSUInteger idx = [base.items indexOfObjectIdenticalTo:item];
+            if (idx == NSNotFound) {
+                [sections addObject:base];
+                continue;
+            }
+            NSMutableArray *items = [base.items mutableCopy];
+            [items removeObjectAtIndex:idx];
+            if (!items.count)
+                continue; // an emptied group loses its header too
+            SPKPAListSection *s = [SPKPAListSection new];
+            s.title = base.title;
+            s.items = items;
+            [sections addObject:s];
+        }
+        self.baseSections = sections;
+    } else if (self.kind == SPKPAListKindProfileUpdate) {
+        NSMutableArray *all = [self.allUpdates mutableCopy];
+        NSUInteger idx = [all indexOfObjectIdenticalTo:item];
+        if (idx != NSNotFound)
+            [all removeObjectAtIndex:idx];
+        self.allUpdates = all;
+    } else {
+        NSMutableArray *all = [self.allUsers mutableCopy];
+        NSUInteger idx = [all indexOfObjectIdenticalTo:item];
+        if (idx != NSNotFound)
+            [all removeObjectAtIndex:idx];
+        self.allUsers = all;
+    }
+
+    if (self.onRemoveEntry)
+        self.onRemoveEntry(item);
     [self applyFilterAndSort];
 }
 
