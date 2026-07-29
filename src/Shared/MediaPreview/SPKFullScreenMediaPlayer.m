@@ -1765,8 +1765,10 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         });
 }
 
-- (void)saveLocalFileURLToPhotos:(NSURL *)fileURL
-                   temporaryFile:(BOOL)temporaryFile {
+// Cleanup of `fileURL` is deliberately not ours, even when the caller just staged it: the
+// submission is asynchronous (a duplicate prompt can hold it up indefinitely), and the
+// download scheduler consumes a job's local source file and clears it with the job.
+- (void)saveLocalFileURLToPhotos:(NSURL *)fileURL {
     if (!fileURL)
         return;
 
@@ -1786,13 +1788,6 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                 anchorView:[self bottomBarAnchorView]
              sourceSurface:SPKDownloadSurfaceForPlaybackSource(
                                self.playbackSource)];
-    if (temporaryFile) {
-        dispatch_after(
-            dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)),
-            dispatch_get_main_queue(), ^{
-                [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
-            });
-    }
 }
 
 #pragma mark - Playback Suppression
@@ -2157,7 +2152,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         return;
 
     if (url.isFileURL) {
-        [self saveLocalFileURLToPhotos:url temporaryFile:NO];
+        [self saveLocalFileURLToPhotos:url];
         return;
     }
 
@@ -2172,7 +2167,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                 [NSURL fileURLWithPath:[NSTemporaryDirectory()
                                            stringByAppendingPathComponent:fileName]];
             if ([jpegData writeToURL:tempURL atomically:YES]) {
-                [self saveLocalFileURLToPhotos:tempURL temporaryFile:YES];
+                [self saveLocalFileURLToPhotos:tempURL];
                 return;
             }
         }
@@ -2289,8 +2284,11 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                     [[NSUUID UUID].UUIDString stringByAppendingPathExtension:@"jpg"]];
             NSURL *tempURL = [NSURL fileURLWithPath:tempPath];
             [jpegData writeToURL:tempURL atomically:YES];
+            // No delete here: submitting is asynchronous (a duplicate prompt can sit in
+            // front of the copy for as long as the user leaves it there), and the download
+            // scheduler owns a job's local source file — it consumes it on finalize and
+            // clears it when the job leaves history.
             [self gallerySaveLocalFile:tempURL mediaType:SPKGalleryMediaTypeImage];
-            [[NSFileManager defaultManager] removeItemAtURL:tempURL error:nil];
             return;
         }
     }

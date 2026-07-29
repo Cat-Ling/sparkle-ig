@@ -2466,6 +2466,27 @@ NSDictionary<NSString *, NSString *> *SPKConsumePendingRepostFeedback(SPKActionB
     return feedback;
 }
 
+// A cover is a separate artifact from the video it belongs to, but it shares the post's
+// identity — and without any identity, `SPKDuplicateKey` has nothing to hash, so
+// duplicate detection waves every cover save through no matter how often the same one was
+// already downloaded. Carry the identity fields over (the media type already keeps the
+// cover's key apart from the video's) and leave the measurements behind: the entry's pixel
+// size and duration describe the video, not its cover.
+static SPKGallerySaveMetadata *SPKThumbnailMetadataFromEntryMetadata(SPKGallerySaveMetadata *meta) {
+    SPKGallerySaveMetadata *thumbnailMeta = [[SPKGallerySaveMetadata alloc] init];
+    thumbnailMeta.source = (int16_t)SPKGallerySourceThumbnail;
+    thumbnailMeta.sourceUsername = meta.sourceUsername;
+    thumbnailMeta.sourceUserPK = meta.sourceUserPK;
+    thumbnailMeta.sourceProfileURLString = meta.sourceProfileURLString;
+    thumbnailMeta.sourceMediaPK = meta.sourceMediaPK;
+    thumbnailMeta.sourceMediaCode = meta.sourceMediaCode;
+    // Keeps any `img_index` the carousel slide added, so two slides' covers stay distinct.
+    thumbnailMeta.sourceMediaURLString = meta.sourceMediaURLString;
+    thumbnailMeta.importPostedDate = meta.importPostedDate;
+    thumbnailMeta.sourceFullName = meta.sourceFullName;
+    return thumbnailMeta;
+}
+
 static void SPKShowExtractedVideoCover(NSURL *videoURL, SPKGallerySaveMetadata *metadata, SPKActionButtonContext *context) {
     if (!videoURL) {
         SPKNotify(kSPKNotificationViewThumbnail, @"Cover unavailable", nil, @"error_filled", SPKNotificationToneError);
@@ -2867,9 +2888,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
             return YES;
         }
 
-        SPKGallerySaveMetadata *thumbnailMeta = [[SPKGallerySaveMetadata alloc] init];
-        thumbnailMeta.source = (int16_t)SPKGallerySourceThumbnail;
-        thumbnailMeta.sourceUsername = meta.sourceUsername;
+        SPKGallerySaveMetadata *thumbnailMeta = SPKThumbnailMetadataFromEntryMetadata(meta);
         id mediaForThumbnail = currentEntry.metadataObject ?: currentEntry.mediaObject ?
                                                                                        : media;
         NSURL *coverURL = SPKCoverURLForMediaObject(mediaForThumbnail);
