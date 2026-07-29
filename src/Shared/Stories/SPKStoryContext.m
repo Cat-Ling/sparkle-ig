@@ -118,19 +118,14 @@ static NSArray *SPKStoryItemsFromCandidate(id candidate) {
     return nil;
 }
 
+// `currentIndex` is only ever used to index `allMedia`, so locating the displayed item in
+// that array beats asking IG for a number: IG's `currentIndex` & friends count the
+// viewer's own item list, while `allMedia` is filtered to the current user below, so a
+// single foreign item ahead of the displayed one shifts IG's number out of range. Which of
+// those four selectors answers at all also varies with the story type, which is what made
+// the mismatch look random rather than systematic. The reported index stays as the
+// fallback for when the displayed media isn't in the list.
 static NSInteger SPKStoryCurrentIndexFromControllerOrSection(id sectionController, UIViewController *controller, id currentMedia, NSArray *allMedia) {
-    for (id target in @[ sectionController ?: (id)NSNull.null, controller ?: (id)NSNull.null ]) {
-        if (target == (id)NSNull.null)
-            continue;
-        for (NSString *selectorName in @[ @"currentIndex", @"currentItemIndex", @"itemIndex", @"currentPage" ]) {
-            NSNumber *number = [SPKUtils numericValueForObj:target selectorName:selectorName];
-            if (number && number.integerValue >= 0)
-                return number.integerValue;
-            id value = SPKKVCObject(target, selectorName);
-            if ([value respondsToSelector:@selector(integerValue)] && [value integerValue] >= 0)
-                return [value integerValue];
-        }
-    }
     if (currentMedia && allMedia.count > 0) {
         NSUInteger idx = [allMedia indexOfObjectIdenticalTo:currentMedia];
         if (idx != NSNotFound)
@@ -142,6 +137,18 @@ static NSInteger SPKStoryCurrentIndexFromControllerOrSection(id sectionControlle
                 if ([candidateID isEqualToString:currentID])
                     return (NSInteger)i;
             }
+        }
+    }
+    for (id target in @[ sectionController ?: (id)NSNull.null, controller ?: (id)NSNull.null ]) {
+        if (target == (id)NSNull.null)
+            continue;
+        for (NSString *selectorName in @[ @"currentIndex", @"currentItemIndex", @"itemIndex", @"currentPage" ]) {
+            NSNumber *number = [SPKUtils numericValueForObj:target selectorName:selectorName];
+            if (number && number.integerValue >= 0)
+                return number.integerValue;
+            id value = SPKKVCObject(target, selectorName);
+            if ([value respondsToSelector:@selector(integerValue)] && [value integerValue] >= 0)
+                return [value integerValue];
         }
     }
     return 0;

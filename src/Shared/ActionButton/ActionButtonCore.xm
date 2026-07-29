@@ -2013,6 +2013,55 @@ static NSArray<SPKResolvedMediaEntry *> *SPKDownloadableEntries(NSArray<SPKResol
     return filtered;
 }
 
+// Where does the item on screen sit in the list we are about to hand the preview player?
+// Not necessarily at the resolved index: that index counts the surface's own item list,
+// while the preview list is a URL-filtered (and for stories, user-filtered) copy of it, so
+// one item dropped for having no resolvable URL shifts everything after it and the viewer
+// opens on a neighbour. Match the entry itself instead, and keep the number as a fallback.
+static NSInteger SPKPreviewIndexForEntry(SPKResolvedMediaEntry *currentEntry,
+                                         NSArray<SPKResolvedMediaEntry *> *previewEntries,
+                                         NSInteger fallbackIndex) {
+    NSInteger clampedFallback = SPKClampedIndex(fallbackIndex, (NSInteger)previewEntries.count);
+    if (!currentEntry || previewEntries.count == 0)
+        return clampedFallback;
+
+    // Same surface, same entry objects (a non-bulk carousel): settled immediately.
+    NSUInteger identical = [previewEntries indexOfObjectIdenticalTo:currentEntry];
+    if (identical != NSNotFound)
+        return (NSInteger)identical;
+
+    // Bulk lists are resolved separately, so compare by URL — the one signal that stays
+    // distinct across carousel slides of a single media object.
+    NSString *currentURLString = (currentEntry.videoURL ?: currentEntry.photoURL).absoluteString;
+    if (currentURLString.length > 0) {
+        for (NSUInteger i = 0; i < previewEntries.count; i++) {
+            SPKResolvedMediaEntry *entry = previewEntries[i];
+            NSString *entryURLString = (entry.videoURL ?: entry.photoURL).absoluteString;
+            if ([entryURLString isEqualToString:currentURLString])
+                return (NSInteger)i;
+        }
+    }
+
+    // Last signal: the media object behind the entry. Only trustworthy when exactly one
+    // entry carries it, since every slide of a carousel shares the same parent object.
+    id currentMedia = currentEntry.metadataObject ?: currentEntry.mediaObject;
+    if (currentMedia) {
+        NSInteger match = NSNotFound;
+        NSUInteger matchCount = 0;
+        for (NSUInteger i = 0; i < previewEntries.count; i++) {
+            SPKResolvedMediaEntry *entry = previewEntries[i];
+            if ((entry.metadataObject ?: entry.mediaObject) == currentMedia) {
+                match = (NSInteger)i;
+                matchCount++;
+            }
+        }
+        if (matchCount == 1)
+            return match;
+    }
+
+    return clampedFallback;
+}
+
 static UIViewController *SPKActionContextPresenter(SPKActionButtonContext *context) {
     if (context.controller.view.window)
         return context.controller;
@@ -2853,7 +2902,9 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
     }
 
     if ([identifier isEqualToString:kSPKActionExpand]) {
-        NSArray<SPKResolvedMediaEntry *> *previewEntries = entries;
+        // Filter here as well, so `playerItems` below (which skips entries with no URL)
+        // stays one-to-one with `previewEntries` and the index needs no second mapping.
+        NSArray<SPKResolvedMediaEntry *> *previewEntries = SPKDownloadableEntries(entries);
         NSArray<SPKResolvedMediaEntry *> *bulkEntries = SPKDownloadableEntries(SPKBulkEntriesForContext(context));
         if (bulkEntries.count > previewEntries.count) {
             previewEntries = bulkEntries;
@@ -2864,7 +2915,8 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
             return YES;
         }
 
-        NSInteger previewIndex = SPKClampedIndex(SPKResolveCurrentIndexForContext(context), (NSInteger)previewEntries.count);
+        NSInteger previewIndex = SPKPreviewIndexForEntry(currentEntry, previewEntries,
+                                                         SPKResolveCurrentIndexForContext(context));
         NSInteger clampedIndex = SPKClampedIndex(previewIndex, (NSInteger)playerItems.count);
         SPKNotify(identifier, @"Expanded media", nil, @"expand", SPKNotificationToneForIconResource(@"expand"));
         [SPKFullScreenMediaPlayer showMediaItems:playerItems
