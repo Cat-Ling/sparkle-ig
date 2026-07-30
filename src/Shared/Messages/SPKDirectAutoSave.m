@@ -321,38 +321,30 @@ void SPKDirectPresentAutoSaveThreadRuleToggle(SPKDirectThreadContext *context) {
 }
 
 - (void)lookupUsername:(NSString *)rawUsername {
-    NSString *username = SPKAutoSaveFilterNormalizedUsername(rawUsername);
+    NSString *username = [SPKUtils sanitizedInstagramUsername:rawUsername];
     if (username.length == 0)
-        return;
-    NSString *encodedUsername = [username stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-    if (encodedUsername.length == 0)
         return;
 
     __weak typeof(self) weakSelf = self;
-    [SPKInstagramAPI sendRequestWithMethod:@"GET"
-                                      path:[NSString stringWithFormat:@"users/web_profile_info/?username=%@", encodedUsername]
-                                      body:nil
-                                completion:^(NSDictionary *response, NSError *error) {
-                                    __strong typeof(weakSelf) strongSelf = weakSelf;
-                                    if (!strongSelf)
-                                        return;
-                                    NSDictionary *user = response[@"data"][@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]])
-                                        user = response[@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                        [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
-                                        return;
-                                    }
-                                    NSString *pk = SPKStringFromValue(user[@"id"] ?: user[@"pk"]);
-                                    if (pk.length == 0) {
-                                        [strongSelf presentError:@"Could not resolve this user's Instagram ID."];
-                                        return;
-                                    }
-                                    [strongSelf resolveThreadForPK:pk
-                                                          username:SPKStringFromValue(user[@"username"]) ?: username
-                                                          fullName:SPKStringFromValue(user[@"full_name"]) ?: @""
-                                                     profilePicUrl:SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"])];
-                                }];
+    [SPKInstagramAPI resolveUserForUsername:username
+                                  completion:^(NSDictionary *user, NSError *error) {
+                                      __strong typeof(weakSelf) strongSelf = weakSelf;
+                                      if (!strongSelf)
+                                          return;
+                                      if (![user isKindOfClass:[NSDictionary class]] || error) {
+                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          return;
+                                      }
+                                      NSString *pk = SPKStringFromValue(user[@"pk"] ?: user[@"id"]);
+                                      if (pk.length == 0) {
+                                          [strongSelf presentError:@"Could not resolve this user's Instagram ID."];
+                                          return;
+                                      }
+                                      [strongSelf resolveThreadForPK:pk
+                                                            username:SPKStringFromValue(user[@"username"]) ?: username
+                                                            fullName:SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @""
+                                                       profilePicUrl:SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"])];
+                                  }];
 }
 
 // The list is keyed by thread, so a username has to be turned into the 1:1 thread it

@@ -505,8 +505,10 @@ typedef NS_ENUM(NSInteger, SPKViewerFilter) {
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     SPKStoryViewerModel *v = self.shownViewers[indexPath.row];
-    if (v.username.length)
-        [SPKUtils openInstagramProfileForUsername:v.username];
+    // The viewer list endpoint already gave us the pk; opening by username alone
+    // would throw it away and resolve it again over the network.
+    if (v.pk.length || v.username.length)
+        [SPKUtils openInstagramProfileForUser:nil pk:v.pk username:v.username fromViewController:self];
 }
 
 @end

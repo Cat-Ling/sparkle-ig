@@ -1296,16 +1296,22 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
 - (void)openProfileForCurrentGalleryItem {
     SPKGalleryFile *file = self.currentItem.galleryFile;
-    if ([SPKGalleryOriginController openProfileForGalleryFile:file]) {
-        [self dismissGalleryFlowForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil,
-                      @"user_circle",
-                      SPKNotificationToneForIconResource(@"user_circle"));
-        }];
-    } else {
-        [self showGalleryOpenFailureMessage:@"Unable to open profile"
-                           actionIdentifier:kSPKNotificationGalleryOpenProfile];
-    }
+    // Completion, not the return value: see the note in -openProfileForFile:.
+    __weak __typeof(self) weakSelf = self;
+    [SPKGalleryOriginController openProfileForGalleryFile:file
+                                      fromViewController:self
+                                              completion:^(BOOL success, BOOL didLink) {
+                                                  if (success) {
+                                                      // Quiet when a link was just made: that toast already said it.
+                                                      if (!didLink)
+                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil,
+                                                                    @"user_circle",
+                                                                    SPKNotificationToneForIconResource(@"user_circle"));
+                                                  } else {
+                                                      [weakSelf showGalleryOpenFailureMessage:@"Unable to open profile"
+                                                                             actionIdentifier:kSPKNotificationGalleryOpenProfile];
+                                                  }
+                                              }];
 }
 
 - (UIMenu *)galleryOriginMenuForCurrentItem {

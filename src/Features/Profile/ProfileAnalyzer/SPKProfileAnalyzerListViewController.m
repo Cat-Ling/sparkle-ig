@@ -783,8 +783,10 @@ static NSString *SPKPARelativeDate(NSDate *date) {
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     SPKProfileAnalyzerUser *user = [self userAtIndexPath:indexPath];
-    if (user.username.length)
-        [SPKUtils openInstagramProfileForUsername:user.username];
+    // Pass the pk we already hold: a username-only open has to resolve it over
+    // the network first, and nothing appears on screen until that lands.
+    if (user.pk.length || user.username.length)
+        [SPKUtils openInstagramProfileForUser:nil pk:user.pk username:user.username fromViewController:self];
 }
 
 #pragma mark - Live follow-state resolution (batched)

@@ -5,6 +5,8 @@
 
 #import "../../Utils.h"
 #import "../ActionButton/ActionButtonLookupUtils.h"
+#import "../UI/SPKNotificationCenter.h"
+#import "SPKGalleryCoreDataStack.h"
 #import "SPKGalleryFile.h"
 #import "SPKGallerySaveMetadata.h"
 
@@ -400,11 +402,106 @@ static BOOL SPKGalleryURLIsPostOrReel(NSURL *url) {
 }
 
 + (BOOL)openProfileForGalleryFile:(SPKGalleryFile *)file {
-    if (file.sourceUsername.length > 0) {
-        return [SPKUtils openInstagramProfileForUsername:file.sourceUsername];
+    return [self openProfileForGalleryFile:file fromViewController:nil];
+}
+
++ (BOOL)openProfileForGalleryFile:(SPKGalleryFile *)file fromViewController:(UIViewController *)presentingVC {
+    return [self spk_openProfileForGalleryFile:file fromViewController:presentingVC completion:nil];
+}
+
++ (void)openProfileForGalleryFile:(SPKGalleryFile *)file
+               fromViewController:(UIViewController *)presentingVC
+                       completion:(void (^)(BOOL success, BOOL didLink))completion {
+    [self spk_openProfileForGalleryFile:file fromViewController:presentingVC completion:completion];
+}
+
+// Single implementation behind both. The BOOL is "an open was started", which is
+// all a fire-and-forget caller can use; `completion` carries the real outcome.
++ (BOOL)spk_openProfileForGalleryFile:(SPKGalleryFile *)file
+                   fromViewController:(UIViewController *)presentingVC
+                           completion:(void (^)(BOOL success, BOOL didLink))completion {
+    NSString *cleanUsername = [SPKUtils sanitizedInstagramUsername:file.sourceUsername];
+
+    // Items saved from a source that carried no user object have a username but
+    // no pk, so every open pays the username -> pk lookup again. Resolve it once
+    // and write it back: sourceUserPK is an existing optional attribute, so this
+    // is a plain field update and needs no schema migration.
+    //
+    // A pk observed at save time is the person who actually posted the media,
+    // while one resolved now is whoever holds that handle today. If the original
+    // owner renamed and somebody else took the handle, this binds the wrong
+    // person permanently -- so say so rather than doing it silently. The item is
+    // named in the toast, which is the only way the user can catch a link that
+    // looks wrong to them and clear it from the file's details.
+    //
+    // There is no stored display name to compare against (the entity keeps a
+    // username and a pk, not a name), so the tweak cannot detect the recycled
+    // handle itself. Telling the user what was linked is the honest substitute.
+    if (cleanUsername.length > 0 && file.sourceUserPK.length == 0) {
+        [SPKUtils resolvePKForUsername:cleanUsername
+                            completion:^(NSString *resolvedPK, NSString *currentName) {
+                                BOOL didLink = NO;
+                                if (resolvedPK.length > 0 && file.sourceUserPK.length == 0) {
+                                    didLink = YES;
+                                    file.sourceUserPK = resolvedPK;
+                                    [[SPKGalleryCoreDataStack shared] saveContext];
+                                    SPKLog(@"Gallery", @"backfilled sourceUserPK=%@ for @%@", resolvedPK, cleanUsername);
+
+                                    NSString *who = currentName.length > 0
+                                                        ? [NSString stringWithFormat:@"@%@ (%@)", cleanUsername, currentName]
+                                                        : [NSString stringWithFormat:@"@%@", cleanUsername];
+                                    SPKNotify(kSPKNotificationGalleryOpenProfile,
+                                              @"Account linked",
+                                              [NSString stringWithFormat:@"%@ saved to this item, so it opens instantly from now on.", who],
+                                              @"info_filled",
+                                              SPKNotificationToneInfo);
+                                }
+                                BOOL opened = [SPKUtils openInstagramProfileForUser:nil
+                                                                                pk:resolvedPK
+                                                                          username:cleanUsername
+                                                                fromViewController:presentingVC];
+                                if (completion)
+                                    completion(opened, didLink);
+                            }];
+        return YES;
+    }
+
+    if (cleanUsername.length > 0) {
+        if ([SPKUtils openInstagramProfileForUser:nil pk:file.sourceUserPK username:cleanUsername fromViewController:presentingVC]) {
+            if (completion)
+                completion(YES, NO);
+            return YES;
+        }
+    }
+    if (file.sourceUserPK.length > 0) {
+        if ([SPKUtils openInstagramProfileForUser:nil pk:file.sourceUserPK username:nil fromViewController:presentingVC]) {
+            if (completion)
+                completion(YES, NO);
+            return YES;
+        }
     }
     NSURL *url = [file preferredProfileURL];
-    return url ? [SPKUtils openInstagramMediaURL:url] : NO;
+    if (url) {
+        NSString *urlStr = url.absoluteString;
+        NSRange userRange = [urlStr rangeOfString:@"username="];
+        if (userRange.location != NSNotFound) {
+            NSString *extracted = [urlStr substringFromIndex:userRange.location + userRange.length];
+            NSRange ampRange = [extracted rangeOfString:@"&"];
+            if (ampRange.location != NSNotFound) {
+                extracted = [extracted substringToIndex:ampRange.location];
+            }
+            extracted = [SPKUtils sanitizedInstagramUsername:extracted];
+            if (extracted.length > 0) {
+                BOOL opened = [SPKUtils openInstagramProfileForUsername:extracted fromViewController:presentingVC];
+                if (completion)
+                    completion(opened, NO);
+                return opened;
+            }
+        }
+    }
+    if (completion)
+        completion(NO, NO);
+    return NO;
 }
 
 @end

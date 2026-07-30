@@ -208,56 +208,48 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
 // The list keys on username, so the lookup is only for the avatar, full name, and to
 // catch typos -- a failed lookup still leaves a usable entry.
 - (void)lookupUsername:(NSString *)rawUsername {
-    NSString *username = SPKAutoSaveFilterNormalizedUsername(rawUsername);
+    NSString *username = [SPKUtils sanitizedInstagramUsername:rawUsername];
     if (username.length == 0)
-        return;
-    NSString *encodedUsername = [username stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-    if (encodedUsername.length == 0)
         return;
 
     __weak typeof(self) weakSelf = self;
-    [SPKInstagramAPI sendRequestWithMethod:@"GET"
-                                      path:[NSString stringWithFormat:@"users/web_profile_info/?username=%@", encodedUsername]
-                                      body:nil
-                                completion:^(NSDictionary *response, NSError *error) {
-                                    __strong typeof(weakSelf) strongSelf = weakSelf;
-                                    if (!strongSelf)
-                                        return;
-                                    NSDictionary *user = response[@"data"][@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]])
-                                        user = response[@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                        [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
-                                        return;
-                                    }
+    [SPKInstagramAPI resolveUserForUsername:username
+                                  completion:^(NSDictionary *user, NSError *error) {
+                                      __strong typeof(weakSelf) strongSelf = weakSelf;
+                                      if (!strongSelf)
+                                          return;
+                                      if (![user isKindOfClass:[NSDictionary class]] || error) {
+                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          return;
+                                      }
 
-                                    NSString *resolvedUsername = SPKStringFromValue(user[@"username"]) ?: username;
-                                    NSString *fullName = SPKStringFromValue(user[@"full_name"]) ?: @"";
-                                    NSString *message = fullName.length > 0
-                                                            ? [NSString stringWithFormat:@"@%@ (%@)", resolvedUsername, fullName]
-                                                            : [@"@" stringByAppendingString:resolvedUsername];
-                                    NSMutableDictionary *entry = [@{@"username" : resolvedUsername, @"fullName" : fullName} mutableCopy];
-                                    NSString *pk = SPKStringFromValue(user[@"id"] ?: user[@"pk"]);
-                                    if (pk.length > 0)
-                                        entry[@"pk"] = pk;
-                                    NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
-                                    if (profilePicUrl.length > 0)
-                                        entry[@"profilePicUrl"] = profilePicUrl;
+                                      NSString *resolvedUsername = SPKStringFromValue(user[@"username"]) ?: username;
+                                      NSString *fullName = SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
+                                      NSString *message = fullName.length > 0
+                                                              ? [NSString stringWithFormat:@"@%@ (%@)", resolvedUsername, fullName]
+                                                              : [@"@" stringByAppendingString:resolvedUsername];
+                                      NSMutableDictionary *entry = [@{@"username" : resolvedUsername, @"fullName" : fullName} mutableCopy];
+                                      NSString *pk = SPKStringFromValue(user[@"pk"] ?: user[@"id"]);
+                                      if (pk.length > 0)
+                                          entry[@"pk"] = pk;
+                                      NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
+                                      if (profilePicUrl.length > 0)
+                                          entry[@"profilePicUrl"] = profilePicUrl;
 
-                                    [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
-                                                                                  title:@"Auto-Save Instants?"
-                                                                                message:message
-                                                                                actions:@[
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
-                                                                                                                style:SPKIGAlertActionStyleCancel
-                                                                                                              handler:nil],
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Add"
-                                                                                                                style:SPKIGAlertActionStyleDefault
-                                                                                                              handler:^{
-                                                                                                                  [strongSelf addResolvedEntry:entry.copy username:resolvedUsername];
-                                                                                                              }],
-                                                                                ]];
-                                }];
+                                      [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
+                                                                                    title:@"Auto-Save Instants?"
+                                                                                  message:message
+                                                                                  actions:@[
+                                                                                      [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                                                                                  style:SPKIGAlertActionStyleCancel
+                                                                                                                handler:nil],
+                                                                                      [SPKIGAlertAction actionWithTitle:@"Add"
+                                                                                                                  style:SPKIGAlertActionStyleDefault
+                                                                                                                handler:^{
+                                                                                                                    [strongSelf addResolvedEntry:entry.copy username:resolvedUsername];
+                                                                                                                }],
+                                                                                  ]];
+                                  }];
 }
 
 - (void)addResolvedEntry:(NSDictionary *)entry username:(NSString *)username {

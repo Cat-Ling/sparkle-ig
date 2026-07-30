@@ -48,6 +48,29 @@
 - (NSString *)ig_imageName;
 @end
 
+// Built only by ivar injection -- see SPKUtils spk_userReferenceForUser:. The
+// factory methods you would expect (+user:, +username:, ...) are Swift-only and
+// throw "unrecognized selector sent to class", so they are deliberately absent.
+@interface IGUserReference : NSObject
+- (nullable NSString *)pk;
+- (nullable NSString *)username;
+- (nullable id)user;
+@end
+
+@interface IGURLHandler : NSObject
++ (BOOL)openInternalURL:(id)url presentationConfig:(nullable id)config controller:(nullable id)controller animated:(BOOL)animated userSession:(id)session annotation:(nullable id)annotation;
++ (void)openURL:(id)url userSession:(id)session completionHandler:(nullable id /* block */)handler;
+@end
+
+@interface IGProfileConfig : NSObject
+- (instancetype)initWithUserReference:(id)userReference userSession:(id)userSession previousAnalyticsModule:(nullable NSString *)module;
+- (instancetype)initWithUserReference:(id)userReference userSession:(id)userSession;
+@end
+
+@interface IGProfileViewController : UIViewController
+- (instancetype)initWithConfiguration:(id)configuration accountSwitcherPresenter:(nullable id)presenter isMainProfileSurface:(BOOL)isMainProfileSurface;
+@end
+
 @interface IGProfileMenuSheetViewController : IGViewController
 @end
 

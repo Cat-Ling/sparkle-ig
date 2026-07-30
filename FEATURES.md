@@ -154,7 +154,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 ### Other
 - **Search Viewer List**: Adds a search button to your own story's viewer list. Tapping it fetches the complete viewer list and opens a sheet where you can search by username or name and filter by follow relationship (All / Following / Not Following). A fully Sparkle-native alternative to the Instagram Plus viewer search.
 - **Hide Story Midcards**: Removes the "Join a trending" / "Add Yours" promo cards from the stories tray. 
-- **Show Story Mentions**: Adds a mentions button listing mentioned users.
+- **Show Story Mentions**: Adds a mentions button listing mentioned users. Tapping a user opens their real profile over the story viewer instead of closing it, so swiping back or tapping the back button returns you straight to the story.
 - **Show Poll Vote Counts**: Shows vote counts next to poll options.
 
 ---
@@ -301,7 +301,7 @@ logs, and Profile Analyzer data live locally under `Documents/Sparkle/`.
 - **Source & username overlays**: Grid items can show the source-type icon and `@username` (toggleable; username shows at lower densities). Video/audio items show a duration label.
 - **Grid / list view** and **sort / filter** controls in the bottom toolbar.
 - **Picker sheets**: Anywhere Sparkle asks you to choose saved media — Direct uploads, the comment composer, Instants, story stickers — you get the same browser as the Gallery itself: folder chips with item counts, grid/list toggle, pinch density, sort, filter, and search. Folders open in place with a back button rather than stacking sheets, and your scroll position is restored when you come back out. Picking an item whose file has since gone missing reports it instead of failing silently. Multi-select pickers show the running count on the **Add** button.
-- **Item actions**: Each item's menu can **Open Story / Reel / Post** (the label and link match the saved source: stories open `instagram.com/stories/...`; posts/reels open their canonical `instagram.com/p/...` or `instagram.com/reel/...` permalink when available, with the authenticated media deep link kept as a fallback) and **Open Profile**, plus favorite, rename, move, share, **Trim** (videos and audio), **Edit** (photos: see Editing), and delete.
+- **Item actions**: Each item's menu can **Open Story / Reel / Post** (the label and link match the saved source: stories open `instagram.com/stories/...`; posts/reels open their canonical `instagram.com/p/...` or `instagram.com/reel/...` permalink when available, with the authenticated media deep link kept as a fallback) and **Open Profile** (opens the real profile over the Gallery so you return straight to where you were when done; older items saved without an account attached are looked up once and remembered, so every later open is instant), plus favorite, rename, move, share, **Trim** (videos and audio), **Edit** (photos: see Editing), and delete.
 - **Automatic Live Text**: Static image previews enable native text selection on supported iOS versions. Animated GIF/WebP previews and iOS 15 skip analysis.
 
 ### Trimming

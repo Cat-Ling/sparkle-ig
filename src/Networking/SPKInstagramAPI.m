@@ -446,4 +446,105 @@ static NSString *spkNormalizePK(NSString *pk) {
     });
 }
 
++ (void)resolveUserForUsername:(NSString *)username
+                    completion:(void (^)(NSDictionary *_Nullable userDict, NSError *_Nullable error))completion {
+    NSString *cleanUsername = [SPKUtils sanitizedInstagramUsername:username];
+    if (cleanUsername.length == 0) {
+        if (completion) {
+            completion(nil, [NSError errorWithDomain:@"SPKInstagramAPI" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Invalid username"}]);
+        }
+        return;
+    }
+
+    id session = [SPKUtils activeUserSession];
+    if (session) {
+        id userStore = [session respondsToSelector:@selector(userStore)] ? [session valueForKey:@"userStore"] : nil;
+        if (!userStore && [session respondsToSelector:@selector(userMap)]) {
+            userStore = [session valueForKey:@"userMap"];
+        }
+        if (userStore) {
+            id cachedUser = nil;
+            @try {
+                if ([userStore respondsToSelector:@selector(userWithUsername:)]) {
+                    cachedUser = [userStore performSelector:@selector(userWithUsername:) withObject:cleanUsername];
+                } else if ([userStore respondsToSelector:@selector(storedUserWithUsername:)]) {
+                    cachedUser = [userStore performSelector:@selector(storedUserWithUsername:) withObject:cleanUsername];
+                }
+            } @catch (__unused id e) {}
+
+            if (cachedUser) {
+                NSString *pk = [SPKUtils pkFromIGUser:cachedUser];
+                if (pk.length > 0) {
+                    NSString *un = [SPKUtils sanitizedInstagramUsername:[cachedUser valueForKey:@"username"]] ?: cleanUsername;
+                    NSString *fullName = nil;
+                    @try {
+                        fullName = [cachedUser valueForKey:@"fullName"] ?: [cachedUser valueForKey:@"full_name"];
+                    } @catch (__unused id e) {}
+                    NSString *pic = nil;
+                    @try {
+                        pic = [cachedUser valueForKey:@"profilePicURL"] ?: [cachedUser valueForKey:@"profile_pic_url"];
+                        if ([pic isKindOfClass:[NSURL class]]) pic = [(NSURL *)pic absoluteString];
+                    } @catch (__unused id e) {}
+
+                    if (completion) {
+                        completion(@{
+                            @"pk": pk,
+                            @"username": un,
+                            @"full_name": fullName ?: @"",
+                            @"profile_pic_url": pic ?: @""
+                        }, nil);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    NSString *encodedUsername = [cleanUsername stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+    [self sendRequestWithMethod:@"GET"
+                           path:[NSString stringWithFormat:@"users/%@/username_info/", encodedUsername]
+                           body:nil
+                     completion:^(NSDictionary *response, NSError *error) {
+                         NSDictionary *user = [response[@"user"] isKindOfClass:[NSDictionary class]] ? response[@"user"] : nil;
+                         if (user && (user[@"pk"] || user[@"id"])) {
+                             NSMutableDictionary *mUser = [user mutableCopy];
+                             if (!mUser[@"pk"] && mUser[@"id"]) mUser[@"pk"] = [mUser[@"id"] description];
+                             if (completion) completion(mUser, nil);
+                             return;
+                         }
+
+                         [self sendRequestWithMethod:@"GET"
+                                                path:[NSString stringWithFormat:@"users/search/?q=%@", encodedUsername]
+                                                body:nil
+                                          completion:^(NSDictionary *searchResp, NSError *searchErr) {
+                             NSArray *users = [searchResp[@"users"] isKindOfClass:[NSArray class]] ? searchResp[@"users"] : nil;
+                             for (NSDictionary *u in users) {
+                                 if ([u isKindOfClass:[NSDictionary class]]) {
+                                     NSString *uName = [u[@"username"] description].lowercaseString;
+                                     if ([uName isEqualToString:cleanUsername]) {
+                                         NSMutableDictionary *mUser = [u mutableCopy];
+                                         if (!mUser[@"pk"] && mUser[@"id"]) mUser[@"pk"] = [mUser[@"id"] description];
+                                         if (completion) completion(mUser, nil);
+                                         return;
+                                     }
+                                 }
+                             }
+
+                             [self sendRequestWithMethod:@"GET"
+                                                    path:[NSString stringWithFormat:@"users/web_profile_info/?username=%@", encodedUsername]
+                                                    body:nil
+                                              completion:^(NSDictionary *webResp, NSError *webErr) {
+                                 NSDictionary *webUser = [webResp[@"data"][@"user"] isKindOfClass:[NSDictionary class]] ? webResp[@"data"][@"user"] : webResp[@"user"];
+                                 if ([webUser isKindOfClass:[NSDictionary class]] && (webUser[@"id"] || webUser[@"pk"])) {
+                                     NSMutableDictionary *mUser = [webUser mutableCopy];
+                                     if (!mUser[@"pk"] && mUser[@"id"]) mUser[@"pk"] = [mUser[@"id"] description];
+                                     if (completion) completion(mUser, nil);
+                                 } else {
+                                     if (completion) completion(nil, webErr ?: searchErr ?: error);
+                                 }
+                             }];
+                         }];
+                     }];
+}
+
 @end

@@ -1291,13 +1291,21 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 }
 
 - (void)openProfileForFile:(SPKGalleryFile *)file {
-    if ([SPKGalleryOriginController openProfileForGalleryFile:file]) {
-        [self dismissGalleryForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil, @"user_circle", SPKNotificationToneForIconResource(@"user_circle"));
-        }];
-    } else {
-        [self showGalleryOpenFailureMessage:@"Unable to open profile" actionIdentifier:kSPKNotificationGalleryOpenProfile];
-    }
+    // Via the completion so the toast lands when the profile actually opens: an
+    // item with no stored pk looks one up first, and announcing "Opened profile"
+    // at call time put this on screen next to the still-spinning progress pill.
+    __weak __typeof(self) weakSelf = self;
+    [SPKGalleryOriginController openProfileForGalleryFile:file
+                                      fromViewController:self
+                                              completion:^(BOOL success, BOOL didLink) {
+                                                  if (success) {
+                                                      // Quiet when a link was just made: that toast already said it.
+                                                      if (!didLink)
+                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil, @"user_circle", SPKNotificationToneForIconResource(@"user_circle"));
+                                                  } else {
+                                                      [weakSelf showGalleryOpenFailureMessage:@"Unable to open profile" actionIdentifier:kSPKNotificationGalleryOpenProfile];
+                                                  }
+                                              }];
 }
 
 - (NSArray<SPKGalleryFile *> *)visibleGalleryFiles {

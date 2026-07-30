@@ -410,8 +410,10 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
     NSString *title = item.title;
     if ([title hasPrefix:@"@"])
         title = [title substringFromIndex:1];
-    if (title.length)
-        [SPKUtils openInstagramProfileForUsername:title];
+    // The pk goes along for the ride whenever the item carries one: opening by
+    // username alone costs a network round trip before anything is presented.
+    if (item.pk.length || title.length)
+        [SPKUtils openInstagramProfileForUser:nil pk:item.pk username:title fromViewController:self];
 }
 
 - (void)didDeleteItem:(SPKUserListItem *)item {

@@ -498,9 +498,11 @@ void SPKDirectOpenProfileForThreadEntry(NSDictionary *entry) {
     NSArray *users = [entry[@"users"] isKindOfClass:[NSArray class]] ? entry[@"users"] : @[];
     if (users.count != 1)
         return;
-    NSString *username = SPKDirectStringFromValue(users.firstObject[@"username"]);
-    if (username.length > 0)
-        [SPKUtils openInstagramProfileForUsername:username];
+    NSDictionary *userDict = users.firstObject;
+    NSString *username = SPKDirectStringFromValue(userDict[@"username"]);
+    NSString *pk = SPKDirectStringFromValue(userDict[@"pk"]);
+    if (username.length > 0 || pk.length > 0)
+        [SPKUtils openInstagramProfileForUser:nil pk:pk username:username fromViewController:nil];
 }
 
 NSString *SPKDirectDisplayNameForThreadContext(SPKDirectThreadContext *context) {
@@ -861,17 +863,8 @@ static void SPKDirectEnrichManualSeenThreadEntryIfNeeded(NSDictionary *entry, BO
     if (pk.length > 0 && profilePicUrl.length > 0)
         return; // already fully enriched!
 
-    NSString *encodedUsername = [username stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-    if (encodedUsername.length == 0)
-        return;
-
-    [SPKInstagramAPI sendRequestWithMethod:@"GET"
-                                      path:[NSString stringWithFormat:@"users/web_profile_info/?username=%@", encodedUsername]
-                                      body:nil
-                                completion:^(NSDictionary *response, NSError *error) {
-                                    NSDictionary *resolvedUser = response[@"data"][@"user"];
-                                    if (![resolvedUser isKindOfClass:[NSDictionary class]])
-                                        resolvedUser = response[@"user"];
+    [SPKInstagramAPI resolveUserForUsername:username
+                                  completion:^(NSDictionary *resolvedUser, NSError *error) {
                                     if (![resolvedUser isKindOfClass:[NSDictionary class]] || error) {
                                         SPKLog(@"Messages", @"[Sparkle MessagesSeen] Thread metadata enrichment failed threadId=%@ username=%@ error=%@",
                                                threadId,
@@ -1224,43 +1217,35 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
 }
 
 - (void)lookupUsername:(NSString *)rawUsername {
-    NSString *username = [[[rawUsername ?: @"" stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"@"]];
+    NSString *username = [SPKUtils sanitizedInstagramUsername:rawUsername];
     if (username.length == 0)
-        return;
-    NSString *encodedUsername = [username stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-    if (encodedUsername.length == 0)
         return;
 
     SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat lookup started username=%@ list=%@",
            username, SPKDirectManualSeenListTitle(self.manualSeenEnabled));
 
     __weak typeof(self) weakSelf = self;
-    [SPKInstagramAPI sendRequestWithMethod:@"GET"
-                                      path:[NSString stringWithFormat:@"users/web_profile_info/?username=%@", encodedUsername]
-                                      body:nil
-                                completion:^(NSDictionary *response, NSError *error) {
-                                    __strong typeof(weakSelf) strongSelf = weakSelf;
-                                    if (!strongSelf)
-                                        return;
-                                    NSDictionary *user = response[@"data"][@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]])
-                                        user = response[@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                        SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup failed username=%@ error=%@", username, error);
-                                        [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
-                                        return;
-                                    }
-                                    NSString *pk = SPKDirectStringFromValue(user[@"id"] ?: user[@"pk"]);
-                                    NSString *resolvedUsername = SPKDirectStringFromValue(user[@"username"]) ?: username;
-                                    NSString *fullName = SPKDirectStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
-                                    NSString *profilePicUrl = SPKDirectStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
-                                    if (pk.length == 0) {
-                                        SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup missing pk username=%@ response=%@", username, user);
-                                        [strongSelf presentError:@"Could not resolve this user's Instagram id."];
-                                        return;
-                                    }
-                                    [strongSelf resolveThreadForPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];
-                                }];
+    [SPKInstagramAPI resolveUserForUsername:username
+                                  completion:^(NSDictionary *user, NSError *error) {
+                                      __strong typeof(weakSelf) strongSelf = weakSelf;
+                                      if (!strongSelf)
+                                          return;
+                                      if (![user isKindOfClass:[NSDictionary class]] || error) {
+                                          SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup failed username=%@ error=%@", username, error);
+                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          return;
+                                      }
+                                      NSString *pk = SPKDirectStringFromValue(user[@"pk"] ?: user[@"id"]);
+                                      NSString *resolvedUsername = SPKDirectStringFromValue(user[@"username"]) ?: username;
+                                      NSString *fullName = SPKDirectStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
+                                      NSString *profilePicUrl = SPKDirectStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
+                                      if (pk.length == 0) {
+                                          SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup missing pk username=%@ response=%@", username, user);
+                                          [strongSelf presentError:@"Could not resolve this user's Instagram id."];
+                                          return;
+                                      }
+                                      [strongSelf resolveThreadForPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];
+                                  }];
 }
 
 - (void)resolveThreadForPK:(NSString *)pk username:(NSString *)resolvedUsername fullName:(NSString *)fullName profilePicUrl:(NSString *)profilePicUrl {

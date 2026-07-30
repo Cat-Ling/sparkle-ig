@@ -305,59 +305,48 @@ BOOL SPKStoryToggleAutoSaveCurrentUser(SPKStoryContext *context, NSString **noti
 }
 
 - (void)lookupUsername:(NSString *)rawUsername {
-    NSString *username = SPKAutoSaveFilterNormalizedUsername(rawUsername);
+    NSString *username = [SPKUtils sanitizedInstagramUsername:rawUsername];
     if (username.length == 0)
-        return;
-    NSString *encodedUsername = [username stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-    if (encodedUsername.length == 0)
         return;
 
     __weak typeof(self) weakSelf = self;
-    [SPKInstagramAPI sendRequestWithMethod:@"GET"
-                                      path:[NSString stringWithFormat:@"users/web_profile_info/?username=%@", encodedUsername]
-                                      body:nil
-                                completion:^(NSDictionary *response, NSError *error) {
-                                    __strong typeof(weakSelf) strongSelf = weakSelf;
-                                    if (!strongSelf)
-                                        return;
-                                    NSDictionary *user = response[@"data"][@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]])
-                                        user = response[@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                        [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
-                                        return;
-                                    }
+    [SPKInstagramAPI resolveUserForUsername:username
+                                  completion:^(NSDictionary *user, NSError *error) {
+                                      __strong typeof(weakSelf) strongSelf = weakSelf;
+                                      if (!strongSelf)
+                                          return;
+                                      if (![user isKindOfClass:[NSDictionary class]] || error) {
+                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          return;
+                                      }
 
-                                    NSString *pk = SPKStringFromValue(user[@"id"] ?: user[@"pk"]);
-                                    if (pk.length == 0) {
-                                        [strongSelf presentError:@"Could not resolve this user's Instagram ID."];
-                                        return;
-                                    }
-                                    NSString *resolvedUsername = SPKStringFromValue(user[@"username"]) ?: username;
-                                    NSString *fullName = SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
-                                    NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
+                                      NSString *pk = SPKStringFromValue(user[@"pk"] ?: user[@"id"]);
+                                      if (pk.length == 0) {
+                                          [strongSelf presentError:@"Could not resolve this user's Instagram ID."];
+                                          return;
+                                      }
+                                      NSString *resolvedUsername = SPKStringFromValue(user[@"username"]) ?: username;
+                                      NSString *fullName = SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
+                                      NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
 
-                                    NSString *message = fullName.length > 0
-                                                            ? [NSString stringWithFormat:@"@%@ (%@)", resolvedUsername, fullName]
-                                                            : [@"@" stringByAppendingString:resolvedUsername];
+                                      NSString *message = fullName.length > 0
+                                                              ? [NSString stringWithFormat:@"@%@ (%@)", resolvedUsername, fullName]
+                                                              : [@"@" stringByAppendingString:resolvedUsername];
 
-                                    [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
-                                                                                  title:@"Auto-Save Stories?"
-                                                                                message:message
-                                                                                actions:@[
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
-                                                                                                                style:SPKIGAlertActionStyleCancel
-                                                                                                              handler:nil],
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Add"
-                                                                                                                style:SPKIGAlertActionStyleDefault
-                                                                                                              handler:^{
-                                                                                                                  [strongSelf addResolvedUserPK:pk
-                                                                                                                                       username:resolvedUsername
-                                                                                                                                       fullName:fullName
-                                                                                                                                  profilePicUrl:profilePicUrl];
-                                                                                                              }],
-                                                                                ]];
-                                }];
+                                      [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
+                                                                                    title:@"Auto-Save Stories?"
+                                                                                  message:message
+                                                                                  actions:@[
+                                                                                      [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                                                                                  style:SPKIGAlertActionStyleCancel
+                                                                                                                handler:nil],
+                                                                                      [SPKIGAlertAction actionWithTitle:@"Add"
+                                                                                                                  style:SPKIGAlertActionStyleDefault
+                                                                                                                handler:^{
+                                                                                                                    [strongSelf addResolvedUserPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];
+                                                                                                                }],
+                                                                                  ]];
+                                   }];
 }
 
 - (void)addResolvedUserPK:(NSString *)pk username:(NSString *)username fullName:(NSString *)fullName profilePicUrl:(NSString *)profilePicUrl {

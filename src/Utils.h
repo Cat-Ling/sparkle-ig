@@ -153,7 +153,20 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 + (NSError *)errorWithDescription:(NSString *)errorDesc code:(NSInteger)errorCode;
 + (BOOL)openURL:(NSURL *)url;
 + (void)dismissPresentedViewControllers;
++ (nullable NSString *)sanitizedInstagramUsername:(nullable NSString *)rawUsername;
 + (BOOL)openInstagramProfileForUsername:(NSString *)username;
++ (BOOL)openInstagramProfileForUsername:(NSString *)username fromViewController:(nullable UIViewController *)presentingVC;
++ (BOOL)openInstagramProfileForUser:(nullable id)user pk:(nullable NSString *)pk username:(nullable NSString *)username fromViewController:(nullable UIViewController *)presentingVC;
+// Username -> pk, memoised for the session and showing the transient progress
+// pill while it is in flight. Completion runs on the main thread, with nil when
+// the username could not be resolved. Exposed so a caller that can PERSIST the
+// answer (the gallery) never has to look it up twice.
+//
+// fullName is the display name the handle carries RIGHT NOW, so a caller holding
+// a name from when the media was saved can tell whether the handle still belongs
+// to the same person. It is nil on a memo hit, where the answer is already known.
++ (void)resolvePKForUsername:(NSString *)username
+                  completion:(void (^)(NSString *_Nullable pk, NSString *_Nullable fullName))completion;
 + (BOOL)openInstagramMediaURL:(NSURL *)url;
 + (BOOL)openPhotosApp;
 + (nullable NSURL *)sanitizedInstagramShareURL:(NSURL *)url;

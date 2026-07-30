@@ -189,7 +189,8 @@ static NSDictionary *SPKAudioPageResolvedPayload(UIView *sourceView) {
 
     SPKGallerySaveMetadata *metadata = [[SPKGallerySaveMetadata alloc] init];
     metadata.source = (int16_t)SPKGallerySourceAudioPage;
-    metadata.sourceUsername = SPKAudioPageStringForAsset(asset, @[ @"artistDisplayName", @"username", @"displayArtist", @"artist" ]) ?: @"audio";
+    NSString *rawArtist = SPKAudioPageStringForAsset(asset, @[ @"artistDisplayName", @"username", @"displayArtist", @"artist" ]);
+    metadata.sourceUsername = [SPKUtils sanitizedInstagramUsername:rawArtist];
     metadata.sourceMediaPK = SPKAudioPageStringForAsset(asset, @[ @"audioAssetId", @"pk", @"id" ]);
     return @{@"url" : url, @"metadata" : metadata};
 }
