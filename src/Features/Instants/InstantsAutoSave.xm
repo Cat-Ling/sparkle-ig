@@ -16,11 +16,13 @@
 // usable here: IG pops the displayed snap off it, so the store holds what's still
 // queued and never what's on screen.
 
-// Two things make the answer arrive late: the swap animation has to land before the new
-// snap is frontmost, and its image has to finish loading before it resolves. So a
-// resolve that comes up empty (or still shows the previous snap) is retried rather than
-// dropped. ~3s total covers a slow transition plus a slow fetch; retries stop the moment
-// a new snap resolves, so the common case costs one pass.
+// Three things make the answer arrive late: the swap animation has to land before the new
+// snap is frontmost, its image has to finish loading before it resolves, and the store
+// match that upgrades it to full resolution needs that loaded image's URL. So a resolve
+// that comes up empty, still shows the previous snap, or carries no backing media is
+// retried rather than dropped. ~3s total covers a slow transition plus a slow fetch;
+// retries stop the moment a new snap resolves with its media, so the common case costs
+// one pass.
 static const NSTimeInterval kSPKInstantsAutoSaveRetryDelay = 0.25;
 static const NSUInteger kSPKInstantsAutoSaveMaxAttempts = 12;
 
@@ -99,8 +101,21 @@ static void SPKInstantsAutoSaveConsiderDisplayedSnap(UIView *viewInHierarchy, NS
     NSString *snapKey = SPKInstantsAutoSaveSnapKey(snap);
     BOOL resolved = (snap && snapKey.length > 0);
     BOOL stale = (resolved && previousKey.length > 0 && [snapKey isEqualToString:previousKey]);
+    BOOL lastAttempt = (attempt + 1 >= kSPKInstantsAutoSaveMaxAttempts);
+    // No backing media means the snap resolved off the view alone, so the pipeline has no
+    // candidate list to pick a quality from and saves the on-screen render (~750x750)
+    // instead of the full-resolution candidate (~1440x1440) the action button gets. That
+    // is a race, not a dead end: the store/registry match needs the displayed image (and
+    // its specifier) to have loaded, which on viewer open it usually has not. So a
+    // fallback-quality resolve is a reason to look again, and only accepted once the
+    // budget is spent -- saving something is still better than dropping the snap.
+    BOOL degraded = (resolved && snap.backingMedia == nil);
 
-    if (resolved && !stale) {
+    if (resolved && !stale && (!degraded || lastAttempt)) {
+        if (degraded) {
+            SPKLog(@"Instants", @"[Sparkle AutoSave] Accepting fallback-quality snap after %lu attempts key=%@ path=%@",
+                   (unsigned long)(attempt + 1), SPKInstantsAutoSaveLoggableKey(snapKey), snap.resolverPath ?: @"(none)");
+        }
         sSPKInstantsAutoSaveLastKey = snapKey;
         // The snap object goes to the pipeline as-is: it's duck-typed via its
         // `sparkle*URL` properties, exactly as the action button's path does.
@@ -108,7 +123,7 @@ static void SPKInstantsAutoSaveConsiderDisplayedSnap(UIView *viewInHierarchy, NS
         return;
     }
 
-    if (attempt + 1 >= kSPKInstantsAutoSaveMaxAttempts) {
+    if (lastAttempt) {
         SPKLog(@"Instants", @"[Sparkle AutoSave] Gave up after %lu attempts (%@) key=%@",
                (unsigned long)kSPKInstantsAutoSaveMaxAttempts,
                stale ? @"displayed snap never changed" : @"nothing resolved",
