@@ -7,19 +7,25 @@
 #import <substrate.h>
 
 #import "../../AssetUtils.h"
+#import "../../Shared/ActionButton/ActionButtonCore.h"
 #import "../../Settings/Topics/SPKInstantsSettingsProvider.h"
 #import "../../Shared/Gallery/SPKGalleryFile.h"
 #import "../../Shared/Gallery/SPKGalleryPickerViewController.h"
 #import "../../Shared/Instants/SPKInstantsFrameInjector.h"
+#import "../../Shared/Instants/SPKInstantsSavedUsersViewController.h"
 #import "../../Shared/PhotoEdit/SPKPhotoEditorViewController.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Shared/UI/SPKIGAlertPresenter.h"
 #import "../../Utils.h"
 
-static NSString *const kSPKInstantsUploadFromGalleryPref = @"instants_upload_from_gallery";
+// One Sparkle button for the whole Instants camera screen: uploading a photo from
+// Photos/Gallery/Files, browsing what you have already saved, and the settings page all
+// hang off its menu. It replaces the two separate injected buttons this file and
+// InstantsBrowseSaved used to place, which competed for the same header slot.
+static NSString *const kSPKInstantsCameraButtonPref = @"instants_camera_btn";
 
-static BOOL SPKInstantsUploadFromGalleryEnabled(void) {
-    return [SPKUtils getBoolPref:kSPKInstantsUploadFromGalleryPref];
+static BOOL SPKInstantsCameraButtonEnabled(void) {
+    return [SPKUtils getBoolPref:kSPKInstantsCameraButtonPref];
 }
 
 static UIImage *sSPKInstantsPendingImage = nil;
@@ -47,6 +53,7 @@ static dispatch_queue_t SPKInstantsFreezeQueue(void) {
 
 static const void *kSPKInstantsGalleryButtonKey = &kSPKInstantsGalleryButtonKey;
 static const void *kSPKInstantsGalleryFrameKey = &kSPKInstantsGalleryFrameKey;
+static const void *kSPKInstantsGalleryIconKey = &kSPKInstantsGalleryIconKey;
 static const void *kSPKInstantsVideoInjectorKey = &kSPKInstantsVideoInjectorKey;
 static NSInteger const kSPKInstantsGalleryButtonTag = 921401;
 static __weak UIView *sSPKInstantsVisibleCreationView = nil;
@@ -527,7 +534,7 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
     // Gallery/files upload: when the user has positioned and cropped an image to send,
     // this pending image MUST take priority over everything else — including the
     // confirm-capture frozen frame. The pending image is the user's intended content.
-    UIImage *pendingImage = SPKInstantsUploadFromGalleryEnabled() ? sSPKInstantsPendingImage : nil;
+    UIImage *pendingImage = SPKInstantsCameraButtonEnabled() ? sSPKInstantsPendingImage : nil;
     if (pendingImage) {
         CMSampleBufferRef replacement = SPKInstantsSampleBufferForImage(pendingImage, sampleBuffer);
         if (replacement) {
@@ -661,61 +668,90 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
 - (void)buttonTapped:(UIButton *)sender;
 @end
 
-static void SPKPresentInstantsSourcePicker(__unused UIView *sourceView) {
-    UIViewController *presenter = SPKInstantsTopPresenter();
-    NSMutableArray<SPKIGAlertAction *> *actions = [NSMutableArray array];
+static void SPKInstantsPickFromPhotos(void) {
+    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+    picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+    picker.mediaTypes = @[ @"public.image" ];
+    picker.delegate = [SPKInstantsImagePickerDelegate shared];
+    picker.modalPresentationStyle = UIModalPresentationFullScreen;
+    [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
+}
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Select from Photos"
-                                                   style:SPKIGAlertActionStyleDefault
-                                                 handler:^{
-                                                     UIImagePickerController *picker = [[UIImagePickerController alloc] init];
-                                                     picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
-                                                     picker.mediaTypes = @[ @"public.image" ];
-                                                     picker.delegate = [SPKInstantsImagePickerDelegate shared];
-                                                     picker.modalPresentationStyle = UIModalPresentationFullScreen;
-                                                     [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
-                                                 }]];
+static void SPKInstantsPickFromGallery(void) {
+    [SPKGalleryPickerViewController presentFromViewController:SPKInstantsTopPresenter()
+                                                        title:@"Choose Photo"
+                                            allowedMediaTypes:[NSSet setWithObject:@(SPKGalleryMediaTypeImage)]
+                                      allowsMultipleSelection:NO
+                                                   completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {
+                                                       SPKGalleryFile *file = selectedFiles.firstObject;
+                                                       UIImage *image = file ? [UIImage imageWithContentsOfFile:file.filePath] : nil;
+                                                       if (image)
+                                                           SPKInstantsPresentImageForPositioning(image);
+                                                   }];
+}
 
+static void SPKInstantsPickFromFiles(void) {
+    UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[ UTTypeImage ] asCopy:YES];
+    picker.allowsMultipleSelection = NO;
+    picker.delegate = [SPKInstantsDocumentPickerDelegate shared];
+    [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
+}
+
+/// The camera button's menu content: upload sources, then browsing what is already saved,
+/// then settings -- each its own inline group, so the three concerns read as separate.
+static NSArray<UIMenuElement *> *SPKInstantsCameraButtonMenuGroups(void) {
+    NSMutableArray<UIAction *> *sourceActions = [NSMutableArray array];
+    [sourceActions addObject:[UIAction actionWithTitle:@"Select from Photos"
+                                                 image:[SPKAssetUtils menuIconNamed:@"photo"]
+                                            identifier:nil
+                                               handler:^(__unused UIAction *action) {
+                                                   SPKInstantsPickFromPhotos();
+                                               }]];
     if ([SPKGalleryPickerViewController hasSelectableFilesForAllowedMediaTypes:[NSSet setWithObject:@(SPKGalleryMediaTypeImage)]]) {
-        [actions addObject:[SPKIGAlertAction actionWithTitle:@"Select from Gallery"
-                                                       style:SPKIGAlertActionStyleDefault
-                                                     handler:^{
-                                                         [SPKGalleryPickerViewController presentFromViewController:SPKInstantsTopPresenter()
-                                                                                                             title:@"Choose Photo"
-                                                                                                 allowedMediaTypes:[NSSet setWithObject:@(SPKGalleryMediaTypeImage)]
-                                                                                           allowsMultipleSelection:NO
-                                                                                                        completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {
-                                                                                                            SPKGalleryFile *file = selectedFiles.firstObject;
-                                                                                                            UIImage *image = file ? [UIImage imageWithContentsOfFile:file.filePath] : nil;
-                                                                                                            if (image)
-                                                                                                                SPKInstantsPresentImageForPositioning(image);
-                                                                                                        }];
-                                                     }]];
+        [sourceActions addObject:[UIAction actionWithTitle:@"Select from Gallery"
+                                                     image:[SPKAssetUtils menuIconNamed:@"sparkle_gallery"]
+                                                identifier:nil
+                                                   handler:^(__unused UIAction *action) {
+                                                       SPKInstantsPickFromGallery();
+                                                   }]];
     }
+    [sourceActions addObject:[UIAction actionWithTitle:@"Select from Files"
+                                                 image:[SPKAssetUtils menuIconNamed:@"folder"]
+                                            identifier:nil
+                                               handler:^(__unused UIAction *action) {
+                                                   SPKInstantsPickFromFiles();
+                                               }]];
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Select from Files"
-                                                   style:SPKIGAlertActionStyleDefault
-                                                 handler:^{
-                                                     UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[ UTTypeImage ] asCopy:YES];
-                                                     picker.allowsMultipleSelection = NO;
-                                                     picker.delegate = [SPKInstantsDocumentPickerDelegate shared];
-                                                     [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
-                                                 }]];
+    UIAction *browseAction = [UIAction actionWithTitle:@"Browse Saved"
+                                                 image:[SPKAssetUtils menuIconNamed:@"instants"]
+                                            identifier:nil
+                                               handler:^(__unused UIAction *action) {
+                                                   [SPKInstantsSavedUsersViewController presentFromViewController:SPKInstantsTopPresenter()];
+                                               }];
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Instants Settings"
-                                                   style:SPKIGAlertActionStyleDefault
-                                                 handler:^{
+    UIAction *settingsAction = [UIAction actionWithTitle:@"Instants Settings"
+                                                   image:[SPKAssetUtils menuIconNamed:@"settings"]
+                                              identifier:nil
+                                                 handler:^(__unused UIAction *action) {
                                                      [SPKUtils showSettingsForTopicTitle:@"Instants"];
-                                                 }]];
+                                                 }];
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel" style:SPKIGAlertActionStyleCancel handler:nil]];
-    if (![SPKIGAlertPresenter presentActionSheetFromViewController:presenter
-                                                             title:@"Upload Photo"
-                                                           message:@"Choose a photo to position and crop, then send as an Instant."
-                                                           actions:actions]) {
-        UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
-        [feedback impactOccurred];
-    }
+    return @[
+        [UIMenu menuWithTitle:@"Upload" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:sourceActions],
+        [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ browseAction ]],
+        [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ settingsAction ]],
+    ];
+}
+
+/// Built through an uncached deferred element so the contents are rebuilt on every open:
+/// "Select from Gallery" only belongs there while the Gallery holds a photo, and that
+/// changes underneath a menu assembled once at button creation.
+static UIMenu *SPKInstantsCameraButtonMenu(void) {
+    UIDeferredMenuElement *deferred =
+        [UIDeferredMenuElement elementWithUncachedProvider:^(void (^completion)(NSArray<UIMenuElement *> *)) {
+            completion(SPKInstantsCameraButtonMenuGroups());
+        }];
+    return [UIMenu menuWithTitle:@"" children:@[ deferred ]];
 }
 
 @implementation SPKInstantsGalleryButtonTarget
@@ -729,7 +765,9 @@ static void SPKPresentInstantsSourcePicker(__unused UIView *sourceView) {
 }
 
 - (void)buttonTapped:(UIButton *)sender {
-    SPKPresentInstantsSourcePicker(sender);
+    // Only reached on systems where the menu didn't take (it is the primary action
+    // otherwise); rebuilding it here keeps the button from being a dead tap.
+    sender.menu = SPKInstantsCameraButtonMenu();
 }
 @end
 
@@ -797,7 +835,7 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         return;
     UIView *host = [header viewWithTag:kSPKInstantsGalleryButtonTag];
     UIButton *button = [host isKindOfClass:UIView.class] ? objc_getAssociatedObject(host, kSPKInstantsGalleryButtonKey) : nil;
-    if (!SPKInstantsUploadFromGalleryEnabled()) {
+    if (!SPKInstantsCameraButtonEnabled()) {
         SPKRemoveInstantsGalleryButton(header);
         return;
     }
@@ -821,11 +859,12 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
 
         button = [UIButton buttonWithType:UIButtonTypeSystem];
         button.translatesAutoresizingMaskIntoConstraints = NO;
-        button.showsMenuAsPrimaryAction = NO;
+        // The whole point of the merged button is its menu, so the menu *is* the tap.
+        button.showsMenuAsPrimaryAction = YES;
+        button.menu = SPKInstantsCameraButtonMenu();
         button.adjustsImageWhenHighlighted = YES;
-        UIImage *image = [SPKAssetUtils instagramIconNamed:@"photo_gallery" pointSize:24.0 renderingMode:UIImageRenderingModeAlwaysTemplate];
-        [button setImage:image forState:UIControlStateNormal];
         button.tintColor = [UIColor whiteColor];
+        button.accessibilityLabel = @"Sparkle";
         [button addTarget:[SPKInstantsGalleryButtonTarget shared]
                       action:@selector(buttonTapped:)
             forControlEvents:UIControlEventTouchUpInside];
@@ -833,6 +872,19 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         SPKInstantsPinEdges(button, canvas.contentContainer);
         objc_setAssociatedObject(host, kSPKInstantsGalleryButtonKey, button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [header addSubview:host];
+    }
+
+    // The glyph follows the global "Open Menu Icon" choice, like every other Sparkle
+    // button whose tap opens a menu. Re-applied whenever that choice changes, so the
+    // setting takes effect without recreating the button (or restarting).
+    NSString *iconName = SPKActionButtonOpenMenuIconName();
+    NSString *appliedIconName = objc_getAssociatedObject(button, kSPKInstantsGalleryIconKey);
+    if (![appliedIconName isEqualToString:iconName]) {
+        UIImage *image = [SPKAssetUtils instagramIconNamed:iconName
+                                                 pointSize:24.0
+                                             renderingMode:UIImageRenderingModeAlwaysTemplate];
+        [button setImage:image forState:UIControlStateNormal];
+        objc_setAssociatedObject(button, kSPKInstantsGalleryIconKey, iconName, OBJC_ASSOCIATION_COPY_NONATOMIC);
     }
 
     UIView *anchor = SPKInstantsHeaderArchiveButton(header) ?: SPKInstantsGalleryFallbackRightAnchor(header, host);
@@ -904,7 +956,7 @@ static void replaced_setSampleBufferDelegate(id self, SEL _cmd, id delegate, dis
     // Wrap the camera's sample-buffer delegate when EITHER feature needs it:
     // gallery upload (replace the feed with a chosen image) or confirm-capture
     // (freeze the live frame while confirming so the sent frame is exact).
-    BOOL wants = SPKInstantsUploadFromGalleryEnabled() || SPKInstantsConfirmCaptureEnabled();
+    BOOL wants = SPKInstantsCameraButtonEnabled() || SPKInstantsConfirmCaptureEnabled();
     if (delegate && wants && ![delegate isKindOfClass:SPKInstantsVideoBufferInjector.class]) {
         SPKInstantsVideoBufferInjector *injector = [[SPKInstantsVideoBufferInjector alloc] init];
         injector.realDelegate = delegate;

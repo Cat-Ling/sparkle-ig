@@ -136,12 +136,39 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 // When YES (and a query is active), search ignores the folder scope and matches
 // across all folders; the search bar scope buttons toggle it.
 @property (nonatomic, assign) BOOL searchAllFolders;
+// Set when the gallery is opened on a seeded filter (e.g. "instants from @user"): that
+// entry point means "everything matching", so it spans folders whatever the browsing
+// pref says -- otherwise a match filed inside a folder would look like it doesn't exist.
+@property (nonatomic, assign) BOOL forcesFlatBrowsing;
+// Title for a gallery opened on a seeded filter ("@user" rather than "Gallery"). Only
+// used at the root of the browse trail -- inside a folder the folder name still wins.
+@property (nonatomic, copy, nullable) NSString *seededFilterTitle;
+// A gallery opened on a seeded filter *is* the answer to a question already asked ("this
+// user's Instants"), so it drops the filter and search affordances: re-filtering would
+// fight the seed, and searching one person's saved media has nothing to narrow.
+@property (nonatomic, assign) BOOL locksSeededFilter;
 
 @end
 
 @implementation SPKGalleryViewController
 
 #pragma mark - Presentation
+
++ (instancetype)galleryFilteredToSources:(NSSet<NSNumber *> *)sources
+                               usernames:(NSSet<NSString *> *)usernames
+                                   title:(NSString *)title {
+    SPKGalleryViewController *vc = [[SPKGalleryViewController alloc] init];
+    vc.seededFilterTitle = [title copy];
+    // Seeded before the view loads, so the very first fetch is already filtered -- no
+    // flash of the full gallery.
+    if (sources.count > 0)
+        vc.filterSources = [sources mutableCopy];
+    if (usernames.count > 0)
+        vc.filterUsernames = [usernames mutableCopy];
+    vc.forcesFlatBrowsing = (sources.count > 0 || usernames.count > 0);
+    vc.locksSeededFilter = vc.forcesFlatBrowsing;
+    return vc;
+}
 
 + (void)presentGallery {
     UIViewController *presenter = topMostController();
@@ -294,6 +321,10 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     [self.navigationController dismissViewControllerAnimated:YES completion:nil];
 }
 
+- (void)popSelf {
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
 #pragma mark - Navigation & chrome
 
 /// Shared neutral chrome matching the Instagram-inspired custom palette.
@@ -313,7 +344,8 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                    ? [NSString stringWithFormat:@"%lu Selected", (unsigned long)self.selectedFileIDs.count]
                    : @"Select Files";
     } else {
-        text = self.currentFolderPath.length > 0 ? [self.currentFolderPath lastPathComponent] : @"Gallery";
+        text = self.currentFolderPath.length > 0 ? [self.currentFolderPath lastPathComponent]
+                                                 : (self.seededFilterTitle.length > 0 ? self.seededFilterTitle : @"Gallery");
     }
     self.navigationItem.titleView = nil;
     self.title = text;
@@ -324,6 +356,11 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 }
 
 - (void)setupSearchController {
+    // A seeded filter answers the only question this screen exists to answer, so it gets
+    // no search bar and no iOS 26 integrated search button (which is vended from here).
+    if (self.locksSeededFilter)
+        return;
+
     UISearchController *controller = [[UISearchController alloc] initWithSearchResultsController:nil];
     controller.obscuresBackgroundDuringPresentation = NO;
     controller.hidesNavigationBarDuringPresentation = NO;
@@ -383,8 +420,12 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
     // Leading group changes as you browse (close ⇄ back) or enter selection
     // (Cancel). Apply only when it actually changes.
-    NSString *leadingSignature = self.selectionMode ? @"cancel"
-                                                    : ([self canNavigateBackInFolders] ? @"back" : @"close");
+    // A pushed gallery (e.g. opened from the saved-instants list) goes back to whatever
+    // pushed it rather than dismissing the whole stack.
+    BOOL isPushed = self.navigationController && self.navigationController.viewControllers.firstObject != self;
+    NSString *leadingSignature = self.selectionMode
+                                     ? @"cancel"
+                                     : ([self canNavigateBackInFolders] ? @"back" : (isPushed ? @"pop" : @"close"));
     if (![leadingSignature isEqualToString:self.lastLeadingNavSignature]) {
         self.lastLeadingNavSignature = leadingSignature;
         UIBarButtonItem *leadingItem;
@@ -393,6 +434,9 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
             leadingItem.accessibilityLabel = @"Cancel";
         } else if ([self canNavigateBackInFolders]) {
             leadingItem = SPKMediaChromeTopBarButtonItem(@"chevron_left", self, @selector(navigateBackInFolders));
+        } else if (isPushed) {
+            leadingItem = SPKMediaChromeTopBarButtonItem(@"chevron_left", self, @selector(popSelf));
+            leadingItem.accessibilityLabel = @"Back";
         } else {
             leadingItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(dismissSelf));
         }
@@ -452,7 +496,13 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
         UIBarButtonItem *folderItem = [self galleryBottomBarItemWithResource:@"folder" accessibility:@"New folder" action:@selector(presentCreateFolder)];
 
-        primary = @[ toggleItem, sortItem, filterItem, folderItem ];
+        primary = self.locksSeededFilter ? @[ toggleItem, sortItem, folderItem ]
+                                         : @[ toggleItem, sortItem, filterItem, folderItem ];
+    }
+
+    if (self.locksSeededFilter) {
+        self.toolbarItems = SPKMediaChromeBottomToolbarItems(primary);
+        return;
     }
 
     // Search lives in its own trailing capsule in both browse and selection modes
@@ -743,7 +793,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 /// Whether the grid lists the files inside subfolders alongside the current
 /// folder's own ones. Read on every fetch, so the settings toggle applies live.
 - (BOOL)flatBrowsingEnabled {
-    return [SPKUtils getBoolPref:kSPKGalleryFlatBrowsingKey];
+    return self.forcesFlatBrowsing || [SPKUtils getBoolPref:kSPKGalleryFlatBrowsingKey];
 }
 
 - (void)setupFetchedResultsController {

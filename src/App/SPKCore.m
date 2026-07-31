@@ -132,7 +132,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"instants_action_btn_default_action" : @"none",
         @"instants_allow_screenshot" : @(NO),
         @"instants_confirm_reaction" : @(NO),
-        @"instants_upload_from_gallery" : @(NO),
+        @"instants_camera_btn" : @(YES),
         @"msgs_disable_vanish_swipe_up" : @(NO),
         @"msgs_hide_vanish_screenshot" : @(NO),
         @"reels_disable_auto_unmute" : @(NO),
@@ -231,6 +231,37 @@ static NSDictionary *SPKFeatureDefaults(void) {
     return defaults;
 }
 
+/// One-time rename of the Instants camera-screen preference.
+///
+/// `instants_upload_from_gallery` shipped as its own toggle for the upload button; that
+/// button and the saved-instants button are now one button with a menu, behind
+/// `instants_camera_btn`. Anyone who explicitly turned the old toggle on or off gets that
+/// choice carried over; everyone else takes the new default. Values are copied per
+/// namespace, since per-account preferences live under `u_<pk>_<key>` and a single global
+/// read would silently drop every account's setting but one.
+static void SPKCoreMigrateInstantsCameraButtonPreference(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    static NSString *const migratedKey = @"instants_camera_btn_migrated";
+    if ([defaults boolForKey:migratedKey])
+        return;
+
+    NSString *legacyKey = @"instants_upload_from_gallery";
+    NSString *newKey = @"instants_camera_btn";
+    for (NSString *key in [defaults dictionaryRepresentation].allKeys) {
+        if (![key isEqualToString:legacyKey] && ![key hasSuffix:[@"_" stringByAppendingString:legacyKey]])
+            continue;
+        id value = [defaults objectForKey:key];
+        if (value != nil) {
+            NSString *target = [[key substringToIndex:key.length - legacyKey.length] stringByAppendingString:newKey];
+            if ([defaults objectForKey:target] == nil)
+                [defaults setObject:value forKey:target];
+        }
+        [defaults removeObjectForKey:key];
+    }
+
+    [defaults setBool:YES forKey:migratedKey];
+}
+
 void SPKCoreRegisterBootstrapDefaults(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -245,6 +276,7 @@ void SPKCoreRegisterDefaults(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         [[NSUserDefaults standardUserDefaults] registerDefaults:SPKFeatureDefaults()];
+        SPKCoreMigrateInstantsCameraButtonPreference();
         SPKStartupMark(@"feature defaults registered");
     });
 }
