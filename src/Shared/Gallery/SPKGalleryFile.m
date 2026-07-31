@@ -1080,9 +1080,24 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         return nil;
     }
 
-    // Posts/reels: prefer canonical permalinks. The generic instagram://media?id=
-    // route can open carousel children as detached media and reels in the feed viewer,
-    // which leaves Instagram without the original post/reel presentation context.
+    // Posts/reels: prefer the authenticated instagram://media?id= route. It hands the
+    // media id straight to Instagram's in-app router, which opens the post on its own
+    // single-post page. The https://instagram.com/<p|reel>/<code>/ permalink instead
+    // travels through continueUserActivity:, which resolves the post into the *main
+    // feed* and leaves it sitting on top of the timeline rather than on a page of its
+    // own. So the web permalink is the fallback, used only when the composite
+    // <mediaPK>_<userPK> id cannot be assembled (a bare media pk on its own resolves
+    // to the home feed).
+    NSString *fullMediaID = [self fullInstagramMediaID];
+    if (fullMediaID.length > 0) {
+        NSString *encodedID = [fullMediaID stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+        if (encodedID.length > 0) {
+            NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"instagram://media?id=%@", encodedID]];
+            SPKLog(@"General", @"[Sparkle Gallery] Open original using media deep link source=%d id=%@ url=%@", self.source, fullMediaID, url.absoluteString);
+            return url;
+        }
+    }
+
     NSString *pathComponent = SPKGalleryPostPathComponentForSource((SPKGallerySource)self.source);
     if (self.sourceMediaCode.length > 0) {
         if (pathComponent.length == 0) {
@@ -1115,18 +1130,6 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
             return url;
         }
         SPKLog(@"General", @"[Sparkle Gallery] Ignoring invalid stored original URL source=%d raw=%@", self.source, self.sourceMediaURLString);
-    }
-
-    // Last resort for entries that only have a full media id. This is authenticated,
-    // but it is not context-preserving for reels/carousels.
-    NSString *fullMediaID = [self fullInstagramMediaID];
-    if (fullMediaID.length > 0) {
-        NSString *encodedID = [fullMediaID stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
-        if (encodedID.length > 0) {
-            NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"instagram://media?id=%@", encodedID]];
-            SPKLog(@"General", @"[Sparkle Gallery] Open original using fallback media deep link source=%d id=%@ url=%@", self.source, fullMediaID, url.absoluteString);
-            return url;
-        }
     }
 
     SPKLog(@"General", @"[Sparkle Gallery] Open original unavailable source=%d relativePath=%@", self.source, self.relativePath);

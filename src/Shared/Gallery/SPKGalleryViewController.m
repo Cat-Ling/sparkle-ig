@@ -1281,10 +1281,19 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                          ? [[file openOriginalActionTitle] substringFromIndex:5]
                          : @"original post";
     NSString *lowerNoun = noun.lowercaseString;
-    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file]) {
-        [self dismissGalleryForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenOriginal, [NSString stringWithFormat:@"Opened %@", lowerNoun], nil, @"external_link", SPKNotificationToneInfo);
-        }];
+    __weak __typeof(self) weakSelf = self;
+    // The Gallery stays up: the post is pushed over it, so it is still here when
+    // the post is closed. Dismissing is only the fallback for a build where the
+    // push cannot be redirected.
+    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file
+                                               fromViewController:self
+                                                   legacyFallback:^{
+                                                       [weakSelf dismissGalleryForOriginOpenWithCompletion:^{
+                                                           SPKNotify(kSPKNotificationGalleryOpenOriginal, [NSString stringWithFormat:@"Opened %@", lowerNoun], nil, @"external_link", SPKNotificationToneInfo);
+                                                       }];
+                                                   }
+                                                        onDismiss:nil]) {
+        // Nothing to announce: the post is on screen.
     } else {
         [self showGalleryOpenFailureMessage:[NSString stringWithFormat:@"Unable to open %@", lowerNoun] actionIdentifier:kSPKNotificationGalleryOpenOriginal];
     }

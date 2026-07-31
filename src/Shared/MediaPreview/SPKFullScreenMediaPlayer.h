@@ -29,6 +29,14 @@ typedef void (^SPKMediaPreviewPlaybackBlock)(void);
 @property (nonatomic, assign) BOOL isFromGallery;
 @property (nonatomic, weak, nullable) id<SPKFullScreenMediaPlayerDelegate> delegate;
 
+/// Silences the preview for a screen pushed over this player (a post or profile),
+/// remembering that the pause was ours.
+- (void)pauseForNavigationAway;
+/// Resumes what -pauseForNavigationAway paused, once that screen is closed. Needed
+/// because the player is presented *over*, never replaced, so it receives no
+/// appearance callbacks for the trip.
+- (void)resumeAfterNavigationBack;
+
 - (void)playItems:(NSArray<SPKMediaItem *> *)items
        startingAtIndex:(NSInteger)index
     fromViewController:(UIViewController *)presenter;

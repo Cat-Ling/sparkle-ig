@@ -11,6 +11,16 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)populateMetadata:(SPKGallerySaveMetadata *)metadata fromMedia:(id _Nullable)media;
 + (void)populateProfileMetadata:(SPKGallerySaveMetadata *)metadata username:(nullable NSString *)username user:(id _Nullable)user;
 + (BOOL)openOriginalPostForGalleryFile:(SPKGalleryFile *)file;
+// Opens the post over `presentingVC` so closing it returns here. `legacyFallback`
+// runs only when that is not possible (or Instagram never produced a page to
+// redirect) and should do whatever the old behaviour did to reveal the post,
+// typically dismissing the presenting screen. It may run asynchronously.
+/// `onDismiss` runs when the post is closed and `presentingVC` is live again; it
+/// gets no appearance callbacks of its own, since the post sits over it.
++ (BOOL)openOriginalPostForGalleryFile:(SPKGalleryFile *)file
+                    fromViewController:(nullable UIViewController *)presentingVC
+                        legacyFallback:(nullable void (^)(void))legacyFallback
+                             onDismiss:(nullable void (^)(void))onDismiss;
 + (BOOL)openProfileForGalleryFile:(SPKGalleryFile *)file;
 + (BOOL)openProfileForGalleryFile:(SPKGalleryFile *)file fromViewController:(nullable UIViewController *)presentingVC;
 // As above, but reports the real outcome. An item with no stored pk has to look

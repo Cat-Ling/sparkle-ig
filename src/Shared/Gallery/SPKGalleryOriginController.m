@@ -10,6 +10,9 @@
 #import "SPKGalleryFile.h"
 #import "SPKGallerySaveMetadata.h"
 
+// Implemented by Features/General/OpenPostNativePush.xm.
+FOUNDATION_EXPORT BOOL SPKOpenPostPushMediaURL(NSURL *url, UIViewController *presentingVC, void (^fallback)(void), void (^onDismiss)(void));
+
 static NSString *SPKGalleryStringValue(id value) {
     if (!value)
         return nil;
@@ -399,6 +402,28 @@ static BOOL SPKGalleryURLIsPostOrReel(NSURL *url) {
 + (BOOL)openOriginalPostForGalleryFile:(SPKGalleryFile *)file {
     NSURL *url = [file preferredOriginalMediaURL];
     return url ? [SPKUtils openInstagramMediaURL:url] : NO;
+}
+
++ (BOOL)openOriginalPostForGalleryFile:(SPKGalleryFile *)file
+                    fromViewController:(UIViewController *)presentingVC
+                        legacyFallback:(void (^)(void))legacyFallback
+                             onDismiss:(void (^)(void))onDismiss {
+    NSURL *url = [file preferredOriginalMediaURL];
+    if (!url)
+        return NO;
+
+    // Preferred: keep this screen up and redirect Instagram's push onto a host
+    // stack over it, so closing the post comes straight back here. Only the
+    // instagram://media route can be redirected; anything else takes the legacy
+    // path, which reveals the post by tearing this screen down.
+    if (presentingVC && SPKOpenPostPushMediaURL(url, presentingVC, legacyFallback, onDismiss))
+        return YES;
+
+    if (![SPKUtils openInstagramMediaURL:url])
+        return NO;
+    if (legacyFallback)
+        legacyFallback();
+    return YES;
 }
 
 + (BOOL)openProfileForGalleryFile:(SPKGalleryFile *)file {

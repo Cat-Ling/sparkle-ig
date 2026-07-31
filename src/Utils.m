@@ -75,6 +75,11 @@ static const CGFloat kSPKProfileReleaseDamping = 65.8092;
 // parallax the push simply slides the profile in over a stationary backdrop.
 @interface SPKProfilePushHostViewController : UIViewController
 @property (nonatomic, assign) BOOL didPush;
+/// Runs once the host has torn itself down, i.e. the pushed screen was popped and
+/// the screen underneath is live again. The presenter never receives appearance
+/// callbacks of its own here, because the host is presented over it rather than in
+/// place of it, so this is the only signal that the trip is over.
+@property (nonatomic, copy, nullable) void (^onDismiss)(void);
 @end
 
 @implementation SPKProfilePushHostViewController
@@ -96,8 +101,15 @@ static const CGFloat kSPKProfileReleaseDamping = 65.8092;
 // underneath has been there the whole time.
 - (void)viewDidAppear:(BOOL)animated {
     [super viewDidAppear:animated];
-    if (self.didPush && self.navigationController.viewControllers.count == 1)
-        [self.presentingViewController dismissViewControllerAnimated:NO completion:nil];
+    if (self.didPush && self.navigationController.viewControllers.count == 1) {
+        void (^onDismiss)(void) = self.onDismiss;
+        self.onDismiss = nil;
+        [self.presentingViewController dismissViewControllerAnimated:NO
+                                                          completion:^{
+                                                              if (onDismiss)
+                                                                  onDismiss();
+                                                          }];
+    }
 }
 
 @end
@@ -2028,6 +2040,44 @@ static const unsigned long long kSPKUserReferenceSubtypeUser = 2;
 // The profile is presented off a thin {pk, username} user, so the header starts
 // sparse. Refetching and re-feeding the map updates the same canonical instance
 // in place, keeping the network round trip off the critical path.
++ (BOOL)pushViewControllerOnNativeHost:(UIViewController *)viewController
+                    fromViewController:(UIViewController *)presentingVC {
+    return [self pushViewControllerOnNativeHost:viewController fromViewController:presentingVC onDismiss:nil];
+}
+
++ (BOOL)pushViewControllerOnNativeHost:(UIViewController *)viewController
+                    fromViewController:(UIViewController *)presentingVC
+                             onDismiss:(void (^)(void))onDismiss {
+    if (!viewController || !presentingVC)
+        return NO;
+
+    Class igNavClass = SPKProfilePushNavigationClass();
+    if (!igNavClass || ![igNavClass instancesRespondToSelector:@selector(initWithRootViewController:)])
+        return NO;
+
+    SPKProfilePushHostViewController *host = [SPKProfilePushHostViewController new];
+    host.onDismiss = onDismiss;
+    UINavigationController *nav = [[igNavClass alloc] initWithRootViewController:host];
+    if (!nav)
+        return NO;
+
+    // The subclass pins this; assigning it too keeps the intent readable
+    // and covers any path that reads the stored value directly.
+    nav.modalPresentationStyle = UIModalPresentationOverFullScreen;
+    nav.view.backgroundColor = UIColor.clearColor;
+    nav.view.opaque = NO;
+    // Presented without animation, and invisible when it lands: the host
+    // draws nothing and the screen behind is left in place. The push that
+    // follows is the whole transition, and it is IG's own.
+    [presentingVC presentViewController:nav
+                              animated:NO
+                            completion:^{
+                                host.didPush = YES;
+                                [nav pushViewController:viewController animated:YES];
+                            }];
+    return YES;
+}
+
 + (void)spk_hydrateCanonicalUserForPK:(NSString *)pk session:(id)session {
     if (pk.length == 0 || !session)
         return;
@@ -2232,27 +2282,19 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
     // of that engages ONLY for a push/pop on the stack. Presenting the profile as
     // the stack's root, as we used to, ran none of it, which is exactly why the
     // hand-rolled imitation never felt right.
-    Class igNavClass = SPKProfilePushNavigationClass();
-    if (igNavClass && [igNavClass instancesRespondToSelector:@selector(initWithRootViewController:)]) {
-        SPKProfilePushHostViewController *host = [SPKProfilePushHostViewController new];
-        UINavigationController *nav = [[igNavClass alloc] initWithRootViewController:host];
-        if (nav) {
-            // The subclass pins this; assigning it too keeps the intent readable
-            // and covers any path that reads the stored value directly.
-            nav.modalPresentationStyle = UIModalPresentationOverFullScreen;
-            nav.view.backgroundColor = UIColor.clearColor;
-            nav.view.opaque = NO;
-            // Presented without animation, and invisible when it lands: the host
-            // draws nothing and the screen behind is left in place. The push that
-            // follows is the whole transition, and it is IG's own.
-            [targetVC presentViewController:nav animated:NO completion:^{
-                host.didPush = YES;
-                [nav pushViewController:profileVC animated:YES];
-            }];
-            [self spk_hydrateCanonicalUserForPK:pk session:session];
-            SPKLog(@"OpenProfile", @"pushed native profile for pk=%@ username=%@ from %@", pk, username, targetVC);
-            return YES;
-        }
+    // Resuming falls to the presenter: a player underneath keeps running audio
+    // while the profile is up, and gets no appearance callback when it closes.
+    void (^onDismiss)(void) = nil;
+    if ([targetVC respondsToSelector:@selector(resumeAfterNavigationBack)]) {
+        __weak UIViewController *weakTarget = targetVC;
+        onDismiss = ^{
+            [(id)weakTarget resumeAfterNavigationBack];
+        };
+    }
+    if ([self pushViewControllerOnNativeHost:profileVC fromViewController:targetVC onDismiss:onDismiss]) {
+        [self spk_hydrateCanonicalUserForPK:pk session:session];
+        SPKLog(@"OpenProfile", @"pushed native profile for pk=%@ username=%@ from %@", pk, username, targetVC);
+        return YES;
     }
 
     // Fallback for a build where IGNavigationController is missing or refuses to
@@ -2317,13 +2359,21 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
 }
 
 + (BOOL)openInstagramMediaURL:(NSURL *)url {
+    return [self openInstagramMediaURL:url dismissingPresentedViewControllers:YES];
+}
+
++ (BOOL)openInstagramMediaURL:(NSURL *)url dismissingPresentedViewControllers:(BOOL)dismiss {
     if (!url)
         return NO;
     NSString *scheme = url.scheme.lowercaseString ?: @"";
     UIApplication *application = [UIApplication sharedApplication];
     id<UIApplicationDelegate> delegate = application.delegate;
 
-    [self dismissPresentedViewControllers];
+    // Callers that intend to keep their own UI on screen (the Gallery redirecting
+    // the router's push onto a native host) pass NO. Everything else clears the
+    // way first, because the router pushes onto a tab stack that a modal hides.
+    if (dismiss)
+        [self dismissPresentedViewControllers];
 
     if ([scheme isEqualToString:@"http"] || [scheme isEqualToString:@"https"]) {
         NSUserActivity *activity = [[NSUserActivity alloc] initWithActivityType:NSUserActivityTypeBrowsingWeb];

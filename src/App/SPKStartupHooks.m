@@ -95,6 +95,7 @@ FOUNDATION_EXPORT void SPKInstallNotesActionsHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallHideDirectCallButtonsHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallHideFlagButtonHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallFixDuplicateNotificationsHooksIfNeeded(void);
+FOUNDATION_EXPORT void SPKInstallOpenPostNativePushHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallDisableAppIconGestureHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallUnlockStoryPreviewHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallUnlockMessagePreviewHooksIfEnabled(void);
@@ -288,6 +289,7 @@ void SPKInstallGeneralUIHooksIfNeeded(void) {
     SPKInstallAudioPageDownloadHooksIfNeeded();
     SPKInstallCaptureHidingHooksIfNeeded();
     SPKInstallFixDuplicateNotificationsHooksIfNeeded();
+    SPKInstallOpenPostNativePushHooksIfNeeded();
 }
 
 void SPKInstallEnabledFeatureHooks(void) {

@@ -215,6 +215,8 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 @property (nonatomic, copy, nullable)
     SPKMediaPreviewPlaybackBlock resumePlaybackBlock;
 @property (nonatomic, assign) BOOL explicitPlaybackPauseActive;
+/// Set when playback was paused for a screen pushed over this player, so returning resumes it.
+@property (nonatomic, assign) BOOL pausedForNavigationAway;
 
 /// Opaque black behind page content (letterboxing); alpha fades during
 /// interactive dismiss.
@@ -705,6 +707,26 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [self prepareViewControllerForDisplay:self.pageViewController.viewControllers
                                               .firstObject];
     [self prepareAdjacentViewControllersAroundIndex:self.currentIndex];
+}
+
+// Called when a screen pushed over this player is closed. It cannot be done in
+// -viewDidAppear:, which never fires again: the pushed screen is presented *over*
+// the player, so the player never disappears in the first place.
+- (void)resumeAfterNavigationBack {
+    if (!self.pausedForNavigationAway)
+        return;
+    self.pausedForNavigationAway = NO;
+    [[self currentVideoViewController] play];
+}
+
+// Pauses the preview for a screen pushed over it, remembering that it was us, so
+// -viewDidAppear: knows whether resuming is correct.
+- (void)pauseForNavigationAway {
+    SPKFullScreenVideoViewController *video = [self currentVideoViewController];
+    if (!video)
+        return;
+    self.pausedForNavigationAway = YES;
+    [video pause];
 }
 
 - (void)viewDidLayoutSubviews {
@@ -1282,12 +1304,25 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
 - (void)openOriginalPostForCurrentGalleryItem {
     SPKGalleryFile *file = self.currentItem.galleryFile;
-    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file]) {
-        [self dismissGalleryFlowForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenOriginal, @"Opened original post",
-                      nil, @"external_link",
-                      SPKNotificationToneForIconResource(@"external_link"));
-        }];
+    __weak __typeof(self) weakSelf = self;
+    // The post is pushed over the player rather than replacing it, so the preview
+    // stays alive behind it and would otherwise keep playing audio under the post.
+    [self pauseForNavigationAway];
+    // Pushed over the player, so closing the post comes back to it. See the note
+    // in -openOriginalPostForFile:.
+    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file
+                                               fromViewController:self
+                                                   legacyFallback:^{
+                                                       [weakSelf dismissGalleryFlowForOriginOpenWithCompletion:^{
+                                                           SPKNotify(kSPKNotificationGalleryOpenOriginal, @"Opened original post",
+                                                                     nil, @"external_link",
+                                                                     SPKNotificationToneForIconResource(@"external_link"));
+                                                       }];
+                                                   }
+                                                        onDismiss:^{
+                                                            [weakSelf resumeAfterNavigationBack];
+                                                        }]) {
+        // Nothing to announce: the post is on screen.
     } else {
         [self showGalleryOpenFailureMessage:@"Unable to open original post"
                            actionIdentifier:kSPKNotificationGalleryOpenOriginal];
@@ -1298,6 +1333,9 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     SPKGalleryFile *file = self.currentItem.galleryFile;
     // Completion, not the return value: see the note in -openProfileForFile:.
     __weak __typeof(self) weakSelf = self;
+    // The profile is pushed over the player, which stays alive behind it, so its
+    // audio has to be stopped explicitly.
+    [self pauseForNavigationAway];
     [SPKGalleryOriginController openProfileForGalleryFile:file
                                       fromViewController:self
                                               completion:^(BOOL success, BOOL didLink) {

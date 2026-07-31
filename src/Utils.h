@@ -168,6 +168,23 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 + (void)resolvePKForUsername:(NSString *)username
                   completion:(void (^)(NSString *_Nullable pk, NSString *_Nullable fullName))completion;
 + (BOOL)openInstagramMediaURL:(NSURL *)url;
+/// As above, but `dismiss` NO leaves whatever is presented on screen. Only for
+/// callers that intercept the resulting navigation themselves; with a modal still
+/// up, the router's push lands behind it and is invisible.
++ (BOOL)openInstagramMediaURL:(NSURL *)url dismissingPresentedViewControllers:(BOOL)dismiss;
+
+/// Presents an invisible full-screen host stack over `presentingVC` and pushes
+/// `viewController` onto it, so the push runs IG's own navigation transition and
+/// its swipe-back pops straight back to whatever was on screen. Returns NO when
+/// IGNavigationController cannot be subclassed, leaving the caller to fall back.
++ (BOOL)pushViewControllerOnNativeHost:(UIViewController *)viewController
+                    fromViewController:(nullable UIViewController *)presentingVC;
+/// As above. `onDismiss` runs when the pushed screen is popped and the presenter is
+/// live again -- the presenter gets no appearance callbacks of its own, because the
+/// host sits over it rather than replacing it.
++ (BOOL)pushViewControllerOnNativeHost:(UIViewController *)viewController
+                    fromViewController:(nullable UIViewController *)presentingVC
+                             onDismiss:(nullable void (^)(void))onDismiss;
 + (BOOL)openPhotosApp;
 + (nullable NSURL *)sanitizedInstagramShareURL:(NSURL *)url;
 + (nullable NSString *)appendImgIndex:(NSInteger)imgIndex toURLString:(nullable NSString *)urlString;
