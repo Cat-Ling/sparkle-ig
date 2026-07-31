@@ -165,7 +165,18 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     UIViewControllerAnimatedTransitioning,
     UIViewControllerInteractiveTransitioning, SPKFullScreenContentDelegate>
 
+// Eager item list. Every entry point except the gallery hands us a small,
+// already-built array (a carousel, a story tray, one file), so those keep using
+// it directly.
 @property (nonatomic, strong) NSArray<SPKMediaItem *> *items;
+// Gallery browsing spans the whole current scope, which with flat browsing on is
+// the entire gallery -- thousands of files. Building an SPKMediaItem per file up
+// front cost a stat() and a full Core Data fault each, on the main thread, before
+// the first page could even be shown. Hold the files instead and build items on
+// demand around the visible page (-itemAtIndex:), so opening a photo is O(1).
+@property (nonatomic, strong, nullable) NSArray<SPKGalleryFile *> *galleryFiles;
+// index -> item, populated by -itemAtIndex: and trimmed with the controller cache.
+@property (nonatomic, strong) NSMutableDictionary<NSNumber *, SPKMediaItem *> *lazyItems;
 @property (nonatomic, assign) NSInteger currentIndex;
 @property (nonatomic, strong)
     NSMutableDictionary<NSNumber *, UIViewController *> *controllerCache;
@@ -302,37 +313,20 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     if (files.count == 0)
         return;
 
-    NSMutableArray<SPKMediaItem *> *items =
-        [NSMutableArray arrayWithCapacity:files.count];
-    // Skipped files shift everything after them, so track where the requested
-    // file ends up rather than reusing its index in the unfiltered array.
-    NSInteger mappedIndex = 0;
-    for (NSInteger i = 0; i < (NSInteger)files.count; i++) {
-        SPKGalleryFile *file = files[(NSUInteger)i];
-        if (![file fileExists])
-            continue;
-        if (i <= index) {
-            mappedIndex = (NSInteger)items.count;
-        }
-        SPKMediaItem *item = [SPKMediaItem itemWithGalleryFile:file];
-        [items addObject:item];
-    }
-
-    if (items.count == 0) {
-        SPKNotify(kSPKNotificationMediaPreviewOpenGallery, @"No files found", nil,
-                  @"search", SPKNotificationToneError);
-        return;
-    }
-
-    NSInteger adjustedIndex = MAX(0, MIN(mappedIndex, (NSInteger)items.count - 1));
+    // No existence pre-pass here: it cost one stat() plus a fired Core Data fault
+    // per file, on the main thread, which is what made opening a photo in a large
+    // gallery take seconds. A file that went missing behind the gallery's back is
+    // rare and its page already shows the load-failure state, so let the page that
+    // actually gets displayed discover it.
+    NSInteger adjustedIndex = MAX(0, MIN(index, (NSInteger)files.count - 1));
     SPKNotify(kSPKNotificationMediaPreviewOpenGallery, @"Opened Gallery media",
               nil, @"media", SPKNotificationToneInfo);
 
     SPKFullScreenMediaPlayer *player = [[SPKFullScreenMediaPlayer alloc] init];
     player.isFromGallery = YES;
-    [player playItems:items
-           startingAtIndex:adjustedIndex
-        fromViewController:presenter];
+    [player playGalleryFiles:files
+             startingAtIndex:adjustedIndex
+          fromViewController:presenter];
 }
 
 + (void)showPhotoURLs:(NSArray<NSURL *> *)urls initialIndex:(NSInteger)index {
@@ -539,11 +533,27 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
        startingAtIndex:(NSInteger)index
     fromViewController:(UIViewController *)presenter {
     _items = [items copy];
-    _currentIndex = MAX(0, MIN(index, (NSInteger)items.count - 1));
-    _controllerCache = [NSMutableDictionary dictionary];
-    _isSingleItemMode = (items.count <= 1);
-    _isToolbarVisible = YES;
+    [self prepareForPresentationAtIndex:index];
+    [self presentFromViewController:presenter];
+}
 
+- (void)playGalleryFiles:(NSArray<SPKGalleryFile *> *)files
+         startingAtIndex:(NSInteger)index
+      fromViewController:(UIViewController *)presenter {
+    _galleryFiles = [files copy];
+    [self prepareForPresentationAtIndex:index];
+    [self presentFromViewController:presenter];
+}
+
+- (void)prepareForPresentationAtIndex:(NSInteger)index {
+    _lazyItems = [NSMutableDictionary dictionary];
+    _currentIndex = MAX(0, MIN(index, [self itemCount] - 1));
+    _controllerCache = [NSMutableDictionary dictionary];
+    _isSingleItemMode = ([self itemCount] <= 1);
+    _isToolbarVisible = YES;
+}
+
+- (void)presentFromViewController:(UIViewController *)presenter {
     [self beginPreviewPlaybackSuppressionIfNeeded];
     UINavigationController *navigationController =
         [[UINavigationController alloc] initWithRootViewController:self];
@@ -768,6 +778,27 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
 }
 
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // NSCache sheds its own entries under pressure, but the images parked on the
+    // items are strong references it cannot reach. Drop the pages outside the
+    // usual window, then the images of everything but the page on screen and the
+    // two it can be swiped onto.
+    [self trimControllerCacheAroundIndex:_currentIndex];
+    for (NSNumber *builtIndex in self.lazyItems.allKeys.copy) {
+        if (ABS(builtIndex.integerValue - _currentIndex) <= 1)
+            continue;
+        [self releaseImageForItem:self.lazyItems[builtIndex]];
+    }
+    if (!_galleryFiles) {
+        for (NSInteger i = 0; i < (NSInteger)_items.count; i++) {
+            if (ABS(i - _currentIndex) <= 1)
+                continue;
+            [self releaseImageForItem:_items[(NSUInteger)i]];
+        }
+    }
+}
+
 - (BOOL)prefersStatusBarHidden {
     return !self.isToolbarVisible;
 }
@@ -839,7 +870,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     _editItem = SPKMediaChromeBottomBarButtonItem(@"crop", @"Edit", self,
                                                   @selector(editCurrentItem));
 
-    if (!_isFromGallery && _items.count > 1) {
+    if (!_isFromGallery && [self itemCount] > 1) {
         _bulkActionsItem =
             SPKMediaChromeBottomBarButtonItem(@"more", @"Download All", nil, nil);
     }
@@ -973,11 +1004,60 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
 }
 
-- (UIViewController *)createViewControllerForIndex:(NSInteger)index {
-    if (index < 0 || index >= (NSInteger)_items.count)
-        return nil;
+#pragma mark - Items
 
-    SPKMediaItem *item = _items[index];
+- (NSInteger)itemCount {
+    return _galleryFiles ? (NSInteger)_galleryFiles.count : (NSInteger)_items.count;
+}
+
+/// The item for `index`, built on first use when browsing the gallery. Items stay
+/// cached for as long as their page controller does, so paging back and forth
+/// across the same few pages doesn't rebuild them.
+- (SPKMediaItem *)itemAtIndex:(NSInteger)index {
+    if (index < 0 || index >= [self itemCount])
+        return nil;
+    if (!_galleryFiles)
+        return _items[(NSUInteger)index];
+
+    NSNumber *key = @(index);
+    SPKMediaItem *cached = _lazyItems[key];
+    if (cached)
+        return cached;
+
+    SPKMediaItem *item =
+        [SPKMediaItem itemWithGalleryFile:_galleryFiles[(NSUInteger)index]];
+    _lazyItems[key] = item;
+    return item;
+}
+
+- (NSInteger)indexOfItem:(SPKMediaItem *)item {
+    if (!item)
+        return NSNotFound;
+    if (!_galleryFiles)
+        return [_items indexOfObjectIdenticalTo:item];
+
+    // Built items are trimmed in lockstep with the controller cache, so any page
+    // that can ask for its index still has its item here (a handful of entries).
+    for (NSNumber *key in _lazyItems) {
+        if (_lazyItems[key] == item)
+            return key.integerValue;
+    }
+    return NSNotFound;
+}
+
+/// Drops the full-size image an item is holding. Only safe for items that can
+/// reload it from disk -- an item created straight from a UIImage (no file behind
+/// it) would lose its only copy.
+- (void)releaseImageForItem:(SPKMediaItem *)item {
+    if (item.fileURL || item.resolvedFileURL) {
+        item.image = nil;
+    }
+}
+
+- (UIViewController *)createViewControllerForIndex:(NSInteger)index {
+    SPKMediaItem *item = [self itemAtIndex:index];
+    if (!item)
+        return nil;
 
     if (item.mediaType == SPKMediaItemTypeVideo ||
         item.mediaType == SPKMediaItemTypeAudio) {
@@ -994,7 +1074,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 }
 
 - (UIViewController *)viewControllerForIndex:(NSInteger)index {
-    if (index < 0 || index >= (NSInteger)_items.count)
+    if (index < 0 || index >= [self itemCount])
         return nil;
 
     NSNumber *cacheKey = @(index);
@@ -1017,9 +1097,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     } else if ([vc isKindOfClass:[SPKFullScreenVideoViewController class]]) {
         item = ((SPKFullScreenVideoViewController *)vc).mediaItem;
     }
-    if (!item)
-        return NSNotFound;
-    return [_items indexOfObjectIdenticalTo:item];
+    return [self indexOfItem:item];
 }
 
 - (void)prepareViewControllerForDisplay:(UIViewController *)controller {
@@ -1054,11 +1132,11 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
          resolvedIndex++) {
         if (resolvedIndex == index)
             continue;
-        if (resolvedIndex < 0 || resolvedIndex >= (NSInteger)self.items.count)
+        SPKMediaItem *adjacentItem = [self itemAtIndex:resolvedIndex];
+        if (!adjacentItem)
             continue;
 
-        [[SPKMediaCacheManager sharedManager]
-            prefetchItem:self.items[resolvedIndex]];
+        [[SPKMediaCacheManager sharedManager] prefetchItem:adjacentItem];
         UIViewController *controller = [self viewControllerForIndex:resolvedIndex];
         if ([controller isKindOfClass:[SPKFullScreenVideoViewController class]]) {
             [(SPKFullScreenVideoViewController *)controller preloadContent];
@@ -1087,6 +1165,17 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
             [(id)controller cleanup];
         }
         [self.controllerCache removeObjectForKey:cachedIndex];
+    }
+
+    // Built items go with their page. They must be trimmed on exactly the same
+    // window as the controllers, because -indexOfItem: resolves a page back to
+    // its index through this dictionary.
+    NSArray<NSNumber *> *builtIndexes = self.lazyItems.allKeys.copy;
+    for (NSNumber *builtIndex in builtIndexes) {
+        if (ABS(builtIndex.integerValue - index) <= 2)
+            continue;
+        [self releaseImageForItem:self.lazyItems[builtIndex]];
+        [self.lazyItems removeObjectForKey:builtIndex];
     }
 }
 
@@ -1142,7 +1231,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                           (UIPageViewController *)pageViewController
        viewControllerAfterViewController:(UIViewController *)viewController {
     NSInteger index = [self indexOfViewController:viewController];
-    if (index == NSNotFound || index >= (NSInteger)_items.count - 1)
+    if (index == NSNotFound || index >= [self itemCount] - 1)
         return nil;
     return [self viewControllerForIndex:index + 1];
 }
@@ -1219,7 +1308,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
     self.title =
         [NSString stringWithFormat:@"%ld of %lu", (long)_currentIndex + 1,
-                                   (unsigned long)_items.count];
+                                   (unsigned long)[self itemCount]];
 }
 
 - (void)updateFavoriteButton {
@@ -1733,9 +1822,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 #pragma mark - Current Item
 
 - (SPKMediaItem *)currentItem {
-    if (_currentIndex < 0 || _currentIndex >= (NSInteger)_items.count)
-        return nil;
-    return _items[_currentIndex];
+    return [self itemAtIndex:_currentIndex];
 }
 
 - (NSURL *)currentFileURL {
@@ -1917,6 +2004,9 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [haptic impactOccurred];
 }
 
+// Bulk actions ("Download All") only exist off the gallery -- the gallery grid has
+// its own selection mode -- so these walk the eager item list directly. Gallery
+// playback leaves `items` nil and builds pages lazily instead (see -itemAtIndex:).
 - (NSArray<SPKDownloadItemRequest *> *)bulkDownloadItemsForPreview {
     NSMutableArray<SPKDownloadItemRequest *> *items = [NSMutableArray array];
     NSInteger index = 0;
@@ -2137,10 +2227,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         [NSMutableArray array];
     for (SPKDownloadItemRequest *req in bulkItems) {
         BOOL isVideo = (req.mediaKind == SPKDownloadMediaKindVideo);
-        SPKMediaItem *mediaItem =
-            (req.index >= 0 && req.index < (NSInteger)self.items.count)
-                ? self.items[(NSUInteger)req.index]
-                : nil;
+        SPKMediaItem *mediaItem = [self itemAtIndex:req.index];
         UIImage *thumb = mediaItem.thumbnail ?: mediaItem.image;
         if (thumb) {
             [selectionItems
@@ -2517,16 +2604,22 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         return;
     }
 
-    NSMutableArray *mutableItems = [_items mutableCopy];
-    [mutableItems removeObjectAtIndex:deletedIndex];
-    _items = [mutableItems copy];
-    _isSingleItemMode = (_items.count <= 1);
+    if (_galleryFiles) {
+        NSMutableArray *mutableFiles = [_galleryFiles mutableCopy];
+        [mutableFiles removeObjectAtIndex:deletedIndex];
+        _galleryFiles = [mutableFiles copy];
+    } else {
+        NSMutableArray *mutableItems = [_items mutableCopy];
+        [mutableItems removeObjectAtIndex:deletedIndex];
+        _items = [mutableItems copy];
+    }
+    _isSingleItemMode = ([self itemCount] <= 1);
 
     if ([self.delegate respondsToSelector:@selector(fullScreenMediaPlayerDidDeleteFileAtIndex:)]) {
         [self.delegate fullScreenMediaPlayerDidDeleteFileAtIndex:deletedIndex];
     }
 
-    if (_items.count == 0) {
+    if ([self itemCount] == 0) {
         SPKNotify(kSPKNotificationMediaPreviewDeleteGallery,
                   @"Deleted from Gallery", nil, @"circle_check_filled",
                   SPKNotificationToneSuccess);
@@ -2540,8 +2633,11 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         }
     }
     [self.controllerCache removeAllObjects];
+    // Removing a file shifts every index after it, so the built items no longer
+    // line up with their keys -- drop them all and let them rebuild.
+    [self.lazyItems removeAllObjects];
 
-    _currentIndex = MIN(deletedIndex, (NSInteger)_items.count - 1);
+    _currentIndex = MIN(deletedIndex, [self itemCount] - 1);
     UIViewController *newVC = [self viewControllerForIndex:_currentIndex];
     if (newVC) {
         [_pageViewController

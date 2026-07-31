@@ -21,6 +21,19 @@ static NSString *SPKSHA256String(NSString *value) {
     return output;
 }
 
+/// Decoded byte cost of an image, so the caches can be bounded by memory rather
+/// than by entry count.
+static NSUInteger SPKImageCacheCost(UIImage *image) {
+    if (!image)
+        return 0;
+    CGImageRef cgImage = image.CGImage;
+    if (cgImage) {
+        return (NSUInteger)(CGImageGetBytesPerRow(cgImage) * CGImageGetHeight(cgImage));
+    }
+    CGFloat scale = image.scale > 0 ? image.scale : 1.0;
+    return (NSUInteger)(image.size.width * scale * image.size.height * scale * 4.0);
+}
+
 static NSString *SPKFileKeyForURL(NSURL *url) {
     return url.absoluteString ?: url.path ?
                                           : @"";
@@ -64,11 +77,16 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
 
         _imageCache = [[NSCache alloc] init];
         _imageCache.name = @"com.sparkle.media-preview.image-cache";
-        _imageCache.countLimit = 64;
+        // These are full-size photos: a single 12 MP frame is ~48 MB decoded, so a
+        // count limit alone let the cache grow to gigabytes. Bound it by bytes and
+        // keep the count modest -- anything evicted reloads from disk.
+        _imageCache.countLimit = 12;
+        _imageCache.totalCostLimit = 96 * 1024 * 1024; // 96 MB
 
         _thumbnailCache = [[NSCache alloc] init];
         _thumbnailCache.name = @"com.sparkle.media-preview.thumbnail-cache";
         _thumbnailCache.countLimit = 64;
+        _thumbnailCache.totalCostLimit = 16 * 1024 * 1024; // 16 MB
 
         _stateQueue = dispatch_queue_create("com.sparkle.media-preview.cache-state", DISPATCH_QUEUE_SERIAL);
         _downloadCompletions = [NSMutableDictionary dictionary];
@@ -297,7 +315,9 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
                 if (image) {
                     item.image = image;
                     if (cacheKey.length > 0) {
-                        [strongSelf.imageCache setObject:image forKey:cacheKey];
+                        [strongSelf.imageCache setObject:image
+                                                  forKey:cacheKey
+                                                    cost:SPKImageCacheCost(image)];
                     }
                     if (completion)
                         completion(image, nil);
@@ -368,7 +388,9 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
                                            }
                                            item.thumbnail = thumbnail;
                                            if (cacheKey.length > 0) {
-                                               [weakSelf.thumbnailCache setObject:thumbnail forKey:cacheKey];
+                                               [weakSelf.thumbnailCache setObject:thumbnail
+                                                                           forKey:cacheKey
+                                                                             cost:SPKImageCacheCost(thumbnail)];
                                            }
                                            if (completion)
                                                completion(thumbnail);
@@ -407,7 +429,9 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
             if (thumbnail) {
                 item.thumbnail = thumbnail;
                 if (cacheKey.length > 0) {
-                    [self.thumbnailCache setObject:thumbnail forKey:cacheKey];
+                    [self.thumbnailCache setObject:thumbnail
+                                            forKey:cacheKey
+                                              cost:SPKImageCacheCost(thumbnail)];
                 }
             }
             if (completion)
