@@ -60,7 +60,15 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
                                               UISearchResultsUpdating,
                                               SPKGallerySortViewControllerDelegate,
                                               SPKGalleryFilterViewControllerDelegate>
+// Folders are browsed in place (re-scoping this one controller) rather than by
+// pushing a picker per folder, matching the Gallery — the nav bar, search field
+// and toolbar are never recreated, so the chrome never flashes mid-transition.
+// `folderTrail` is the stack of folder paths from root to the current folder
+// (empty at root); `folderScrollOffsets` holds the parallel grid scroll position
+// to restore on the way back.
 @property (nonatomic, copy, nullable) NSString *folderPath;
+@property (nonatomic, strong) NSMutableArray<NSString *> *folderTrail;
+@property (nonatomic, strong) NSMutableArray<NSValue *> *folderScrollOffsets;
 @property (nonatomic, copy) NSString *pickerTitle;
 @property (nonatomic, strong, nullable) NSSet<NSNumber *> *allowedMediaTypes;
 @property (nonatomic, assign) BOOL allowsMultipleSelection;
@@ -194,6 +202,11 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     self = [super initWithNibName:nil bundle:nil];
     if (self) {
         _folderPath = [folderPath copy];
+        _folderTrail = [NSMutableArray array];
+        _folderScrollOffsets = [NSMutableArray array];
+        if (_folderPath.length > 0) {
+            [_folderTrail addObject:_folderPath];
+        }
         _pickerTitle = [title.length > 0 ? title : @"Gallery" copy];
         _allowedMediaTypes = [allowedMediaTypes copy];
         _allowsMultipleSelection = allowsMultipleSelection;
@@ -223,7 +236,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
                                                object:nil];
 
     self.view.backgroundColor = [SPKUtils SPKColor_InstagramBackground];
-    self.title = self.folderPath.length > 0 ? self.folderPath.lastPathComponent : self.pickerTitle;
+    [self updateFolderTitle];
 
     self.collectionView = [[UICollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:[self makeLayout]];
     self.collectionView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -262,12 +275,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
         [self.emptyLabel.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor]
     ]];
 
-    BOOL isRoot = (self.navigationController.viewControllers.firstObject == self || self.folderPath.length == 0);
-    if (isRoot) {
-        UIBarButtonItem *cancelItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(cancelTapped));
-        cancelItem.accessibilityLabel = @"Cancel";
-        self.navigationItem.leftBarButtonItem = cancelItem;
-    }
+    [self refreshLeadingNavItem];
     [self refreshNavigationRightItems];
 
     self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
@@ -812,15 +820,107 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 - (void)openSubfolderAtIndex:(NSInteger)index {
     if (index < 0 || index >= (NSInteger)self.subfolders.count)
         return;
-    NSString *folder = self.subfolders[index];
-    SPKGalleryPickerViewController *child = [[SPKGalleryPickerViewController alloc] initWithFolderPath:folder
-                                                                                                 title:self.pickerTitle
-                                                                                     allowedMediaTypes:self.allowedMediaTypes
-                                                                               allowsMultipleSelection:self.allowsMultipleSelection
-                                                                                            completion:self.completion];
-    child.selectedIDs = self.selectedIDs;
-    child.selectedFilesByID = self.selectedFilesByID;
-    [self.navigationController pushViewController:child animated:YES];
+    [self navigateIntoFolder:self.subfolders[index]];
+}
+
+#pragma mark - Folder Navigation
+
+- (BOOL)canNavigateBackInFolders {
+    return self.folderTrail.count > 0;
+}
+
+/// Descends into `subfolderPath` by re-scoping this screen's data instead of
+/// pushing another picker, so the chrome and the running selection stay intact.
+- (void)navigateIntoFolder:(NSString *)subfolderPath {
+    if (subfolderPath.length == 0)
+        return;
+    // Remember where we were so returning restores the grid position.
+    [self.folderScrollOffsets addObject:[NSValue valueWithCGPoint:self.collectionView.contentOffset]];
+    [self.folderTrail addObject:subfolderPath];
+    self.folderPath = subfolderPath;
+
+    [self prepareForFolderChange];
+    __weak typeof(self) weakSelf = self;
+    [self replaceGridContentWithCrossfade:^{
+        [weakSelf reloadData];
+        [weakSelf scrollGridToTop];
+    }];
+    [self updateFolderTitle];
+    [self refreshLeadingNavItem];
+}
+
+/// Returns to the parent folder, restoring its previous scroll position.
+- (void)navigateBackInFolders {
+    if (![self canNavigateBackInFolders])
+        return;
+    [self.folderTrail removeLastObject];
+    self.folderPath = self.folderTrail.lastObject; // nil at root
+
+    CGPoint restoreOffset = CGPointZero;
+    BOOL hasRestoreOffset = NO;
+    if (self.folderScrollOffsets.count > 0) {
+        restoreOffset = [self.folderScrollOffsets.lastObject CGPointValue];
+        [self.folderScrollOffsets removeLastObject];
+        hasRestoreOffset = YES;
+    }
+
+    [self prepareForFolderChange];
+    __weak typeof(self) weakSelf = self;
+    [self replaceGridContentWithCrossfade:^{
+        [weakSelf reloadData];
+        if (hasRestoreOffset) {
+            [weakSelf.collectionView setContentOffset:restoreOffset animated:NO];
+        } else {
+            [weakSelf scrollGridToTop];
+        }
+    }];
+    [self updateFolderTitle];
+    [self refreshLeadingNavItem];
+}
+
+/// A folder change starts fresh: a search scoped to the folder we just left
+/// would otherwise silently carry over and hide the new folder's contents.
+- (void)prepareForFolderChange {
+    if (self.searchController.active) {
+        self.searchController.active = NO;
+    }
+    self.searchQuery = @"";
+    self.searchController.searchBar.text = nil;
+}
+
+- (void)scrollGridToTop {
+    CGFloat topY = -self.collectionView.adjustedContentInset.top;
+    [self.collectionView setContentOffset:CGPointMake(0.0, topY) animated:NO];
+}
+
+/// Cross-dissolves the grid's contents (no positional slide, so no layout jank)
+/// as a stand-in for the push animation we no longer perform.
+- (void)replaceGridContentWithCrossfade:(void (^)(void))contentUpdate {
+    if (!contentUpdate)
+        return;
+    [UIView transitionWithView:self.collectionView
+                      duration:0.22
+                       options:(UIViewAnimationOptionTransitionCrossDissolve | UIViewAnimationOptionAllowUserInteraction)
+                    animations:contentUpdate
+                    completion:nil];
+}
+
+- (void)updateFolderTitle {
+    self.title = self.folderPath.length > 0 ? self.folderPath.lastPathComponent : self.pickerTitle;
+}
+
+/// Close at the root, back while inside a folder — the only affordance for
+/// leaving a folder now that there is no navigation stack to pop.
+- (void)refreshLeadingNavItem {
+    UIBarButtonItem *leadingItem;
+    if ([self canNavigateBackInFolders]) {
+        leadingItem = SPKMediaChromeTopBarButtonItem(@"chevron_left", self, @selector(navigateBackInFolders));
+        leadingItem.accessibilityLabel = @"Back";
+    } else {
+        leadingItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(cancelTapped));
+        leadingItem.accessibilityLabel = @"Cancel";
+    }
+    SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ leadingItem ]);
 }
 
 - (CGSize)collectionView:(UICollectionView *)collectionView
