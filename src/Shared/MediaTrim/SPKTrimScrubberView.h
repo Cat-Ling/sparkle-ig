@@ -30,6 +30,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) NSTimeInterval duration;
 /// Shortest selectable clip in seconds.
 @property (nonatomic, assign) NSTimeInterval minimumDuration;
+/// Longest selectable clip in seconds; 0 means no ceiling. Dragging a handle past
+/// it pushes the opposite handle along instead of widening the selection, so the
+/// window slides rather than growing.
+@property (nonatomic, assign) NSTimeInterval maximumDuration;
 
 @property (nonatomic, assign, readonly) NSTimeInterval startTime;
 @property (nonatomic, assign, readonly) NSTimeInterval endTime;

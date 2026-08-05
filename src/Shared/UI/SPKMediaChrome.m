@@ -241,6 +241,37 @@ void SPKMediaChromeSetTrailingTopBarItems(UINavigationItem *navigationItem, NSAr
     navigationItem.rightBarButtonItems = items.count > 0 ? items : nil;
 }
 
+void SPKMediaChromeSetTrailingTopBarItemGroups(UINavigationItem *navigationItem, NSArray<NSArray<UIBarButtonItem *> *> *groups) {
+    if (!navigationItem) {
+        return;
+    }
+    if (@available(iOS 16.0, *)) {
+        NSMutableArray<UIBarButtonItemGroup *> *itemGroups = [NSMutableArray arrayWithCapacity:groups.count];
+        for (NSArray<UIBarButtonItem *> *items in groups) {
+            if (items.count == 0)
+                continue;
+            // One group per bubble: adjacent items inside a group share a capsule,
+            // separate groups get their own.
+            [itemGroups addObject:[UIBarButtonItemGroup fixedGroupWithRepresentativeItem:nil items:items]];
+        }
+        navigationItem.rightBarButtonItems = nil;
+        navigationItem.rightBarButtonItem = nil;
+        navigationItem.trailingItemGroups = itemGroups;
+        return;
+    }
+    // Pre-16 has no item groups; fall back to one flat list (see the singular/plural
+    // ordering note in SPKMediaChromeSetLeadingTopBarItems). `rightBarButtonItems`
+    // runs trailing-to-leading, the opposite of the visual order the groups are
+    // given in, so the flattened list is reversed to keep the same arrangement.
+    NSMutableArray<UIBarButtonItem *> *flat = [NSMutableArray array];
+    for (NSArray<UIBarButtonItem *> *items in groups) {
+        [flat addObjectsFromArray:items];
+    }
+    flat = [[[flat reverseObjectEnumerator] allObjects] mutableCopy];
+    navigationItem.rightBarButtonItem = nil;
+    navigationItem.rightBarButtonItems = flat.count > 0 ? flat : nil;
+}
+
 #pragma mark - Bottom Toolbar
 
 UIImage *SPKMediaChromeBottomBarIcon(NSString *resourceName) {

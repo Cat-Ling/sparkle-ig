@@ -1,6 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 
+#import "SPKTrimCrop.h"
 #import "SPKTrimTypes.h"
 
 NS_ASSUME_NONNULL_BEGIN
@@ -36,6 +37,20 @@ NS_ASSUME_NONNULL_BEGIN
 /// selected range as an .m4a, discarding the picture. Only meaningful for video
 /// (an audio trim is already audio-only). Defaults to YES.
 @property (nonatomic, assign) BOOL allowsAudioOnly;
+
+/// When YES, the editor's top bar offers a Crop button that opens the video
+/// framing editor (pan/zoom crop, rotate, flip). Only meaningful for video.
+/// Defaults to YES.
+@property (nonatomic, assign) BOOL allowsCrop;
+
+/// Pins the crop editor to a single ratio and hides its ratio picker (Instants
+/// pass 1.0). 0 (the default) offers the full freeform picker.
+@property (nonatomic, assign) CGFloat lockedCropAspectRatio;
+
+/// Longest selectable clip, in seconds. 0 (the default) means the full duration.
+/// Callers with a hard ceiling (an Instant is capped) set it so the scrubber can
+/// never select more than the destination accepts.
+@property (nonatomic, assign) NSTimeInterval maximumDuration;
 
 /// Shortest selectable clip, in seconds. Prevents a degenerate zero-length
 /// range. Defaults to 0.3.

@@ -625,6 +625,14 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
     case SPKTrimDragTargetLeftHandle: {
         NSTimeInterval maxStart = MAX(0.0, _endTime - _minimumDuration);
         _startTime = MAX(0.0, MIN(t, maxStart));
+        // Under a duration ceiling the out point follows the in point, so the
+        // selection slides at its maximum width instead of refusing to move.
+        if (_maximumDuration > 0.0 && (_endTime - _startTime) > _maximumDuration) {
+            _endTime = MIN(_duration, _startTime + _maximumDuration);
+            if ([self.delegate respondsToSelector:@selector(trimScrubber:didChangeEndTime:)]) {
+                [self.delegate trimScrubber:self didChangeEndTime:_endTime];
+            }
+        }
         _playheadTime = _startTime;
         [self layoutSelection];
         [self layoutPlayhead];
@@ -636,6 +644,12 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
     case SPKTrimDragTargetRightHandle: {
         NSTimeInterval minEnd = MIN(_duration, _startTime + _minimumDuration);
         _endTime = MIN(_duration, MAX(t, minEnd));
+        if (_maximumDuration > 0.0 && (_endTime - _startTime) > _maximumDuration) {
+            _startTime = MAX(0.0, _endTime - _maximumDuration);
+            if ([self.delegate respondsToSelector:@selector(trimScrubber:didChangeStartTime:)]) {
+                [self.delegate trimScrubber:self didChangeStartTime:_startTime];
+            }
+        }
         _playheadTime = _endTime;
         [self layoutSelection];
         [self layoutPlayhead];

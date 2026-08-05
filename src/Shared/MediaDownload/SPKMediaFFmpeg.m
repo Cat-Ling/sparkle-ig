@@ -641,10 +641,14 @@ static void SPKFFmpegAppendTrimAudioOptions(NSMutableArray<NSString *> *args, SP
 // mirrors the advanced merge's codec/CRF/bitrate/profile/level/pixel-format/
 // max-resolution options. Shared by the single-input trim and the DASH
 // trim+merge so both respect the same settings.
+// `leadingVideoFilter` runs before everything else in the -vf chain: it is the
+// framing edit (crop / transpose / hflip), which has to happen before any
+// max-resolution scale so the scale applies to the cropped picture.
 static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
                                               NSInteger width,
                                               NSInteger height,
                                               NSInteger sourceBitrate,
+                                              NSString *leadingVideoFilter,
                                               NSString *extraVideoFilter) {
     BOOL useAdvanced = [SPKUtils getBoolPref:@"downloads_adv_encoding"];
 
@@ -662,8 +666,15 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
             @"-level",
             @"4.0",
         ]];
+        NSMutableArray<NSString *> *basicFilters = [NSMutableArray array];
+        if (leadingVideoFilter.length > 0) {
+            [basicFilters addObject:leadingVideoFilter];
+        }
         if (extraVideoFilter.length > 0) {
-            [args addObjectsFromArray:@[ @"-vf", extraVideoFilter ]];
+            [basicFilters addObject:extraVideoFilter];
+        }
+        if (basicFilters.count > 0) {
+            [args addObjectsFromArray:@[ @"-vf", [basicFilters componentsJoinedByString:@","] ]];
         }
         return;
     }
@@ -671,6 +682,9 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
     // Collect video filters (max-resolution scale + any caller-supplied filter,
     // e.g. a setpts re-stamp) into a single -vf chain.
     NSMutableArray<NSString *> *videoFilters = [NSMutableArray array];
+    if (leadingVideoFilter.length > 0) {
+        [videoFilters addObject:leadingVideoFilter];
+    }
     NSString *maxResolution = SPKFFmpegStringPref(@"downloads_encoding_max_resolution", @"original");
     NSInteger targetMaxResolution = [maxResolution isEqualToString:@"original"] ? 0 : MAX(maxResolution.integerValue, 0);
     if (targetMaxResolution > 0 && width > 0 && height > 0) {
@@ -739,6 +753,7 @@ static NSArray<NSString *> *SPKFFmpegTrimArguments(NSURL *videoFileURL,
                                                    NSInteger width,
                                                    NSInteger height,
                                                    NSInteger sourceBitrate,
+                                                   NSString *cropFilter,
                                                    SPKFFmpegTrimAudioMode audioMode) {
     NSMutableArray<NSString *> *args = [NSMutableArray arrayWithArray:@[
         @"-y",
@@ -757,7 +772,7 @@ static NSArray<NSString *> *SPKFFmpegTrimArguments(NSURL *videoFileURL,
         [args addObjectsFromArray:@[ @"-map", @"0:v:0", @"-map", @"0:a:0" ]];
     }
 
-    SPKFFmpegAppendVideoEncodeOptions(args, width, height, sourceBitrate, nil);
+    SPKFFmpegAppendVideoEncodeOptions(args, width, height, sourceBitrate, cropFilter, nil);
     SPKFFmpegAppendTrimAudioOptions(args, audioMode);
     [args addObject:outputURL.path];
     return args;
@@ -775,7 +790,8 @@ static NSArray<NSString *> *SPKFFmpegTrimMergeArguments(NSString *videoSource,
                                                         NSTimeInterval startSeconds,
                                                         NSTimeInterval durationSeconds,
                                                         NSInteger width,
-                                                        NSInteger height) {
+                                                        NSInteger height,
+                                                        NSString *cropFilter) {
     NSMutableArray<NSString *> *args = [NSMutableArray arrayWithArray:@[
         @"-y",
         @"-hide_banner",
@@ -792,7 +808,7 @@ static NSArray<NSString *> *SPKFFmpegTrimMergeArguments(NSString *videoSource,
         @"-map",
         @"1:a:0",
     ]];
-    SPKFFmpegAppendVideoEncodeOptions(args, width, height, 0, nil);
+    SPKFFmpegAppendVideoEncodeOptions(args, width, height, 0, cropFilter, nil);
     SPKFFmpegAppendTrimAudioOptions(args, SPKFFmpegTrimAudioAAC);
     [args addObject:outputURL.path];
     return args;
@@ -1815,6 +1831,8 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
 + (void)trimVideoFileURL:(NSURL *)videoFileURL
             startSeconds:(NSTimeInterval)startSeconds
          durationSeconds:(NSTimeInterval)durationSeconds
+              cropFilter:(NSString *)cropFilter
+             croppedSize:(CGSize)croppedSize
        preferredBasename:(NSString *)preferredBasename
                 progress:(SPKMediaFFmpegProgressBlock)progress
               completion:(SPKMediaFFmpegCompletionBlock)completion
@@ -1837,6 +1855,12 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         width = (NSInteger)lround(fabs(rendered.width));
         height = (NSInteger)lround(fabs(rendered.height));
     }
+    // With a crop in the chain the encoder sees the cropped picture, so the
+    // max-resolution decision has to be made against that size.
+    if (croppedSize.width > 0.0 && croppedSize.height > 0.0) {
+        width = (NSInteger)lround(croppedSize.width);
+        height = (NSInteger)lround(croppedSize.height);
+    }
 
     NSArray<NSNumber *> *audioModes = hasAudio
                                           ? @[ @(SPKFFmpegTrimAudioAAC), @(SPKFFmpegTrimAudioCopy), @(SPKFFmpegTrimAudioNone) ]
@@ -1852,7 +1876,7 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         [attempts addObject:@{
             @"identifier" : [NSString stringWithFormat:@"trim-%ld", (long)mode],
             @"stage" : @"Trimming video",
-            @"arguments" : SPKFFmpegTrimArguments(videoFileURL, encodeURL, startSeconds, durationSeconds, width, height, 0, mode),
+            @"arguments" : SPKFFmpegTrimArguments(videoFileURL, encodeURL, startSeconds, durationSeconds, width, height, 0, cropFilter, mode),
             @"mainOutputURL" : encodeURL,
             @"postProcessArguments" : SPKFFmpegFaststartArguments(encodeURL, outputURL),
             @"cleanupPaths" : @[ encodeURL.path ?: @"" ]
@@ -1876,6 +1900,7 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
                  audioURL:(NSURL *)audioURL
              startSeconds:(NSTimeInterval)startSeconds
           durationSeconds:(NSTimeInterval)durationSeconds
+               cropFilter:(NSString *)cropFilter
         preferredBasename:(NSString *)preferredBasename
                     width:(NSInteger)width
                    height:(NSInteger)height
@@ -1901,7 +1926,7 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         NSArray<NSDictionary<NSString *, id> *> *attempts = @[ @{
             @"identifier" : @"trim-merge",
             @"stage" : @"Trimming video",
-            @"arguments" : SPKFFmpegTrimMergeArguments(videoSource, audioSource, encodeURL, startSeconds, durationSeconds, width, height),
+            @"arguments" : SPKFFmpegTrimMergeArguments(videoSource, audioSource, encodeURL, startSeconds, durationSeconds, width, height, cropFilter),
             @"mainOutputURL" : encodeURL,
             @"postProcessArguments" : SPKFFmpegFaststartArguments(encodeURL, outputURL),
             @"cleanupPaths" : @[ encodeURL.path ?: @"" ]

@@ -30,6 +30,9 @@ typedef void (^SPKMediaFFmpegCancelBlockPublisher)(dispatch_block_t cancelBlock)
                  completion:(SPKMediaFFmpegCompletionBlock)completion
                   cancelOut:(nullable SPKMediaFFmpegCancelBlockPublisher)cancelOut;
 
+/// `cropFilter` is an optional leading -vf fragment (see `SPKTrimCrop`); pass the
+/// resulting picture size as `croppedSize` (or CGSizeZero) so max-resolution
+/// scaling measures the cropped frame rather than the original.
 /// Frame-accurate re-encode trim. Encodes `[startSeconds, startSeconds +
 /// durationSeconds)` of the source with libx264 (preset from
 /// `downloads_encoding_speed`), then relocates the moov atom (+faststart).
@@ -38,6 +41,8 @@ typedef void (^SPKMediaFFmpegCancelBlockPublisher)(dispatch_block_t cancelBlock)
 + (void)trimVideoFileURL:(NSURL *)videoFileURL
             startSeconds:(NSTimeInterval)startSeconds
          durationSeconds:(NSTimeInterval)durationSeconds
+              cropFilter:(nullable NSString *)cropFilter
+             croppedSize:(CGSize)croppedSize
        preferredBasename:(NSString *)preferredBasename
                 progress:(nullable SPKMediaFFmpegProgressBlock)progress
               completion:(SPKMediaFFmpegCompletionBlock)completion
@@ -51,6 +56,7 @@ typedef void (^SPKMediaFFmpegCancelBlockPublisher)(dispatch_block_t cancelBlock)
                  audioURL:(NSURL *)audioURL
              startSeconds:(NSTimeInterval)startSeconds
           durationSeconds:(NSTimeInterval)durationSeconds
+               cropFilter:(nullable NSString *)cropFilter
         preferredBasename:(NSString *)preferredBasename
                     width:(NSInteger)width
                    height:(NSInteger)height

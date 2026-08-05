@@ -487,6 +487,7 @@
                                            audioURL:result.renderAudioURL
                                        startSeconds:result.startSeconds
                                     durationSeconds:result.durationSeconds
+                                               crop:result.crop
                                               width:result.width
                                              height:result.height
                                            basename:basename
@@ -500,6 +501,7 @@
                                           asset:nil
                                    startSeconds:result.startSeconds
                                 durationSeconds:result.durationSeconds
+                                           crop:result.crop
                                        basename:basename
                                        progress:progressToPill
                                      completion:onRendered

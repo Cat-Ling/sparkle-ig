@@ -1,14 +1,8 @@
 #import <UIKit/UIKit.h>
 
-NS_ASSUME_NONNULL_BEGIN
+#import "../Crop/SPKCropCanvasView.h"
 
-/// Crop-rectangle aspect behaviour for the photo editor.
-typedef NS_ENUM(NSInteger, SPKPhotoEditorAspectMode) {
-    /// A single fixed 1:1 crop, no ratio picker (Instants positioning).
-    SPKPhotoEditorAspectModeLockedSquare = 0,
-    /// Freeform + ratio presets for general editing.
-    SPKPhotoEditorAspectModeFreeform = 1,
-};
+NS_ASSUME_NONNULL_BEGIN
 
 /// One destination choice in the editor's Done menu (mirrors the trim editor's
 /// `SPKTrimDoneOption`). When a configuration carries `doneOptions`, the Done
@@ -26,7 +20,7 @@ typedef NS_ENUM(NSInteger, SPKPhotoEditorAspectMode) {
 /// Configures a photo editor instance. Instants uses `lockedSquareConfiguration`;
 /// the Gallery uses `freeformConfiguration`.
 @interface SPKPhotoEditorConfiguration : NSObject
-@property (nonatomic, assign) SPKPhotoEditorAspectMode aspectMode;
+@property (nonatomic, assign) SPKCropAspectMode aspectMode;
 /// Title of the confirm button (e.g. "Use" for Instants, "Done" for Gallery).
 @property (nonatomic, copy) NSString *confirmButtonTitle;
 /// When non-empty, Done becomes a destination menu (Photos / Gallery / Share /
