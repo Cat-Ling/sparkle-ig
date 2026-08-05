@@ -489,10 +489,20 @@
 
 // IGConsumerSubsStoryPeekDirectPlugin.IGConsumerSubsStoryPeekDirectManager — the
 // DM-inbox story peek entry. It calls presentPeek… (real) or presentPeekUpsell…
-// (subscribe dead-end) based on entitlement.
+// (subscribe dead-end) based on entitlement. IG 440 and earlier only; 441 folded
+// it into the unified manager below.
 @interface _TtC35IGConsumerSubsStoryPeekDirectPlugin36IGConsumerSubsStoryPeekDirectManager : NSObject
 - (void)presentPeekWithSourceView:(id)view reelPK:(id)pk presenting:(id)presenting onTapToOpenStory:(id)onTapToOpenStory onViewProfile:(id)onViewProfile;
 - (void)presentPeekUpsellWithSourceView:(id)view reelPK:(id)pk presenting:(id)presenting onSubscribeToInstagramPlus:(id)onSubscribe onViewProfile:(id)onViewProfile;
+@end
+
+// IGConsumerSubsStoryPeekPlugin.IGConsumerSubsStoryPeekManager — IG 441+. The
+// per-surface Direct and Profile plugins were replaced by this single manager,
+// and the upsell is no longer a separate presenter: both entry points call one
+// presentPeek… and pass the real-vs-upsell decision in `peekMode` (0 = real).
+@interface _TtC29IGConsumerSubsStoryPeekPlugin30IGConsumerSubsStoryPeekManager : NSObject
+- (void)presentPeekWithReelPK:(id)pk source:(id)source pogPosition:(long long)position peekMode:(long long)mode context:(id)context actions:(id)actions presenting:(id)presenting;
+- (void)presentPeekWithViewModel:(id)model source:(id)source pogPosition:(long long)position peekMode:(long long)mode context:(id)context actions:(id)actions presenting:(id)presenting;
 @end
 
 @interface IGUFIInteractionCountsView : UIView
