@@ -735,8 +735,11 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
         return;
     }
     __weak typeof(self) weakSelf = self;
+    // The edit comes back here to be saved, so its confirm is not the final one.
+    SPKPhotoEditorConfiguration *configuration = [SPKPhotoEditorConfiguration freeformConfiguration];
+    configuration.intermediateConfirm = YES;
     [SPKPhotoEditorViewController presentWithSourceImage:frame
-                                           configuration:[SPKPhotoEditorConfiguration freeformConfiguration]
+                                           configuration:configuration
                                                     from:self
                                               completion:^(UIImage *edited) {
                                                   [weakSelf applyEditedFrame:edited];

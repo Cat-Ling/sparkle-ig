@@ -172,9 +172,14 @@ static UIImage *SPKPhotoEditorFlipped(UIImage *image) {
         doneItem = SPKMediaChromeTopBarMenuButtonItem(
             @"check", [self buildDoneMenu], self.configuration.confirmButtonTitle ?: @"Done");
     } else {
+        // An intermediate confirm is a plain, untinted button: only the final Done
+        // of a flow gets the emphasized capsule and the blue glyph.
+        BOOL intermediate = self.configuration.intermediateConfirm;
         doneItem = SPKMediaChromeTopBarButtonItemWithStyle(
-            @"check", self, @selector(confirmTapped), UIBarButtonItemStyleDone,
-            [SPKUtils SPKColor_InstagramBlue], self.configuration.confirmButtonTitle ?: @"Done");
+            @"check", self, @selector(confirmTapped),
+            intermediate ? UIBarButtonItemStylePlain : UIBarButtonItemStyleDone,
+            intermediate ? nil : [SPKUtils SPKColor_InstagramBlue],
+            self.configuration.confirmButtonTitle ?: @"Done");
     }
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ cancelItem ]);
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, @[ doneItem ]);

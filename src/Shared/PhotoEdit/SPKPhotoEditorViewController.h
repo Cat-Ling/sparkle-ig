@@ -27,6 +27,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// Copy ...). The chosen id is delivered via the destination completion. Empty =
 /// a plain confirm that returns just the image (gallery/instants flows).
 @property (nonatomic, copy, nullable) NSArray<SPKPhotoEditorDoneOption *> *doneOptions;
+/// YES when confirming hands the result back to another editor rather than
+/// committing it (the trim editor's Frame Only pass). Only the final Done in a
+/// flow is prominent, so an intermediate one stays a plain button.
+@property (nonatomic, assign) BOOL intermediateConfirm;
 
 + (instancetype)lockedSquareConfiguration; // confirm = "Use"
 + (instancetype)freeformConfiguration;     // confirm = "Done"
