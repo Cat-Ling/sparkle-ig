@@ -45,6 +45,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Pins the crop editor to a single ratio and hides its ratio picker (Instants
 /// pass 1.0). 0 (the default) offers the full freeform picker.
+///
+/// A locked ratio also seeds a centred crop at that ratio, so the render matches
+/// the destination's shape even if the user never opens the crop editor. Without
+/// it a 16:9 clip sent to a square destination would be padded with black bars.
 @property (nonatomic, assign) CGFloat lockedCropAspectRatio;
 
 /// Longest selectable clip, in seconds. 0 (the default) means the full duration.

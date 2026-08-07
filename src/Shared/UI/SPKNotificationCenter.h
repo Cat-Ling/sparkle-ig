@@ -43,6 +43,7 @@ FOUNDATION_EXPORT NSString *const kSPKNotificationDirectAutoSaveThreadRule;
 FOUNDATION_EXPORT NSString *const kSPKNotificationUnsentMessage;
 FOUNDATION_EXPORT NSString *const kSPKNotificationUnsentReaction;
 FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsCaptureBlocked;
+FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsUpload;
 FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsAutoSave;
 FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsAutoSaveUserRule;
 

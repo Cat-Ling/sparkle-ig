@@ -51,6 +51,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 @property (nonatomic, strong) UIBarButtonItem *cropItem;
 @property (nonatomic, strong) UIBarButtonItem *doneItem;
 @property (nonatomic, copy, nullable) SPKTrimCrop *pendingCrop; // framing edit carried onto the result
+@property (nonatomic, assign) BOOL seedingLockedCrop;          // re-entry guard for the locked-ratio default
 @property (nonatomic, strong) UIView *cropPreviewHost;                  // clips the preview to the crop rect
 @property (nonatomic, strong) SPKVideoCropContentView *cropPreviewContent;
 @property (nonatomic, assign) CGSize orientedSize;
@@ -218,8 +219,43 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
                                         }];
 }
 
+/// With a locked ratio the destination's shape is not negotiable, so start from
+/// the largest centred crop at that ratio. Without this, confirming the editor
+/// without touching the crop would render the source's own aspect and leave the
+/// destination to pad it with black bars.
+- (void)seedLockedAspectCropIfNeeded {
+    CGFloat ratio = self.configuration.lockedCropAspectRatio;
+    if (ratio <= 0.0 || self.pendingCrop || !self.configuration.allowsCrop || self.seedingLockedCrop)
+        return;
+    CGSize oriented = self.orientedSize;
+    if (oriented.width <= 0.0 || oriented.height <= 0.0)
+        return;
+
+    CGSize box = (oriented.width / oriented.height > ratio)
+                     ? CGSizeMake(oriented.height * ratio, oriented.height)
+                     : CGSizeMake(oriented.width, oriented.width / ratio);
+    CGRect normalized = CGRectMake((oriented.width - box.width) / 2.0 / oriented.width,
+                                   (oriented.height - box.height) / 2.0 / oriented.height,
+                                   box.width / oriented.width,
+                                   box.height / oriented.height);
+    SPKTrimCrop *seed = [SPKTrimCrop cropWithNormalizedRect:normalized rotationQuarters:0 mirrored:NO];
+    // A source already at the locked ratio needs no crop at all, and applying an
+    // identity one would bounce straight back here through applyCrop:.
+    if (seed.isIdentity)
+        return;
+    self.seedingLockedCrop = YES;
+    [self applyCrop:seed];
+    self.seedingLockedCrop = NO;
+}
+
 - (void)applyCrop:(SPKTrimCrop *)crop {
     self.pendingCrop = (crop && !crop.isIdentity) ? crop : nil;
+    // Cancelling the crop editor must not drop a locked ratio back to the
+    // source's shape; fall back to the centred default instead of no crop.
+    if (!self.pendingCrop && self.configuration.lockedCropAspectRatio > 0.0) {
+        [self seedLockedAspectCropIfNeeded];
+        return;
+    }
     // Tint the button while a crop is active, so the state is legible even when
     // the framing change itself is subtle.
     UIColor *tint = self.pendingCrop ? [SPKUtils SPKColor_InstagramBlue]
@@ -535,6 +571,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     if (videoTrack) {
         CGSize rendered = CGSizeApplyAffineTransform(videoTrack.naturalSize, videoTrack.preferredTransform);
         self.orientedSize = CGSizeMake(fabs(rendered.width), fabs(rendered.height));
+        [self seedLockedAspectCropIfNeeded];
     }
 
     self.scrubber.duration = duration;

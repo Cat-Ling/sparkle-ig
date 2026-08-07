@@ -65,6 +65,7 @@ SPK_NOTIF_CONST(kSPKNotificationDirectAutoSaveThreadRule, "toggle_direct_auto_sa
 SPK_NOTIF_CONST(kSPKNotificationUnsentMessage, "unsent_message");
 SPK_NOTIF_CONST(kSPKNotificationUnsentReaction, "unsent_reaction");
 SPK_NOTIF_CONST(kSPKNotificationInstantsCaptureBlocked, "instants_capture_blocked");
+SPK_NOTIF_CONST(kSPKNotificationInstantsUpload, "instants_upload");
 SPK_NOTIF_CONST(kSPKNotificationInstantsAutoSave, "instants_auto_save");
 SPK_NOTIF_CONST(kSPKNotificationInstantsAutoSaveUserRule, "toggle_instants_auto_save_user_rule");
 
@@ -225,6 +226,7 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
         @{@"title" : @"Instants",
           @"items" : @[
               SPKNotificationItem(kSPKNotificationInstantsCaptureBlocked, @"Instant Capture Blocked", @"lock"),
+              SPKNotificationItem(kSPKNotificationInstantsUpload, @"Instant Upload Failed", @"warning"),
           ]},
         @{@"title" : @"Profile",
           @"items" : @[
