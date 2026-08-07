@@ -58,6 +58,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
                                               UICollectionViewDelegateFlowLayout,
                                               UIAdaptivePresentationControllerDelegate,
                                               UISearchResultsUpdating,
+                                              UISearchBarDelegate,
                                               SPKGallerySortViewControllerDelegate,
                                               SPKGalleryFilterViewControllerDelegate>
 // Folders are browsed in place (re-scoping this one controller) rather than by
@@ -74,9 +75,15 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 @property (nonatomic, assign) BOOL allowsMultipleSelection;
 @property (nonatomic, copy) SPKGalleryPickerCompletion completion;
 @property (nonatomic, strong) UICollectionView *collectionView;
-@property (nonatomic, strong) UILabel *emptyLabel;
+@property (nonatomic, strong) UIView *emptyStateView;
+@property (nonatomic, strong) UILabel *emptyStateLabel;
+@property (nonatomic, strong) UILabel *emptyStateSubtitle;
 @property (nonatomic, strong) UISearchController *searchController;
 @property (nonatomic, copy) NSString *searchQuery;
+// When YES (and a query is active), search ignores the folder scope and matches
+// across all folders; the search bar scope buttons toggle it. Same affordance as
+// the Gallery, so a file you know is filed away is still findable from the root.
+@property (nonatomic, assign) BOOL searchAllFolders;
 @property (nonatomic, strong) NSArray<NSString *> *subfolders;
 @property (nonatomic, strong) NSArray<SPKGalleryFile *> *files;
 @property (nonatomic, strong) NSMutableArray<NSString *> *selectedIDs;
@@ -254,25 +261,13 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     UIPinchGestureRecognizer *pinch = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handleGridPinch:)];
     [self.collectionView addGestureRecognizer:pinch];
 
-    self.emptyLabel = [[UILabel alloc] init];
-    self.emptyLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.emptyLabel.text = @"No matching Gallery files";
-    self.emptyLabel.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
-    self.emptyLabel.textAlignment = NSTextAlignmentCenter;
-    self.emptyLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
-    self.emptyLabel.numberOfLines = 0;
-    [self.view addSubview:self.emptyLabel];
+    [self setupEmptyState];
 
     [NSLayoutConstraint activateConstraints:@[
         [self.collectionView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
         [self.collectionView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.collectionView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [self.collectionView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
-        [self.emptyLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor
-                                                      constant:24.0],
-        [self.emptyLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor
-                                                       constant:-24.0],
-        [self.emptyLabel.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor]
+        [self.collectionView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
     ]];
 
     [self refreshLeadingNavItem];
@@ -283,9 +278,14 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     self.searchController.obscuresBackgroundDuringPresentation = NO;
     self.searchController.hidesNavigationBarDuringPresentation = NO;
     self.searchController.searchBar.placeholder = @"Search Gallery";
+    self.searchController.searchBar.delegate = self;
     [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                              forSearchBarIcon:UISearchBarIconSearch
                                         state:UIControlStateNormal];
+    // Scope toggle: search the current folder, or across all folders. Let the
+    // search controller manage the scope bar's visibility (shown while searching).
+    self.searchController.searchBar.scopeButtonTitles = @[ @"This Folder", @"All Folders" ];
+    self.searchController.automaticallyShowsScopeBar = YES;
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = YES;
 
@@ -387,11 +387,25 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     return predicates.count > 0 ? [NSCompoundPredicate andPredicateWithSubpredicates:predicates] : nil;
 }
 
+/// The scope toggle is only meaningful while a query is active — with no query,
+/// "All Folders" would flatten the whole gallery into the folder you are in.
+- (BOOL)searchingAllFolders {
+    if (!self.searchAllFolders)
+        return NO;
+    NSString *query = [self.searchQuery stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    return query.length > 0;
+}
+
 - (NSArray<SPKGalleryFile *> *)fetchFiles {
     NSFetchRequest *request = [[NSFetchRequest alloc] initWithEntityName:@"SPKGalleryFile"];
     NSMutableArray<NSPredicate *> *predicates = [NSMutableArray array];
 
-    NSPredicate *basePred = [self filePredicateForFolderPath:self.folderPath includeDescendants:NO];
+    // "All Folders" only applies while actually searching; otherwise stay scoped
+    // to the folder being browsed. Passing a nil path with descendants included
+    // drops the folder predicate entirely, which is exactly "everywhere".
+    NSPredicate *basePred = [self searchingAllFolders]
+                                ? [self filePredicateForFolderPath:nil includeDescendants:YES]
+                                : [self filePredicateForFolderPath:self.folderPath includeDescendants:NO];
     if (basePred) [predicates addObject:basePred];
 
     NSPredicate *filterPred = [SPKGalleryFilterViewController predicateForTypes:self.filterTypes
@@ -709,10 +723,101 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     }
 }
 
+#pragma mark - Empty State
+
+/// Same icon + title + subtitle treatment as the Gallery, so an empty picker
+/// reads as a deliberate state rather than a blank sheet with one grey line.
+- (void)setupEmptyState {
+    _emptyStateView = [[UIView alloc] initWithFrame:CGRectZero];
+    _emptyStateView.translatesAutoresizingMaskIntoConstraints = NO;
+    _emptyStateView.hidden = YES;
+    [self.view addSubview:_emptyStateView];
+
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[SPKAssetUtils instagramIconNamed:@"media_empty"
+                                                                                   pointSize:96.0]];
+    icon.translatesAutoresizingMaskIntoConstraints = NO;
+    icon.contentMode = UIViewContentModeScaleAspectFit;
+    icon.tintColor = [SPKUtils SPKColor_InstagramTertiaryText];
+    [_emptyStateView addSubview:icon];
+
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    label.textColor = [SPKUtils SPKColor_InstagramPrimaryText];
+    label.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightMedium];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.numberOfLines = 0;
+    [_emptyStateView addSubview:label];
+    _emptyStateLabel = label;
+
+    UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
+    subtitle.translatesAutoresizingMaskIntoConstraints = NO;
+    subtitle.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
+    subtitle.font = [UIFont systemFontOfSize:14.0];
+    subtitle.textAlignment = NSTextAlignmentCenter;
+    subtitle.numberOfLines = 0;
+    [_emptyStateView addSubview:subtitle];
+    _emptyStateSubtitle = subtitle;
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_emptyStateView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [_emptyStateView.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor
+                                                      constant:-40.0],
+        [_emptyStateView.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.view.leadingAnchor
+                                                                   constant:40.0],
+        [_emptyStateView.trailingAnchor constraintLessThanOrEqualToAnchor:self.view.trailingAnchor
+                                                                 constant:-40.0],
+
+        [icon.topAnchor constraintEqualToAnchor:_emptyStateView.topAnchor],
+        [icon.centerXAnchor constraintEqualToAnchor:_emptyStateView.centerXAnchor],
+        [icon.widthAnchor constraintEqualToConstant:96.0],
+        [icon.heightAnchor constraintEqualToConstant:96.0],
+
+        [label.topAnchor constraintEqualToAnchor:icon.bottomAnchor
+                                        constant:20.0],
+        [label.leadingAnchor constraintEqualToAnchor:_emptyStateView.leadingAnchor],
+        [label.trailingAnchor constraintEqualToAnchor:_emptyStateView.trailingAnchor],
+
+        [subtitle.topAnchor constraintEqualToAnchor:label.bottomAnchor
+                                           constant:8.0],
+        [subtitle.leadingAnchor constraintEqualToAnchor:_emptyStateView.leadingAnchor],
+        [subtitle.trailingAnchor constraintEqualToAnchor:_emptyStateView.trailingAnchor],
+        [subtitle.bottomAnchor constraintEqualToAnchor:_emptyStateView.bottomAnchor],
+    ]];
+}
+
 - (void)updateEmptyState {
     BOOL empty = self.subfolders.count == 0 && self.files.count == 0;
-    self.emptyLabel.hidden = !empty;
+    self.emptyStateView.hidden = !empty;
     self.collectionView.hidden = empty;
+
+    if (!empty)
+        return;
+
+    BOOL hasFilters = self.filterTypes.count > 0 || self.filterSources.count > 0 ||
+                      self.filterFavoritesOnly || self.filterUsernames.count > 0;
+    NSString *query = [self.searchQuery stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    NSString *folderName = self.folderPath.length > 0 ? self.folderPath.lastPathComponent : nil;
+
+    NSString *title;
+    NSString *subtitle;
+    if (query.length > 0) {
+        title = @"No results";
+        // Point at the scope toggle: the match may simply live in another folder.
+        subtitle = (!self.searchAllFolders && folderName.length > 0)
+                       ? @"Nothing in this folder matches your search. Try All Folders."
+                       : @"No media matches your search.";
+    } else if (hasFilters) {
+        title = @"No matching files";
+        subtitle = @"Try adjusting your filters.";
+    } else if (folderName.length > 0) {
+        title = @"This folder is empty";
+        subtitle = @"Nothing here can be selected.";
+    } else {
+        title = @"Nothing to select";
+        subtitle = @"There is no Gallery media of this kind yet.";
+    }
+    self.emptyStateLabel.text = title;
+    self.emptyStateSubtitle.text = subtitle;
 }
 
 - (void)updateDoneButton {
@@ -886,6 +991,16 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     }
     self.searchQuery = @"";
     self.searchController.searchBar.text = nil;
+    self.searchAllFolders = NO;
+    self.searchController.searchBar.selectedScopeButtonIndex = 0;
+}
+
+- (void)searchBar:(UISearchBar *)searchBar selectedScopeButtonIndexDidChange:(NSInteger)selectedScope {
+    BOOL allFolders = (selectedScope == 1);
+    if (allFolders == self.searchAllFolders)
+        return;
+    self.searchAllFolders = allFolders;
+    [self reloadData];
 }
 
 - (void)scrollGridToTop {
