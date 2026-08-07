@@ -2,6 +2,7 @@
 #import <objc/message.h>
 #import <objc/runtime.h>
 
+#import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
 
 // ─── Constants & Types ──────────────────────────────────────────────
@@ -38,6 +39,76 @@ static void SPKRegisterPollViewWithOverlay(UIView *pollView) {
 #define kSPKPollBadgeMarginRight -6.0
 // Set to 0.0 to center vertically, or a positive/negative value to offset from the center
 #define kSPKPollBadgeCenterYOffset -18.0
+
+// ─── Badge View ─────────────────────────────────────────────────────
+
+// The vote badge is Sparkle UI, so it honours "Hide UI on Capture" like every
+// other injected overlay: both the pill and its text live inside an
+// SPKChromeCanvas, whose content is excluded from screenshots and recordings.
+// Nothing is drawn on the container itself — that sits outside the secure
+// canvas and would survive the redaction.
+@interface SPKStoryPollVoteBadge : UIView
+@property (nonatomic, strong, readonly) UILabel *label;
+@property (nonatomic, strong, readonly) UIView *pill;
+- (instancetype)initWithFont:(UIFont *)font textColor:(UIColor *)textColor pillColor:(UIColor *)pillColor;
+@end
+
+@implementation SPKStoryPollVoteBadge {
+    SPKChromeCanvas *_canvas;
+}
+
+- (instancetype)initWithFont:(UIFont *)font textColor:(UIColor *)textColor pillColor:(UIColor *)pillColor {
+    self = [super initWithFrame:CGRectZero];
+    if (!self)
+        return nil;
+
+    // Frame-positioned from the outside (the poll sticker lays out by frame);
+    // all Auto Layout stays inside the container.
+    self.translatesAutoresizingMaskIntoConstraints = YES;
+    self.userInteractionEnabled = NO;
+    self.clipsToBounds = NO;
+
+    _canvas = [SPKChromeCanvas new];
+    _canvas.userInteractionEnabled = NO;
+    [self addSubview:_canvas];
+
+    // Content goes into the canvas now (before it materialises its secure
+    // canvas) but is constrained to `_canvas` itself — its identity is stable,
+    // whereas `contentContainer` swaps to the stolen CanvasView once attached,
+    // migrating these subviews along with it.
+    UIView *host = _canvas.contentContainer;
+
+    _pill = [[UIView alloc] init];
+    _pill.translatesAutoresizingMaskIntoConstraints = NO;
+    _pill.userInteractionEnabled = NO;
+    _pill.backgroundColor = pillColor;
+    _pill.layer.masksToBounds = YES;
+    [host addSubview:_pill];
+
+    _label = [[UILabel alloc] init];
+    _label.translatesAutoresizingMaskIntoConstraints = NO;
+    _label.font = font;
+    _label.textColor = textColor;
+    _label.textAlignment = NSTextAlignmentCenter;
+    [host addSubview:_label];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_canvas.leadingAnchor constraintEqualToAnchor:self.leadingAnchor],
+        [_canvas.trailingAnchor constraintEqualToAnchor:self.trailingAnchor],
+        [_canvas.topAnchor constraintEqualToAnchor:self.topAnchor],
+        [_canvas.bottomAnchor constraintEqualToAnchor:self.bottomAnchor],
+        [_pill.leadingAnchor constraintEqualToAnchor:_canvas.leadingAnchor],
+        [_pill.trailingAnchor constraintEqualToAnchor:_canvas.trailingAnchor],
+        [_pill.topAnchor constraintEqualToAnchor:_canvas.topAnchor],
+        [_pill.bottomAnchor constraintEqualToAnchor:_canvas.bottomAnchor],
+        [_label.centerXAnchor constraintEqualToAnchor:_canvas.centerXAnchor],
+        [_label.centerYAnchor constraintEqualToAnchor:_canvas.centerYAnchor],
+    ]];
+
+    return self;
+}
+
+@end
 
 // ─── Utilities ──────────────────────────────────────────────────────
 
@@ -210,29 +281,28 @@ static void SPKApplyStoryPollVoteCounts(UIView *pollView, NSArray<UIView *> *opt
 
         // Use a unique tag for each option view's badge
         NSInteger badgeTag = 998800 + index;
-        UILabel *badge = [pollView viewWithTag:badgeTag];
+        UIView *existing = [pollView viewWithTag:badgeTag];
+        SPKStoryPollVoteBadge *badge = [existing isKindOfClass:[SPKStoryPollVoteBadge class]] ? (SPKStoryPollVoteBadge *)existing : nil;
         if (!badge) {
-            badge = [[UILabel alloc] init];
-            badge.tag = badgeTag;
-            badge.font = [UIFont boldSystemFontOfSize:12];
+            [existing removeFromSuperview];
             // Poll stickers always render on a light card, so pin the badge to the
             // dark-mode variant (dark pill + light text) regardless of the user's
             // system appearance — otherwise it's low-contrast in dark mode.
             UITraitCollection *darkTraits = [UITraitCollection traitCollectionWithUserInterfaceStyle:UIUserInterfaceStyleDark];
-            badge.textColor = [[SPKUtils SPKColor_InstagramPrimaryText] resolvedColorWithTraitCollection:darkTraits];
-            badge.backgroundColor = [[SPKUtils SPKColor_InstagramTertiaryBackground] resolvedColorWithTraitCollection:darkTraits];
-            badge.textAlignment = NSTextAlignmentCenter;
-            badge.layer.masksToBounds = YES;
+            badge = [[SPKStoryPollVoteBadge alloc]
+                initWithFont:[UIFont boldSystemFontOfSize:12]
+                   textColor:[[SPKUtils SPKColor_InstagramPrimaryText] resolvedColorWithTraitCollection:darkTraits]
+                   pillColor:[[SPKUtils SPKColor_InstagramTertiaryBackground] resolvedColorWithTraitCollection:darkTraits]];
+            badge.tag = badgeTag;
             [pollView addSubview:badge];
         }
 
         badge.hidden = NO;
-        badge.text = formattedVotes;
-        [badge sizeToFit];
+        badge.label.text = formattedVotes;
 
-        CGSize badgeSize = badge.frame.size;
-        badgeSize.width += kSPKPollBadgePaddingHorizontal;
-        badgeSize.height += kSPKPollBadgePaddingVertical;
+        CGSize badgeSize = [badge.label sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)];
+        badgeSize.width = ceil(badgeSize.width) + kSPKPollBadgePaddingHorizontal;
+        badgeSize.height = ceil(badgeSize.height) + kSPKPollBadgePaddingVertical;
 
         // Enforce perfect circle if the width is smaller than the height (e.g. for single digits)
         badgeSize.width = MAX(badgeSize.width, badgeSize.height);
@@ -244,7 +314,9 @@ static void SPKApplyStoryPollVoteCounts(UIView *pollView, NSArray<UIView *> *opt
         CGFloat badgeY = CGRectGetMidY(optionFrame) - (badgeSize.height / 2.0) + kSPKPollBadgeCenterYOffset;
 
         badge.frame = CGRectMake(badgeX, badgeY, badgeSize.width, badgeSize.height);
-        badge.layer.cornerRadius = badgeSize.height / 2.0;
+        // Rounding goes on the pill INSIDE the secure canvas, never on the
+        // container — anything drawn there would outlive "Hide UI on Capture".
+        badge.pill.layer.cornerRadius = badgeSize.height / 2.0;
 
         // Poll stickers are displayed with an upscaling transform, so a label
         // rasterized at the screen scale gets magnified by the parent and looks
@@ -258,9 +330,9 @@ static void SPKApplyStoryPollVoteCounts(UIView *pollView, NSArray<UIView *> *opt
             onScreenScale = hypot(unit.x - origin.x, unit.y - origin.y);
         }
         CGFloat targetContentsScale = UIScreen.mainScreen.scale * MAX(1.0, onScreenScale);
-        if (fabs(badge.layer.contentsScale - targetContentsScale) > 0.01) {
-            badge.layer.contentsScale = targetContentsScale;
-            [badge setNeedsDisplay];
+        if (fabs(badge.label.layer.contentsScale - targetContentsScale) > 0.01) {
+            badge.label.layer.contentsScale = targetContentsScale;
+            [badge.label setNeedsDisplay];
         }
 
         [pollView bringSubviewToFront:badge];
