@@ -177,8 +177,15 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
     NSMutableArray<UIBarButtonItem *> *items = [NSMutableArray array];
     if (self.showsAddButton)
         [items addObject:SPKMediaChromeTopBarButtonItemWithTint(@"plus", self, @selector(spk_addTapped), [SPKUtils SPKColor_InstagramPrimaryText], @"Add")];
-    if (self.enablesSort || self.infoText.length)
-        [items addObject:SPKMediaChromeTopBarMenuButtonItem(@"more", [self moreMenu], @"More")];
+    // When the overflow folds nothing but sort, say so with the sort glyph: "•••"
+    // promises more than the menu delivers. It only earns the dots once something
+    // else ("How It Works") shares it.
+    if (self.enablesSort || self.infoText.length) {
+        BOOL sortOnly = (self.enablesSort && self.infoText.length == 0);
+        [items addObject:SPKMediaChromeTopBarMenuButtonItem(sortOnly ? @"sort" : @"more",
+                                                            [self moreMenu],
+                                                            sortOnly ? @"Sort" : @"More")];
+    }
     if (items.count)
         SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, items);
 }
