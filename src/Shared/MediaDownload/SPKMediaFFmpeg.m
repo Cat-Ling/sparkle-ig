@@ -834,6 +834,72 @@ static NSError *SPKFFmpegError(NSString *description, NSInteger code) {
                            userInfo:@{NSLocalizedDescriptionKey : description ?: @"FFmpeg failed"}];
 }
 
+/// FFmpeg's failure output is the entire session log: banner, build flags, then
+/// the input path, and only somewhere in there the actual reason. Surfacing that
+/// verbatim produces a notification that is all path and no reason, so distil it
+/// to the one line that says what went wrong. The full log is still written to
+/// the FFmpeg logs directory and carried on the error under SPKFFmpegLogKey.
+NSString *const SPKFFmpegLogKey = @"SPKFFmpegLog";
+
+static NSString *SPKFFmpegConciseFailureMessage(NSString *logs) {
+    if (logs.length == 0)
+        return @"FFmpeg command failed";
+
+    static NSArray<NSString *> *markers = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        markers = @[ @"error", @"invalid", @"unable", @"no such file", @"not supported",
+                     @"unsupported", @"unknown", @"failed", @"denied", @"permission" ];
+    });
+
+    NSCharacterSet *whitespace = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+    NSString *chosen = nil;
+    NSString *lastNonEmpty = nil;
+    for (NSString *raw in [logs componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]]) {
+        NSString *line = [raw stringByTrimmingCharactersInSet:whitespace];
+        if (line.length == 0)
+            continue;
+        lastNonEmpty = line;
+        // "Conversion failed!" is FFmpeg's last word on every failure and says
+        // nothing; the useful line is the one before it.
+        if ([line hasPrefix:@"Conversion failed"])
+            continue;
+        NSString *lowered = line.lowercaseString;
+        for (NSString *marker in markers) {
+            if ([lowered containsString:marker]) {
+                chosen = line;
+                break;
+            }
+        }
+    }
+    NSString *message = chosen ?: lastNonEmpty;
+    if (message.length == 0)
+        return @"FFmpeg command failed";
+
+    // Lines about a file are prefixed with its full path; the reason follows.
+    if ([message hasPrefix:@"/"]) {
+        NSRange separator = [message rangeOfString:@": "];
+        if (separator.location != NSNotFound && separator.location + separator.length < message.length) {
+            message = [message substringFromIndex:separator.location + separator.length];
+        } else {
+            message = message.lastPathComponent;
+        }
+    }
+    if (message.length > 160) {
+        message = [[message substringToIndex:159] stringByAppendingString:@"…"];
+    }
+    return message;
+}
+
+static NSError *SPKFFmpegErrorWithLog(NSString *description, NSInteger code, NSString *logs) {
+    NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
+    userInfo[NSLocalizedDescriptionKey] = description ?: @"FFmpeg failed";
+    if (logs.length > 0) {
+        userInfo[SPKFFmpegLogKey] = logs;
+    }
+    return [NSError errorWithDomain:@"Sparkle.MediaFFmpeg" code:code userInfo:userInfo];
+}
+
 // Pre-convert an arbitrary audio source (including xHE-AAC, which the bundled
 // FFmpegKit cannot decode) to a plain AAC-LC m4a using AVFoundation.
 //  iOS's audio stack natively supports xHE-AAC, so the resulting file is
@@ -994,8 +1060,14 @@ static void _SPKFFmpegRunAsyncImpl(id commandOrArgs,
                 completion(successURL, nil);
             return;
         }
-        if (completion)
-            completion(nil, SPKFFmpegError(description, cancelled ? NSUserCancelledError : 3));
+        if (completion) {
+            NSString *message = cancelled ? @"Cancelled" : SPKFFmpegConciseFailureMessage(logs);
+            if (!cancelled) {
+                SPKLog(@"FFmpeg", @"[Sparkle] command failed: %@ (full log in %@)", message,
+                       SPKFFmpegLogsDirectoryPath());
+            }
+            completion(nil, SPKFFmpegErrorWithLog(message, cancelled ? NSUserCancelledError : 3, logs));
+        }
     };
 
     id logBlock = ^(__unused id log) {

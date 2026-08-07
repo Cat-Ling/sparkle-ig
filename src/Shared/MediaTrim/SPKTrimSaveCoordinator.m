@@ -423,7 +423,9 @@
             return;
         }
         if (!renderedURL) {
-            [pill showError:error.localizedDescription ?: @"Trim failed"];
+            // The reason goes in the subtitle so the pill always leads with what
+            // failed; an encoder message is too long to read as a title.
+            [pill showErrorWithTitle:@"Trim failed" subtitle:error.localizedDescription icon:nil];
             if (completion)
                 completion(NO);
             return;
