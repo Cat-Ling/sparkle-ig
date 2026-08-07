@@ -3,6 +3,7 @@
 #include <UIKit/UIKit.h>
 
 #import "../../AssetUtils.h"
+#import "../../Networking/SPKInstagramAPI.h"
 #import "../../Utils.h"
 #import "../ActionButton/ActionButtonCore.h"
 #import "../ActionButton/SPKActionDescriptor.h"
@@ -23,6 +24,7 @@
 #import "../PhotoEdit/SPKPhotoEditorViewController.h"
 #import "../UI/SPKIGAlertPresenter.h"
 #import "../UI/SPKMediaChrome.h"
+#import "../UI/SPKNotificationCenter.h"
 #import "SPKFullScreenImageViewController.h"
 #import "SPKFullScreenMediaPlayer.h"
 #import "SPKFullScreenVideoViewController.h"
@@ -2330,12 +2332,73 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
 }
 
+// The 4K web candidates are fetched lazily, once per post, by whoever needs them
+// first — and the action button only does so for its own download/copy actions.
+// A download or copy started from inside the preview reaches
+// SPKMediaQualityManager directly, bypassing that fetch, so unless the action
+// button happened to fetch them for this post already, "Max" quality would
+// silently fall back to the mobile-sized variant. Fetch them here too.
+//
+// Returns YES when a fetch was started; `retry` re-runs the operation once the
+// candidates have landed (or the request failed, which is marked so it is not
+// retried on every tap).
+- (BOOL)beginFetching4KCandidatesForItem:(SPKMediaItem *)item
+                              identifier:(NSString *)identifier
+                                   retry:(void (^)(void))retry {
+    if (item.mediaType != SPKMediaItemTypeImage)
+        return NO;
+    if (![SPKUtils getBoolPref:@"downloads_fetch_4k_images"])
+        return NO;
+
+    // Same gate the action button applies: the candidates only change the result
+    // for quality modes that can pick them.
+    NSString *photoQuality = [SPKUtils getStringPref:@"downloads_photo_quality"] ?: @"high";
+    if (![photoQuality isEqualToString:@"max"] && ![photoQuality isEqualToString:@"always_ask"])
+        return NO;
+
+    // For a carousel child this is the parent post's PK (the metadata is
+    // populated from the top-level media), which is what the web media endpoint
+    // expects — a child PK does not resolve there.
+    NSString *mediaPK = [self metadataForCurrentItem].sourceMediaPK;
+    if (mediaPK.length == 0)
+        return NO;
+    if ([SPKMediaQualityManager hasWebPhotoCandidatesFetchedForPK:mediaPK])
+        return NO;
+
+    if (identifier.length > 0 && SPKNotificationIsEnabled(identifier)) {
+        [[SPKNotificationCenter shared] beginTransientProgressWithTitle:@"Fetching 4K candidates..."
+                                                               onCancel:nil];
+    }
+    [SPKInstagramAPI fetchWebMediaInfoForPK:mediaPK
+                                 completion:^(NSDictionary *response, NSError *error) {
+                                     [SPKMediaQualityManager markWebPhotoCandidatesFetchedForPK:mediaPK];
+                                     if (response) {
+                                         [SPKMediaQualityManager cacheWebCandidatesFromResponse:response];
+                                     }
+                                     dispatch_async(dispatch_get_main_queue(), ^{
+                                         if (retry)
+                                             retry();
+                                     });
+                                 }];
+    return YES;
+}
+
 - (BOOL)handleRemoteOperationWithAction:(SPKDownloadDestination)destination
                      feedbackIdentifier:(NSString *)feedbackIdentifier {
     SPKMediaItem *item = [self currentItem];
     NSURL *url = [self currentOperationURL];
     if (!item.sourceMediaObject || !item.fileURL || item.fileURL.isFileURL) {
         return NO;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    if ([self beginFetching4KCandidatesForItem:item
+                                    identifier:feedbackIdentifier
+                                         retry:^{
+                                             [weakSelf handleRemoteOperationWithAction:destination
+                                                                    feedbackIdentifier:feedbackIdentifier];
+                                         }]) {
+        return YES;
     }
 
     NSURL *sourceURL = item.fileURL ?: url;
@@ -2360,6 +2423,15 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     SPKMediaItem *item = [self currentItem];
     if (!item.sourceMediaObject || !item.fileURL || item.fileURL.isFileURL) {
         return NO;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    if ([self beginFetching4KCandidatesForItem:item
+                                    identifier:kSPKNotificationMediaPreviewCopy
+                                         retry:^{
+                                             [weakSelf handleRemoteCopyOperation];
+                                         }]) {
+        return YES;
     }
 
     NSURL *sourceURL = item.fileURL;
