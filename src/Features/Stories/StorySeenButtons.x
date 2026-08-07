@@ -11,6 +11,7 @@
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Tweak.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -428,6 +429,7 @@ UIView *SPKActiveStoryOverlayForInteractions(void) {
 %hook IGStoryFullscreenOverlayView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StorySeenButtons.layoutSubviews");
 
     UIView *overlayView = (UIView *)self;
     SPKActiveStoryOverlayView = overlayView;

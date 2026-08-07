@@ -4,6 +4,7 @@
 
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 // ─── Constants & Types ──────────────────────────────────────────────
 
@@ -373,6 +374,7 @@ static void SPKApplyStoryPollVoteCounts(UIView *pollView, NSArray<UIView *> *opt
 %hook IGPollStickerV2View
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StoryPollVoteCounts.layoutSubviews");
     NSArray *options = SPKArrayIvar(self, "_optionViews");
     if (options.count > 0) {
         SPKApplyStoryPollVoteCounts((UIView *)self, options);
@@ -385,6 +387,7 @@ static void SPKApplyStoryPollVoteCounts(UIView *pollView, NSArray<UIView *> *opt
 %hook IGPollStickerView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StoryPollVoteCounts.layoutSubviews2");
     NSArray *options = SPKArrayIvar(self, "_optionViews") ?: SPKArrayIvar(self, "_voteOptionViews") ?
                                                                                                     : SPKArrayIvar(self, "_options");
     if (options.count > 0) {
@@ -402,6 +405,7 @@ static void SPKApplyStoryPollVoteCounts(UIView *pollView, NSArray<UIView *> *opt
 %hook IGStoryFullscreenOverlayView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StoryPollVoteCounts.layoutSubviews3");
     NSHashTable *pollViews = objc_getAssociatedObject(self, &kSPKOverlayPollViewsAssocKey);
     if (pollViews.count == 0)
         return;

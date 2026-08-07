@@ -1,6 +1,7 @@
 #import "SPKStartupHooks.h"
 
 #import "../Utils.h"
+#import "SPKHookBisect.h"
 #import "SPKStabilityGuard.h"
 
 FOUNDATION_EXPORT void SPKInstallLiquidGlassHooksIfEnabled(void);
@@ -117,15 +118,26 @@ static void SPKInstallEssentialAccessHooks(void) {
     SPKInstallSettingsShortcutsHooksIfNeeded();
 }
 
+// Every feature installer below goes through SPK_INSTALL so a single installer
+// can be skipped at launch from Settings > Tools > Hook Bisect. Feature prefs
+// can't do this: most installers ignore their pref and install unconditionally,
+// leaving the swizzle (and its per-layout work) in place with the feature "off".
+#define SPK_INSTALL(installer)                                    \
+    do {                                                          \
+        if (!SPKHookBisectShouldSkipInstaller(#installer))        \
+            installer();                                          \
+    } while (0)
+
 void SPKInstallLaunchCriticalHooks(void) {
     if (SPKShouldSuppressFeatureHooks()) {
         SPKInstallEssentialAccessHooks();
         return;
     }
+    SPKHookBisectSetCurrentSurface(@"Launch");
     // Progressive blur relies on UIScrollEdgeEffect (iOS 26+ only).
     if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"26.0")) {
         if ([SPKUtils getBoolPref:@"interface_progressive_blur"]) {
-            SPKInstallProgressiveBlurHooksIfEnabled();
+            SPK_INSTALL(SPKInstallProgressiveBlurHooksIfEnabled);
         }
     }
     // Liquid Glass surface hooks install on any iOS: the tab bar experiment
@@ -133,14 +145,14 @@ void SPKInstallLaunchCriticalHooks(void) {
     // material is unavailable). The ObjC button hooks inside self-skip when
     // their classes are absent, so this is safe on older systems.
     if ([SPKUtils spk_isLiquidGlassEffectivelyEnabled]) {
-        SPKInstallLiquidGlassHooksIfEnabled();
+        SPK_INSTALL(SPKInstallLiquidGlassHooksIfEnabled);
     }
-    SPKInstallTweakLaunchCriticalHooks();
-    SPKInstallFollowingFeedHooksIfEnabled();
-    SPKInstallAdBlockingEarlyHooksIfEnabled();
-    SPKInstallStoryAdBlockingHooksIfEnabled();
-    SPKInstallNavigationHooksIfNeeded();
-    SPKInstallSettingsShortcutsHooksIfNeeded();
+    SPK_INSTALL(SPKInstallTweakLaunchCriticalHooks);
+    SPK_INSTALL(SPKInstallFollowingFeedHooksIfEnabled);
+    SPK_INSTALL(SPKInstallAdBlockingEarlyHooksIfEnabled);
+    SPK_INSTALL(SPKInstallStoryAdBlockingHooksIfEnabled);
+    SPK_INSTALL(SPKInstallNavigationHooksIfNeeded);
+    SPK_INSTALL(SPKInstallSettingsShortcutsHooksIfNeeded);
 }
 
 void SPKInstallFeedSurfaceHooksIfNeeded(void) {
@@ -148,25 +160,26 @@ void SPKInstallFeedSurfaceHooksIfNeeded(void) {
         SPKInstallEssentialAccessHooks();
         return;
     }
-    SPKInstallTweakFeedHooksIfNeeded();
-    SPKInstallFeedFilteringFeedHooksIfEnabled();
-    SPKInstallFeedActionButtonHooksIfEnabled();
-    SPKInstallHeaderActionButtonHooksIfEnabled();
-    SPKInstallBackgroundRefreshHooksIfEnabled();
-    SPKInstallLikeConfirmHooksIfNeeded();
-    SPKInstallDisableFeedAutoplayHooksIfEnabled();
-    SPKInstallPostCommentConfirmHooksIfEnabled();
-    SPKInstallSwipeCloseCommentsHooksIfEnabled();
-    SPKInstallCommentActionsHooksIfEnabled();
-    SPKInstallHideCommentGiftsButtonHooksIfEnabled();
-    SPKInstallCommentComposerGalleryUploadHooksIfEnabled();
-    SPKInstallHideStoryTrayHooksIfEnabled();
-    SPKInstallHideThreadsHooksIfEnabled();
-    SPKInstallHideRepostButtonHooksIfEnabled();
-    SPKInstallDisableHomeButtonRefreshHooksIfEnabled();
-    SPKInstallCopyDescriptionHooksIfEnabled();
-    SPKInstallHideMetricsHooksIfEnabled();
-    SPKInstallDisableAppIconGestureHooksIfEnabled();
+    SPKHookBisectSetCurrentSurface(@"Feed");
+    SPK_INSTALL(SPKInstallTweakFeedHooksIfNeeded);
+    SPK_INSTALL(SPKInstallFeedFilteringFeedHooksIfEnabled);
+    SPK_INSTALL(SPKInstallFeedActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHeaderActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallBackgroundRefreshHooksIfEnabled);
+    SPK_INSTALL(SPKInstallLikeConfirmHooksIfNeeded);
+    SPK_INSTALL(SPKInstallDisableFeedAutoplayHooksIfEnabled);
+    SPK_INSTALL(SPKInstallPostCommentConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallSwipeCloseCommentsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallCommentActionsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideCommentGiftsButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallCommentComposerGalleryUploadHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideStoryTrayHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideThreadsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideRepostButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDisableHomeButtonRefreshHooksIfEnabled);
+    SPK_INSTALL(SPKInstallCopyDescriptionHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideMetricsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDisableAppIconGestureHooksIfEnabled);
 }
 
 void SPKInstallStorySurfaceHooksIfNeeded(void) {
@@ -174,21 +187,22 @@ void SPKInstallStorySurfaceHooksIfNeeded(void) {
         SPKInstallEssentialAccessHooks();
         return;
     }
-    SPKInstallTweakStoryHooksIfNeeded();
-    SPKInstallFeedFilteringHooksIfEnabled();
-    SPKInstallStoriesActionButtonHooksIfEnabled();
-    SPKInstallStoryAutoSaveHooksIfEnabled();
-    SPKInstallSeenButtonHooksIfNeeded();
-    SPKInstallHideMetaAIHooksIfEnabled();
-    SPKInstallLikeConfirmHooksIfNeeded();
-    SPKInstallDisableStorySeenHooksIfNeeded();
-    SPKInstallStickerInteractConfirmHooksIfEnabled();
-    SPKInstallStoryPollVoteCountsHooksIfEnabled();
-    SPKInstallDetailedColorPickerHooksIfEnabled();
-    SPKInstallUnlockStoryPreviewHooksIfEnabled();
-    SPKInstallHideViewerPlusButtonHooksIfEnabled();
-    SPKInstallSearchStoryViewersHooksIfEnabled();
-    SPKInstallStoryVideoStickerHooksIfEnabled();
+    SPKHookBisectSetCurrentSurface(@"Stories");
+    SPK_INSTALL(SPKInstallTweakStoryHooksIfNeeded);
+    SPK_INSTALL(SPKInstallFeedFilteringHooksIfEnabled);
+    SPK_INSTALL(SPKInstallStoriesActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallStoryAutoSaveHooksIfEnabled);
+    SPK_INSTALL(SPKInstallSeenButtonHooksIfNeeded);
+    SPK_INSTALL(SPKInstallHideMetaAIHooksIfEnabled);
+    SPK_INSTALL(SPKInstallLikeConfirmHooksIfNeeded);
+    SPK_INSTALL(SPKInstallDisableStorySeenHooksIfNeeded);
+    SPK_INSTALL(SPKInstallStickerInteractConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallStoryPollVoteCountsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDetailedColorPickerHooksIfEnabled);
+    SPK_INSTALL(SPKInstallUnlockStoryPreviewHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideViewerPlusButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallSearchStoryViewersHooksIfEnabled);
+    SPK_INSTALL(SPKInstallStoryVideoStickerHooksIfEnabled);
 }
 
 void SPKInstallReelsSurfaceHooksIfNeeded(void) {
@@ -196,15 +210,16 @@ void SPKInstallReelsSurfaceHooksIfNeeded(void) {
         SPKInstallEssentialAccessHooks();
         return;
     }
-    SPKInstallTweakReelsHooksIfNeeded();
-    SPKInstallReelsActionButtonHooksIfEnabled();
-    SPKInstallFeedFilteringHooksIfEnabled();
-    SPKInstallLikeConfirmHooksIfNeeded();
-    SPKInstallReelsPlaybackHooksIfNeeded();
-    SPKInstallHideReelsHeaderHooksIfEnabled();
-    SPKInstallDisableScrollingReelsHooksIfEnabled();
-    SPKInstallHideRepostButtonHooksIfEnabled();
-    SPKInstallHideMetricsHooksIfEnabled();
+    SPKHookBisectSetCurrentSurface(@"Reels");
+    SPK_INSTALL(SPKInstallTweakReelsHooksIfNeeded);
+    SPK_INSTALL(SPKInstallReelsActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallFeedFilteringHooksIfEnabled);
+    SPK_INSTALL(SPKInstallLikeConfirmHooksIfNeeded);
+    SPK_INSTALL(SPKInstallReelsPlaybackHooksIfNeeded);
+    SPK_INSTALL(SPKInstallHideReelsHeaderHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDisableScrollingReelsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideRepostButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideMetricsHooksIfEnabled);
 }
 
 void SPKInstallMessagesSurfaceHooksIfNeeded(void) {
@@ -212,42 +227,43 @@ void SPKInstallMessagesSurfaceHooksIfNeeded(void) {
         SPKInstallEssentialAccessHooks();
         return;
     }
-    SPKInstallTweakMessagesHooksIfNeeded();
-    SPKInstallDirectAutoSaveHooksIfEnabled();
-    SPKInstallMessagesActionButtonHooksIfEnabled();
-    SPKInstallAggregatedMediaActionButtonHooksIfEnabled();
-    SPKInstallSeenButtonHooksIfNeeded();
-    SPKInstallCreateGroupButtonControlHooksIfEnabled();
-    SPKInstallConfirmSendHooksIfEnabled();
-    SPKInstallHideMetaAIHooksIfEnabled();
-    SPKInstallDisableDMStorySeenHooksIfNeeded();
-    SPKInstallDisableInstantsCreationHooksIfEnabled();
-    SPKInstallInstantsActionButtonHooksIfEnabled();
-    SPKInstallInstantsAutoSaveHooksIfEnabled();
-    SPKInstallInstantsAllowScreenshotHooksIfEnabled();
-    SPKInstallInstantsReactionConfirmHooksIfEnabled();
-    SPKInstallInstantsGalleryUploadHooksIfEnabled();
-    SPKInstallVisualMsgModifierHooksIfEnabled();
-    SPKInstallNoSuggestedChatsHooksIfEnabled();
-    SPKInstallChangeThemeConfirmHooksIfEnabled();
-    SPKInstallFollowRequestConfirmHooksIfEnabled();
-    SPKInstallDisableTypingStatusHooksIfEnabled();
-    SPKInstallFullLastActiveHooksIfEnabled();
-    SPKInstallShhConfirmHooksIfNeeded();
-    SPKInstallHideFriendsMapHooksIfEnabled();
-    SPKInstallKeepDeletedMessagesHooksIfEnabled();
-    SPKInstallCallConfirmHooksIfEnabled();
-    SPKInstallDMAudioMsgConfirmHooksIfEnabled();
-    SPKInstallDMInteractionConfirmHooksIfEnabled();
-    SPKInstallDMRefreshConfirmHooksIfEnabled();
-    SPKInstallDMAudioDownloadHooksIfNeeded();
-    SPKInstallNotesActionsHooksIfEnabled();
-    SPKInstallHideDirectCallButtonsHooksIfEnabled();
-    SPKInstallHideFlagButtonHooksIfEnabled();
-    SPKInstallUnlockMessagePreviewHooksIfEnabled();
-    SPKInstallNoRecentSearchesHooksIfEnabled();
-    SPKInstallDetailedColorPickerHooksIfEnabled();
-    SPKInstallHeaderActionButtonHooksIfEnabled();
+    SPKHookBisectSetCurrentSurface(@"Messages");
+    SPK_INSTALL(SPKInstallTweakMessagesHooksIfNeeded);
+    SPK_INSTALL(SPKInstallDirectAutoSaveHooksIfEnabled);
+    SPK_INSTALL(SPKInstallMessagesActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallAggregatedMediaActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallSeenButtonHooksIfNeeded);
+    SPK_INSTALL(SPKInstallCreateGroupButtonControlHooksIfEnabled);
+    SPK_INSTALL(SPKInstallConfirmSendHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideMetaAIHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDisableDMStorySeenHooksIfNeeded);
+    SPK_INSTALL(SPKInstallDisableInstantsCreationHooksIfEnabled);
+    SPK_INSTALL(SPKInstallInstantsActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallInstantsAutoSaveHooksIfEnabled);
+    SPK_INSTALL(SPKInstallInstantsAllowScreenshotHooksIfEnabled);
+    SPK_INSTALL(SPKInstallInstantsReactionConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallInstantsGalleryUploadHooksIfEnabled);
+    SPK_INSTALL(SPKInstallVisualMsgModifierHooksIfEnabled);
+    SPK_INSTALL(SPKInstallNoSuggestedChatsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallChangeThemeConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallFollowRequestConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDisableTypingStatusHooksIfEnabled);
+    SPK_INSTALL(SPKInstallFullLastActiveHooksIfEnabled);
+    SPK_INSTALL(SPKInstallShhConfirmHooksIfNeeded);
+    SPK_INSTALL(SPKInstallHideFriendsMapHooksIfEnabled);
+    SPK_INSTALL(SPKInstallKeepDeletedMessagesHooksIfEnabled);
+    SPK_INSTALL(SPKInstallCallConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDMAudioMsgConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDMInteractionConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDMRefreshConfirmHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDMAudioDownloadHooksIfNeeded);
+    SPK_INSTALL(SPKInstallNotesActionsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideDirectCallButtonsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideFlagButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallUnlockMessagePreviewHooksIfEnabled);
+    SPK_INSTALL(SPKInstallNoRecentSearchesHooksIfEnabled);
+    SPK_INSTALL(SPKInstallDetailedColorPickerHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHeaderActionButtonHooksIfEnabled);
 }
 
 void SPKInstallProfileSurfaceHooksIfNeeded(void) {
@@ -255,14 +271,15 @@ void SPKInstallProfileSurfaceHooksIfNeeded(void) {
         SPKInstallEssentialAccessHooks();
         return;
     }
-    SPKInstallProfileActionButtonHooksIfEnabled();
-    SPKInstallProfilePhotoZoomHooksIfEnabled();
-    SPKInstallFollowConfirmHooksIfNeeded();
-    SPKInstallNoSuggestedUsersHooksIfEnabled();
-    SPKInstallFollowIndicatorHooksIfEnabled();
-    SPKInstallProfileHeaderControlsHooksIfNeeded();
-    SPKInstallProfileAnalyzerVisitTrackerHooksIfEnabled();
-    SPKInstallSettingsShortcutsHooksIfNeeded();
+    SPKHookBisectSetCurrentSurface(@"Profile");
+    SPK_INSTALL(SPKInstallProfileActionButtonHooksIfEnabled);
+    SPK_INSTALL(SPKInstallProfilePhotoZoomHooksIfEnabled);
+    SPK_INSTALL(SPKInstallFollowConfirmHooksIfNeeded);
+    SPK_INSTALL(SPKInstallNoSuggestedUsersHooksIfEnabled);
+    SPK_INSTALL(SPKInstallFollowIndicatorHooksIfEnabled);
+    SPK_INSTALL(SPKInstallProfileHeaderControlsHooksIfNeeded);
+    SPK_INSTALL(SPKInstallProfileAnalyzerVisitTrackerHooksIfEnabled);
+    SPK_INSTALL(SPKInstallSettingsShortcutsHooksIfNeeded);
 }
 
 void SPKInstallGeneralUIHooksIfNeeded(void) {
@@ -270,26 +287,27 @@ void SPKInstallGeneralUIHooksIfNeeded(void) {
         SPKInstallEssentialAccessHooks();
         return;
     }
-    SPKInstallAccountSwitchHooksIfNeeded();
-    SPKInstallTweakGeneralUIHooksIfNeeded();
-    SPKInstallSharedLinkCleanupHooksIfEnabled();
-    SPKInstallShareLongPressCopyHooksIfNeeded();
-    SPKInstallHideMetaAIHooksIfEnabled();
-    SPKInstallNoSuggestedUsersHooksIfEnabled();
-    SPKInstallOpenLinkFromClipboardHooksIfEnabled();
-    SPKInstallHideExploreGridHooksIfEnabled();
-    SPKInstallHideTrendingSearchesHooksIfEnabled();
-    SPKInstallNavigationHooksIfNeeded();
-    SPKInstallSettingsShortcutsHooksIfNeeded();
-    SPKInstallDisableHapticsHooksIfEnabled();
-    SPKInstallCopyDescriptionHooksIfEnabled();
-    SPKInstallNoRecentSearchesHooksIfEnabled();
-    SPKInstallSearchBarIconRemapHooksIfNeeded();
-    SPKInstallEnhancedMediaResolutionHooksIfEnabled();
-    SPKInstallAudioPageDownloadHooksIfNeeded();
-    SPKInstallCaptureHidingHooksIfNeeded();
-    SPKInstallFixDuplicateNotificationsHooksIfNeeded();
-    SPKInstallOpenPostNativePushHooksIfNeeded();
+    SPKHookBisectSetCurrentSurface(@"General UI");
+    SPK_INSTALL(SPKInstallAccountSwitchHooksIfNeeded);
+    SPK_INSTALL(SPKInstallTweakGeneralUIHooksIfNeeded);
+    SPK_INSTALL(SPKInstallSharedLinkCleanupHooksIfEnabled);
+    SPK_INSTALL(SPKInstallShareLongPressCopyHooksIfNeeded);
+    SPK_INSTALL(SPKInstallHideMetaAIHooksIfEnabled);
+    SPK_INSTALL(SPKInstallNoSuggestedUsersHooksIfEnabled);
+    SPK_INSTALL(SPKInstallOpenLinkFromClipboardHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideExploreGridHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideTrendingSearchesHooksIfEnabled);
+    SPK_INSTALL(SPKInstallNavigationHooksIfNeeded);
+    SPK_INSTALL(SPKInstallSettingsShortcutsHooksIfNeeded);
+    SPK_INSTALL(SPKInstallDisableHapticsHooksIfEnabled);
+    SPK_INSTALL(SPKInstallCopyDescriptionHooksIfEnabled);
+    SPK_INSTALL(SPKInstallNoRecentSearchesHooksIfEnabled);
+    SPK_INSTALL(SPKInstallSearchBarIconRemapHooksIfNeeded);
+    SPK_INSTALL(SPKInstallEnhancedMediaResolutionHooksIfEnabled);
+    SPK_INSTALL(SPKInstallAudioPageDownloadHooksIfNeeded);
+    SPK_INSTALL(SPKInstallCaptureHidingHooksIfNeeded);
+    SPK_INSTALL(SPKInstallFixDuplicateNotificationsHooksIfNeeded);
+    SPK_INSTALL(SPKInstallOpenPostNativePushHooksIfNeeded);
 }
 
 void SPKInstallEnabledFeatureHooks(void) {

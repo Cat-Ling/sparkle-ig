@@ -2,6 +2,7 @@
 #import "../../Shared/AutoSave/SPKAutoSave.h"
 #import "../../Shared/Stories/SPKStoryAutoSave.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
+#import "../../App/SPKPerfMeter.h"
 
 // Auto-save rides the same overlay layout pass the story action button uses, but
 // installs its own hook: the action button's group is gated on `stories_action_btn`,
@@ -11,6 +12,7 @@
 %hook IGStoryFullscreenOverlayView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StoryAutoSave.layoutSubviews");
     SPKStoryAutoSaveConsiderOverlay((UIView *)self);
 }
 %end

@@ -13,6 +13,7 @@
 #import "../../Utils.h"
 #import "FollowIndicator.h"
 #import <objc/runtime.h>
+#import "../../App/SPKPerfMeter.h"
 
 NSNotificationName const SPKFollowIndicatorDidChangeNotification = @"SPKFollowIndicatorDidChangeNotification";
 
@@ -315,6 +316,7 @@ static void SPKRefreshFollowIndicator(UIViewController *controller) {
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"FollowIndicator.layoutSubviews");
 
     UIViewController *controller = [SPKUtils nearestViewControllerForView:(UIView *)self];
     if (![controller isKindOfClass:%c(IGProfileViewController)])

@@ -32,6 +32,10 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         @"gallery_quick_access_tab" : @"direct-inbox-tab",
         @"tools_open_settings_on_launch" : @(NO),
         @"tools_disable_all" : @(NO),
+#if SPK_DEV
+        @"tools_perf_meter" : @(NO),
+        @"tools_perf_hud" : @(NO),
+#endif
         @"app_safe_startup" : @(NO),
         @"general_hide_ads_stories" : @(YES),
         @"feed_mode" : @"default",

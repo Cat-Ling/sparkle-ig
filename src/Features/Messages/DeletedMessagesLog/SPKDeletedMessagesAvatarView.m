@@ -2,6 +2,7 @@
 #import "../../../AssetUtils.h"
 #import "../../../Shared/Avatars/SPKAvatarCache.h"
 #import "../../../Utils.h"
+#import "../../../App/SPKPerfMeter.h"
 
 @interface SPKDeletedMessagesAvatarView ()
 @property (nonatomic, strong) UIImageView *imageView;
@@ -61,6 +62,7 @@
 }
 
 - (void)layoutSubviews {
+    SPK_PERF_SCOPE(@"SPKDeletedMessagesAvatarView.layoutSubviews");
     [super layoutSubviews];
     self.layer.cornerRadius = self.bounds.size.width / 2.0;
 }

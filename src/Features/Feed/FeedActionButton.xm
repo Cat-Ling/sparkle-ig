@@ -9,6 +9,7 @@
 #import "../../Shared/Gallery/SPKGallerySaveMetadata.h"
 #import "../../Shared/MediaPreview/SPKMediaItem.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 extern "C" void MSHookMessageEx(Class cls, SEL sel, IMP replacement, IMP *result);
 
@@ -816,6 +817,7 @@ SPKHandleFeedExpandLongPress((UIView *)self, sender);
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"FeedActionButton.layoutSubviews");
     SPKAddFeedExpandLongPressIfNeeded((UIView *)self, @selector(spk_mediaCell_handleExpandLongPress:));
 }
 
@@ -832,6 +834,7 @@ SPKHandleFeedExpandLongPress((UIView *)self, sender);
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"FeedActionButton.layoutSubviews2");
     SPKAddFeedExpandLongPressIfNeeded((UIView *)self, @selector(spk_handleExpandLongPress:));
 }
 
@@ -876,6 +879,7 @@ SPKHandleFeedExpandLongPress((UIView *)self, sender);
 %hook IGUFIButtonBarView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"FeedActionButton.layoutSubviews3");
     SPKInstallFeedActionButton((UIView *)self);
 }
 %end
@@ -883,6 +887,7 @@ SPKHandleFeedExpandLongPress((UIView *)self, sender);
 %hook IGUFIInteractionCountsView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"FeedActionButton.layoutSubviews4");
     SPKInstallFeedActionButton((UIView *)self);
 }
 %end

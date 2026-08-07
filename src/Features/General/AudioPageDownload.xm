@@ -11,6 +11,7 @@
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static NSInteger const kSPKAudioPageDownloadButtonTag = 1351;
 static const void *kSPKAudioPageButtonKey = &kSPKAudioPageButtonKey;
@@ -352,6 +353,7 @@ SPKAudioPageRunDefaultAction(sender ?: (UIView *)self);
 %hook _TtC16IGAudioPageSwift26IGAudioPageHeaderActionBar
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"AudioPageDownload.layoutSubviews");
     // Only install/reposition if the button doesn't exist yet or the anchor moved.
     // Avoid touching the button mid-animation (menu morph) which breaks Liquid Glass.
     UIView *existing = [(UIView *)self viewWithTag:kSPKAudioPageDownloadButtonTag];

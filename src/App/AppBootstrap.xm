@@ -3,6 +3,7 @@
 #import "../Utils.h"
 #import "SPKCore.h"
 #import "SPKFlexLoader.h"
+#import "SPKPerfMeter.h"
 #import "SPKStabilityGuard.h"
 #import "SPKStartupProfiler.h"
 
@@ -122,6 +123,7 @@ static void SPKScheduleStagedFeatureHooks(void) {
     BOOL result = %orig;
     SPKStartupMark(@"didFinishLaunching orig returned");
     SPKScheduleStagedFeatureHooks();
+    SPKPerfMeterStartIfEnabled();
 
     double openDelay = [SPKUtils getBoolPref:@"tools_open_settings_on_launch"] ? 0.0 : 5.0;
 
@@ -142,6 +144,8 @@ static void SPKScheduleStagedFeatureHooks(void) {
     %orig;
     sSPKAppDidBecomeActive = YES;
     SPKMarkLaunchStableIfReady();
+    // The HUD needs a window scene, which is not guaranteed at didFinishLaunching.
+    SPKPerfMeterStartIfEnabled();
     SPKPresentSafeModeAlertIfNeeded();
 
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{

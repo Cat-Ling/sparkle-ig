@@ -1,11 +1,13 @@
 #import "../../InstagramHeaders.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 %group SPKDisableScrollingReelsHooks
 
 %hook IGUnifiedVideoCollectionView
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"DisableScrollingReels.didMoveToWindow");
 
     if ([SPKUtils getBoolPref:@"reels_disable_scrolling"]) {
         SPKLog(@"General", @"[Sparkle] Disabling scrolling reels");

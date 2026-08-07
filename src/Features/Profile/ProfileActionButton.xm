@@ -13,6 +13,7 @@
 #import "../../Shared/Gallery/SPKGallerySaveMetadata.h"
 #import "../../Shared/MediaPreview/SPKFullScreenMediaPlayer.h"
 #import "../../Shared/UI/SPKChromeGlassMirror.h"
+#import "../../App/SPKPerfMeter.h"
 
 static CGFloat const kSPKProfileActionButtonWidth = 44.0;
 static CGFloat const kSPKProfileActionButtonHeight = 44.0;
@@ -192,6 +193,7 @@ static void SPKProfileUpdateGlass(SPKProfileHeaderActionButton *button, UIView *
 }
 
 - (void)didMoveToWindow {
+    SPK_PERF_SCOPE(@"ProfileActionButton.didMoveToWindow");
     [super didMoveToWindow];
     if (self.window && !self.spkDidConfigure) {
         self.spkDidConfigure = YES;

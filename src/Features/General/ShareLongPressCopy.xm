@@ -3,6 +3,7 @@
 #import "../../Shared/ActionButton/ActionButtonLookupUtils.h"
 #import "../../Shared/Stories/SPKStoryContext.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static const void *kSPKShareCopyLongPressAssocKey = &kSPKShareCopyLongPressAssocKey;
 static NSHashTable<UIGestureRecognizer *> *SPKShareCopyLongPressRecognizers(void) {
@@ -609,6 +610,7 @@ SPKCopyShareURLForView((UIView *)self);
 %hook IGUFIButtonBarView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ShareLongPressCopy.layoutSubviews");
     SPKInstallShareLongPressInContainer((UIView *)self, @[ @"sendButton", @"shareButton", @"reshareButton" ], YES);
 }
 %end
@@ -616,6 +618,7 @@ SPKCopyShareURLForView((UIView *)self);
 %hook IGUFIInteractionCountsView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ShareLongPressCopy.layoutSubviews2");
     SPKInstallShareLongPressInContainer((UIView *)self, @[ @"sendButton", @"shareButton", @"reshareButton" ], YES);
 }
 %end
@@ -623,6 +626,7 @@ SPKCopyShareURLForView((UIView *)self);
 %hook IGSundialViewerVerticalUFI
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ShareLongPressCopy.layoutSubviews3");
     SPKInstallShareLongPressInContainer((UIView *)self, @[ @"sendButton", @"shareButton", @"reshareButton" ], YES);
 }
 %end
@@ -630,6 +634,7 @@ SPKCopyShareURLForView((UIView *)self);
 %hook IGStoryFullscreenOverlayView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ShareLongPressCopy.layoutSubviews4");
     SPKStorySetActiveOverlay((UIView *)self);
     SPKInstallShareLongPressInContainer((UIView *)self, @[ @"sendButton", @"shareButton", @"reshareButton" ], NO);
 }
@@ -638,6 +643,7 @@ SPKCopyShareURLForView((UIView *)self);
 %hook IGDirectVisualMessageViewerController
 - (void)viewDidLayoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ShareLongPressCopy.viewDidLayoutSubviews");
     SPKInstallShareLongPressInContainer(((UIViewController *)self).view, @[ @"sendButton", @"shareButton" ], NO);
 }
 %end

@@ -1,5 +1,6 @@
 #import "../../InstagramHeaders.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static inline BOOL SPKHideMetaAIDirect(void) {
     return [SPKUtils getBoolPref:@"general_hide_meta_ai_msgs"];
@@ -372,6 +373,7 @@ return [config copy];
 %hook IGSearchBarDonutButton
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"HideMetaAI.didMoveToWindow");
 
     if (SPKHideMetaAIExplore()) {
         [self removeFromSuperview];
@@ -667,6 +669,7 @@ static BOOL SPKHasShortcutManager(void) {
 %hook UIButton
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"HideMetaAI.didMoveToWindow2");
 
     if (SPKHideMetaAIDirect() || SPKHideMetaAICreation() || SPKHideMetaAIGlobal()) {
         NSString *accessibilityID = self.accessibilityIdentifier;

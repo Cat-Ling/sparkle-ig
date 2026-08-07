@@ -3,6 +3,7 @@
 #import "../../Shared/ActionButton/ActionButtonCore.h"
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static NSInteger const kSPKDirectActionButtonTag = 921344;
 static const void *kSPKDirectActionBottomConstraintAssocKey = &kSPKDirectActionBottomConstraintAssocKey;
@@ -202,6 +203,7 @@ static void SPKDirectReinstallActionButtonSoon(UIViewController *controller) {
 %hook IGDirectVisualMessageViewerController
 - (void)viewDidLayoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"MessagesActionButton.viewDidLayoutSubviews");
     SPKDirectReinstallActionButtonSoon((UIViewController *)self);
 }
 

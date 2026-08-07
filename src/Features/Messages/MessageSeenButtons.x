@@ -12,6 +12,7 @@
 #import "../../Utils.h"
 #import "DeletedMessagesLog/SPKDeletedMessagesViewController.h"
 #import "MessageSeenButtons.h"
+#import "../../App/SPKPerfMeter.h"
 
 NSNotificationName const SPKMessageSeenButtonPositionDidChangeNotification = @"SPKMessageSeenButtonPositionDidChangeNotification";
 
@@ -1254,6 +1255,7 @@ if ([nearestVC isKindOfClass:%c(IGDirectThreadViewController)]) {
 
 - (void)viewDidLayoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"MessageSeenButtons.viewDidLayoutSubviews");
     // Cheap reposition only — the bubble is installed in viewDidAppear. Avoids
     // rebuilding thread context on every layout pass.
     if (SPKThreadSeenBubbleEnabled())

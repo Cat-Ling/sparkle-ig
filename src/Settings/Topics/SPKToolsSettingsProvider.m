@@ -12,6 +12,9 @@
 #import "../SPKWhatsNewViewController.h"
 #import "../SPKSettingsViewController.h"
 #import "../SPKTopicSettingsSupport.h"
+#if SPK_DEV
+#import "SPKHookBisectSettingsProvider.h"
+#endif
 #import "SPKInterfaceSettingsProvider.h"
 
 static UIViewController *SPKSettingsLockPresenter(void) {
@@ -168,6 +171,11 @@ static NSDictionary *SPKSettingsLockSection(void) {
                                      }],
 #endif
         ], @"Clears failed-launch counters and temporary hook suppression. Tap this button if it appears as if features aren't enabled."),
+#if SPK_DEV
+        SPKTopicSection(@"Diagnostics",
+                        @[ [SPKHookBisectSettingsProvider rootSetting] ],
+                        @"Skip individual hook installers at launch to isolate a crash or a slowdown to one feature."),
+#endif
         SPKSettingsLockSection(),
     ]];
 

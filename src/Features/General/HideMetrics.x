@@ -1,6 +1,7 @@
 #import "../../Utils.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
+#import "../../App/SPKPerfMeter.h"
 
 // IG 436+ : the reels vertical UFI no longer drives the visible counts through
 // its setNumLikes:/setNumComments:/... setters. Counts are rendered by per-type
@@ -75,6 +76,7 @@ static void SPKApplyReelsMetricHiding(id ufi) {
 }
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"HideMetrics.layoutSubviews");
     SPKApplyReelsMetricHiding(self);
 }
 %end

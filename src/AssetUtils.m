@@ -112,6 +112,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"autoplay_off" : @{@"candidates" : @[ @"ig_icon_auto_play_off_outline_24" ]},
             @"autoscroll" : @{@"candidates" : @[ @"ig_icon_auto_scroll_outline_24" ]},
             @"backspace" : @{@"candidates" : @[ @"ig_icon_backspace_outline_24" ]},
+            @"beaker" : @{@"candidates" : @[ @"ig_icon_beaker_outline_24" ]},
             @"blend" : @{@"candidates" : @[ @"ig_icon_blend_outline_24" ]},
             @"calendar" : @{@"candidates" : @[ @"ig_icon_calendar_outline_24" ]},
             @"call" : @{@"candidates" : @[ @"ig_icon_call_outline_24" ]},

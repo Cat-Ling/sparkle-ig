@@ -3,6 +3,7 @@
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
 #import <objc/runtime.h>
+#import "../../App/SPKPerfMeter.h"
 
 // Sparkle-native "Search Viewer List". Instagram Plus's own viewer search is
 // server-enforced (the GraphQL search rejects non-subscribers), so instead of
@@ -84,6 +85,7 @@ static NSString *SPKViewerMediaIDFromItem(id item) {
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"SearchStoryViewers.layoutSubviews");
     if (!SPKSearchViewerListEnabled())
         return;
     [self spk_maybeAddViewerSearchButton];

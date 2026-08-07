@@ -7,6 +7,7 @@
 #import "../../Shared/Stories/SPKStoryContext.h"
 #import "../../Shared/Stories/SPKStoryDynamicRange.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static NSInteger const kSPKStoriesActionButtonTag = 921343;
 
@@ -236,6 +237,7 @@ static void SPKInstallStoriesActionButton(UIView *overlayView) {
 %hook IGStoryFullscreenOverlayView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StoriesActionButton.layoutSubviews");
     SPKStorySetActiveOverlay((UIView *)self);
     SPKInstallStoriesActionButton((UIView *)self);
 }
@@ -244,6 +246,7 @@ static void SPKInstallStoriesActionButton(UIView *overlayView) {
 %hook IGStoryFullscreenHeaderView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StoriesActionButton.layoutSubviews2");
     UIView *overlay = [(UIView *)self superview];
     if ([NSStringFromClass(overlay.class) containsString:@"IGStoryFullscreenOverlayView"]) {
         SPKInstallStoriesActionButton(overlay);

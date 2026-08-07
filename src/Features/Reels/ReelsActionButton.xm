@@ -6,6 +6,7 @@
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static NSInteger const kSPKReelsActionButtonTag = 921342;
 static const void *kSPKReelsActionBottomConstraintAssocKey = &kSPKReelsActionBottomConstraintAssocKey;
@@ -503,6 +504,7 @@ void SPKInstallReelsActionButton(UIView *verticalUFIView) {
 %hook IGSundialViewerVerticalUFI
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ReelsActionButton.layoutSubviews");
     SPKInstallReelsActionButton((UIView *)self);
 }
 %end

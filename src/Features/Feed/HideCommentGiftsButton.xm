@@ -2,6 +2,7 @@
 #import "../../Utils.h"
 
 #import <objc/message.h>
+#import "../../App/SPKPerfMeter.h"
 
 static NSString *const kSPKHideCommentGiftsButtonPref = @"general_comments_hide_gifts_button";
 
@@ -128,6 +129,7 @@ static void SPKHideCommentComposerGiftButton(UIView *composerView) {
 }
 
 - (void)layoutSubviews {
+    SPK_PERF_SCOPE(@"HideCommentGiftsButton.layoutSubviews");
     if (SPKHideCommentGiftsButtonEnabled()) {
         SPKSetCommentComposerGiftButtonEnabled(self, NO);
     }

@@ -1,4 +1,5 @@
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static BOOL SPKShouldHideDirectCallButton(UIView *button) {
     if (![button isKindOfClass:NSClassFromString(@"IGDirectCallButton")])
@@ -94,6 +95,7 @@ static void SPKRepackNavigationBarPlatters(UIView *container) {
 
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"HideCallButtons.didMoveToWindow");
     UIView *button = (UIView *)self;
     if (button.window && SPKShouldHideDirectCallButton(button)) {
         button.hidden = YES;
@@ -114,6 +116,7 @@ static void SPKRepackNavigationBarPlatters(UIView *container) {
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"HideCallButtons.layoutSubviews");
 
     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:(UIView *)self];
     while (queue.count > 0) {

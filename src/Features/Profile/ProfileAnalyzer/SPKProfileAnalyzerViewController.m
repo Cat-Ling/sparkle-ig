@@ -11,6 +11,7 @@
 #import "SPKProfileAnalyzerModels.h"
 #import "SPKProfileAnalyzerService.h"
 #import "SPKProfileAnalyzerStorage.h"
+#import "../../../App/SPKPerfMeter.h"
 
 #pragma mark - Category descriptor
 
@@ -276,6 +277,7 @@ typedef NS_ENUM(NSInteger, SPKPACategory) {
 }
 
 - (void)viewWillLayoutSubviews {
+    SPK_PERF_SCOPE(@"SPKProfileAnalyzerViewController.viewWillLayoutSubviews");
     [super viewWillLayoutSubviews];
     CGFloat w = self.tableView.bounds.size.width;
     if (w < 1)

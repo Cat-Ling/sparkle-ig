@@ -1068,6 +1068,16 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
         return YES;
     if ([key hasPrefix:@"downloads_encoding_"])
         return YES;
+#if SPK_DEV
+    // Hook-bisect skip flags: read during hook installation (before the session
+    // PK resolves) and meaningless per-account — a bisect must behave the same
+    // whichever account is live.
+    if ([key hasPrefix:@"tools_bisect_"])
+        return YES;
+    // Performance meter: a diagnostic instrument, not a per-account preference.
+    if ([key hasPrefix:@"tools_perf_"])
+        return YES;
+#endif
     if ([key hasPrefix:@"gallery_"])
         return YES;
     // interface_hide_*_tab (tab layout) + interface_hide_ui_on_capture.

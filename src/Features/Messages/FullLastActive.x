@@ -21,6 +21,7 @@
 #import "../../Utils.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
+#import "../../App/SPKPerfMeter.h"
 
 // Instagram's presence "Active now" window. Inside it we leave IG's own string
 // alone so the live indicator keeps reading "Active now".
@@ -211,6 +212,7 @@ static void SPKRewriteLastActiveSubtitle(IGDirectLeftAlignedTitleView *titleView
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"FullLastActive.layoutSubviews");
     SPKRewriteLastActiveSubtitle(self);
 }
 

@@ -14,6 +14,7 @@
 #import "../../Utils.h"
 #import "../Messages/DeletedMessagesLog/SPKDeletedMessagesViewController.h"
 #import "../Profile/ProfileAnalyzer/SPKProfileAnalyzerViewController.h"
+#import "../../App/SPKPerfMeter.h"
 
 NSString *const kSPKHeaderButtonEnabledKey = @"feed_header_button";
 NSString *const kSPKHeaderButtonDefaultActionKey = @"feed_header_button_default";
@@ -640,12 +641,14 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
 
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.didMoveToWindow");
     if ([(UIView *)self window])
         [self spk_installInboxHeaderActionButtonIfNeeded];
 }
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.layoutSubviews");
     if ([(UIView *)self window])
         [self spk_installInboxHeaderActionButtonIfNeeded];
     [self spk_layoutInboxHeaderActionButton];
@@ -661,12 +664,14 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
 
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.didMoveToWindow2");
     if ([(UIView *)self window])
         [self spk_installHeaderActionButtonIfNeeded];
 }
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.layoutSubviews2");
     // Install here too: the feed header is usually created before our delayed
     // Feed-surface hooks land, so its first didMoveToWindow already fired. Every
     // relayout gives us a reliable, idempotent chance to inject the button.

@@ -5,6 +5,7 @@
 #import "../../Settings/SPKSettingsViewController.h"
 #import "../../Shared/Gallery/SPKGalleryViewController.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static const void *kSPKHomeTabSettingsLongPressAssocKey = &kSPKHomeTabSettingsLongPressAssocKey;
 static const void *kSPKGalleryTabLongPressAssocKey = &kSPKGalleryTabLongPressAssocKey;
@@ -286,6 +287,7 @@ static BOOL SPKShouldReplaceProfileTabLongPress(NSString *identifier, NSString *
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"SettingsShortcuts.layoutSubviews");
 
     NSString *identifier = self.accessibilityIdentifier ?: @"";
     NSString *label = self.accessibilityLabel ?: @"";
@@ -419,6 +421,7 @@ SPKFireShortcutHaptic();
 %hook IGDirectInboxNavigationHeaderView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"SettingsShortcuts.layoutSubviews2");
 
     UIButton *btn = nil;
     if ([self respondsToSelector:@selector(messageButton)]) {

@@ -1,6 +1,7 @@
 #import "../../Utils.h"
 #import "../../App/SPKStabilityGuard.h"
 #import <objc/message.h>
+#import "../../App/SPKPerfMeter.h"
 
 static NSString *SPKSelectorForLaunchTabPreference(NSString *preference) {
     if ([preference isEqualToString:@"feed"])
@@ -122,6 +123,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 
 - (void)viewDidLayoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"Navigation.viewDidLayoutSubviews");
     if (SPKStabilityGuardIsSafeStartupMode()) {
         return;
     }
@@ -271,6 +273,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 %hook IGHomeFeedHeaderView
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"Navigation.didMoveToWindow");
 
     if ([SPKUtils getBoolPref:@"interface_hide_msgs_tab"]) {
         // IG 436+ is a Swift class: the DM button is the `directButton` @property
