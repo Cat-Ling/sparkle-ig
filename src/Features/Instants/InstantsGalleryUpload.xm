@@ -783,6 +783,29 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
 - (void)buttonTapped:(UIButton *)sender;
 @end
 
+/// Plain UIButton plus the menu-open haptic every other Sparkle menu button has
+/// (SPKChromeButton gets it from `menuWillDisplayHandler`; the action button
+/// from its own interaction delegate). UIButton is the delegate of its built-in
+/// context-menu interaction, so this fires for the primary-action tap too.
+@interface SPKInstantsGalleryButton : UIButton
+@end
+
+@implementation SPKInstantsGalleryButton
+- (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction
+    willDisplayMenuForConfiguration:(UIContextMenuConfiguration *)configuration
+                           animator:(id<UIContextMenuInteractionAnimating>)animator {
+    if ([UIButton instancesRespondToSelector:_cmd]) {
+        [super contextMenuInteraction:interaction
+      willDisplayMenuForConfiguration:configuration
+                             animator:animator];
+    }
+    if (![SPKUtils getBoolPref:@"general_disable_haptics"]) {
+        UISelectionFeedbackGenerator *feedback = [UISelectionFeedbackGenerator new];
+        [feedback selectionChanged];
+    }
+}
+@end
+
 /// Longest clip we let the user select. IG caps a recorded Instant at 6 seconds
 /// (observed; the cap is not readable statically because `videoCaptureMaxDuration`
 /// is a Swift lazy).
@@ -1032,7 +1055,7 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         return;
     }
 
-    if (![button isKindOfClass:UIButton.class]) {
+    if (![button isKindOfClass:SPKInstantsGalleryButton.class]) {
         [host removeFromSuperview];
         host = [[UIView alloc] init];
         host.tag = kSPKInstantsGalleryButtonTag;
@@ -1044,7 +1067,7 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         [host addSubview:canvas];
         SPKInstantsPinEdges(canvas, host);
 
-        button = [UIButton buttonWithType:UIButtonTypeSystem];
+        button = [SPKInstantsGalleryButton buttonWithType:UIButtonTypeSystem];
         button.translatesAutoresizingMaskIntoConstraints = NO;
         // The whole point of the merged button is its menu, so the menu *is* the tap.
         button.showsMenuAsPrimaryAction = YES;
