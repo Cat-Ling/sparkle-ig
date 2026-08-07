@@ -716,10 +716,23 @@ static inline BOOL SPKThreadSeenBubbleEnabled(void) {
 }
 
 static UIView *SPKThreadComposerView(UIViewController *controller) {
-    if (![controller respondsToSelector:@selector(composerView)])
-        return nil;
-    id view = ((id (*)(id, SEL))objc_msgSend)(controller, @selector(composerView));
-    return [view isKindOfClass:[UIView class]] ? (UIView *)view : nil;
+    if ([controller respondsToSelector:@selector(composerView)]) {
+        id view = ((id (*)(id, SEL))objc_msgSend)(controller, @selector(composerView));
+        if ([view isKindOfClass:[UIView class]])
+            return (UIView *)view;
+    }
+
+    // IG 410 exposes no `composerView` getter — only the backing ivar (the getter
+    // arrives later). Read it directly so the bubble tracks the composer there
+    // too, instead of falling back to the keyboard's frame alone.
+    for (Class cls = [controller class]; cls && cls != [UIViewController class]; cls = class_getSuperclass(cls)) {
+        Ivar ivar = class_getInstanceVariable(cls, "_composerView");
+        if (!ivar)
+            continue;
+        id view = object_getIvar(controller, ivar);
+        return [view isKindOfClass:[UIView class]] ? (UIView *)view : nil;
+    }
+    return nil;
 }
 
 static NSUInteger SPKThreadComposerTextLength(UIViewController *controller) {
@@ -891,6 +904,23 @@ static void SPKLayoutThreadSeenBubble(UIViewController *controller) {
         composerHeight = MAX(composerHeight, CGRectGetHeight(composer.bounds));
     CGFloat composerTop = composerBottom - composerHeight;
 
+    // The keyboard is not the only thing that lifts the composer: opening an
+    // in-app tray (GIF/sticker picker, media tray) raises it while the keyboard
+    // notification reports the keyboard LEAVING, which alone would drop the
+    // bubble to the bottom of the screen, on top of the tray. So also read the
+    // composer's real position and let it raise the bubble — never lower it,
+    // since mid keyboard animation the composer's frame can still be stale
+    // while the keyboard's end frame is already correct.
+    if (composer && composer.window) {
+        CGRect composerFrame = [root convertRect:composer.bounds fromView:composer];
+        CGFloat actualTop = CGRectGetMinY(composerFrame);
+        if (CGRectGetHeight(composerFrame) > 0.0 &&
+            actualTop > CGRectGetHeight(bounds) * 0.2 &&
+            actualTop < CGRectGetHeight(bounds)) {
+            composerTop = MIN(composerTop, actualTop);
+        }
+    }
+
     CGFloat x = CGRectGetWidth(bounds) - safe.right - margin - size;
     CGFloat baseTop = composerTop;
 
@@ -949,6 +979,26 @@ static void SPKEnsureThreadSeenKeyboardObserver(UIViewController *controller) {
 
                     double duration = [note.userInfo[UIKeyboardAnimationDurationUserInfoKey] doubleValue];
                     NSInteger curve = [note.userInfo[UIKeyboardAnimationCurveUserInfoKey] integerValue];
+                    // Re-run once the change has settled: when the composer is
+                    // lifted by an in-app tray (GIF/sticker picker) rather than
+                    // by the keyboard itself, IG may not have moved it yet at
+                    // notification time, so this pass is the one that reads its
+                    // final position.
+                    void (^settle)(BOOL) = ^(__unused BOOL finished) {
+                        UIViewController *settled = weakController;
+                        if (!settled || !SPKThreadSeenBubbleEnabled())
+                            return;
+                        // Animated so the correction glides rather than snaps;
+                        // a no-op when the position was already right.
+                        [UIView animateWithDuration:0.2
+                                              delay:0.0
+                                            options:UIViewAnimationOptionBeginFromCurrentState | UIViewAnimationOptionCurveEaseOut
+                                         animations:^{
+                                             SPKLayoutThreadSeenBubble(settled);
+                                         }
+                                         completion:nil];
+                    };
+
                     if (duration > 0.0) {
                         [UIView animateWithDuration:duration
                                               delay:0.0
@@ -956,9 +1006,10 @@ static void SPKEnsureThreadSeenKeyboardObserver(UIViewController *controller) {
                                          animations:^{
                                              SPKLayoutThreadSeenBubble(strong);
                                          }
-                                         completion:nil];
+                                         completion:settle];
                     } else {
                         SPKLayoutThreadSeenBubble(strong);
+                        settle(YES);
                     }
                 }];
     objc_setAssociatedObject(controller, kSPKThreadSeenKeyboardObserverKey, token, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
