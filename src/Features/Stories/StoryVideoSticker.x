@@ -48,8 +48,11 @@ static IGStoryMediaCompositionEditingViewController *SPKFindStoryEditingViewCont
         if ([vc isKindOfClass:%c(IGStoryMediaCompositionEditingViewController)]) {
             return (IGStoryMediaCompositionEditingViewController *)vc;
         }
-        if (vc.presentedViewController) {
-            [queue addObject:vc.presentedViewController];
+        // -presentedViewController also answers for ancestors, so enqueueing it
+        // from every node would queue the same modal subtree once per node.
+        UIViewController *presented = vc.presentedViewController;
+        if (presented.presentingViewController == vc) {
+            [queue addObject:presented];
         }
         for (UIViewController *child in vc.childViewControllers) {
             [queue addObject:child];

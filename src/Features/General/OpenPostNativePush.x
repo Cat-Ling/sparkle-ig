@@ -181,7 +181,13 @@ static BOOL SPKOpenPostViewControllerContains(UIViewController *root, UIViewCont
         if (SPKOpenPostViewControllerContains(child, target))
             return YES;
     }
-    return SPKOpenPostViewControllerContains(root.presentedViewController, target);
+    // Only from the actual presenter: -presentedViewController also answers for
+    // ancestors, so following it from every node re-walks the same modal subtree
+    // once per node.
+    UIViewController *presented = root.presentedViewController;
+    if (presented.presentingViewController != root)
+        return NO;
+    return SPKOpenPostViewControllerContains(presented, target);
 }
 
 static BOOL SPKOpenPostPresentsPendingPresenter(UIViewController *presented) {

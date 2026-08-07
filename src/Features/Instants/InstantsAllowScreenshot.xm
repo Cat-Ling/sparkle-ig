@@ -1,4 +1,6 @@
+#import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
+#import <objc/runtime.h>
 
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
@@ -9,19 +11,43 @@ static BOOL SPKInstantsAllowScreenshotEnabled(void) {
     return [SPKUtils getBoolPref:kSPKInstantsAllowScreenshotPref];
 }
 
+// class_getName + strstr rather than NSStringFromClass + containsString:. This
+// runs once per view controller per walk, and the NSString version allocated and
+// did a locale-aware search every time.
+static inline BOOL SPKInstantsClassIsQuickSnap(Class cls) {
+    const char *name = cls ? class_getName(cls) : NULL;
+    return name && strstr(name, "QuickSnap") != NULL;
+}
+
+// -presentedViewController returns the controller presented by the receiver *or
+// by any of its ancestors*, so recursing into it from every node re-walks the
+// same modal subtree once per node - exponential in nav depth. Follow it only
+// from the controller that actually presented it.
 static BOOL SPKInstantsViewControllerTreeContainsQuickSnap(UIViewController *controller) {
     if (!controller)
         return NO;
-    if ([NSStringFromClass(controller.class) containsString:@"QuickSnap"])
+    if (SPKInstantsClassIsQuickSnap(controller.class))
         return YES;
     for (UIViewController *child in controller.childViewControllers) {
         if (SPKInstantsViewControllerTreeContainsQuickSnap(child))
             return YES;
     }
-    return SPKInstantsViewControllerTreeContainsQuickSnap(controller.presentedViewController);
+    UIViewController *presented = controller.presentedViewController;
+    if (presented.presentingViewController != controller)
+        return NO;
+    return SPKInstantsViewControllerTreeContainsQuickSnap(presented);
 }
 
-static BOOL SPKInstantsScreenshotBypassActive(void) {
+// The bypass check sits behind hooks on NSNotificationCenter and UIScreen, both
+// of which are hit thousands of times a second, so the answer is cached for a
+// fraction of a second. An Instant cannot appear and be screenshotted inside that
+// window, and the walk touches UIKit - which means it must not run off the main
+// thread at all, and notifications are posted from every thread there is.
+static const CFTimeInterval kSPKInstantsBypassTTL = 0.2;
+static BOOL spkInstantsBypassCached = NO;
+static CFTimeInterval spkInstantsBypassCachedAt = 0;
+
+static BOOL SPKInstantsScreenshotBypassComputeOnMain(void) {
     if (!SPKInstantsAllowScreenshotEnabled())
         return NO;
     for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
@@ -34,6 +60,19 @@ static BOOL SPKInstantsScreenshotBypassActive(void) {
         }
     }
     return NO;
+}
+
+static BOOL SPKInstantsScreenshotBypassActive(void) {
+    if (!NSThread.isMainThread)
+        return spkInstantsBypassCached;
+
+    CFTimeInterval now = CACurrentMediaTime();
+    if (now - spkInstantsBypassCachedAt < kSPKInstantsBypassTTL)
+        return spkInstantsBypassCached;
+
+    spkInstantsBypassCachedAt = now;
+    spkInstantsBypassCached = SPKInstantsScreenshotBypassComputeOnMain();
+    return spkInstantsBypassCached;
 }
 
 static BOOL SPKInstantsIsScreenshotCoverText(NSString *text) {
@@ -74,14 +113,21 @@ static UITextField *SPKInstantsSecureTextFieldAncestor(UIView *view) {
 %end
 
 %hook NSNotificationCenter
+
+// Name first, always. This hook sees every notification the app posts, and the
+// bypass check walks the view-controller tree - testing it first made every
+// notification in Instagram pay for a full tree walk, which is quadratic against
+// navigation depth and froze the app after a few screens.
 - (void)postNotificationName:(NSNotificationName)name object:(id)object userInfo:(NSDictionary *)userInfo {
-    if (SPKInstantsScreenshotBypassActive() && [name isEqualToString:UIApplicationUserDidTakeScreenshotNotification])
+    if ([name isEqualToString:UIApplicationUserDidTakeScreenshotNotification] &&
+        SPKInstantsScreenshotBypassActive())
         return;
     %orig;
 }
 
 - (void)postNotificationName:(NSNotificationName)name object:(id)object {
-    if (SPKInstantsScreenshotBypassActive() && [name isEqualToString:UIApplicationUserDidTakeScreenshotNotification])
+    if ([name isEqualToString:UIApplicationUserDidTakeScreenshotNotification] &&
+        SPKInstantsScreenshotBypassActive())
         return;
     %orig;
 }
