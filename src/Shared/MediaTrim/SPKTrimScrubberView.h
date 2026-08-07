@@ -21,6 +21,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Photos-style trim bar: a filmstrip of thumbnails with two draggable in/out
 /// handles, a dimmed region outside the selection, and a draggable playhead.
+/// Dragging inside the selection slides it along the clip, and dragging away
+/// from the track vertically slows every drag down for fine placement.
 /// Toggling `frameOnlyMode` collapses the UI to a frame-picker marker.
 @interface SPKTrimScrubberView : UIView
 
