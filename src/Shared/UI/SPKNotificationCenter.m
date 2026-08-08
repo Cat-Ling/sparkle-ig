@@ -2,8 +2,28 @@
 #import "../../AssetUtils.h"
 #import "../../Settings/SPKPreferences.h"
 #import "../../Utils.h"
+#import "../AutoSave/SPKAutoSaveFilter.h"
+#import "../Instants/SPKInstantsAutoSave.h"
+#import "../Messages/SPKDirectAutoSave.h"
 #import "../Messages/SPKDirectSeenContext.h"
+#import "../Stories/SPKStoryAutoSave.h"
 #import "../Stories/SPKStoryContext.h"
+
+// Every auto-save list-change notification offers the same "tap to open the list"
+// affordance, so they live in one table rather than a branch per surface. Returns nil
+// when there's nothing to offer -- unknown identifier, or the user is already looking
+// at an auto-save list.
+static UIViewController *SPKAutoSaveListViewControllerForRuleIdentifier(NSString *identifier) {
+    if (identifier.length == 0 || SPKAutoSaveFilterListUIVisible())
+        return nil;
+    if ([identifier isEqualToString:kSPKNotificationStoryAutoSaveUserRule])
+        return SPKStoryAutoSaveListViewController();
+    if ([identifier isEqualToString:kSPKNotificationDirectAutoSaveThreadRule])
+        return SPKDirectAutoSaveListViewController();
+    if ([identifier isEqualToString:kSPKNotificationInstantsAutoSaveUserRule])
+        return SPKInstantsAutoSaveListViewController();
+    return nil;
+}
 
 #define SPK_NOTIF_CONST(name, value) NSString *const name = @value
 SPK_NOTIF_CONST(kSPKNotificationDownloadLibrary, "download_library");
@@ -33,12 +53,21 @@ SPK_NOTIF_CONST(kSPKNotificationCopyAudioURL, "copy_audio_url");
 SPK_NOTIF_CONST(kSPKNotificationStoryMarkSeen, "story_mark_seen");
 SPK_NOTIF_CONST(kSPKNotificationStorySeenUserRule, "toggle_story_seen_user_rule");
 SPK_NOTIF_CONST(kSPKNotificationStoryMentionsSheet, "story_mentions_sheet");
+SPK_NOTIF_CONST(kSPKNotificationStoryAutoSave, "story_auto_save");
+SPK_NOTIF_CONST(kSPKNotificationStoryAutoSaveUserRule, "toggle_story_auto_save_user_rule");
+SPK_NOTIF_CONST(kSPKNotificationAutoSaveSummary, "auto_save_summary");
+SPK_NOTIF_CONST(kSPKNotificationAutoSavePending, "auto_save_pending");
 SPK_NOTIF_CONST(kSPKNotificationDirectVisualMarkSeen, "direct_visual_mark_seen");
 SPK_NOTIF_CONST(kSPKNotificationThreadMessagesMarkSeen, "thread_messages_mark_seen");
 SPK_NOTIF_CONST(kSPKNotificationDirectThreadSeenRule, "direct_thread_seen_rule");
+SPK_NOTIF_CONST(kSPKNotificationDirectAutoSave, "direct_auto_save");
+SPK_NOTIF_CONST(kSPKNotificationDirectAutoSaveThreadRule, "toggle_direct_auto_save_thread_rule");
 SPK_NOTIF_CONST(kSPKNotificationUnsentMessage, "unsent_message");
 SPK_NOTIF_CONST(kSPKNotificationUnsentReaction, "unsent_reaction");
 SPK_NOTIF_CONST(kSPKNotificationInstantsCaptureBlocked, "instants_capture_blocked");
+SPK_NOTIF_CONST(kSPKNotificationInstantsUpload, "instants_upload");
+SPK_NOTIF_CONST(kSPKNotificationInstantsAutoSave, "instants_auto_save");
+SPK_NOTIF_CONST(kSPKNotificationInstantsAutoSaveUserRule, "toggle_instants_auto_save_user_rule");
 
 SPK_NOTIF_CONST(kSPKNotificationProfileCopyInfo, "profile_copy_info");
 SPK_NOTIF_CONST(kSPKNotificationProfileAnalyzerComplete, "profile_analyzer_complete");
@@ -167,6 +196,19 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
               SPKNotificationItem(kSPKNotificationPlayAudio, @"Play Audio", @"play"),
               SPKNotificationItem(kSPKNotificationCopyAudioURL, @"Copy Audio Download URL", @"link"),
           ]},
+        // Every auto-save toast lives here rather than under its surface: they're
+        // configured together, and the summary/pending pair isn't per-surface at all.
+        @{@"title" : @"Auto-Save",
+          @"items" : @[
+              SPKNotificationItem(kSPKNotificationStoryAutoSave, @"Story Auto-Save Started", @"story"),
+              SPKNotificationItem(kSPKNotificationDirectAutoSave, @"DM Auto-Save Started", @"messages"),
+              SPKNotificationItem(kSPKNotificationInstantsAutoSave, @"Instants Auto-Save Started", @"instants"),
+              SPKNotificationItem(kSPKNotificationAutoSavePending, @"Auto-Save Still Working", @"history"),
+              SPKNotificationItem(kSPKNotificationAutoSaveSummary, @"Auto-Save Summary", @"download"),
+              SPKNotificationItem(kSPKNotificationStoryAutoSaveUserRule, @"Story Auto-Save List Changes", @"story"),
+              SPKNotificationItem(kSPKNotificationDirectAutoSaveThreadRule, @"DM Auto-Save List Changes", @"messages"),
+              SPKNotificationItem(kSPKNotificationInstantsAutoSaveUserRule, @"Instants Auto-Save List Changes", @"instants"),
+          ]},
         @{@"title" : @"Stories",
           @"items" : @[
               SPKNotificationItem(kSPKNotificationStoryMarkSeen, @"Mark Story as Seen", @"story"),
@@ -184,6 +226,7 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
         @{@"title" : @"Instants",
           @"items" : @[
               SPKNotificationItem(kSPKNotificationInstantsCaptureBlocked, @"Instant Capture Blocked", @"lock"),
+              SPKNotificationItem(kSPKNotificationInstantsUpload, @"Instant Upload Failed", @"warning"),
           ]},
         @{@"title" : @"Profile",
           @"items" : @[
@@ -214,7 +257,7 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
               SPKNotificationItem(kSPKNotificationGalleryDeleteFile, @"Delete File", @"media"),
               SPKNotificationItem(kSPKNotificationGalleryDeleteSelected, @"Delete Selected Files", @"circle_check"),
               SPKNotificationItem(kSPKNotificationGalleryBulkDelete, @"Bulk Delete", @"trash"),
-              SPKNotificationItem(kSPKNotificationGalleryImport, @"Import Files", @"arrow_down"),
+              SPKNotificationItem(kSPKNotificationGalleryImport, @"Import Media", @"media"),
           ]},
         @{@"title" : @"Settings & Tools",
           @"items" : @[
@@ -346,6 +389,10 @@ static NSString *SPKNotificationIconResourceForTone(NSString *iconResource, SPKN
 @property (nonatomic, strong) NSMutableArray<NSDictionary *> *queue;
 @property (nonatomic, strong) SPKNotificationPassthroughWindow *overlayWindow;
 @property (nonatomic, strong) SPKNotificationOverlayRootViewController *overlayRoot;
+// The pill shown for preparatory work that runs before the real flow starts (e.g.
+// the 4K candidate fetch). Weak: it's owned by its slot, and whoever adopts it as a
+// real progress pill clears this so it's no longer dismissed out from under them.
+@property (nonatomic, weak) SPKNotificationPillView *transientProgressPill;
 - (void)notifyIdentifier:(NSString *)identifier
                    title:(NSString *)title
                 subtitle:(NSString *)subtitle
@@ -647,6 +694,8 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
                        [identifier isEqualToString:kSPKNotificationProfileMessagesSeenUserRule]) {
                 BOOL manualSeenEnabled = [SPKUtils getBoolPref:@"msgs_manual_seen"];
                 resolvedSubtitle = [NSString stringWithFormat:@"Tap to open %@", manualSeenEnabled ? @"excluded list" : @"included list"];
+            } else if (SPKAutoSaveListViewControllerForRuleIdentifier(identifier)) {
+                resolvedSubtitle = @"Tap to open auto-save list";
             }
         }
 
@@ -666,6 +715,14 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
                        [identifier isEqualToString:kSPKNotificationProfileMessagesSeenUserRule]) {
                 pill.onTapWhenCompleted = ^{
                     [SPKUtils presentViewControllerInSheet:SPKDirectManualSeenListViewController()];
+                };
+            } else if (SPKAutoSaveListViewControllerForRuleIdentifier(identifier)) {
+                pill.onTapWhenCompleted = ^{
+                    // Re-resolved on tap rather than captured: by then the user may have
+                    // switched Filter Mode, and the list screen reads its mode at init.
+                    UIViewController *list = SPKAutoSaveListViewControllerForRuleIdentifier(identifier);
+                    if (list)
+                        [SPKUtils presentViewControllerInSheet:list];
                 };
             }
         }
@@ -687,8 +744,48 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
 
 - (SPKNotificationPillView *)beginUnmanagedProgressWithTitle:(NSString *)title
                                                     onCancel:(void (^)(void))onCancel {
+    return [self beginUnmanagedProgressWithTitle:title onCancel:onCancel transient:NO];
+}
+
+- (SPKNotificationPillView *)beginTransientProgressWithTitle:(NSString *)title
+                                                    onCancel:(void (^)(void))onCancel {
+    return [self beginUnmanagedProgressWithTitle:title onCancel:onCancel transient:YES];
+}
+
+- (void)dismissTransientProgressPill {
+    dispatch_block_t dismiss = ^{
+        SPKNotificationPillView *pill = self.transientProgressPill;
+        self.transientProgressPill = nil;
+        if (pill && pill.superview)
+            [pill dismiss];
+    };
+    if (NSThread.isMainThread)
+        dismiss();
+    else
+        dispatch_async(dispatch_get_main_queue(), dismiss);
+}
+
+- (SPKNotificationPillView *)beginUnmanagedProgressWithTitle:(NSString *)title
+                                                    onCancel:(void (^)(void))onCancel
+                                                   transient:(BOOL)transient {
     __block SPKNotificationPillView *pill = nil;
     dispatch_block_t create = ^{
+        for (SPKNotificationSlot *slot in self.visible) {
+            if (slot.progress && slot.pill && slot.pill.superview) {
+                pill = slot.pill;
+                if (title.length > 0) {
+                    [pill updateProgressTitle:title subtitle:nil];
+                }
+                if (onCancel) {
+                    pill.onCancel = onCancel;
+                }
+                // Reusing a live progress pill means a real flow now owns it (either
+                // it was already real, or a transient pill just morphed into one), so
+                // it must no longer be dismissed as transient.
+                self.transientProgressPill = nil;
+                return;
+            }
+        }
         pill = [SPKNotificationPillView progressPill];
         [pill updateProgressTitle:title ?: @"Downloading..." subtitle:nil];
         pill.onCancel = onCancel;
@@ -711,12 +808,17 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
                     [p dismiss];
             });
         };
+        self.transientProgressPill = transient ? pill : nil;
+        // Prep work is a single request with nothing to report: spin instead of
+        // sitting at 0%. The download that adopts this pill flips it back.
+        if (transient)
+            [pill setProgressIndeterminate:YES];
         [self insertPill:pill identifier:@"download_queue_aggregate" progress:YES];
     };
     if (NSThread.isMainThread)
         create();
     else
-        dispatch_async(dispatch_get_main_queue(), create);
+        dispatch_sync(dispatch_get_main_queue(), create);
     return pill;
 }
 

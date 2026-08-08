@@ -72,9 +72,11 @@
                                             @"•  Quick access shortcuts (Settings & Gallery)\n"
                                             @"•  Main feed mode (For You / Following)\n"
                                             @"•  Disable video autoplay\n"
+                                            @"•  Reels doom scroll & limits\n"
                                             @"•  Hide UI on capture\n"
                                             @"•  Download encoding settings\n"
                                             @"•  Gallery view, sort & lock\n"
+                                            @"•  Fix duplicate notifications\n"
                                             @"•  Disable All (master switch)\n\n"
                                             @"Gallery media ownership is controlled separately in Gallery settings.";
 
@@ -135,12 +137,6 @@
                         @"1. Hide the create group button from the Instagram send/share sheet.\n"
                         @"2. Show a confirmation alert when you try to create a group.\n"
                         @"3. Show a confirmation alert when sending a post."),
-        SPKTopicSection(@"Media Preview", @[
-            [SPKSetting switchCellWithTitle:@"Show Media Info"
-                                       icon:SPKSettingsIcon(@"info")
-                                defaultsKey:@"general_preview_show_metadata"],
-        ],
-                        @"Overlay the author and post date on the expanded photo preview."),
         SPKTopicSection(@"Recommendations", @[
             [SPKSetting navigationCellWithTitle:@"Ads"
                                        subtitle:@""
@@ -204,6 +200,16 @@
                                     ]]
         ],
                         @"Control ads, AI and suggestions visibility by surface."),
+        SPKTopicSection(@"Media Preview & Menu", @[
+            [SPKSetting switchCellWithTitle:@"Show Media Info"
+                                       icon:SPKSettingsIcon(@"info")
+                                defaultsKey:@"general_preview_show_metadata"],
+            [SPKSetting switchCellWithTitle:@"Show Date in Menu"
+                                       icon:SPKSettingsIcon(@"calendar")
+                                defaultsKey:@"general_action_btn_show_date"],
+        ],
+                        @"1. Overlay the author and post date on the expanded photo preview.\n"
+                        @"2. Show the exact date and time a post was made in the action button menu."),
         SPKTopicSection(@"Comments", @[
             [SPKSetting switchCellWithTitle:@"Copy Comment"
                                        icon:SPKSettingsIcon(@"copy")

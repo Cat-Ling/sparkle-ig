@@ -3,6 +3,7 @@
 #include <UIKit/UIKit.h>
 
 #import "../../AssetUtils.h"
+#import "../../Networking/SPKInstagramAPI.h"
 #import "../../Utils.h"
 #import "../ActionButton/ActionButtonCore.h"
 #import "../ActionButton/SPKActionDescriptor.h"
@@ -23,6 +24,7 @@
 #import "../PhotoEdit/SPKPhotoEditorViewController.h"
 #import "../UI/SPKIGAlertPresenter.h"
 #import "../UI/SPKMediaChrome.h"
+#import "../UI/SPKNotificationCenter.h"
 #import "SPKFullScreenImageViewController.h"
 #import "SPKFullScreenMediaPlayer.h"
 #import "SPKFullScreenVideoViewController.h"
@@ -165,7 +167,18 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     UIViewControllerAnimatedTransitioning,
     UIViewControllerInteractiveTransitioning, SPKFullScreenContentDelegate>
 
+// Eager item list. Every entry point except the gallery hands us a small,
+// already-built array (a carousel, a story tray, one file), so those keep using
+// it directly.
 @property (nonatomic, strong) NSArray<SPKMediaItem *> *items;
+// Gallery browsing spans the whole current scope, which with flat browsing on is
+// the entire gallery -- thousands of files. Building an SPKMediaItem per file up
+// front cost a stat() and a full Core Data fault each, on the main thread, before
+// the first page could even be shown. Hold the files instead and build items on
+// demand around the visible page (-itemAtIndex:), so opening a photo is O(1).
+@property (nonatomic, strong, nullable) NSArray<SPKGalleryFile *> *galleryFiles;
+// index -> item, populated by -itemAtIndex: and trimmed with the controller cache.
+@property (nonatomic, strong) NSMutableDictionary<NSNumber *, SPKMediaItem *> *lazyItems;
 @property (nonatomic, assign) NSInteger currentIndex;
 @property (nonatomic, strong)
     NSMutableDictionary<NSNumber *, UIViewController *> *controllerCache;
@@ -215,6 +228,8 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 @property (nonatomic, copy, nullable)
     SPKMediaPreviewPlaybackBlock resumePlaybackBlock;
 @property (nonatomic, assign) BOOL explicitPlaybackPauseActive;
+/// Set when playback was paused for a screen pushed over this player, so returning resumes it.
+@property (nonatomic, assign) BOOL pausedForNavigationAway;
 
 /// Opaque black behind page content (letterboxing); alpha fades during
 /// interactive dismiss.
@@ -275,10 +290,15 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [player playItems:@[ item ] startingAtIndex:0 fromViewController:presenter];
 }
 
-+ (void)showLocalFilePreview:(NSURL *)fileURL {
++ (void)showLocalFilePreview:(NSURL *)fileURL mediaType:(SPKMediaItemType)mediaType {
     // A read-only look at a local file (Files-import queue): just the media, close button,
-    // and pinch/zoom. No metadata attached, so nothing tries to resolve a remote URL.
+    // and pinch/zoom. Pre-resolve the on-disk URL so the video path never falls through the cache
+    // manager to its "Missing remote media URL" branch (there is no remote for an import preview).
     SPKMediaItem *item = [SPKMediaItem itemWithFileURL:fileURL];
+    // Trust the caller's type over the extension: Regram stores audio in .mp4, which would
+    // otherwise play as a black video with no audio artwork overlay.
+    item.mediaType = mediaType;
+    item.resolvedFileURL = fileURL;
     item.isFromGallery = NO;
 
     SPKFullScreenMediaPlayer *player = [[SPKFullScreenMediaPlayer alloc] init];
@@ -295,30 +315,20 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     if (files.count == 0)
         return;
 
-    NSMutableArray<SPKMediaItem *> *items =
-        [NSMutableArray arrayWithCapacity:files.count];
-    for (SPKGalleryFile *file in files) {
-        if (![file fileExists])
-            continue;
-        SPKMediaItem *item = [SPKMediaItem itemWithGalleryFile:file];
-        [items addObject:item];
-    }
-
-    if (items.count == 0) {
-        SPKNotify(kSPKNotificationMediaPreviewOpenGallery, @"No files found", nil,
-                  @"search", SPKNotificationToneError);
-        return;
-    }
-
-    NSInteger adjustedIndex = MAX(0, MIN(index, (NSInteger)items.count - 1));
+    // No existence pre-pass here: it cost one stat() plus a fired Core Data fault
+    // per file, on the main thread, which is what made opening a photo in a large
+    // gallery take seconds. A file that went missing behind the gallery's back is
+    // rare and its page already shows the load-failure state, so let the page that
+    // actually gets displayed discover it.
+    NSInteger adjustedIndex = MAX(0, MIN(index, (NSInteger)files.count - 1));
     SPKNotify(kSPKNotificationMediaPreviewOpenGallery, @"Opened Gallery media",
               nil, @"media", SPKNotificationToneInfo);
 
     SPKFullScreenMediaPlayer *player = [[SPKFullScreenMediaPlayer alloc] init];
     player.isFromGallery = YES;
-    [player playItems:items
-           startingAtIndex:adjustedIndex
-        fromViewController:presenter];
+    [player playGalleryFiles:files
+             startingAtIndex:adjustedIndex
+          fromViewController:presenter];
 }
 
 + (void)showPhotoURLs:(NSArray<NSURL *> *)urls initialIndex:(NSInteger)index {
@@ -491,6 +501,16 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [self showRemoteImageURL:url metadata:meta];
 }
 
++ (void)showRemoteImageURLPreview:(NSURL *)url {
+    if (!url)
+        return;
+    SPKMediaItem *item = [SPKMediaItem itemWithFileURL:url];
+    SPKFullScreenMediaPlayer *player = [[SPKFullScreenMediaPlayer alloc] init];
+    player.previewOnly = YES;
+    UIViewController *presenter = topMostController();
+    [player playItems:@[ item ] startingAtIndex:0 fromViewController:presenter];
+}
+
 #pragma mark - Playback Context
 
 - (void)configurePlaybackContextWithSource:
@@ -515,11 +535,27 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
        startingAtIndex:(NSInteger)index
     fromViewController:(UIViewController *)presenter {
     _items = [items copy];
-    _currentIndex = MAX(0, MIN(index, (NSInteger)items.count - 1));
-    _controllerCache = [NSMutableDictionary dictionary];
-    _isSingleItemMode = (items.count <= 1);
-    _isToolbarVisible = YES;
+    [self prepareForPresentationAtIndex:index];
+    [self presentFromViewController:presenter];
+}
 
+- (void)playGalleryFiles:(NSArray<SPKGalleryFile *> *)files
+         startingAtIndex:(NSInteger)index
+      fromViewController:(UIViewController *)presenter {
+    _galleryFiles = [files copy];
+    [self prepareForPresentationAtIndex:index];
+    [self presentFromViewController:presenter];
+}
+
+- (void)prepareForPresentationAtIndex:(NSInteger)index {
+    _lazyItems = [NSMutableDictionary dictionary];
+    _currentIndex = MAX(0, MIN(index, [self itemCount] - 1));
+    _controllerCache = [NSMutableDictionary dictionary];
+    _isSingleItemMode = ([self itemCount] <= 1);
+    _isToolbarVisible = YES;
+}
+
+- (void)presentFromViewController:(UIViewController *)presenter {
     [self beginPreviewPlaybackSuppressionIfNeeded];
     UINavigationController *navigationController =
         [[UINavigationController alloc] initWithRootViewController:self];
@@ -666,9 +702,9 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         }
         subtitle = [parts componentsJoinedByString:@" · "];
     } else {
-        // Live preview: "@user"; subtitle = post date, or full name for profile pics.
+        // Live preview: "@user"; subtitle = post date + time (hour), or full name for profile pics.
         title = handle;
-        subtitle = SPKPreviewMediumDateString(meta.importPostedDate);
+        subtitle = [SPKUtils spk_formattedDateHeader:meta.importPostedDate];
         if (subtitle.length == 0) {
             subtitle = meta.sourceFullName;
         }
@@ -683,6 +719,26 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [self prepareViewControllerForDisplay:self.pageViewController.viewControllers
                                               .firstObject];
     [self prepareAdjacentViewControllersAroundIndex:self.currentIndex];
+}
+
+// Called when a screen pushed over this player is closed. It cannot be done in
+// -viewDidAppear:, which never fires again: the pushed screen is presented *over*
+// the player, so the player never disappears in the first place.
+- (void)resumeAfterNavigationBack {
+    if (!self.pausedForNavigationAway)
+        return;
+    self.pausedForNavigationAway = NO;
+    [[self currentVideoViewController] play];
+}
+
+// Pauses the preview for a screen pushed over it, remembering that it was us, so
+// -viewDidAppear: knows whether resuming is correct.
+- (void)pauseForNavigationAway {
+    SPKFullScreenVideoViewController *video = [self currentVideoViewController];
+    if (!video)
+        return;
+    self.pausedForNavigationAway = YES;
+    [video pause];
 }
 
 - (void)viewDidLayoutSubviews {
@@ -721,6 +777,27 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         return;
     if ([controller respondsToSelector:@selector(applyMediaContentInsets:)]) {
         [(id)controller applyMediaContentInsets:self.currentContentInsets];
+    }
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // NSCache sheds its own entries under pressure, but the images parked on the
+    // items are strong references it cannot reach. Drop the pages outside the
+    // usual window, then the images of everything but the page on screen and the
+    // two it can be swiped onto.
+    [self trimControllerCacheAroundIndex:_currentIndex];
+    for (NSNumber *builtIndex in self.lazyItems.allKeys.copy) {
+        if (ABS(builtIndex.integerValue - _currentIndex) <= 1)
+            continue;
+        [self releaseImageForItem:self.lazyItems[builtIndex]];
+    }
+    if (!_galleryFiles) {
+        for (NSInteger i = 0; i < (NSInteger)_items.count; i++) {
+            if (ABS(i - _currentIndex) <= 1)
+                continue;
+            [self releaseImageForItem:_items[(NSUInteger)i]];
+        }
     }
 }
 
@@ -795,7 +872,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     _editItem = SPKMediaChromeBottomBarButtonItem(@"crop", @"Edit", self,
                                                   @selector(editCurrentItem));
 
-    if (!_isFromGallery && _items.count > 1) {
+    if (!_isFromGallery && [self itemCount] > 1) {
         _bulkActionsItem =
             SPKMediaChromeBottomBarButtonItem(@"more", @"Download All", nil, nil);
     }
@@ -929,11 +1006,60 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
 }
 
-- (UIViewController *)createViewControllerForIndex:(NSInteger)index {
-    if (index < 0 || index >= (NSInteger)_items.count)
-        return nil;
+#pragma mark - Items
 
-    SPKMediaItem *item = _items[index];
+- (NSInteger)itemCount {
+    return _galleryFiles ? (NSInteger)_galleryFiles.count : (NSInteger)_items.count;
+}
+
+/// The item for `index`, built on first use when browsing the gallery. Items stay
+/// cached for as long as their page controller does, so paging back and forth
+/// across the same few pages doesn't rebuild them.
+- (SPKMediaItem *)itemAtIndex:(NSInteger)index {
+    if (index < 0 || index >= [self itemCount])
+        return nil;
+    if (!_galleryFiles)
+        return _items[(NSUInteger)index];
+
+    NSNumber *key = @(index);
+    SPKMediaItem *cached = _lazyItems[key];
+    if (cached)
+        return cached;
+
+    SPKMediaItem *item =
+        [SPKMediaItem itemWithGalleryFile:_galleryFiles[(NSUInteger)index]];
+    _lazyItems[key] = item;
+    return item;
+}
+
+- (NSInteger)indexOfItem:(SPKMediaItem *)item {
+    if (!item)
+        return NSNotFound;
+    if (!_galleryFiles)
+        return [_items indexOfObjectIdenticalTo:item];
+
+    // Built items are trimmed in lockstep with the controller cache, so any page
+    // that can ask for its index still has its item here (a handful of entries).
+    for (NSNumber *key in _lazyItems) {
+        if (_lazyItems[key] == item)
+            return key.integerValue;
+    }
+    return NSNotFound;
+}
+
+/// Drops the full-size image an item is holding. Only safe for items that can
+/// reload it from disk -- an item created straight from a UIImage (no file behind
+/// it) would lose its only copy.
+- (void)releaseImageForItem:(SPKMediaItem *)item {
+    if (item.fileURL || item.resolvedFileURL) {
+        item.image = nil;
+    }
+}
+
+- (UIViewController *)createViewControllerForIndex:(NSInteger)index {
+    SPKMediaItem *item = [self itemAtIndex:index];
+    if (!item)
+        return nil;
 
     if (item.mediaType == SPKMediaItemTypeVideo ||
         item.mediaType == SPKMediaItemTypeAudio) {
@@ -950,7 +1076,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 }
 
 - (UIViewController *)viewControllerForIndex:(NSInteger)index {
-    if (index < 0 || index >= (NSInteger)_items.count)
+    if (index < 0 || index >= [self itemCount])
         return nil;
 
     NSNumber *cacheKey = @(index);
@@ -973,9 +1099,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     } else if ([vc isKindOfClass:[SPKFullScreenVideoViewController class]]) {
         item = ((SPKFullScreenVideoViewController *)vc).mediaItem;
     }
-    if (!item)
-        return NSNotFound;
-    return [_items indexOfObjectIdenticalTo:item];
+    return [self indexOfItem:item];
 }
 
 - (void)prepareViewControllerForDisplay:(UIViewController *)controller {
@@ -1010,11 +1134,11 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
          resolvedIndex++) {
         if (resolvedIndex == index)
             continue;
-        if (resolvedIndex < 0 || resolvedIndex >= (NSInteger)self.items.count)
+        SPKMediaItem *adjacentItem = [self itemAtIndex:resolvedIndex];
+        if (!adjacentItem)
             continue;
 
-        [[SPKMediaCacheManager sharedManager]
-            prefetchItem:self.items[resolvedIndex]];
+        [[SPKMediaCacheManager sharedManager] prefetchItem:adjacentItem];
         UIViewController *controller = [self viewControllerForIndex:resolvedIndex];
         if ([controller isKindOfClass:[SPKFullScreenVideoViewController class]]) {
             [(SPKFullScreenVideoViewController *)controller preloadContent];
@@ -1044,6 +1168,17 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         }
         [self.controllerCache removeObjectForKey:cachedIndex];
     }
+
+    // Built items go with their page. They must be trimmed on exactly the same
+    // window as the controllers, because -indexOfItem: resolves a page back to
+    // its index through this dictionary.
+    NSArray<NSNumber *> *builtIndexes = self.lazyItems.allKeys.copy;
+    for (NSNumber *builtIndex in builtIndexes) {
+        if (ABS(builtIndex.integerValue - index) <= 2)
+            continue;
+        [self releaseImageForItem:self.lazyItems[builtIndex]];
+        [self.lazyItems removeObjectForKey:builtIndex];
+    }
 }
 
 - (SPKFullScreenVideoViewController *)currentVideoViewController {
@@ -1052,6 +1187,18 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     return [currentVC isKindOfClass:[SPKFullScreenVideoViewController class]]
                ? (SPKFullScreenVideoViewController *)currentVC
                : nil;
+}
+
+/// Whether the currently visible page (image or video) is zoomed in. Used to
+/// suppress paging/dismiss and drive the bar material.
+- (BOOL)isViewControllerZoomed:(UIViewController *)vc {
+    if ([vc isKindOfClass:[SPKFullScreenImageViewController class]]) {
+        return ((SPKFullScreenImageViewController *)vc).isZoomed;
+    }
+    if ([vc isKindOfClass:[SPKFullScreenVideoViewController class]]) {
+        return ((SPKFullScreenVideoViewController *)vc).isZoomed;
+    }
+    return NO;
 }
 
 - (void)updatePlayerControlInsetsForVideoController:
@@ -1086,7 +1233,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                           (UIPageViewController *)pageViewController
        viewControllerAfterViewController:(UIViewController *)viewController {
     NSInteger index = [self indexOfViewController:viewController];
-    if (index == NSNotFound || index >= (NSInteger)_items.count - 1)
+    if (index == NSNotFound || index >= [self itemCount] - 1)
         return nil;
     return [self viewControllerForIndex:index + 1];
 }
@@ -1112,9 +1259,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [self prepareAdjacentViewControllersAroundIndex:newIndex];
 
     // Match the bar material to the newly visible page's zoom state.
-    BOOL zoomed =
-        [currentVC isKindOfClass:[SPKFullScreenImageViewController class]] &&
-        ((SPKFullScreenImageViewController *)currentVC).isZoomed;
+    BOOL zoomed = [self isViewControllerZoomed:currentVC];
     SPKMediaChromeSetBarsMaterialActive(self.navigationController, zoomed);
 
     for (UIViewController *prevVC in previousViewControllers) {
@@ -1140,6 +1285,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     if (controller != self.pageViewController.viewControllers.firstObject)
         return;
     SPKMediaChromeSetBarsMaterialActive(self.navigationController, isZoomed);
+    _pageScrollView.scrollEnabled = !isZoomed;
 }
 
 #pragma mark - UI Updates
@@ -1164,7 +1310,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
     self.title =
         [NSString stringWithFormat:@"%ld of %lu", (long)_currentIndex + 1,
-                                   (unsigned long)_items.count];
+                                   (unsigned long)[self itemCount]];
 }
 
 - (void)updateFavoriteButton {
@@ -1249,12 +1395,25 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
 - (void)openOriginalPostForCurrentGalleryItem {
     SPKGalleryFile *file = self.currentItem.galleryFile;
-    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file]) {
-        [self dismissGalleryFlowForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenOriginal, @"Opened original post",
-                      nil, @"external_link",
-                      SPKNotificationToneForIconResource(@"external_link"));
-        }];
+    __weak __typeof(self) weakSelf = self;
+    // The post is pushed over the player rather than replacing it, so the preview
+    // stays alive behind it and would otherwise keep playing audio under the post.
+    [self pauseForNavigationAway];
+    // Pushed over the player, so closing the post comes back to it. See the note
+    // in -openOriginalPostForFile:.
+    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file
+                                               fromViewController:self
+                                                   legacyFallback:^{
+                                                       [weakSelf dismissGalleryFlowForOriginOpenWithCompletion:^{
+                                                           SPKNotify(kSPKNotificationGalleryOpenOriginal, @"Opened original post",
+                                                                     nil, @"external_link",
+                                                                     SPKNotificationToneForIconResource(@"external_link"));
+                                                       }];
+                                                   }
+                                                        onDismiss:^{
+                                                            [weakSelf resumeAfterNavigationBack];
+                                                        }]) {
+        // Nothing to announce: the post is on screen.
     } else {
         [self showGalleryOpenFailureMessage:@"Unable to open original post"
                            actionIdentifier:kSPKNotificationGalleryOpenOriginal];
@@ -1263,16 +1422,25 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
 - (void)openProfileForCurrentGalleryItem {
     SPKGalleryFile *file = self.currentItem.galleryFile;
-    if ([SPKGalleryOriginController openProfileForGalleryFile:file]) {
-        [self dismissGalleryFlowForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil,
-                      @"user_circle",
-                      SPKNotificationToneForIconResource(@"user_circle"));
-        }];
-    } else {
-        [self showGalleryOpenFailureMessage:@"Unable to open profile"
-                           actionIdentifier:kSPKNotificationGalleryOpenProfile];
-    }
+    // Completion, not the return value: see the note in -openProfileForFile:.
+    __weak __typeof(self) weakSelf = self;
+    // The profile is pushed over the player, which stays alive behind it, so its
+    // audio has to be stopped explicitly.
+    [self pauseForNavigationAway];
+    [SPKGalleryOriginController openProfileForGalleryFile:file
+                                      fromViewController:self
+                                              completion:^(BOOL success, BOOL didLink) {
+                                                  if (success) {
+                                                      // Quiet when a link was just made: that toast already said it.
+                                                      if (!didLink)
+                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil,
+                                                                    @"user_circle",
+                                                                    SPKNotificationToneForIconResource(@"user_circle"));
+                                                  } else {
+                                                      [weakSelf showGalleryOpenFailureMessage:@"Unable to open profile"
+                                                                             actionIdentifier:kSPKNotificationGalleryOpenProfile];
+                                                  }
+                                              }];
 }
 
 - (UIMenu *)galleryOriginMenuForCurrentItem {
@@ -1656,9 +1824,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 #pragma mark - Current Item
 
 - (SPKMediaItem *)currentItem {
-    if (_currentIndex < 0 || _currentIndex >= (NSInteger)_items.count)
-        return nil;
-    return _items[_currentIndex];
+    return [self itemAtIndex:_currentIndex];
 }
 
 - (NSURL *)currentFileURL {
@@ -1732,8 +1898,10 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         });
 }
 
-- (void)saveLocalFileURLToPhotos:(NSURL *)fileURL
-                   temporaryFile:(BOOL)temporaryFile {
+// Cleanup of `fileURL` is deliberately not ours, even when the caller just staged it: the
+// submission is asynchronous (a duplicate prompt can hold it up indefinitely), and the
+// download scheduler consumes a job's local source file and clears it with the job.
+- (void)saveLocalFileURLToPhotos:(NSURL *)fileURL {
     if (!fileURL)
         return;
 
@@ -1753,13 +1921,6 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                 anchorView:[self bottomBarAnchorView]
              sourceSurface:SPKDownloadSurfaceForPlaybackSource(
                                self.playbackSource)];
-    if (temporaryFile) {
-        dispatch_after(
-            dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2 * NSEC_PER_SEC)),
-            dispatch_get_main_queue(), ^{
-                [[NSFileManager defaultManager] removeItemAtURL:fileURL error:nil];
-            });
-    }
 }
 
 #pragma mark - Playback Suppression
@@ -1845,6 +2006,9 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [haptic impactOccurred];
 }
 
+// Bulk actions ("Download All") only exist off the gallery -- the gallery grid has
+// its own selection mode -- so these walk the eager item list directly. Gallery
+// playback leaves `items` nil and builds pages lazily instead (see -itemAtIndex:).
 - (NSArray<SPKDownloadItemRequest *> *)bulkDownloadItemsForPreview {
     NSMutableArray<SPKDownloadItemRequest *> *items = [NSMutableArray array];
     NSInteger index = 0;
@@ -2065,10 +2229,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         [NSMutableArray array];
     for (SPKDownloadItemRequest *req in bulkItems) {
         BOOL isVideo = (req.mediaKind == SPKDownloadMediaKindVideo);
-        SPKMediaItem *mediaItem =
-            (req.index >= 0 && req.index < (NSInteger)self.items.count)
-                ? self.items[(NSUInteger)req.index]
-                : nil;
+        SPKMediaItem *mediaItem = [self itemAtIndex:req.index];
         UIImage *thumb = mediaItem.thumbnail ?: mediaItem.image;
         if (thumb) {
             [selectionItems
@@ -2124,12 +2285,12 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         return;
 
     if (url.isFileURL) {
-        [self saveLocalFileURLToPhotos:url temporaryFile:NO];
+        [self saveLocalFileURLToPhotos:url];
         return;
     }
 
     if (!url && item.image) {
-        NSData *jpegData = UIImageJPEGRepresentation(item.image, 0.95);
+        NSData *jpegData = UIImageJPEGRepresentation(item.image, 0.85);
         if (jpegData) {
             SPKGallerySaveMetadata *meta = [self metadataForCurrentItem];
             NSString *fileName =
@@ -2139,7 +2300,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                 [NSURL fileURLWithPath:[NSTemporaryDirectory()
                                            stringByAppendingPathComponent:fileName]];
             if ([jpegData writeToURL:tempURL atomically:YES]) {
-                [self saveLocalFileURLToPhotos:tempURL temporaryFile:YES];
+                [self saveLocalFileURLToPhotos:tempURL];
                 return;
             }
         }
@@ -2171,12 +2332,73 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
 }
 
+// The 4K web candidates are fetched lazily, once per post, by whoever needs them
+// first — and the action button only does so for its own download/copy actions.
+// A download or copy started from inside the preview reaches
+// SPKMediaQualityManager directly, bypassing that fetch, so unless the action
+// button happened to fetch them for this post already, "Max" quality would
+// silently fall back to the mobile-sized variant. Fetch them here too.
+//
+// Returns YES when a fetch was started; `retry` re-runs the operation once the
+// candidates have landed (or the request failed, which is marked so it is not
+// retried on every tap).
+- (BOOL)beginFetching4KCandidatesForItem:(SPKMediaItem *)item
+                              identifier:(NSString *)identifier
+                                   retry:(void (^)(void))retry {
+    if (item.mediaType != SPKMediaItemTypeImage)
+        return NO;
+    if (![SPKUtils getBoolPref:@"downloads_fetch_4k_images"])
+        return NO;
+
+    // Same gate the action button applies: the candidates only change the result
+    // for quality modes that can pick them.
+    NSString *photoQuality = [SPKUtils getStringPref:@"downloads_photo_quality"] ?: @"high";
+    if (![photoQuality isEqualToString:@"max"] && ![photoQuality isEqualToString:@"always_ask"])
+        return NO;
+
+    // For a carousel child this is the parent post's PK (the metadata is
+    // populated from the top-level media), which is what the web media endpoint
+    // expects — a child PK does not resolve there.
+    NSString *mediaPK = [self metadataForCurrentItem].sourceMediaPK;
+    if (mediaPK.length == 0)
+        return NO;
+    if ([SPKMediaQualityManager hasWebPhotoCandidatesFetchedForPK:mediaPK])
+        return NO;
+
+    if (identifier.length > 0 && SPKNotificationIsEnabled(identifier)) {
+        [[SPKNotificationCenter shared] beginTransientProgressWithTitle:@"Fetching 4K candidates..."
+                                                               onCancel:nil];
+    }
+    [SPKInstagramAPI fetchWebMediaInfoForPK:mediaPK
+                                 completion:^(NSDictionary *response, NSError *error) {
+                                     [SPKMediaQualityManager markWebPhotoCandidatesFetchedForPK:mediaPK];
+                                     if (response) {
+                                         [SPKMediaQualityManager cacheWebCandidatesFromResponse:response];
+                                     }
+                                     dispatch_async(dispatch_get_main_queue(), ^{
+                                         if (retry)
+                                             retry();
+                                     });
+                                 }];
+    return YES;
+}
+
 - (BOOL)handleRemoteOperationWithAction:(SPKDownloadDestination)destination
                      feedbackIdentifier:(NSString *)feedbackIdentifier {
     SPKMediaItem *item = [self currentItem];
     NSURL *url = [self currentOperationURL];
     if (!item.sourceMediaObject || !item.fileURL || item.fileURL.isFileURL) {
         return NO;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    if ([self beginFetching4KCandidatesForItem:item
+                                    identifier:feedbackIdentifier
+                                         retry:^{
+                                             [weakSelf handleRemoteOperationWithAction:destination
+                                                                    feedbackIdentifier:feedbackIdentifier];
+                                         }]) {
+        return YES;
     }
 
     NSURL *sourceURL = item.fileURL ?: url;
@@ -2201,6 +2423,15 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     SPKMediaItem *item = [self currentItem];
     if (!item.sourceMediaObject || !item.fileURL || item.fileURL.isFileURL) {
         return NO;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    if ([self beginFetching4KCandidatesForItem:item
+                                    identifier:kSPKNotificationMediaPreviewCopy
+                                         retry:^{
+                                             [weakSelf handleRemoteCopyOperation];
+                                         }]) {
+        return YES;
     }
 
     NSURL *sourceURL = item.fileURL;
@@ -2249,15 +2480,18 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         [self gallerySaveLocalFile:targetURL mediaType:galleryType];
         return;
     } else if (!targetURL && item.image) {
-        NSData *jpegData = UIImageJPEGRepresentation(item.image, 0.95);
+        NSData *jpegData = UIImageJPEGRepresentation(item.image, 0.85);
         if (jpegData) {
             NSString *tempPath = [NSTemporaryDirectory()
                 stringByAppendingPathComponent:
                     [[NSUUID UUID].UUIDString stringByAppendingPathExtension:@"jpg"]];
             NSURL *tempURL = [NSURL fileURLWithPath:tempPath];
             [jpegData writeToURL:tempURL atomically:YES];
+            // No delete here: submitting is asynchronous (a duplicate prompt can sit in
+            // front of the copy for as long as the user leaves it there), and the download
+            // scheduler owns a job's local source file — it consumes it on finalize and
+            // clears it when the job leaves history.
             [self gallerySaveLocalFile:tempURL mediaType:SPKGalleryMediaTypeImage];
-            [[NSFileManager defaultManager] removeItemAtURL:tempURL error:nil];
             return;
         }
     }
@@ -2329,7 +2563,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                 }
             }
         } else if (item.image) {
-            NSData *jpegData = UIImageJPEGRepresentation(item.image, 0.95);
+            NSData *jpegData = UIImageJPEGRepresentation(item.image, 0.85);
             NSString *fileName =
                 SPKFileNameForMedia([NSURL fileURLWithPath:@"preview.jpg"],
                                     SPKGalleryMediaTypeImage, meta);
@@ -2442,16 +2676,22 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         return;
     }
 
-    NSMutableArray *mutableItems = [_items mutableCopy];
-    [mutableItems removeObjectAtIndex:deletedIndex];
-    _items = [mutableItems copy];
-    _isSingleItemMode = (_items.count <= 1);
+    if (_galleryFiles) {
+        NSMutableArray *mutableFiles = [_galleryFiles mutableCopy];
+        [mutableFiles removeObjectAtIndex:deletedIndex];
+        _galleryFiles = [mutableFiles copy];
+    } else {
+        NSMutableArray *mutableItems = [_items mutableCopy];
+        [mutableItems removeObjectAtIndex:deletedIndex];
+        _items = [mutableItems copy];
+    }
+    _isSingleItemMode = ([self itemCount] <= 1);
 
     if ([self.delegate respondsToSelector:@selector(fullScreenMediaPlayerDidDeleteFileAtIndex:)]) {
         [self.delegate fullScreenMediaPlayerDidDeleteFileAtIndex:deletedIndex];
     }
 
-    if (_items.count == 0) {
+    if ([self itemCount] == 0) {
         SPKNotify(kSPKNotificationMediaPreviewDeleteGallery,
                   @"Deleted from Gallery", nil, @"circle_check_filled",
                   SPKNotificationToneSuccess);
@@ -2465,8 +2705,11 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         }
     }
     [self.controllerCache removeAllObjects];
+    // Removing a file shifts every index after it, so the built items no longer
+    // line up with their keys -- drop them all and let them rebuild.
+    [self.lazyItems removeAllObjects];
 
-    _currentIndex = MIN(deletedIndex, (NSInteger)_items.count - 1);
+    _currentIndex = MIN(deletedIndex, [self itemCount] - 1);
     UIViewController *newVC = [self viewControllerForIndex:_currentIndex];
     if (newVC) {
         [_pageViewController
@@ -2495,8 +2738,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     UIViewController *currentVC = _pageViewController.viewControllers.firstObject;
-    if ([currentVC isKindOfClass:[SPKFullScreenImageViewController class]] &&
-        [(SPKFullScreenImageViewController *)currentVC isZoomed]) {
+    if ([self isViewControllerZoomed:currentVC]) {
         return NO;
     }
     return YES;
@@ -2625,6 +2867,9 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                     if ([currentVC
                             isKindOfClass:[SPKFullScreenImageViewController class]]) {
                         [(SPKFullScreenImageViewController *)currentVC resetZoomIfNeeded];
+                    } else if ([currentVC
+                                   isKindOfClass:[SPKFullScreenVideoViewController class]]) {
+                        [(SPKFullScreenVideoViewController *)currentVC resetZoomIfNeeded];
                     }
                     [self cancelInteractiveDismissal];
                 }];

@@ -16,8 +16,10 @@
 // isStoryPeeksBenefitEnabled flag is NOT consulted here, so we gate above it.
 //
 // Behind stories_unlock_preview we force the eligibility gate to real peek, and
-// redirect the DM manager's presentPeekUpsell… to presentPeek… as a belt-and-
-// suspenders for the DM entry.
+// also correct the presenter itself: on 440 and earlier that means redirecting
+// the DM manager's presentPeekUpsell… to presentPeek…, and on 441+ (where the
+// per-surface plugins were merged into one manager that takes the decision as a
+// `peekMode` argument) forcing that mode to real.
 //
 // These classes are Swift; their runtime names are the mangled _TtC form and do
 // not exist on IG 410 (iOS 15) where Instagram Plus is absent, so %hook binds
@@ -67,6 +69,35 @@ static inline BOOL SPKUnlockStoryPreviewEnabled(void) {
     }
     %orig(view, pk, presenting, onSubscribe, onViewProfile);
 }
+%end
+
+// IG 441 replaced the per-surface Direct/Profile plugins with one manager, and
+// dropped the separate upsell presenter: the real-vs-upsell choice now rides in
+// `peekMode` on a single entry point (1 = upsell, 0 = real).
+//
+// This is not belt-and-suspenders on 441 — device logs show both entry points
+// arriving with mode 1 even while the eligibility gate above is forced, so this
+// is what actually unlocks the peek there. Binds nothing on 440 and earlier,
+// where this class does not exist.
+// Demangled: IGConsumerSubsStoryPeekPlugin.IGConsumerSubsStoryPeekManager
+%hook _TtC29IGConsumerSubsStoryPeekPlugin30IGConsumerSubsStoryPeekManager
+
+- (void)presentPeekWithReelPK:(id)pk source:(id)source pogPosition:(long long)position peekMode:(long long)mode context:(id)context actions:(id)actions presenting:(id)presenting {
+    if (SPKUnlockStoryPreviewEnabled() && mode != 0) {
+        SPKLog(@"Peek", @"[Sparkle] peek mode %lld forced to real (reelPK)", mode);
+        mode = 0;
+    }
+    %orig(pk, source, position, mode, context, actions, presenting);
+}
+
+- (void)presentPeekWithViewModel:(id)model source:(id)source pogPosition:(long long)position peekMode:(long long)mode context:(id)context actions:(id)actions presenting:(id)presenting {
+    if (SPKUnlockStoryPreviewEnabled() && mode != 0) {
+        SPKLog(@"Peek", @"[Sparkle] peek mode %lld forced to real (viewModel)", mode);
+        mode = 0;
+    }
+    %orig(model, source, position, mode, context, actions, presenting);
+}
+
 %end
 
 %end

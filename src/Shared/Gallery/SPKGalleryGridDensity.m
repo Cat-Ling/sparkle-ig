@@ -4,7 +4,9 @@ NSString *const kSPKGalleryGridColumnsKey = @"gallery_grid_columns";
 NSString *const kSPKGalleryGridPinchDisabledKey = @"gallery_grid_pinch_disabled";
 NSString *const kSPKGalleryGridShowSourceUsernameDisabledKey = @"gallery_grid_show_source_username_disabled";
 NSString *const kSPKGalleryFolderBarPinDisabledKey = @"gallery_folder_bar_pin_disabled";
+NSString *const kSPKGalleryFlatBrowsingKey = @"gallery_flat_browsing";
 NSString *const kSPKGalleryGridControlsChangedNotification = @"SPKGalleryGridControlsPreferenceChanged";
+NSString *const kSPKGalleryBrowsingScopeChangedNotification = @"SPKGalleryBrowsingScopePreferenceChanged";
 
 BOOL SPKGalleryFolderBarPinned(void) {
     return ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryFolderBarPinDisabledKey];

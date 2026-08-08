@@ -21,6 +21,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /// Photos-style trim bar: a filmstrip of thumbnails with two draggable in/out
 /// handles, a dimmed region outside the selection, and a draggable playhead.
+/// Dragging inside the selection slides it along the clip, and dragging away
+/// from the track vertically slows every drag down for fine placement.
 /// Toggling `frameOnlyMode` collapses the UI to a frame-picker marker.
 @interface SPKTrimScrubberView : UIView
 
@@ -30,6 +32,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, assign) NSTimeInterval duration;
 /// Shortest selectable clip in seconds.
 @property (nonatomic, assign) NSTimeInterval minimumDuration;
+/// Longest selectable clip in seconds; 0 means no ceiling. Dragging a handle past
+/// it pushes the opposite handle along instead of widening the selection, so the
+/// window slides rather than growing.
+@property (nonatomic, assign) NSTimeInterval maximumDuration;
 
 @property (nonatomic, assign, readonly) NSTimeInterval startTime;
 @property (nonatomic, assign, readonly) NSTimeInterval endTime;

@@ -1,11 +1,13 @@
 #import "../../InstagramHeaders.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 %group SPKDetailedColorPickerHooks
 
 %hook IGStoryEyedropperToggleButton
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"DetailedColorPicker.didMoveToWindow");
 
     if ([SPKUtils getBoolPref:@"stories_detailed_color_picker"]) {
         [self addLongPressGestureRecognizer];

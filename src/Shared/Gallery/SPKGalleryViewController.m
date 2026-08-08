@@ -136,12 +136,39 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 // When YES (and a query is active), search ignores the folder scope and matches
 // across all folders; the search bar scope buttons toggle it.
 @property (nonatomic, assign) BOOL searchAllFolders;
+// Set when the gallery is opened on a seeded filter (e.g. "instants from @user"): that
+// entry point means "everything matching", so it spans folders whatever the browsing
+// pref says -- otherwise a match filed inside a folder would look like it doesn't exist.
+@property (nonatomic, assign) BOOL forcesFlatBrowsing;
+// Title for a gallery opened on a seeded filter ("@user" rather than "Gallery"). Only
+// used at the root of the browse trail -- inside a folder the folder name still wins.
+@property (nonatomic, copy, nullable) NSString *seededFilterTitle;
+// A gallery opened on a seeded filter *is* the answer to a question already asked ("this
+// user's Instants"), so it drops the filter and search affordances: re-filtering would
+// fight the seed, and searching one person's saved media has nothing to narrow.
+@property (nonatomic, assign) BOOL locksSeededFilter;
 
 @end
 
 @implementation SPKGalleryViewController
 
 #pragma mark - Presentation
+
++ (instancetype)galleryFilteredToSources:(NSSet<NSNumber *> *)sources
+                               usernames:(NSSet<NSString *> *)usernames
+                                   title:(NSString *)title {
+    SPKGalleryViewController *vc = [[SPKGalleryViewController alloc] init];
+    vc.seededFilterTitle = [title copy];
+    // Seeded before the view loads, so the very first fetch is already filtered -- no
+    // flash of the full gallery.
+    if (sources.count > 0)
+        vc.filterSources = [sources mutableCopy];
+    if (usernames.count > 0)
+        vc.filterUsernames = [usernames mutableCopy];
+    vc.forcesFlatBrowsing = (sources.count > 0 || usernames.count > 0);
+    vc.locksSeededFilter = vc.forcesFlatBrowsing;
+    return vc;
+}
 
 + (void)presentGallery {
     UIViewController *presenter = topMostController();
@@ -222,6 +249,10 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                                              selector:@selector(handleGalleryPreferencesChanged:)
                                                  name:SPKGalleryHiddenSourcesDidChangeNotification
                                                object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleGalleryPreferencesChanged:)
+                                                 name:kSPKGalleryBrowsingScopeChangedNotification
+                                               object:nil];
     // Re-scope when the active account changes (per-account filter).
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(handleGalleryPreferencesChanged:)
@@ -290,6 +321,10 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     [self.navigationController dismissViewControllerAnimated:YES completion:nil];
 }
 
+- (void)popSelf {
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
 #pragma mark - Navigation & chrome
 
 /// Shared neutral chrome matching the Instagram-inspired custom palette.
@@ -309,7 +344,8 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                    ? [NSString stringWithFormat:@"%lu Selected", (unsigned long)self.selectedFileIDs.count]
                    : @"Select Files";
     } else {
-        text = self.currentFolderPath.length > 0 ? [self.currentFolderPath lastPathComponent] : @"Gallery";
+        text = self.currentFolderPath.length > 0 ? [self.currentFolderPath lastPathComponent]
+                                                 : (self.seededFilterTitle.length > 0 ? self.seededFilterTitle : @"Gallery");
     }
     self.navigationItem.titleView = nil;
     self.title = text;
@@ -320,6 +356,11 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 }
 
 - (void)setupSearchController {
+    // A seeded filter answers the only question this screen exists to answer, so it gets
+    // no search bar and no iOS 26 integrated search button (which is vended from here).
+    if (self.locksSeededFilter)
+        return;
+
     UISearchController *controller = [[UISearchController alloc] initWithSearchResultsController:nil];
     controller.obscuresBackgroundDuringPresentation = NO;
     controller.hidesNavigationBarDuringPresentation = NO;
@@ -379,8 +420,12 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
     // Leading group changes as you browse (close ⇄ back) or enter selection
     // (Cancel). Apply only when it actually changes.
-    NSString *leadingSignature = self.selectionMode ? @"cancel"
-                                                    : ([self canNavigateBackInFolders] ? @"back" : @"close");
+    // A pushed gallery (e.g. opened from the saved-instants list) goes back to whatever
+    // pushed it rather than dismissing the whole stack.
+    BOOL isPushed = self.navigationController && self.navigationController.viewControllers.firstObject != self;
+    NSString *leadingSignature = self.selectionMode
+                                     ? @"cancel"
+                                     : ([self canNavigateBackInFolders] ? @"back" : (isPushed ? @"pop" : @"close"));
     if (![leadingSignature isEqualToString:self.lastLeadingNavSignature]) {
         self.lastLeadingNavSignature = leadingSignature;
         UIBarButtonItem *leadingItem;
@@ -389,6 +434,9 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
             leadingItem.accessibilityLabel = @"Cancel";
         } else if ([self canNavigateBackInFolders]) {
             leadingItem = SPKMediaChromeTopBarButtonItem(@"chevron_left", self, @selector(navigateBackInFolders));
+        } else if (isPushed) {
+            leadingItem = SPKMediaChromeTopBarButtonItem(@"chevron_left", self, @selector(popSelf));
+            leadingItem.accessibilityLabel = @"Back";
         } else {
             leadingItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(dismissSelf));
         }
@@ -448,7 +496,13 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
         UIBarButtonItem *folderItem = [self galleryBottomBarItemWithResource:@"folder" accessibility:@"New folder" action:@selector(presentCreateFolder)];
 
-        primary = @[ toggleItem, sortItem, filterItem, folderItem ];
+        primary = self.locksSeededFilter ? @[ toggleItem, sortItem, folderItem ]
+                                         : @[ toggleItem, sortItem, filterItem, folderItem ];
+    }
+
+    if (self.locksSeededFilter) {
+        self.toolbarItems = SPKMediaChromeBottomToolbarItems(primary);
+        return;
     }
 
     // Search lives in its own trailing capsule in both browse and selection modes
@@ -610,7 +664,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
         SPKGalleryFile *file = [self galleryFileForCollectionIndexPath:indexPath];
         if (!file)
             continue;
-        NSString *folderName = [self searchResultFolderNameForFile:file];
+        NSString *folderName = [self folderBadgeNameForFile:file];
         [(SPKGalleryGridCell *)cell configureWithGalleryFile:file
                                                selectionMode:self.selectionMode
                                                     selected:[self.selectedFileIDs containsObject:file.identifier]
@@ -736,6 +790,12 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
 #pragma mark - Fetched Results Controller
 
+/// Whether the grid lists the files inside subfolders alongside the current
+/// folder's own ones. Read on every fetch, so the settings toggle applies live.
+- (BOOL)flatBrowsingEnabled {
+    return self.forcesFlatBrowsing || [SPKUtils getBoolPref:kSPKGalleryFlatBrowsingKey];
+}
+
 - (void)setupFetchedResultsController {
     NSFetchRequest *request = [self currentFetchRequest];
 
@@ -763,12 +823,26 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     // "Search all folders" only applies while actually searching; otherwise stay
     // scoped to the current folder.
     BOOL searchingAllFolders = self.searchAllFolders && query.length > 0;
+    // Flat browsing widens the folder scope from "this folder" to "this folder and
+    // everything under it" (so the root lists the whole gallery). The exact-folder
+    // predicate the filter builds can't express that, so ask it not to scope and add
+    // the subtree predicate here. Folders stay browsable: descending still narrows
+    // the subtree, and searching all folders still drops the scope entirely.
+    BOOL flatBrowsing = [self flatBrowsingEnabled];
     NSPredicate *basePredicate = [SPKGalleryFilterViewController predicateForTypes:self.filterTypes
                                                                            sources:self.filterSources
                                                                      favoritesOnly:self.filterFavoritesOnly
                                                                          usernames:self.filterUsernames
                                                                         folderPath:self.currentFolderPath
-                                                                     scopeToFolder:!searchingAllFolders];
+                                                                     scopeToFolder:!searchingAllFolders && !flatBrowsing];
+    if (flatBrowsing && !searchingAllFolders && self.currentFolderPath.length > 0) {
+        NSPredicate *subtree = [NSPredicate predicateWithFormat:@"folderPath == %@ OR folderPath BEGINSWITH %@",
+                                                               self.currentFolderPath,
+                                                               [self.currentFolderPath stringByAppendingString:@"/"]];
+        basePredicate = basePredicate
+                            ? [NSCompoundPredicate andPredicateWithSubpredicates:@[ basePredicate, subtree ]]
+                            : subtree;
+    }
     NSPredicate *visibleSources = SPKGalleryVisibleSourcesPredicate();
     if (visibleSources) {
         basePredicate = basePredicate
@@ -952,7 +1026,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
         BOOL showsMeta = ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryGridShowSourceUsernameDisabledKey];
         // Username caption only fits at roomy densities (2-3 columns).
         BOOL showsUsername = showsMeta && self.gridColumns <= 3;
-        NSString *folderName = [self searchResultFolderNameForFile:file];
+        NSString *folderName = [self folderBadgeNameForFile:file];
         [cell configureWithGalleryFile:file
                          selectionMode:self.selectionMode
                               selected:[self.selectedFileIDs containsObject:file.identifier]
@@ -966,15 +1040,17 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     [cell configureWithGalleryFile:file
                      selectionMode:self.selectionMode
                           selected:[self.selectedFileIDs containsObject:file.identifier]];
-    [cell setFolderContextName:[self searchResultFolderNameForFile:file]];
+    [cell setFolderContextName:[self folderBadgeNameForFile:file]];
     [cell setMoreActionsMenu:self.selectionMode ? nil : [self fileActionsMenuForFile:file]];
     return cell;
 }
 
-// The folder a search result lives in, shown on the cell only while searching
-// across all folders and when the file is in a different, non-root folder.
-- (NSString *)searchResultFolderNameForFile:(SPKGalleryFile *)file {
-    if (!self.searchAllFolders || self.searchQuery.length == 0) {
+// The folder a listed file lives in, shown on the cell only when the list can
+// span folders (searching across all folders, or flat browsing) and the file is
+// in a different, non-root folder — otherwise the label is noise.
+- (NSString *)folderBadgeNameForFile:(SPKGalleryFile *)file {
+    BOOL listSpansFolders = [self flatBrowsingEnabled] || (self.searchAllFolders && self.searchQuery.length > 0);
+    if (!listSpansFolders) {
         return nil;
     }
     NSString *folderPath = file.folderPath;
@@ -1223,8 +1299,10 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
     }
 
     NSArray *allFiles = self.fetchedResultsController.fetchedObjects;
-    NSInteger idx = [allFiles indexOfObject:selectedFile];
-    if (idx == NSNotFound)
+    // filePath.item is already the index into fetchedObjects -- objectAtIndexPath:
+    // above resolved the file from it -- so there is no need to search the array.
+    NSInteger idx = filePath.item;
+    if (idx < 0 || idx >= (NSInteger)allFiles.count)
         idx = 0;
     [SPKFullScreenMediaPlayer showGalleryFiles:allFiles
                                startingAtIndex:idx
@@ -1253,23 +1331,40 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                          ? [[file openOriginalActionTitle] substringFromIndex:5]
                          : @"original post";
     NSString *lowerNoun = noun.lowercaseString;
-    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file]) {
-        [self dismissGalleryForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenOriginal, [NSString stringWithFormat:@"Opened %@", lowerNoun], nil, @"external_link", SPKNotificationToneInfo);
-        }];
+    __weak __typeof(self) weakSelf = self;
+    // The Gallery stays up: the post is pushed over it, so it is still here when
+    // the post is closed. Dismissing is only the fallback for a build where the
+    // push cannot be redirected.
+    if ([SPKGalleryOriginController openOriginalPostForGalleryFile:file
+                                               fromViewController:self
+                                                   legacyFallback:^{
+                                                       [weakSelf dismissGalleryForOriginOpenWithCompletion:^{
+                                                           SPKNotify(kSPKNotificationGalleryOpenOriginal, [NSString stringWithFormat:@"Opened %@", lowerNoun], nil, @"external_link", SPKNotificationToneInfo);
+                                                       }];
+                                                   }
+                                                        onDismiss:nil]) {
+        // Nothing to announce: the post is on screen.
     } else {
         [self showGalleryOpenFailureMessage:[NSString stringWithFormat:@"Unable to open %@", lowerNoun] actionIdentifier:kSPKNotificationGalleryOpenOriginal];
     }
 }
 
 - (void)openProfileForFile:(SPKGalleryFile *)file {
-    if ([SPKGalleryOriginController openProfileForGalleryFile:file]) {
-        [self dismissGalleryForOriginOpenWithCompletion:^{
-            SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil, @"user_circle", SPKNotificationToneForIconResource(@"user_circle"));
-        }];
-    } else {
-        [self showGalleryOpenFailureMessage:@"Unable to open profile" actionIdentifier:kSPKNotificationGalleryOpenProfile];
-    }
+    // Via the completion so the toast lands when the profile actually opens: an
+    // item with no stored pk looks one up first, and announcing "Opened profile"
+    // at call time put this on screen next to the still-spinning progress pill.
+    __weak __typeof(self) weakSelf = self;
+    [SPKGalleryOriginController openProfileForGalleryFile:file
+                                      fromViewController:self
+                                              completion:^(BOOL success, BOOL didLink) {
+                                                  if (success) {
+                                                      // Quiet when a link was just made: that toast already said it.
+                                                      if (!didLink)
+                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil, @"user_circle", SPKNotificationToneForIconResource(@"user_circle"));
+                                                  } else {
+                                                      [weakSelf showGalleryOpenFailureMessage:@"Unable to open profile" actionIdentifier:kSPKNotificationGalleryOpenProfile];
+                                                  }
+                                              }];
 }
 
 - (NSArray<SPKGalleryFile *> *)visibleGalleryFiles {
@@ -2447,6 +2542,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
 - (void)pushSettings {
     SPKGallerySettingsViewController *vc = [[SPKGallerySettingsViewController alloc] init];
+    vc.importDestinationFolderPath = self.currentFolderPath;
     [self.navigationController pushViewController:vc animated:YES];
 }
 

@@ -14,6 +14,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, nullable) NSString *sourceMediaURLString;
 @property (nonatomic, assign) int16_t source;
 
+/// Marks the resulting `SPKGalleryFile` as auto-saved (see `SPKGalleryFile.isAutoSave`).
+@property (nonatomic, assign) BOOL isAutoSave;
+
 /// If > 0, overrides probed dimensions from the file.
 @property (nonatomic, assign) int32_t pixelWidth;
 @property (nonatomic, assign) int32_t pixelHeight;
@@ -37,6 +40,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// the preview metadata overlay (used as the subtitle for profile pictures, which have
 /// no post date). Not written to the gallery.
 @property (nonatomic, copy, nullable) NSString *sourceFullName;
+
+/// Plist-safe round-trip for persisting the import queue across screen dismissals / relaunches.
+/// The transient `sourceFullName` is intentionally excluded (it is re-resolved live).
+- (NSDictionary *)spk_dictionaryRepresentation;
++ (instancetype)spk_metadataFromDictionary:(NSDictionary *)dict;
 
 @end
 

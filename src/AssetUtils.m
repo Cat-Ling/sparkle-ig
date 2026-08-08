@@ -112,6 +112,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"autoplay_off" : @{@"candidates" : @[ @"ig_icon_auto_play_off_outline_24" ]},
             @"autoscroll" : @{@"candidates" : @[ @"ig_icon_auto_scroll_outline_24" ]},
             @"backspace" : @{@"candidates" : @[ @"ig_icon_backspace_outline_24" ]},
+            @"beaker" : @{@"candidates" : @[ @"ig_icon_beaker_outline_24" ]},
             @"blend" : @{@"candidates" : @[ @"ig_icon_blend_outline_24" ]},
             @"calendar" : @{@"candidates" : @[ @"ig_icon_calendar_outline_24" ]},
             @"call" : @{@"candidates" : @[ @"ig_icon_call_outline_24" ]},
@@ -140,6 +141,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"donate" : @{@"candidates" : @[ @"ig_icon_donations_outline_44" ]},
             @"download" : @{@"candidates" : @[ @"ig_icon_download_outline_24" ]},
             @"download_filled" : @{@"candidates" : @[ @"ig_icon_download_filled_24" ]},
+            @"download_off" : @{@"candidates" : @[ @"ig_icon_download_off_outline_24" ]},
             @"download_reels" : @{@"candidates" : @[ @"ig_icon_download_outline_44" ]},
             @"duplicate" : @{@"candidates" : @[ @"ig_icon_photo_dump_outline_24" ]},
             @"edit" : @{@"candidates" : @[ @"ig_icon_edit_outline_24" ]},
@@ -155,6 +157,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"eyedropper" : @{@"candidates" : @[ @"ig_icon_eyedropper_outline_24" ]},
             @"face_happy" : @{@"candidates" : @[ @"ig_icon_face2_outline_24" ]},
             @"face_sad" : @{@"candidates" : @[ @"ig_icon_face4_outline_24" ]},
+            @"flag" : @{@"candidates" : @[ @"ig_icon_flag_outline_24" ]},
             @"feed" : @{@"candidates" : @[ @"ig_icon_feeds_outline_24", @"ig_icon_photo_list_outline_24" ]},
             @"feed_filled" : @{@"candidates" : @[ @"ig_icon_feeds_filled_24" ]},
             @"filter" : @{@"candidates" : @[ @"ig_icon_align_center_outline_24", @"ig_icon_sliders_pano_outline_24", @"ig_icon_sliders_outline_24" ]},
@@ -167,6 +170,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"group" : @{@"candidates" : @[ @"ig_icon_group_outline_24" ]},
             @"haptics" : @{@"candidates" : @[ @"ig_icon_audio_crunchy_outline_24" ]},
             @"hd" : @{@"candidates" : @[ @"ig_icon_hd_outline_24" ]},
+            @"hd_check_filled" : @{@"candidates" : @[ @"ig_icon_hd_check_filled_24" ]},
             @"heart" : @{@"candidates" : @[ @"ig_icon_heart_pano_outline_24", @"ig_icon_heart_outline_24" ]},
             @"heart_filled" : @{@"candidates" : @[ @"ig_icon_heart_filled_24" ]},
             @"highlights" : @{@"candidates" : @[ @"ig_icon_story_highlight_pano_outline_24", @"ig_icon_story_highlight_outline_24" ]},
@@ -291,6 +295,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"volume_off" : @{@"candidates" : @[ @"ig_icon_volume_off_pano_outline_24", @"ig_icon_volume_off_outline_24" ]},
             @"warning" : @{@"candidates" : @[ @"ig_icon_warning_pano_outline_24", @"ig_icon_warning_outline_24" ]},
             @"warning_filled" : @{@"candidates" : @[ @"ig_icon_warning_pano_filled_24", @"ig_icon_warning_filled_24" ]},
+            @"web" : @{@"candidates" : @[ @"globe_Outline_24", @"globe_outline_24" ]},
             @"xmark" : @{@"candidates" : @[ @"ig_icon_x_pano_outline_24" ]},
             @"zoom" : @{@"candidates" : @[ @"ig_icon_fullscreen_outline_24" ]}
         };
@@ -443,10 +448,26 @@ static BOOL SPKAssetHasExplicitOverride(NSString *name) {
     return SPKAssetResolvedDescriptor(SPKAssetNormalizeInternalName(name)) != nil;
 }
 
+static NSCache<NSString *, id> *SPKAssetIconNameCache(void) {
+    static NSCache<NSString *, id> *cache;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        cache = [[NSCache alloc] init];
+        cache.countLimit = 512;
+    });
+    return cache;
+}
+
 static NSString *SPKAssetResolvedIconCandidateName(NSString *name, CGFloat pointSize, SPKAssetCatalogSource source) {
     NSString *normalizedName = SPKAssetNormalizeInternalName(name);
     if (normalizedName.length == 0) {
         return nil;
+    }
+
+    NSString *cacheKey = [NSString stringWithFormat:@"%@|%.2f|%ld", normalizedName, pointSize, (long)source];
+    id cachedName = [SPKAssetIconNameCache() objectForKey:cacheKey];
+    if (cachedName) {
+        return cachedName == [NSNull null] ? nil : cachedName;
     }
 
     CGFloat resolvedPointSize = SPKAssetResolvedPointSize(normalizedName, pointSize);
@@ -463,18 +484,43 @@ static NSString *SPKAssetResolvedIconCandidateName(NSString *name, CGFloat point
         for (NSString *candidate in candidates) {
             UIImage *image = [UIImage imageNamed:candidate inBundle:bundle compatibleWithTraitCollection:nil];
             if (image) {
+                [SPKAssetIconNameCache() setObject:candidate forKey:cacheKey];
                 return candidate;
             }
         }
     }
 
+    [SPKAssetIconNameCache() setObject:[NSNull null] forKey:cacheKey];
     return nil;
+}
+
+// Resolving an icon walks every candidate name across every candidate bundle and
+// then redraws the hit through UIGraphicsImageRenderer to scale it. That is far
+// too expensive to repeat per call site: collection view cells reconfigure their
+// badges on every dequeue, so an uncached lookup turns into a full off-screen
+// render pass per cell while scrolling. Results are pure functions of the four
+// lookup inputs, so memoize them (misses included, so a miss does not rescan).
+static NSCache<NSString *, id> *SPKAssetIconCache(void) {
+    static NSCache<NSString *, id> *cache;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        cache = [[NSCache alloc] init];
+        cache.countLimit = 512;
+    });
+    return cache;
 }
 
 static UIImage *SPKAssetLookupInstagramIcon(NSString *name, CGFloat pointSize, SPKAssetCatalogSource source, UIImageRenderingMode renderingMode) {
     NSString *normalizedName = SPKAssetNormalizeInternalName(name);
     if (normalizedName.length == 0) {
         return nil;
+    }
+
+    NSString *cacheKey = [NSString stringWithFormat:@"%@|%.2f|%ld|%ld",
+                                                    normalizedName, pointSize, (long)source, (long)renderingMode];
+    id cached = [SPKAssetIconCache() objectForKey:cacheKey];
+    if (cached) {
+        return cached == [NSNull null] ? nil : cached;
     }
 
     CGFloat resolvedPointSize = SPKAssetResolvedPointSize(normalizedName, pointSize);
@@ -495,10 +541,13 @@ static UIImage *SPKAssetLookupInstagramIcon(NSString *name, CGFloat pointSize, S
             }
 
             image = SPKAssetScaleImage(image, resolvedPointSize);
-            return SPKAssetApplyRenderingMode(image, renderingMode);
+            image = SPKAssetApplyRenderingMode(image, renderingMode);
+            [SPKAssetIconCache() setObject:(image ?: (id)[NSNull null]) forKey:cacheKey];
+            return image;
         }
     }
 
+    [SPKAssetIconCache() setObject:[NSNull null] forKey:cacheKey];
     return nil;
 }
 

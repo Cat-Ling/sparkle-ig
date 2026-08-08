@@ -7,19 +7,31 @@
 #import <substrate.h>
 
 #import "../../AssetUtils.h"
+#import "../../Shared/ActionButton/ActionButtonCore.h"
 #import "../../Settings/Topics/SPKInstantsSettingsProvider.h"
 #import "../../Shared/Gallery/SPKGalleryFile.h"
 #import "../../Shared/Gallery/SPKGalleryPickerViewController.h"
 #import "../../Shared/Instants/SPKInstantsFrameInjector.h"
+#import "../../Shared/Instants/SPKInstantsSavedUsersViewController.h"
+#import "../../Shared/Instants/SPKInstantsVideoStreamer.h"
+#import "../../Shared/MediaTrim/SPKTrimConfiguration.h"
+#import "../../Shared/MediaTrim/SPKTrimEditorViewController.h"
+#import "../../Shared/MediaTrim/SPKTrimResult.h"
+#import "../../Shared/MediaTrim/SPKTrimSaveCoordinator.h"
 #import "../../Shared/PhotoEdit/SPKPhotoEditorViewController.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Shared/UI/SPKIGAlertPresenter.h"
+#import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
 
-static NSString *const kSPKInstantsUploadFromGalleryPref = @"instants_upload_from_gallery";
+// One Sparkle button for the whole Instants camera screen: uploading a photo from
+// Photos/Gallery/Files, browsing what you have already saved, and the settings page all
+// hang off its menu. It replaces the two separate injected buttons this file and
+// InstantsBrowseSaved used to place, which competed for the same header slot.
+static NSString *const kSPKInstantsCameraButtonPref = @"instants_camera_btn";
 
-static BOOL SPKInstantsUploadFromGalleryEnabled(void) {
-    return [SPKUtils getBoolPref:kSPKInstantsUploadFromGalleryPref];
+static BOOL SPKInstantsCameraButtonEnabled(void) {
+    return [SPKUtils getBoolPref:kSPKInstantsCameraButtonPref];
 }
 
 static UIImage *sSPKInstantsPendingImage = nil;
@@ -47,6 +59,7 @@ static dispatch_queue_t SPKInstantsFreezeQueue(void) {
 
 static const void *kSPKInstantsGalleryButtonKey = &kSPKInstantsGalleryButtonKey;
 static const void *kSPKInstantsGalleryFrameKey = &kSPKInstantsGalleryFrameKey;
+static const void *kSPKInstantsGalleryIconKey = &kSPKInstantsGalleryIconKey;
 static const void *kSPKInstantsVideoInjectorKey = &kSPKInstantsVideoInjectorKey;
 static NSInteger const kSPKInstantsGalleryButtonTag = 921401;
 static __weak UIView *sSPKInstantsVisibleCreationView = nil;
@@ -266,10 +279,72 @@ static BOOL SPKInstantsCreationViewIsPostCapture(UIView *creationView) {
     return foundUndo;
 }
 
+static void SPKInstantsClearPendingVideo(void);
+static void SPKInstantsPresentVideoForPositioning(NSURL *videoURL);
+
+static NSString *const kSPKInstantsImportPrefix = @"SPKInstantImport-";
+
+/// UIImagePickerController hands back a URL inside the Photos picker extension's
+/// own container. AVFoundation reads it through the sandbox extension granted
+/// with the pick, but FFmpeg's plain open() cannot ("Operation not permitted"),
+/// so the render failed only after the user had finished trimming. Copy the file
+/// into our own container while the grant is still live. Only one import is kept
+/// around: the previous one is purged on each pick.
+static NSURL *SPKInstantsImportPickedVideo(NSURL *sourceURL) {
+    if (!sourceURL)
+        return nil;
+    NSFileManager *manager = [NSFileManager defaultManager];
+    NSString *temporaryPath = NSTemporaryDirectory();
+    for (NSString *name in [manager contentsOfDirectoryAtPath:temporaryPath error:nil] ?: @[]) {
+        if ([name hasPrefix:kSPKInstantsImportPrefix]) {
+            [manager removeItemAtPath:[temporaryPath stringByAppendingPathComponent:name] error:nil];
+        }
+    }
+
+    NSString *extension = sourceURL.pathExtension.length > 0 ? sourceURL.pathExtension : @"mov";
+    NSString *fileName = [NSString stringWithFormat:@"%@%@.%@", kSPKInstantsImportPrefix,
+                                                    NSUUID.UUID.UUIDString, extension];
+    NSURL *destination = [NSURL fileURLWithPath:[temporaryPath stringByAppendingPathComponent:fileName]];
+
+    BOOL scoped = [sourceURL startAccessingSecurityScopedResource];
+    NSError *error = nil;
+    BOOL ok = [manager copyItemAtURL:sourceURL toURL:destination error:&error];
+    if (scoped) {
+        [sourceURL stopAccessingSecurityScopedResource];
+    }
+    if (!ok) {
+        SPKLog(@"Instants", @"[Sparkle] could not import picked video: %@", error.localizedDescription);
+        return nil;
+    }
+    return destination;
+}
+
+/// The picked file is the untouched original, which for a long 4K clip is large
+/// enough that copying it on the main thread would visibly hang. Copy on a work
+/// queue behind a progress pill and hand back the local URL on the main thread.
+static void SPKInstantsImportPickedVideoAsync(NSURL *sourceURL, void (^completion)(NSURL *_Nullable)) {
+    SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationInstantsUpload, @"Importing video", nil);
+    [pill setProgressIndeterminate:YES];
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+        NSURL *localURL = SPKInstantsImportPickedVideo(sourceURL);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (localURL) {
+                [pill dismiss];
+            } else {
+                [pill showErrorWithTitle:@"Could not open video"
+                                subtitle:@"The picked file could not be read."
+                                    icon:nil];
+            }
+            completion(localURL);
+        });
+    });
+}
+
 static void SPKInstantsClearPendingImageForCreationView(UIView *creationView) {
     (void)creationView;
     sSPKInstantsPendingImage = nil;
     SPKInstantsClearFrameCache();
+    SPKInstantsClearPendingVideo();
 }
 
 static void SPKInstantsPresentImageForPositioning(UIImage *image) {
@@ -524,10 +599,36 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
         });
     }
 
+    // A pending video outranks everything for the same reason a pending image does:
+    // it is the content the user chose to send. Frames come pre-rendered to the
+    // camera's exact geometry and pixel format, so they drop straight in.
+    if (SPKInstantsCameraButtonEnabled() && [SPKInstantsVideoStreamer isArmed]) {
+        CMFormatDescriptionRef templateFormat = CMSampleBufferGetFormatDescription(sampleBuffer);
+        if (templateFormat) {
+            CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(templateFormat);
+            CVPixelBufferRef streamed =
+                [SPKInstantsVideoStreamer copyPixelBufferForCameraTime:CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                                                                 width:dimensions.width
+                                                                height:dimensions.height
+                                                                format:CMFormatDescriptionGetMediaSubType(templateFormat)];
+            if (streamed) {
+                CMSampleBufferRef replacement = SPKInstantsSampleBufferForPixelBuffer(streamed, sampleBuffer);
+                CVPixelBufferRelease(streamed);
+                if (replacement) {
+                    [(id<AVCaptureVideoDataOutputSampleBufferDelegate>)realDelegate captureOutput:output
+                                                                            didOutputSampleBuffer:replacement
+                                                                                   fromConnection:connection];
+                    CFRelease(replacement);
+                    return;
+                }
+            }
+        }
+    }
+
     // Gallery/files upload: when the user has positioned and cropped an image to send,
     // this pending image MUST take priority over everything else — including the
     // confirm-capture frozen frame. The pending image is the user's intended content.
-    UIImage *pendingImage = SPKInstantsUploadFromGalleryEnabled() ? sSPKInstantsPendingImage : nil;
+    UIImage *pendingImage = SPKInstantsCameraButtonEnabled() ? sSPKInstantsPendingImage : nil;
     if (pendingImage) {
         CMSampleBufferRef replacement = SPKInstantsSampleBufferForImage(pendingImage, sampleBuffer);
         if (replacement) {
@@ -610,10 +711,18 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
 
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary<UIImagePickerControllerInfoKey, id> *)info {
     UIImage *image = info[UIImagePickerControllerOriginalImage];
+    NSURL *pickedURL = info[UIImagePickerControllerMediaURL];
     [picker dismissViewControllerAnimated:YES
                                completion:^{
-                                   if (image)
+                                   if (pickedURL) {
+                                       SPKInstantsImportPickedVideoAsync(pickedURL, ^(NSURL *localURL) {
+                                           if (localURL) {
+                                               SPKInstantsPresentVideoForPositioning(localURL);
+                                           }
+                                       });
+                                   } else if (image) {
                                        SPKInstantsPresentImageForPositioning(image);
+                                   }
                                }];
 }
 
@@ -639,15 +748,28 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
     NSURL *url = urls.firstObject;
     if (!url)
         return;
+    // `asCopy:YES` already vends a local copy, so a video can be handed to the
+    // trim editor by URL; only an image needs reading into memory here.
     BOOL scoped = [url startAccessingSecurityScopedResource];
-    NSData *data = [NSData dataWithContentsOfURL:url];
-    UIImage *image = data ? [UIImage imageWithData:data] : nil;
+    UIImage *image = nil;
+    BOOL isVideo = NO;
+    NSString *type = nil;
+    if ([url getResourceValue:&type forKey:NSURLTypeIdentifierKey error:nil] && type) {
+        isVideo = [[UTType typeWithIdentifier:type] conformsToType:UTTypeMovie];
+    }
+    if (!isVideo) {
+        NSData *data = [NSData dataWithContentsOfURL:url];
+        image = data ? [UIImage imageWithData:data] : nil;
+    }
     if (scoped)
         [url stopAccessingSecurityScopedResource];
     [controller dismissViewControllerAnimated:YES
                                    completion:^{
-                                       if (image)
+                                       if (isVideo) {
+                                           SPKInstantsPresentVideoForPositioning(url);
+                                       } else if (image) {
                                            SPKInstantsPresentImageForPositioning(image);
+                                       }
                                    }];
 }
 
@@ -661,61 +783,185 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
 - (void)buttonTapped:(UIButton *)sender;
 @end
 
-static void SPKPresentInstantsSourcePicker(__unused UIView *sourceView) {
-    UIViewController *presenter = SPKInstantsTopPresenter();
-    NSMutableArray<SPKIGAlertAction *> *actions = [NSMutableArray array];
+/// Plain UIButton plus the menu-open haptic every other Sparkle menu button has
+/// (SPKChromeButton gets it from `menuWillDisplayHandler`; the action button
+/// from its own interaction delegate). UIButton is the delegate of its built-in
+/// context-menu interaction, so this fires for the primary-action tap too.
+@interface SPKInstantsGalleryButton : UIButton
+@end
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Select from Photos"
-                                                   style:SPKIGAlertActionStyleDefault
-                                                 handler:^{
-                                                     UIImagePickerController *picker = [[UIImagePickerController alloc] init];
-                                                     picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
-                                                     picker.mediaTypes = @[ @"public.image" ];
-                                                     picker.delegate = [SPKInstantsImagePickerDelegate shared];
-                                                     picker.modalPresentationStyle = UIModalPresentationFullScreen;
-                                                     [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
-                                                 }]];
-
-    if ([SPKGalleryPickerViewController hasSelectableFilesForAllowedMediaTypes:[NSSet setWithObject:@(SPKGalleryMediaTypeImage)]]) {
-        [actions addObject:[SPKIGAlertAction actionWithTitle:@"Select from Gallery"
-                                                       style:SPKIGAlertActionStyleDefault
-                                                     handler:^{
-                                                         [SPKGalleryPickerViewController presentFromViewController:SPKInstantsTopPresenter()
-                                                                                                             title:@"Choose Photo"
-                                                                                                 allowedMediaTypes:[NSSet setWithObject:@(SPKGalleryMediaTypeImage)]
-                                                                                           allowsMultipleSelection:NO
-                                                                                                        completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {
-                                                                                                            SPKGalleryFile *file = selectedFiles.firstObject;
-                                                                                                            UIImage *image = file ? [UIImage imageWithContentsOfFile:file.filePath] : nil;
-                                                                                                            if (image)
-                                                                                                                SPKInstantsPresentImageForPositioning(image);
-                                                                                                        }];
-                                                     }]];
+@implementation SPKInstantsGalleryButton
+- (void)contextMenuInteraction:(UIContextMenuInteraction *)interaction
+    willDisplayMenuForConfiguration:(UIContextMenuConfiguration *)configuration
+                           animator:(id<UIContextMenuInteractionAnimating>)animator {
+    if ([UIButton instancesRespondToSelector:_cmd]) {
+        [super contextMenuInteraction:interaction
+      willDisplayMenuForConfiguration:configuration
+                             animator:animator];
     }
+    if (![SPKUtils getBoolPref:@"general_disable_haptics"]) {
+        UISelectionFeedbackGenerator *feedback = [UISelectionFeedbackGenerator new];
+        [feedback selectionChanged];
+    }
+}
+@end
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Select from Files"
-                                                   style:SPKIGAlertActionStyleDefault
-                                                 handler:^{
-                                                     UIDocumentPickerViewController *picker = [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[ UTTypeImage ] asCopy:YES];
-                                                     picker.allowsMultipleSelection = NO;
-                                                     picker.delegate = [SPKInstantsDocumentPickerDelegate shared];
-                                                     [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
-                                                 }]];
+/// Longest clip we let the user select. IG caps a recorded Instant at 6 seconds
+/// (observed; the cap is not readable statically because `videoCaptureMaxDuration`
+/// is a Swift lazy).
+static NSTimeInterval const kSPKInstantsMaxVideoSeconds = 6.0;
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Instants Settings"
-                                                   style:SPKIGAlertActionStyleDefault
-                                                 handler:^{
+static NSURL *SPKInstantsPendingVideoURL(void) {
+    return [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:@"SPKInstantVideo.mp4"]];
+}
+
+static void SPKInstantsClearPendingVideo(void) {
+    [SPKInstantsVideoStreamer stop];
+    [[NSFileManager defaultManager] removeItemAtURL:SPKInstantsPendingVideoURL() error:nil];
+}
+
+/// Trim + crop the chosen video to the Instants square, then arm the streamer so
+/// the camera feed becomes those frames. Rendering first (rather than cropping
+/// live per frame) keeps the capture callback free of per-frame work and reuses
+/// the same single-pass trim+crop render as everything else.
+static void SPKInstantsPresentVideoForPositioning(NSURL *videoURL) {
+    if (!videoURL)
+        return;
+    SPKTrimConfiguration *configuration = [SPKTrimConfiguration configurationWithVideoURL:videoURL];
+    configuration.title = @"Trim Instant";
+    configuration.allowsFrameOnly = NO;
+    configuration.allowsAudioOnly = NO;
+    configuration.allowsCrop = YES;
+    configuration.lockedCropAspectRatio = 1.0;
+    configuration.maximumDuration = kSPKInstantsMaxVideoSeconds;
+
+    [SPKTrimEditorViewController presentWithConfiguration:configuration
+                                                    from:SPKInstantsTopPresenter()
+                                              completion:^(SPKTrimResult *result) {
+                                                  if (!result)
+                                                      return;
+                                                  [SPKTrimSaveCoordinator renderResult:result
+                                                      progressTitle:@"Preparing instant..."
+                                                       existingPill:nil
+                                                              store:^(NSURL *renderedURL, SPKTrimStoreCompletion done) {
+                                                                  NSURL *destination = SPKInstantsPendingVideoURL();
+                                                                  NSFileManager *manager = [NSFileManager defaultManager];
+                                                                  [manager removeItemAtURL:destination error:nil];
+                                                                  NSError *error = nil;
+                                                                  // The coordinator cleans up its temp file after this
+                                                                  // block, so keep our own copy for the streamer.
+                                                                  BOOL ok = [manager copyItemAtURL:renderedURL toURL:destination error:&error];
+                                                                  if (ok) {
+                                                                      [SPKInstantsVideoStreamer startWithVideoURL:destination];
+                                                                  } else {
+                                                                      SPKLog(@"Instants", @"[Sparkle] instant video copy failed: %@",
+                                                                             error.localizedDescription);
+                                                                  }
+                                                                  done(ok, ok ? @"Press and hold to record" : @"Could not prepare video");
+                                                              }
+                                                       onSuccessTap:nil
+                                                         completion:nil];
+                                              }];
+}
+
+static void SPKInstantsPickFromPhotos(void) {
+    UIImagePickerController *picker = [[UIImagePickerController alloc] init];
+    picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;
+    picker.mediaTypes = @[ @"public.image", @"public.movie" ];
+    // Hand us the untouched file: the trim editor does its own trimming, and
+    // UIImagePickerController would otherwise transcode to its own preset.
+    picker.videoExportPreset = AVAssetExportPresetPassthrough;
+    picker.delegate = [SPKInstantsImagePickerDelegate shared];
+    picker.modalPresentationStyle = UIModalPresentationFullScreen;
+    [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
+}
+
+static NSSet<NSNumber *> *SPKInstantsUploadableMediaTypes(void) {
+    return [NSSet setWithObjects:@(SPKGalleryMediaTypeImage), @(SPKGalleryMediaTypeVideo), nil];
+}
+
+static void SPKInstantsPickFromGallery(void) {
+    [SPKGalleryPickerViewController presentFromViewController:SPKInstantsTopPresenter()
+                                                        title:@"Choose Media"
+                                            allowedMediaTypes:SPKInstantsUploadableMediaTypes()
+                                      allowsMultipleSelection:NO
+                                                   completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {
+                                                       SPKGalleryFile *file = selectedFiles.firstObject;
+                                                       if (!file.filePath)
+                                                           return;
+                                                       if (file.mediaType == SPKGalleryMediaTypeVideo) {
+                                                           SPKInstantsPresentVideoForPositioning([NSURL fileURLWithPath:file.filePath]);
+                                                           return;
+                                                       }
+                                                       UIImage *image = [UIImage imageWithContentsOfFile:file.filePath];
+                                                       if (image)
+                                                           SPKInstantsPresentImageForPositioning(image);
+                                                   }];
+}
+
+static void SPKInstantsPickFromFiles(void) {
+    UIDocumentPickerViewController *picker =
+        [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[ UTTypeImage, UTTypeMovie ] asCopy:YES];
+    picker.allowsMultipleSelection = NO;
+    picker.delegate = [SPKInstantsDocumentPickerDelegate shared];
+    [SPKInstantsTopPresenter() presentViewController:picker animated:YES completion:nil];
+}
+
+/// The camera button's menu content: upload sources, then browsing what is already saved,
+/// then settings -- each its own inline group, so the three concerns read as separate.
+static NSArray<UIMenuElement *> *SPKInstantsCameraButtonMenuGroups(void) {
+    NSMutableArray<UIAction *> *sourceActions = [NSMutableArray array];
+    [sourceActions addObject:[UIAction actionWithTitle:@"Select from Photos"
+                                                 image:[SPKAssetUtils menuIconNamed:@"photo_gallery"]
+                                            identifier:nil
+                                               handler:^(__unused UIAction *action) {
+                                                   SPKInstantsPickFromPhotos();
+                                               }]];
+    if ([SPKGalleryPickerViewController hasSelectableFilesForAllowedMediaTypes:SPKInstantsUploadableMediaTypes()]) {
+        [sourceActions addObject:[UIAction actionWithTitle:@"Select from Gallery"
+                                                     image:[SPKAssetUtils menuIconNamed:@"sparkle_gallery"]
+                                                identifier:nil
+                                                   handler:^(__unused UIAction *action) {
+                                                       SPKInstantsPickFromGallery();
+                                                   }]];
+    }
+    [sourceActions addObject:[UIAction actionWithTitle:@"Select from Files"
+                                                 image:[SPKAssetUtils menuIconNamed:@"folder"]
+                                            identifier:nil
+                                               handler:^(__unused UIAction *action) {
+                                                   SPKInstantsPickFromFiles();
+                                               }]];
+
+    UIAction *browseAction = [UIAction actionWithTitle:@"Browse Saved"
+                                                 image:[SPKAssetUtils menuIconNamed:@"instants"]
+                                            identifier:nil
+                                               handler:^(__unused UIAction *action) {
+                                                   [SPKInstantsSavedUsersViewController presentFromViewController:SPKInstantsTopPresenter()];
+                                               }];
+
+    UIAction *settingsAction = [UIAction actionWithTitle:@"Instants Settings"
+                                                   image:[SPKAssetUtils menuIconNamed:@"settings"]
+                                              identifier:nil
+                                                 handler:^(__unused UIAction *action) {
                                                      [SPKUtils showSettingsForTopicTitle:@"Instants"];
-                                                 }]];
+                                                 }];
 
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel" style:SPKIGAlertActionStyleCancel handler:nil]];
-    if (![SPKIGAlertPresenter presentActionSheetFromViewController:presenter
-                                                             title:@"Upload Photo"
-                                                           message:@"Choose a photo to position and crop, then send as an Instant."
-                                                           actions:actions]) {
-        UIImpactFeedbackGenerator *feedback = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
-        [feedback impactOccurred];
-    }
+    return @[
+        [UIMenu menuWithTitle:@"Upload" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:sourceActions],
+        [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ browseAction ]],
+        [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ settingsAction ]],
+    ];
+}
+
+/// Built through an uncached deferred element so the contents are rebuilt on every open:
+/// "Select from Gallery" only belongs there while the Gallery holds a photo, and that
+/// changes underneath a menu assembled once at button creation.
+static UIMenu *SPKInstantsCameraButtonMenu(void) {
+    UIDeferredMenuElement *deferred =
+        [UIDeferredMenuElement elementWithUncachedProvider:^(void (^completion)(NSArray<UIMenuElement *> *)) {
+            completion(SPKInstantsCameraButtonMenuGroups());
+        }];
+    return [UIMenu menuWithTitle:@"" children:@[ deferred ]];
 }
 
 @implementation SPKInstantsGalleryButtonTarget
@@ -729,7 +975,9 @@ static void SPKPresentInstantsSourcePicker(__unused UIView *sourceView) {
 }
 
 - (void)buttonTapped:(UIButton *)sender {
-    SPKPresentInstantsSourcePicker(sender);
+    // Only reached on systems where the menu didn't take (it is the primary action
+    // otherwise); rebuilding it here keeps the button from being a dead tap.
+    sender.menu = SPKInstantsCameraButtonMenu();
 }
 @end
 
@@ -797,7 +1045,7 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         return;
     UIView *host = [header viewWithTag:kSPKInstantsGalleryButtonTag];
     UIButton *button = [host isKindOfClass:UIView.class] ? objc_getAssociatedObject(host, kSPKInstantsGalleryButtonKey) : nil;
-    if (!SPKInstantsUploadFromGalleryEnabled()) {
+    if (!SPKInstantsCameraButtonEnabled()) {
         SPKRemoveInstantsGalleryButton(header);
         return;
     }
@@ -807,7 +1055,7 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         return;
     }
 
-    if (![button isKindOfClass:UIButton.class]) {
+    if (![button isKindOfClass:SPKInstantsGalleryButton.class]) {
         [host removeFromSuperview];
         host = [[UIView alloc] init];
         host.tag = kSPKInstantsGalleryButtonTag;
@@ -819,13 +1067,14 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         [host addSubview:canvas];
         SPKInstantsPinEdges(canvas, host);
 
-        button = [UIButton buttonWithType:UIButtonTypeSystem];
+        button = [SPKInstantsGalleryButton buttonWithType:UIButtonTypeSystem];
         button.translatesAutoresizingMaskIntoConstraints = NO;
-        button.showsMenuAsPrimaryAction = NO;
+        // The whole point of the merged button is its menu, so the menu *is* the tap.
+        button.showsMenuAsPrimaryAction = YES;
+        button.menu = SPKInstantsCameraButtonMenu();
         button.adjustsImageWhenHighlighted = YES;
-        UIImage *image = [SPKAssetUtils instagramIconNamed:@"photo_gallery" pointSize:24.0 renderingMode:UIImageRenderingModeAlwaysTemplate];
-        [button setImage:image forState:UIControlStateNormal];
         button.tintColor = [UIColor whiteColor];
+        button.accessibilityLabel = @"Sparkle";
         [button addTarget:[SPKInstantsGalleryButtonTarget shared]
                       action:@selector(buttonTapped:)
             forControlEvents:UIControlEventTouchUpInside];
@@ -833,6 +1082,19 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         SPKInstantsPinEdges(button, canvas.contentContainer);
         objc_setAssociatedObject(host, kSPKInstantsGalleryButtonKey, button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [header addSubview:host];
+    }
+
+    // The glyph follows the global "Open Menu Icon" choice, like every other Sparkle
+    // button whose tap opens a menu. Re-applied whenever that choice changes, so the
+    // setting takes effect without recreating the button (or restarting).
+    NSString *iconName = SPKActionButtonOpenMenuIconName();
+    NSString *appliedIconName = objc_getAssociatedObject(button, kSPKInstantsGalleryIconKey);
+    if (![appliedIconName isEqualToString:iconName]) {
+        UIImage *image = [SPKAssetUtils instagramIconNamed:iconName
+                                                 pointSize:24.0
+                                             renderingMode:UIImageRenderingModeAlwaysTemplate];
+        [button setImage:image forState:UIControlStateNormal];
+        objc_setAssociatedObject(button, kSPKInstantsGalleryIconKey, iconName, OBJC_ASSOCIATION_COPY_NONATOMIC);
     }
 
     UIView *anchor = SPKInstantsHeaderArchiveButton(header) ?: SPKInstantsGalleryFallbackRightAnchor(header, host);
@@ -880,7 +1142,7 @@ static void replaced_creationViewLayoutSubviews(id self, SEL _cmd) {
 }
 
 static void replaced_creationViewWillMoveToWindow(id self, SEL _cmd, id window) {
-    if (!window && sSPKInstantsPendingImage) {
+    if (!window && (sSPKInstantsPendingImage || [SPKInstantsVideoStreamer isArmed])) {
         SPKInstantsClearPendingImageForCreationView((UIView *)self);
     }
     if (!window && sSPKInstantsVisibleCreationView == (UIView *)self) {
@@ -904,7 +1166,7 @@ static void replaced_setSampleBufferDelegate(id self, SEL _cmd, id delegate, dis
     // Wrap the camera's sample-buffer delegate when EITHER feature needs it:
     // gallery upload (replace the feed with a chosen image) or confirm-capture
     // (freeze the live frame while confirming so the sent frame is exact).
-    BOOL wants = SPKInstantsUploadFromGalleryEnabled() || SPKInstantsConfirmCaptureEnabled();
+    BOOL wants = SPKInstantsCameraButtonEnabled() || SPKInstantsConfirmCaptureEnabled();
     if (delegate && wants && ![delegate isKindOfClass:SPKInstantsVideoBufferInjector.class]) {
         SPKInstantsVideoBufferInjector *injector = [[SPKInstantsVideoBufferInjector alloc] init];
         injector.realDelegate = delegate;
@@ -915,6 +1177,101 @@ static void replaced_setSampleBufferDelegate(id self, SEL _cmd, id delegate, dis
     }
     if (orig_setSampleBufferDelegate)
         orig_setSampleBufferDelegate(self, _cmd, delegate, queue);
+}
+
+// An injected video is held on its first frame until IG actually starts
+// recording, because IG records from the instant the shutter is pressed: a
+// preview that was already playing would start the take mid-clip.
+//
+// Two independent signals are hooked because it is not obvious which one the
+// QuickSnap path drives. FBCaptureCoordinator is Optic's own recorder (the
+// processor controller owns one), while didStart/StopRecording is the delegate
+// notification. `play`/`pause` are idempotent, so whichever fires first wins and
+// the other is a no-op rather than a rewind mid-take.
+static void SPKInstantsHandleRecordingStart(const char *signal) {
+    BOOL armed = [SPKInstantsVideoStreamer isArmed];
+    SPKLog(@"Instants", @"[Sparkle] record start via %s (armed=%d)", signal, armed);
+    if (SPKInstantsCameraButtonEnabled() && armed) {
+        [SPKInstantsVideoStreamer play];
+    }
+}
+
+static void SPKInstantsHandleRecordingEnd(const char *signal) {
+    BOOL armed = [SPKInstantsVideoStreamer isArmed];
+    SPKLog(@"Instants", @"[Sparkle] record end via %s (armed=%d)", signal, armed);
+    if (SPKInstantsCameraButtonEnabled() && armed) {
+        [SPKInstantsVideoStreamer pause];
+    }
+}
+
+static void (*orig_didStartRecording)(id, SEL) = NULL;
+static void replaced_didStartRecording(id self, SEL _cmd) {
+    SPKInstantsHandleRecordingStart("IGCameraOptic.didStartRecording");
+    if (orig_didStartRecording)
+        orig_didStartRecording(self, _cmd);
+}
+
+static void (*orig_didStopRecording)(id, SEL) = NULL;
+static void replaced_didStopRecording(id self, SEL _cmd) {
+    SPKInstantsHandleRecordingEnd("IGCameraOptic.didStopRecording");
+    if (orig_didStopRecording)
+        orig_didStopRecording(self, _cmd);
+}
+
+static void (*orig_startRecordingWithCompletion)(id, SEL, id, BOOL) = NULL;
+static void replaced_startRecordingWithCompletion(id self, SEL _cmd, id completion, BOOL echoCancellation) {
+    SPKInstantsHandleRecordingStart("FBCaptureCoordinator.startRecording");
+    if (orig_startRecordingWithCompletion)
+        orig_startRecordingWithCompletion(self, _cmd, completion, echoCancellation);
+}
+
+static void (*orig_stopRecordingWithCompletion)(id, SEL, id, id) = NULL;
+static void replaced_stopRecordingWithCompletion(id self, SEL _cmd, id completion, id queue) {
+    SPKInstantsHandleRecordingEnd("FBCaptureCoordinator.stopRecording");
+    if (orig_stopRecordingWithCompletion)
+        orig_stopRecordingWithCompletion(self, _cmd, completion, queue);
+}
+
+static void (*orig_cancelRecordingIfAny)(id, SEL) = NULL;
+static void replaced_cancelRecordingIfAny(id self, SEL _cmd) {
+    SPKInstantsHandleRecordingEnd("FBCaptureCoordinator.cancelRecording");
+    if (orig_cancelRecordingIfAny)
+        orig_cancelRecordingIfAny(self, _cmd);
+}
+
+// The shutter's own long-press handler. IGQuickSnapCameraManager drives
+// recording from Swift (its `recordingState` is a Swift stored property with no
+// ObjC entry point), so the button is the closest hookable point to the actual
+// start of a take -- and being a gesture handler it is necessarily @objc.
+static void (*orig_captureButtonLongPress)(id, SEL, id) = NULL;
+static void replaced_captureButtonLongPress(id self, SEL _cmd, id gesture) {
+    UIGestureRecognizerState state = [(UIGestureRecognizer *)gesture state];
+    if (state == UIGestureRecognizerStateBegan) {
+        SPKInstantsHandleRecordingStart("IGCameraCaptureButton.longPress");
+    } else if (state == UIGestureRecognizerStateEnded || state == UIGestureRecognizerStateCancelled ||
+               state == UIGestureRecognizerStateFailed) {
+        SPKInstantsHandleRecordingEnd("IGCameraCaptureButton.longPress");
+    }
+    if (orig_captureButtonLongPress)
+        orig_captureButtonLongPress(self, _cmd, gesture);
+}
+
+// AVCaptureMovieFileOutput is the signal RyukGram drives its own Instants video
+// injection from, so IG's take goes through here even though Optic owns the
+// pipeline. Hooked on the AVFoundation class rather than an IG one, which also
+// makes it immune to IG's class churn.
+static void (*orig_startRecordingToOutputFileURL)(id, SEL, id, id) = NULL;
+static void replaced_startRecordingToOutputFileURL(id self, SEL _cmd, id fileURL, id delegate) {
+    SPKInstantsHandleRecordingStart("AVCaptureMovieFileOutput.startRecording");
+    if (orig_startRecordingToOutputFileURL)
+        orig_startRecordingToOutputFileURL(self, _cmd, fileURL, delegate);
+}
+
+static void (*orig_movieOutputStopRecording)(id, SEL) = NULL;
+static void replaced_movieOutputStopRecording(id self, SEL _cmd) {
+    SPKInstantsHandleRecordingEnd("AVCaptureMovieFileOutput.stopRecording");
+    if (orig_movieOutputStopRecording)
+        orig_movieOutputStopRecording(self, _cmd);
 }
 
 static void SPKHookInstanceMethod(const char *className, SEL selector, IMP replacement, IMP *original) {
@@ -946,6 +1303,38 @@ extern "C" void SPKInstallInstantsGalleryUploadHooksIfEnabled(void) {
                               @selector(setSampleBufferDelegate:queue:),
                               (IMP)replaced_setSampleBufferDelegate,
                               (IMP *)&orig_setSampleBufferDelegate);
+        SPKHookInstanceMethod("IGCameraOpticVideoProcessorController",
+                              @selector(didStartRecording),
+                              (IMP)replaced_didStartRecording,
+                              (IMP *)&orig_didStartRecording);
+        SPKHookInstanceMethod("IGCameraOpticVideoProcessorController",
+                              @selector(didStopRecording),
+                              (IMP)replaced_didStopRecording,
+                              (IMP *)&orig_didStopRecording);
+        SPKHookInstanceMethod("FBCaptureCoordinator",
+                              @selector(startRecordingWithCompletion:enableEchoCancellation:),
+                              (IMP)replaced_startRecordingWithCompletion,
+                              (IMP *)&orig_startRecordingWithCompletion);
+        SPKHookInstanceMethod("FBCaptureCoordinator",
+                              @selector(stopRecordingWithCompletion:callbackQueue:),
+                              (IMP)replaced_stopRecordingWithCompletion,
+                              (IMP *)&orig_stopRecordingWithCompletion);
+        SPKHookInstanceMethod("FBCaptureCoordinator",
+                              @selector(cancelRecordingIfAny),
+                              (IMP)replaced_cancelRecordingIfAny,
+                              (IMP *)&orig_cancelRecordingIfAny);
+        SPKHookInstanceMethod("IGCameraCaptureButton",
+                              @selector(_longPress:),
+                              (IMP)replaced_captureButtonLongPress,
+                              (IMP *)&orig_captureButtonLongPress);
+        SPKHookInstanceMethod("AVCaptureMovieFileOutput",
+                              @selector(startRecordingToOutputFileURL:recordingDelegate:),
+                              (IMP)replaced_startRecordingToOutputFileURL,
+                              (IMP *)&orig_startRecordingToOutputFileURL);
+        SPKHookInstanceMethod("AVCaptureMovieFileOutput",
+                              @selector(stopRecording),
+                              (IMP)replaced_movieOutputStopRecording,
+                              (IMP *)&orig_movieOutputStopRecording);
         SPKLog(@"Instants", @"[Sparkle] Instants gallery upload hooks installed");
     });
 }

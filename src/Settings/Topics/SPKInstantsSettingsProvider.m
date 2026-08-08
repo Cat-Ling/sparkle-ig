@@ -1,6 +1,7 @@
 #import "SPKInstantsSettingsProvider.h"
 #include <UIKit/UIKit.h>
 
+#import "../../Shared/ActionButton/ActionButtonCore.h"
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../../Utils.h"
 #import "../SPKPreferenceAvailability.h"
@@ -61,14 +62,17 @@ static NSArray *SPKInstantsSettingsSections(void) {
                                                     defaultsKey:@"instants_disable_camera_control"];
                 s;
             }),
-            [SPKSetting switchCellWithTitle:@"Upload from Gallery"
-                                       icon:SPKSettingsIcon(@"photo_gallery")
-                                defaultsKey:@"instants_upload_from_gallery"],
         ],
                         @"1. Blocks Instant capture (photo and video) without disabling received Instants. The shutter is darkened.\n"
                         @"2. Skips the camera page Instagram opens after viewing the last Instant.\n"
-                        @"3. Stops the hardware Camera Control button (iPhone 16/17) from taking an Instant.\n"
-                        @"4. Adds a button to the Instants navigation bar to upload from Photos, Files, or Gallery."),
+                        @"3. Stops the hardware Camera Control button (iPhone 16/17) from taking an Instant."),
+        SPKTopicSection(@"", @[
+            // Same glyph the button itself wears: the global "Open Menu Icon" choice.
+            [SPKSetting switchCellWithTitle:@"Camera View Button"
+                                       icon:SPKSettingsIcon(SPKActionButtonOpenMenuIconName())
+                                defaultsKey:@"instants_camera_btn"],
+        ],
+                        @"Adds a Sparkle button to the Instants camera view to upload a photo from Photos, Files, or Gallery, and to browse the Instants you have saved."),
         SPKTopicSection(@"Confirmation", @[
             ({
                 SPKSetting *s = [SPKSetting switchCellWithTitle:@"Confirm Instant Capture"

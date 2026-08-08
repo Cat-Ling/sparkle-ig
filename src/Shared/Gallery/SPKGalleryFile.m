@@ -18,7 +18,8 @@ static NSCache<NSString *, UIImage *> *SPKGalleryThumbnailCache(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         cache = [[NSCache alloc] init];
-        cache.countLimit = 200;
+        cache.countLimit = 2000;
+        cache.totalCostLimit = 64 * 1024 * 1024; // 64 MB
     });
     return cache;
 }
@@ -30,6 +31,86 @@ static dispatch_queue_t SPKGalleryThumbnailStateQueue(void) {
         queue = dispatch_queue_create("com.sparkle.gallery.thumbnail-state", DISPATCH_QUEUE_SERIAL);
     });
     return queue;
+}
+
+// Reads and decodes off the main thread. UIImage(contentsOfFile:) only maps the
+// file and defers the JPEG decode to the CA commit, so a grid that loads
+// thumbnails inside cellForItemAtIndexPath pays a decode per cell on the main
+// thread while scrolling. Loads run here instead.
+// Serial on purpose. A fast scroll enqueues a load for every cell that passes,
+// and each block does blocking file I/O -- on a concurrent queue GCD reacts to
+// the blocked threads by spawning more, up to dozens, which saturates every core
+// and starves the main thread that the scroll is running on. Decoding a 300px
+// thumbnail is ~1ms, so one queue drains a backlog fast enough and costs the
+// scroll nothing.
+static dispatch_queue_t SPKGalleryThumbnailLoadQueue(void) {
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL,
+                                                                             QOS_CLASS_USER_INITIATED, 0);
+        queue = dispatch_queue_create("com.sparkle.gallery.thumbnail-load", attr);
+    });
+    return queue;
+}
+
+static dispatch_queue_t SPKGalleryThumbnailRenderQueue(void) {
+    static dispatch_queue_t queue;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dispatch_queue_attr_t attr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL,
+                                                                             QOS_CLASS_UTILITY, 0);
+        queue = dispatch_queue_create("com.sparkle.gallery.thumbnail-render", attr);
+    });
+    return queue;
+}
+
+// Forces the decode now, so what lands in the cache is a ready-to-draw bitmap
+// and the main thread only has to blit it.
+static UIImage *SPKGalleryDecodedImage(UIImage *image) {
+    CGImageRef cgImage = image.CGImage;
+    if (!cgImage) {
+        return image;
+    }
+    size_t width = CGImageGetWidth(cgImage);
+    size_t height = CGImageGetHeight(cgImage);
+    if (width == 0 || height == 0) {
+        return image;
+    }
+
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(NULL, width, height, 8, 0, colorSpace,
+                                                 kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    CGColorSpaceRelease(colorSpace);
+    if (!context) {
+        return image;
+    }
+
+    CGContextDrawImage(context, CGRectMake(0, 0, (CGFloat)width, (CGFloat)height), cgImage);
+    CGImageRef decoded = CGBitmapContextCreateImage(context);
+    CGContextRelease(context);
+    if (!decoded) {
+        return image;
+    }
+
+    UIImage *result = [UIImage imageWithCGImage:decoded scale:image.scale orientation:image.imageOrientation];
+    CGImageRelease(decoded);
+    return result;
+}
+
+static NSUInteger SPKGalleryImageCacheCost(UIImage *image) {
+    CGImageRef cgImage = image.CGImage;
+    if (cgImage) {
+        return CGImageGetHeight(cgImage) * CGImageGetBytesPerRow(cgImage);
+    }
+    return (NSUInteger)(image.size.width * image.size.height * 4.0);
+}
+
+static void SPKGalleryCacheThumbnail(UIImage *image, NSString *thumbPath) {
+    if (!image || thumbPath.length == 0) {
+        return;
+    }
+    [SPKGalleryThumbnailCache() setObject:image forKey:thumbPath cost:SPKGalleryImageCacheCost(image)];
 }
 
 static NSMutableDictionary<NSString *, NSMutableArray<void (^)(BOOL success)> *> *SPKGalleryThumbnailCompletions(void) {
@@ -223,6 +304,9 @@ static NSDate *_Nullable SPKParseEpochDateFromString(NSString *s) {
 }
 
 /// Recognizes slug segments matching `SPKGallerySourceSlug` output (feed, story, reel, ...).
+/// Also recognizes Regram's own basename slugs (tv, dm-story, dm-note, post-audio, highlight-cover)
+/// so imported Regram media strips the slug token instead of folding it into the username — see
+/// SPKRegramImporter for the full source-value → slug table.
 static BOOL SPKSourceFromBasenameSlug(NSString *low, SPKGallerySource *out) {
     if ([low isEqualToString:@"feed"]) {
         *out = SPKGallerySourceFeed;
@@ -232,7 +316,7 @@ static BOOL SPKSourceFromBasenameSlug(NSString *low, SPKGallerySource *out) {
         *out = SPKGallerySourceStories;
         return YES;
     }
-    if ([low isEqualToString:@"reel"] || [low isEqualToString:@"reels"]) {
+    if ([low isEqualToString:@"reel"] || [low isEqualToString:@"reels"] || [low isEqualToString:@"tv"]) {
         *out = SPKGallerySourceReels;
         return YES;
     }
@@ -240,11 +324,13 @@ static BOOL SPKSourceFromBasenameSlug(NSString *low, SPKGallerySource *out) {
         *out = SPKGallerySourceProfile;
         return YES;
     }
-    if ([low isEqualToString:@"dm"] || [low isEqualToString:@"dms"]) {
+    if ([low isEqualToString:@"dm"] || [low isEqualToString:@"dms"] || [low isEqualToString:@"dm-story"] ||
+        [low isEqualToString:@"dm-note"]) {
         *out = SPKGallerySourceDMs;
         return YES;
     }
-    if ([low isEqualToString:@"thumbnail"] || [low isEqualToString:@"thumb"]) {
+    if ([low isEqualToString:@"thumbnail"] || [low isEqualToString:@"thumb"] || [low isEqualToString:@"cover"] ||
+        [low isEqualToString:@"highlight-cover"]) {
         *out = SPKGallerySourceThumbnail;
         return YES;
     }
@@ -252,7 +338,8 @@ static BOOL SPKSourceFromBasenameSlug(NSString *low, SPKGallerySource *out) {
         *out = SPKGallerySourceInstants;
         return YES;
     }
-    if ([low isEqualToString:@"audio"] || [low isEqualToString:@"audio-page"] || [low isEqualToString:@"audiopage"]) {
+    if ([low isEqualToString:@"audio"] || [low isEqualToString:@"audio-page"] || [low isEqualToString:@"audiopage"] ||
+        [low isEqualToString:@"post-audio"]) {
         *out = SPKGallerySourceAudioPage;
         return YES;
     }
@@ -287,8 +374,10 @@ void SPKGalleryApplyImportHeuristicsFromFilename(NSString *fileName, SPKGalleryS
         return;
     }
 
+    BOOL hasLeadEpoch = NO;
     NSDate *leadEpochDate = SPKParseEpochDateFromString(parts.firstObject);
     if (leadEpochDate) {
+        hasLeadEpoch = YES;
         if (!m.importCapturedDate) {
             m.importCapturedDate = leadEpochDate;
         }
@@ -298,8 +387,10 @@ void SPKGalleryApplyImportHeuristicsFromFilename(NSString *fileName, SPKGalleryS
         return;
     }
 
+    BOOL hasTrailDate = NO;
     NSDate *trailDate = SPKParseCompactDigitDateFromString(parts.lastObject);
     if (trailDate) {
+        hasTrailDate = YES;
         if (!m.importPostedDate) {
             m.importPostedDate = trailDate;
         }
@@ -325,44 +416,36 @@ void SPKGalleryApplyImportHeuristicsFromFilename(NSString *fileName, SPKGalleryS
         return;
     }
 
-    if (parts.count >= 2) {
-        NSString *a = parts[0];
-        NSString *b = parts[1];
-        if (SPKDigitsOnlyString(a) && !SPKDigitsOnlyString(b)) {
-            if (!m.sourceUserPK.length) {
-                m.sourceUserPK = a;
-            }
-            if (!m.sourceUsername.length) {
-                m.sourceUsername = b;
-                [SPKGalleryOriginController populateProfileMetadata:m username:b user:nil];
-            }
-        } else if (!SPKDigitsOnlyString(a) && SPKDigitsOnlyString(b)) {
-            if (!m.sourceUsername.length) {
-                m.sourceUsername = a;
-                [SPKGalleryOriginController populateProfileMetadata:m username:a user:nil];
-            }
-            if (!m.sourceUserPK.length) {
-                m.sourceUserPK = b;
-            }
-        } else if (!SPKDigitsOnlyString(a) && !SPKDigitsOnlyString(b)) {
-            if (!m.sourceUsername.length) {
-                m.sourceUsername = a;
-                [SPKGalleryOriginController populateProfileMetadata:m username:a user:nil];
-            }
-        }
+    // Only auto-fill a username when the filename matches Sparkle's own export layout
+    // (epoch_user_slug_date — see SPKFileNameForMedia). For arbitrary Files, leave the username
+    // blank rather than guessing a handle from an unrelated file name.
+    if (!(hasLeadEpoch && hasTrailDate)) {
         return;
     }
 
-    NSString *only = parts[0];
-    if (SPKDigitsOnlyString(only)) {
+    // The remaining parts are the username region. A leading digits-only token is the user pk;
+    // rejoin everything after it with "_" so usernames containing underscores survive (this is
+    // the inverse of SPKSanitizedGalleryUsername).
+    NSUInteger usernameStart = 0;
+    if (parts.count >= 2 && SPKDigitsOnlyString(parts[0])) {
         if (!m.sourceUserPK.length) {
-            m.sourceUserPK = only;
+            m.sourceUserPK = parts[0];
         }
-    } else {
-        if (!m.sourceUsername.length) {
-            m.sourceUsername = only;
-            [SPKGalleryOriginController populateProfileMetadata:m username:only user:nil];
+        usernameStart = 1;
+    }
+    NSArray<NSString *> *usernameParts =
+        [parts subarrayWithRange:NSMakeRange(usernameStart, parts.count - usernameStart)];
+    NSString *username = [usernameParts componentsJoinedByString:@"_"];
+    if (username.length == 0) {
+        return;
+    }
+    if (SPKDigitsOnlyString(username)) {
+        if (!m.sourceUserPK.length) {
+            m.sourceUserPK = username;
         }
+    } else if (!m.sourceUsername.length) {
+        m.sourceUsername = username;
+        [SPKGalleryOriginController populateProfileMetadata:m username:username user:nil];
     }
 }
 
@@ -420,6 +503,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
 @dynamic dateAdded;
 @dynamic fileSize;
 @dynamic isFavorite;
+@dynamic isAutoSave;
 @dynamic folderPath;
 @dynamic customName;
 @dynamic sourceUsername;
@@ -464,6 +548,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         file.pixelHeight = metadata.pixelHeight;
         file.durationSeconds = metadata.durationSeconds;
         file.customName = metadata.customName.length ? metadata.customName : nil;
+        file.isAutoSave = metadata.isAutoSave;
     } else {
         file.source = fallbackSource;
         file.sourceUsername = nil;
@@ -476,6 +561,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         file.pixelHeight = 0;
         file.durationSeconds = 0;
         file.customName = nil;
+        file.isAutoSave = NO;
     }
 }
 
@@ -994,9 +1080,24 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         return nil;
     }
 
-    // Posts/reels: prefer canonical permalinks. The generic instagram://media?id=
-    // route can open carousel children as detached media and reels in the feed viewer,
-    // which leaves Instagram without the original post/reel presentation context.
+    // Posts/reels: prefer the authenticated instagram://media?id= route. It hands the
+    // media id straight to Instagram's in-app router, which opens the post on its own
+    // single-post page. The https://instagram.com/<p|reel>/<code>/ permalink instead
+    // travels through continueUserActivity:, which resolves the post into the *main
+    // feed* and leaves it sitting on top of the timeline rather than on a page of its
+    // own. So the web permalink is the fallback, used only when the composite
+    // <mediaPK>_<userPK> id cannot be assembled (a bare media pk on its own resolves
+    // to the home feed).
+    NSString *fullMediaID = [self fullInstagramMediaID];
+    if (fullMediaID.length > 0) {
+        NSString *encodedID = [fullMediaID stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+        if (encodedID.length > 0) {
+            NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"instagram://media?id=%@", encodedID]];
+            SPKLog(@"General", @"[Sparkle Gallery] Open original using media deep link source=%d id=%@ url=%@", self.source, fullMediaID, url.absoluteString);
+            return url;
+        }
+    }
+
     NSString *pathComponent = SPKGalleryPostPathComponentForSource((SPKGallerySource)self.source);
     if (self.sourceMediaCode.length > 0) {
         if (pathComponent.length == 0) {
@@ -1029,18 +1130,6 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
             return url;
         }
         SPKLog(@"General", @"[Sparkle Gallery] Ignoring invalid stored original URL source=%d raw=%@", self.source, self.sourceMediaURLString);
-    }
-
-    // Last resort for entries that only have a full media id. This is authenticated,
-    // but it is not context-preserving for reels/carousels.
-    NSString *fullMediaID = [self fullInstagramMediaID];
-    if (fullMediaID.length > 0) {
-        NSString *encodedID = [fullMediaID stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
-        if (encodedID.length > 0) {
-            NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"instagram://media?id=%@", encodedID]];
-            SPKLog(@"General", @"[Sparkle Gallery] Open original using fallback media deep link source=%d id=%@ url=%@", self.source, fullMediaID, url.absoluteString);
-            return url;
-        }
     }
 
     SPKLog(@"General", @"[Sparkle Gallery] Open original unavailable source=%d relativePath=%@", self.source, self.relativePath);
@@ -1149,6 +1238,76 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
 
 #pragma mark - Thumbnails
 
+// Synchronous render core shared by the saved-file thumbnailer and the URL variant. Call off the
+// main thread. Images are decoded + downscaled; videos yield a frame at the half-second mark.
++ (nullable UIImage *)renderThumbnailForURL:(NSURL *)url mediaType:(SPKGalleryMediaType)mediaType maxSize:(CGSize)maxSize {
+    if (mediaType == SPKGalleryMediaTypeImage) {
+        // Decode via ImageIO with downsampling: this handles formats -imageWithContentsOfFile: chokes
+        // on (WebP, some HEIC/animated frames) and applies the EXIF orientation, so Regram exports and
+        // odd Files imports render a thumbnail instead of falling back to the grey placeholder glyph.
+        CGImageSourceRef source = CGImageSourceCreateWithURL((__bridge CFURLRef)url, NULL);
+        if (source) {
+            CGFloat scale = MAX(UIScreen.mainScreen.scale, 1.0);
+            CGFloat maxPixel = MAX(maxSize.width, maxSize.height);
+            if (maxPixel < 1.0) {
+                maxPixel = 256.0 * scale;
+            }
+            NSDictionary *opts = @{
+                (id)kCGImageSourceCreateThumbnailFromImageAlways : @YES,
+                (id)kCGImageSourceCreateThumbnailWithTransform : @YES,
+                (id)kCGImageSourceShouldCacheImmediately : @YES,
+                (id)kCGImageSourceThumbnailMaxPixelSize : @(maxPixel),
+            };
+            CGImageRef cg = CGImageSourceCreateThumbnailAtIndex(source, 0, (__bridge CFDictionaryRef)opts);
+            CFRelease(source);
+            if (cg) {
+                UIImage *img = [UIImage imageWithCGImage:cg];
+                CGImageRelease(cg);
+                return img;
+            }
+        }
+        // Last resort for anything ImageIO couldn't thumbnail (e.g. a raw pixel buffer format).
+        UIImage *full = [UIImage imageWithContentsOfFile:url.path];
+        return full ? [self resizeImage:full toSize:maxSize] : nil;
+    }
+    if (mediaType == SPKGalleryMediaTypeVideo) {
+        AVAsset *asset = [AVAsset assetWithURL:url];
+        AVAssetImageGenerator *gen = [[AVAssetImageGenerator alloc] initWithAsset:asset];
+        gen.appliesPreferredTrackTransform = YES;
+        gen.maximumSize = maxSize;
+        gen.requestedTimeToleranceBefore = kCMTimePositiveInfinity;
+        gen.requestedTimeToleranceAfter = kCMTimePositiveInfinity;
+
+        // Prefer a frame ~0.5s in, but fall back to the very first frame for clips shorter than that
+        // (a single grabbed frame is why some short reels/audio-cover videos showed no thumbnail).
+        CMTime times[] = { CMTimeMakeWithSeconds(0.5, 600), kCMTimeZero };
+        for (int i = 0; i < 2; i++) {
+            CGImageRef cgImage = [gen copyCGImageAtTime:times[i] actualTime:NULL error:NULL];
+            if (cgImage) {
+                UIImage *img = [UIImage imageWithCGImage:cgImage];
+                CGImageRelease(cgImage);
+                return img;
+            }
+        }
+    }
+    return nil;
+}
+
++ (void)generateThumbnailForURL:(NSURL *)url
+                      mediaType:(SPKGalleryMediaType)mediaType
+                           size:(CGSize)size
+                     completion:(void (^)(UIImage *_Nullable))completion {
+    if (!completion) {
+        return;
+    }
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
+        UIImage *thumb = [self renderThumbnailForURL:url mediaType:mediaType maxSize:size];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(thumb);
+        });
+    });
+}
+
 + (void)generateThumbnailForFile:(SPKGalleryFile *)file completion:(void (^)(BOOL success))completion {
     int16_t mediaType = file.mediaType;
     if (mediaType == SPKGalleryMediaTypeAudio) {
@@ -1169,7 +1328,8 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         if (!cachedThumb) {
             cachedThumb = [UIImage imageWithContentsOfFile:thumbPath];
             if (cachedThumb) {
-                [cache setObject:cachedThumb forKey:thumbPath];
+                cachedThumb = SPKGalleryDecodedImage(cachedThumb);
+                SPKGalleryCacheThumbnail(cachedThumb, thumbPath);
             }
         }
         if (completion) {
@@ -1203,33 +1363,19 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         return;
     }
 
-    dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-        UIImage *thumb = nil;
-
-        if (mediaType == SPKGalleryMediaTypeImage) {
-            UIImage *full = [UIImage imageWithContentsOfFile:filePath];
-            if (full) {
-                thumb = [self resizeImage:full toSize:CGSizeMake(kThumbnailSize, kThumbnailSize)];
-            }
-        } else if (mediaType == SPKGalleryMediaTypeVideo) {
-            NSURL *videoURL = [NSURL fileURLWithPath:filePath];
-            AVAsset *asset = [AVAsset assetWithURL:videoURL];
-            AVAssetImageGenerator *gen = [[AVAssetImageGenerator alloc] initWithAsset:asset];
-            gen.appliesPreferredTrackTransform = YES;
-            gen.maximumSize = CGSizeMake(kThumbnailSize, kThumbnailSize);
-
-            NSError *err;
-            CGImageRef cgImage = [gen copyCGImageAtTime:CMTimeMake(1, 2) actualTime:NULL error:&err];
-            if (cgImage) {
-                thumb = [UIImage imageWithCGImage:cgImage];
-                CGImageRelease(cgImage);
-            }
-        }
+    // Also serial, and for a stronger reason than the load queue: generating a
+    // video thumbnail spins up an AVAssetImageGenerator. Scrolling past a run of
+    // videos that have no thumbnail yet would otherwise start one per file at
+    // once and flatten the CPU.
+    dispatch_async(SPKGalleryThumbnailRenderQueue(), ^{
+        UIImage *thumb = [self renderThumbnailForURL:[NSURL fileURLWithPath:filePath]
+                                           mediaType:(SPKGalleryMediaType)mediaType
+                                             maxSize:CGSizeMake(kThumbnailSize, kThumbnailSize)];
 
         if (thumb) {
             NSData *jpegData = UIImageJPEGRepresentation(thumb, 0.8);
             [jpegData writeToFile:thumbPath atomically:YES];
-            [cache setObject:thumb forKey:thumbPath];
+            SPKGalleryCacheThumbnail(thumb, thumbPath);
         }
 
         __block NSArray<void (^)(BOOL success)> *callbacks = nil;
@@ -1314,6 +1460,10 @@ static UIImage *SPKGalleryAudioPlaceholderImage(void) {
     return glyph;
 }
 
++ (UIImage *)audioPlaceholderThumbnail {
+    return SPKGalleryAudioPlaceholderImage();
+}
+
 + (UIImage *)loadThumbnailForFile:(SPKGalleryFile *)file {
     if (file.mediaType == SPKGalleryMediaTypeAudio) {
         return SPKGalleryAudioPlaceholderImage();
@@ -1327,14 +1477,71 @@ static UIImage *SPKGalleryAudioPlaceholderImage(void) {
     if ([file thumbnailExists]) {
         UIImage *image = [UIImage imageWithContentsOfFile:thumbPath];
         if (image) {
-            [SPKGalleryThumbnailCache() setObject:image forKey:thumbPath];
+            image = SPKGalleryDecodedImage(image);
+            SPKGalleryCacheThumbnail(image, thumbPath);
         }
         return image;
     }
     return nil;
 }
 
++ (UIImage *)cachedThumbnailForFile:(SPKGalleryFile *)file {
+    if (file.mediaType == SPKGalleryMediaTypeAudio) {
+        return SPKGalleryAudioPlaceholderImage();
+    }
+    return [SPKGalleryThumbnailCache() objectForKey:[file thumbnailPath]];
+}
+
++ (void)loadThumbnailAsyncForFile:(SPKGalleryFile *)file completion:(void (^)(UIImage *_Nullable))completion {
+    if (!completion) {
+        return;
+    }
+    if (file.mediaType == SPKGalleryMediaTypeAudio) {
+        UIImage *placeholder = SPKGalleryAudioPlaceholderImage();
+        dispatch_async(dispatch_get_main_queue(), ^{
+            completion(placeholder);
+        });
+        return;
+    }
+
+    // Snapshot the path on the caller's (main) thread: the background block must
+    // never touch the managed object, whose context is main-queue confined.
+    NSString *thumbPath = [file thumbnailPath];
+    dispatch_async(SPKGalleryThumbnailLoadQueue(), ^{
+        UIImage *cached = [SPKGalleryThumbnailCache() objectForKey:thumbPath];
+        if (!cached && [[NSFileManager defaultManager] fileExistsAtPath:thumbPath]) {
+            UIImage *image = [UIImage imageWithContentsOfFile:thumbPath];
+            if (image) {
+                cached = SPKGalleryDecodedImage(image);
+                SPKGalleryCacheThumbnail(cached, thumbPath);
+            }
+        }
+
+        if (cached) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                completion(cached);
+            });
+            return;
+        }
+
+        // Nothing on disk yet. Generation reads the managed object, so hop back
+        // to the main queue to kick it off.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self generateThumbnailForFile:file
+                                completion:^(BOOL success) {
+                                    completion(success ? [SPKGalleryThumbnailCache() objectForKey:thumbPath] : nil);
+                                }];
+        });
+    });
+}
+
 + (UIImage *)resizeImage:(UIImage *)image toSize:(CGSize)targetSize {
+    // Guard against a zero/degenerate target (e.g. a not-yet-laid-out view passing a 0 width),
+    // which would make UIGraphicsBeginImageContext assert on a {0,0} bitmap.
+    if (!image || image.size.width < 1.0 || image.size.height < 1.0 ||
+        targetSize.width < 1.0 || targetSize.height < 1.0) {
+        return image;
+    }
     CGFloat scale = MIN(targetSize.width / image.size.width, targetSize.height / image.size.height);
     CGSize newSize = CGSizeMake(image.size.width * scale, image.size.height * scale);
 

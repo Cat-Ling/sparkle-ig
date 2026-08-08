@@ -68,7 +68,21 @@ static BOOL SPKInstantsHeaderIsVisible(UIView *header) {
 /// on the consumption header, not on the creation/camera header (which hosts the gallery
 /// upload button at the same anchor). Detected by the presence of a visible
 /// IGQuickSnapImmersiveViewerSingleSnapView in the same window.
-static BOOL SPKInstantsHeaderIsConsumption(UIView *header) {
+/// Visibility test for header-mode detection.
+///
+/// This MUST stay identical to `SPKInstantsViewIsVisible` in InstantsGalleryUpload.xm.
+/// The two features decide which of them owns the header's right-hand slot from the same
+/// signals, so any divergence lets both conclude they own it and draw on top of each
+/// other. A looser test here (no size check, alpha >= 0.01) previously counted a
+/// collapsed leftover snap view as "still consuming" while the gallery button, using the
+/// stricter test, saw the creation view and installed itself as well.
+static BOOL SPKInstantsModeViewIsVisible(UIView *view) {
+    return view && view.window && !view.hidden && view.alpha >= 0.05 &&
+           view.bounds.size.width > 1.0 && view.bounds.size.height > 1.0;
+}
+
+/// Whether any visible view in the header's window has a class containing `needle`.
+static BOOL SPKInstantsWindowHasVisibleViewOfClass(UIView *header, NSString *needle) {
     UIWindow *window = header.window;
     if (!window)
         return NO;
@@ -76,15 +90,22 @@ static BOOL SPKInstantsHeaderIsConsumption(UIView *header) {
     NSUInteger idx = 0;
     while (idx < queue.count) {
         UIView *view = queue[idx++];
-        if (!view.hidden && view.alpha >= 0.01 && view.window) {
-            if ([NSStringFromClass(view.class) containsString:@"IGQuickSnapImmersiveViewerSingleSnapView"]) {
-                return YES;
-            }
+        if (SPKInstantsModeViewIsVisible(view) &&
+            [NSStringFromClass(view.class) containsString:needle]) {
+            return YES;
         }
         for (UIView *sub in view.subviews)
             [queue addObject:sub];
     }
     return NO;
+}
+
+static BOOL SPKInstantsHeaderIsConsumption(UIView *header) {
+    if (!SPKInstantsWindowHasVisibleViewOfClass(header, @"IGQuickSnapImmersiveViewerSingleSnapView"))
+        return NO;
+    // Creation wins the slot: when the camera page is up, the gallery-upload button owns
+    // this position, so the action button must stand down even if a snap view lingers.
+    return !SPKInstantsWindowHasVisibleViewOfClass(header, @"IGQuickSnapCreationView");
 }
 
 // MARK: - Action Context
@@ -168,20 +189,11 @@ static void SPKInstantsPlaceButton(UIView *header) {
 
     UIButton *existing = (UIButton *)[header viewWithTag:kSPKInstantsActionButtonTag];
 
-    // CRITICAL (iOS 26 menu morph): if the button already exists, has a menu, is in the
-    // header, and is correctly positioned, return immediately and touch NOTHING. During the
-    // menu open/close animation UIKit temporarily hides the real button and animates a
-    // snapshot; any frame/hidden/alpha write here fights that animation and makes the button
-    // flash or disappear. Every other action button (Feed/Profile/Stories/Reels/Audio) uses
-    // this same early-return. We must NOT gate this on button.hidden/alpha — those belong to
-    // the animation, not us.
-    if (existing && existing.menu != nil && existing.superview == header) {
-        CGRect expectedFrame = SPKInstantsButtonFrame(header, existing);
-        if (SPKInstantsActionFrameMatches(existing, expectedFrame)) {
-            return; // Placed and configured — leave it entirely alone.
-        }
-    }
-
+    // Eligibility is checked BEFORE the menu-morph early-return below. These decide whether
+    // the button belongs on this header at all, and an already-placed button used to take
+    // the early-return forever — so when the header switched from consumption to the
+    // creation ("New instant") page, it was never removed and sat on top of the
+    // gallery-upload button, which owns that slot during creation.
     if (![SPKUtils getBoolPref:@"instants_action_btn"]) {
         [existing removeFromSuperview];
         return;
@@ -198,6 +210,23 @@ static void SPKInstantsPlaceButton(UIView *header) {
     if (!SPKInstantsHeaderIsConsumption(header)) {
         [existing removeFromSuperview];
         return;
+    }
+
+    // CRITICAL (iOS 26 menu morph): if the button already exists, has a menu, is in the
+    // header, and is correctly positioned, return immediately and touch NOTHING. During the
+    // menu open/close animation UIKit temporarily hides the real button and animates a
+    // snapshot; any frame/hidden/alpha write here fights that animation and makes the button
+    // flash or disappear. Every other action button (Feed/Profile/Stories/Reels/Audio) uses
+    // this same early-return. We must NOT gate this on button.hidden/alpha — those belong to
+    // the animation, not us.
+    //
+    // Safe to run after the eligibility checks above: a menu morph only happens while the
+    // snap viewer is up, where those checks all pass anyway.
+    if (existing && existing.menu != nil && existing.superview == header) {
+        CGRect expectedFrame = SPKInstantsButtonFrame(header, existing);
+        if (SPKInstantsActionFrameMatches(existing, expectedFrame)) {
+            return; // Placed and configured — leave it entirely alone.
+        }
     }
 
     UIButton *button = existing;

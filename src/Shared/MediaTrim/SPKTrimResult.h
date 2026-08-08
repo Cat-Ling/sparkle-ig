@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 
+#import "SPKTrimCrop.h"
 #import "SPKTrimTypes.h"
 
 NS_ASSUME_NONNULL_BEGIN
@@ -27,6 +28,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy, nullable) NSURL *renderAudioURL;
 @property (nonatomic, assign) NSInteger width;
 @property (nonatomic, assign) NSInteger height;
+
+/// Optional framing edit (crop / rotate / flip) applied in the same render pass
+/// as the trim, so a crop never costs a second encode. Nil means the full frame.
+@property (nonatomic, copy, nullable) SPKTrimCrop *crop;
 
 /// Filled by the renderer once the temp output exists.
 @property (nonatomic, copy, nullable) NSURL *outputURL;

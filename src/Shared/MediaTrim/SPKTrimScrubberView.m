@@ -6,13 +6,32 @@ static CGFloat const kSPKTrimBorderThickness = 3.0;
 static CGFloat const kSPKTrimGrabThreshold = 36.0;
 static NSInteger const kSPKTrimThumbnailCount = 16;
 static CGFloat const kSPKTrimCornerRadius = 8.0;
+// Zoomed track spans this many times the longest allowed clip, so the selection
+// fills a comfortable share of the width with context on either side.
+static CGFloat const kSPKTrimZoomSpanFactor = 3.0;
 
 typedef NS_ENUM(NSInteger, SPKTrimDragTarget) {
     SPKTrimDragTargetNone = 0,
     SPKTrimDragTargetLeftHandle,
     SPKTrimDragTargetRightHandle,
     SPKTrimDragTargetPlayhead,
+    SPKTrimDragTargetSelection, // slides the whole selection along the timeline
+    SPKTrimDragTargetScroll,    // pans the visible window on a zoomed track
 };
+
+// Fine scrubbing, the way Apple's media scrubbers work: dragging away from the
+// track vertically scales the horizontal movement down. Even zoomed, one point
+// of track is a meaningful slice of a long clip, so full-rate dragging alone
+// cannot land on a given moment.
+static CGFloat SPKTrimFineScrubRate(CGFloat verticalDistance) {
+    if (verticalDistance <= 40.0)
+        return 1.0;
+    if (verticalDistance <= 90.0)
+        return 0.5;
+    if (verticalDistance <= 150.0)
+        return 0.25;
+    return 0.1;
+}
 
 static NSInteger const kSPKTrimWaveformBars = 96;
 
@@ -203,6 +222,19 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
 @property (nonatomic, assign) NSTimeInterval endTime;
 @property (nonatomic, assign) SPKTrimDragTarget dragTarget;
 @property (nonatomic, strong) AVAssetImageGenerator *imageGenerator;
+@property (nonatomic, strong) AVAsset *thumbnailAsset; // kept so a scrolled window can regenerate
+@property (nonatomic, assign) NSTimeInterval visibleStart;
+@property (nonatomic, assign) NSTimeInterval visibleSpan; // 0 = whole asset
+@property (nonatomic, assign) CGFloat scrollLastX;
+// Drag bookkeeping. `dragAdjustedX` is the virtual finger position after fine
+// scrubbing has scaled each movement, `dragOffsetTime` the grab point's distance
+// from the thing being dragged (so it never snaps to the finger).
+@property (nonatomic, assign) CGFloat dragLastX;
+@property (nonatomic, assign) CGFloat dragAdjustedX;
+@property (nonatomic, assign) CGFloat dragRate;
+@property (nonatomic, assign) NSTimeInterval dragOffsetTime;
+@property (nonatomic, assign) NSTimeInterval dragVisibleStart;
+@property (nonatomic, strong) UISelectionFeedbackGenerator *rateFeedback;
 @end
 
 @implementation SPKTrimScrubberView
@@ -321,12 +353,20 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
         _startTime = 0.0;
         _endTime = _duration;
     }
+    [self updateVisibleWindow];
+    [self setNeedsLayout];
+}
+
+- (void)setMaximumDuration:(NSTimeInterval)maximumDuration {
+    _maximumDuration = MAX(0.0, maximumDuration);
+    [self updateVisibleWindow];
     [self setNeedsLayout];
 }
 
 - (void)setStartTime:(NSTimeInterval)start endTime:(NSTimeInterval)end {
     _startTime = MAX(0.0, MIN(start, _duration));
     _endTime = MAX(_startTime, MIN(end, _duration));
+    [self scrollVisibleWindowToTime:_startTime centered:NO];
     [self setNeedsLayout];
 }
 
@@ -391,8 +431,19 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
 #pragma mark - Thumbnails
 
 - (void)loadThumbnailsForAsset:(AVAsset *)asset {
+    self.thumbnailAsset = asset;
+    [self reloadThumbnailsForVisibleWindow];
+}
+
+/// Regenerates the filmstrip for whatever slice of the timeline is on screen.
+/// On an unzoomed track that is the whole asset, exactly as before.
+- (void)reloadThumbnailsForVisibleWindow {
+    AVAsset *asset = self.thumbnailAsset;
     if (!asset)
         return;
+    [self.imageGenerator cancelAllCGImageGeneration];
+    [self.thumbnailImages removeAllObjects];
+
     AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
     generator.appliesPreferredTrackTransform = YES;
     generator.requestedTimeToleranceBefore = kCMTimePositiveInfinity;
@@ -406,9 +457,15 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
     if (total <= 0.0 || !isfinite(total))
         return;
 
+    // Thumbnails span the visible window, not the whole asset.
+    NSTimeInterval windowStart = _visibleStart;
+    NSTimeInterval windowSpan = [self visibleSpan];
+    if (windowSpan <= 0.0)
+        windowSpan = total;
+
     NSMutableArray<NSValue *> *times = [NSMutableArray array];
     for (NSInteger i = 0; i < kSPKTrimThumbnailCount; i++) {
-        NSTimeInterval t = (total * (i + 0.5)) / kSPKTrimThumbnailCount;
+        NSTimeInterval t = windowStart + (windowSpan * (i + 0.5)) / kSPKTrimThumbnailCount;
         [times addObject:[NSValue valueWithCMTime:CMTimeMakeWithSeconds(t, 600)]];
         [self.thumbnailImages addObject:(id)[NSNull null]];
     }
@@ -423,7 +480,7 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
                                         // Derive the slot from the requested time — the generator does not
                                         // guarantee completion order, so we can't rely on a running counter.
                                         NSTimeInterval requested = CMTimeGetSeconds(requestedTime);
-                                        NSInteger slot = (NSInteger)floor((requested * kSPKTrimThumbnailCount) / total);
+                                        NSInteger slot = (NSInteger)floor(((requested - windowStart) * kSPKTrimThumbnailCount) / windowSpan);
                                         slot = MAX(0, MIN(slot, kSPKTrimThumbnailCount - 1));
                                         UIImage *uiImage = [UIImage imageWithCGImage:image];
                                         dispatch_async(dispatch_get_main_queue(), ^{
@@ -504,10 +561,65 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
     [self layoutPlayhead];
 }
 
+#pragma mark - Visible window
+
+// On a long source with a short ceiling (a 6s Instant cut from a 5 minute clip)
+// the selection is a couple of percent of the track and impossible to place. The
+// track then shows a zoomed window of the timeline that the user pans, instead of
+// the whole asset squeezed into one screen width.
+
+/// Seconds currently spanned by the track.
+- (NSTimeInterval)visibleSpan {
+    return (_visibleSpan > 0.0 && _visibleSpan < _duration) ? _visibleSpan : _duration;
+}
+
+- (BOOL)isZoomed {
+    return [self visibleSpan] < _duration - 0.001;
+}
+
+/// Picks the zoom level: show a few times the longest allowed clip, so the
+/// selection is a comfortable fraction of the track with context either side.
+- (void)updateVisibleWindow {
+    NSTimeInterval span = 0.0;
+    if (_maximumDuration > 0.0 && _duration > _maximumDuration * kSPKTrimZoomSpanFactor) {
+        span = _maximumDuration * kSPKTrimZoomSpanFactor;
+    }
+    if (fabs(span - _visibleSpan) > 0.001) {
+        _visibleSpan = span;
+        [self scrollVisibleWindowToTime:_startTime centered:NO];
+        [self reloadThumbnailsForVisibleWindow];
+    }
+    [self clampVisibleStart];
+}
+
+- (void)clampVisibleStart {
+    NSTimeInterval span = [self visibleSpan];
+    _visibleStart = MAX(0.0, MIN(_visibleStart, _duration - span));
+}
+
+/// Keeps `time` on screen, scrolling only as far as needed (or centring it).
+- (void)scrollVisibleWindowToTime:(NSTimeInterval)time centered:(BOOL)centered {
+    if (![self isZoomed])
+        return;
+    NSTimeInterval span = [self visibleSpan];
+    if (centered) {
+        _visibleStart = time - span / 2.0;
+    } else {
+        NSTimeInterval margin = span * 0.1;
+        if (time < _visibleStart + margin) {
+            _visibleStart = time - margin;
+        } else if (time > _visibleStart + span - margin) {
+            _visibleStart = time - span + margin;
+        }
+    }
+    [self clampVisibleStart];
+}
+
 - (CGFloat)xForTime:(NSTimeInterval)t {
-    if (_duration <= 0.0)
+    NSTimeInterval span = [self visibleSpan];
+    if (span <= 0.0)
         return [self contentOriginX];
-    return [self contentOriginX] + (t / _duration) * [self contentWidth];
+    return [self contentOriginX] + ((t - _visibleStart) / span) * [self contentWidth];
 }
 
 - (NSTimeInterval)timeForX:(CGFloat)x {
@@ -515,7 +627,8 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
     if (w <= 0.0)
         return 0.0;
     CGFloat clamped = MAX(0.0, MIN(x - [self contentOriginX], w));
-    return (clamped / w) * _duration;
+    NSTimeInterval t = _visibleStart + (clamped / w) * [self visibleSpan];
+    return MAX(0.0, MIN(t, _duration));
 }
 
 - (void)layoutSelection {
@@ -581,18 +694,34 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
 
     if (pan.state == UIGestureRecognizerStateBegan) {
         _dragTarget = [self dragTargetForPoint:p];
+        _dragLastX = p.x;
+        _dragAdjustedX = p.x;
+        _dragRate = 1.0;
+        _dragOffsetTime = [self grabOffsetTimeForPoint:p];
+        _dragVisibleStart = _visibleStart;
+        _scrollLastX = p.x;
+        if (!_rateFeedback) {
+            _rateFeedback = [[UISelectionFeedbackGenerator alloc] init];
+        }
+        [_rateFeedback prepare];
         if ([self.delegate respondsToSelector:@selector(trimScrubberDidBeginInteraction:)]) {
             [self.delegate trimScrubberDidBeginInteraction:self];
         }
     }
 
     if (pan.state == UIGestureRecognizerStateBegan || pan.state == UIGestureRecognizerStateChanged) {
-        [self applyDragAtPoint:p];
+        [self updateAdjustedPositionForPoint:p];
+        [self applyDrag];
     }
 
     if (pan.state == UIGestureRecognizerStateEnded ||
         pan.state == UIGestureRecognizerStateCancelled ||
         pan.state == UIGestureRecognizerStateFailed) {
+        // Regenerating mid-drag would thrash the generator, so the filmstrip
+        // catches up with the new window once the finger lifts.
+        if (fabs(_visibleStart - _dragVisibleStart) > 0.001) {
+            [self reloadThumbnailsForVisibleWindow];
+        }
         _dragTarget = SPKTrimDragTargetNone;
         if ([self.delegate respondsToSelector:@selector(trimScrubberDidEndInteraction:)]) {
             [self.delegate trimScrubberDidEndInteraction:self];
@@ -613,18 +742,88 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
         return (distLeft <= distRight) ? SPKTrimDragTargetLeftHandle : SPKTrimDragTargetRightHandle;
     }
     if (p.x > startX && p.x < endX) {
-        return SPKTrimDragTargetPlayhead;
+        // Inside the selection: right on the playhead scrubs it, anywhere else
+        // slides the whole selection. Under a duration ceiling that is the only
+        // way to move a full-width selection along the clip, and a tap still
+        // scrubs, so the playhead loses nothing.
+        if (fabs(p.x - [self xForTime:_playheadTime]) <= kSPKTrimGrabThreshold / 2.0) {
+            return SPKTrimDragTargetPlayhead;
+        }
+        return SPKTrimDragTargetSelection;
+    }
+    // Outside the selection on a zoomed track, dragging pans the timeline: the
+    // rest of the clip is off screen and reaching it matters more than extending
+    // a selection that is already at its ceiling.
+    if ([self isZoomed]) {
+        return SPKTrimDragTargetScroll;
     }
     // Outside selection: grab the nearer handle so it extends toward the touch.
     return (p.x <= startX) ? SPKTrimDragTargetLeftHandle : SPKTrimDragTargetRightHandle;
 }
 
-- (void)applyDragAtPoint:(CGPoint)p {
+/// Distance the grabbed thing sits from the touch, so it stays under the finger
+/// rather than jumping to it. Zero when the touch is not on the thing already
+/// (grabbing outside the selection is meant to pull a handle over to the touch).
+- (NSTimeInterval)grabOffsetTimeForPoint:(CGPoint)p {
     NSTimeInterval t = [self timeForX:p.x];
+    switch (_dragTarget) {
+    case SPKTrimDragTargetLeftHandle:
+        return (fabs(p.x - [self xForTime:_startTime]) <= kSPKTrimGrabThreshold) ? t - _startTime : 0.0;
+    case SPKTrimDragTargetRightHandle:
+        return (fabs(p.x - [self xForTime:_endTime]) <= kSPKTrimGrabThreshold) ? t - _endTime : 0.0;
+    case SPKTrimDragTargetSelection:
+        return t - _startTime;
+    default:
+        return 0.0;
+    }
+}
+
+/// Advances the virtual finger by this event's movement, scaled by how far the
+/// touch has strayed above or below the track. A rate change ticks the selection
+/// haptic, which is the only cue that the slowdown happened.
+- (void)updateAdjustedPositionForPoint:(CGPoint)p {
+    CGFloat distance = 0.0;
+    if (p.y < 0.0) {
+        distance = -p.y;
+    } else if (p.y > self.bounds.size.height) {
+        distance = p.y - self.bounds.size.height;
+    }
+    CGFloat rate = SPKTrimFineScrubRate(distance);
+    if (fabs(rate - _dragRate) > 0.001) {
+        _dragRate = rate;
+        [_rateFeedback selectionChanged];
+        [_rateFeedback prepare];
+    }
+    _dragAdjustedX += (p.x - _dragLastX) * rate;
+    _dragLastX = p.x;
+    // Panning must keep accumulating past the edges; everything else stays
+    // pinned to the track so no invisible slack builds up when reversing.
+    if (_dragTarget != SPKTrimDragTargetScroll) {
+        CGFloat left = [self contentOriginX];
+        _dragAdjustedX = MAX(left, MIN(_dragAdjustedX, left + [self contentWidth]));
+    }
+}
+
+- (void)applyDrag {
+    NSTimeInterval t = [self timeForX:_dragAdjustedX] - _dragOffsetTime;
+    // The grab offset can push the result past the edge of a zoomed track (by up
+    // to the selection's own width), which would drag the selection off screen.
+    // Panning is how you reach the rest of the clip.
+    if ([self isZoomed]) {
+        t = MAX(_visibleStart, MIN(t, _visibleStart + [self visibleSpan]));
+    }
     switch (_dragTarget) {
     case SPKTrimDragTargetLeftHandle: {
         NSTimeInterval maxStart = MAX(0.0, _endTime - _minimumDuration);
         _startTime = MAX(0.0, MIN(t, maxStart));
+        // Under a duration ceiling the out point follows the in point, so the
+        // selection slides at its maximum width instead of refusing to move.
+        if (_maximumDuration > 0.0 && (_endTime - _startTime) > _maximumDuration) {
+            _endTime = MIN(_duration, _startTime + _maximumDuration);
+            if ([self.delegate respondsToSelector:@selector(trimScrubber:didChangeEndTime:)]) {
+                [self.delegate trimScrubber:self didChangeEndTime:_endTime];
+            }
+        }
         _playheadTime = _startTime;
         [self layoutSelection];
         [self layoutPlayhead];
@@ -636,6 +835,12 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
     case SPKTrimDragTargetRightHandle: {
         NSTimeInterval minEnd = MIN(_duration, _startTime + _minimumDuration);
         _endTime = MIN(_duration, MAX(t, minEnd));
+        if (_maximumDuration > 0.0 && (_endTime - _startTime) > _maximumDuration) {
+            _startTime = MAX(0.0, _endTime - _maximumDuration);
+            if ([self.delegate respondsToSelector:@selector(trimScrubber:didChangeStartTime:)]) {
+                [self.delegate trimScrubber:self didChangeStartTime:_startTime];
+            }
+        }
         _playheadTime = _endTime;
         [self layoutSelection];
         [self layoutPlayhead];
@@ -652,6 +857,42 @@ static void SPKTrimSampleWaveform(AVAsset *asset, NSInteger targetCount,
         if ([self.delegate respondsToSelector:@selector(trimScrubber:didScrubToTime:)]) {
             [self.delegate trimScrubber:self didScrubToTime:t];
         }
+        break;
+    }
+    case SPKTrimDragTargetSelection: {
+        NSTimeInterval width = _endTime - _startTime;
+        NSTimeInterval start = MAX(0.0, MIN(t, _duration - width));
+        if ([self isZoomed]) {
+            // Keep the far edge on screen too, so the selection never slides out
+            // the trailing side of the window.
+            start = MIN(start, _visibleStart + [self visibleSpan] - width);
+            start = MAX(start, _visibleStart);
+        }
+        _startTime = start;
+        _endTime = start + width;
+        _playheadTime = _startTime;
+        [self layoutSelection];
+        [self layoutPlayhead];
+        if ([self.delegate respondsToSelector:@selector(trimScrubber:didChangeStartTime:)]) {
+            [self.delegate trimScrubber:self didChangeStartTime:_startTime];
+        }
+        if ([self.delegate respondsToSelector:@selector(trimScrubber:didChangeEndTime:)]) {
+            [self.delegate trimScrubber:self didChangeEndTime:_endTime];
+        }
+        break;
+    }
+    case SPKTrimDragTargetScroll: {
+        CGFloat w = [self contentWidth];
+        if (w <= 0.0)
+            break;
+        // Drag right moves the timeline right, i.e. earlier content into view.
+        NSTimeInterval delta = ((_dragAdjustedX - _scrollLastX) / w) * [self visibleSpan];
+        _scrollLastX = _dragAdjustedX;
+        _visibleStart -= delta;
+        [self clampVisibleStart];
+        [self setNeedsLayout];
+        [self layoutSelection];
+        [self layoutPlayhead];
         break;
     }
     case SPKTrimDragTargetNone:

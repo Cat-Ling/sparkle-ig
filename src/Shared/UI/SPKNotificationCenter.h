@@ -31,12 +31,21 @@ FOUNDATION_EXPORT NSString *const kSPKNotificationCopyAudioURL;
 FOUNDATION_EXPORT NSString *const kSPKNotificationStoryMarkSeen;
 FOUNDATION_EXPORT NSString *const kSPKNotificationStorySeenUserRule;
 FOUNDATION_EXPORT NSString *const kSPKNotificationStoryMentionsSheet;
+FOUNDATION_EXPORT NSString *const kSPKNotificationStoryAutoSave;
+FOUNDATION_EXPORT NSString *const kSPKNotificationStoryAutoSaveUserRule;
+FOUNDATION_EXPORT NSString *const kSPKNotificationAutoSaveSummary;
+FOUNDATION_EXPORT NSString *const kSPKNotificationAutoSavePending;
 FOUNDATION_EXPORT NSString *const kSPKNotificationDirectVisualMarkSeen;
 FOUNDATION_EXPORT NSString *const kSPKNotificationThreadMessagesMarkSeen;
 FOUNDATION_EXPORT NSString *const kSPKNotificationDirectThreadSeenRule;
+FOUNDATION_EXPORT NSString *const kSPKNotificationDirectAutoSave;
+FOUNDATION_EXPORT NSString *const kSPKNotificationDirectAutoSaveThreadRule;
 FOUNDATION_EXPORT NSString *const kSPKNotificationUnsentMessage;
 FOUNDATION_EXPORT NSString *const kSPKNotificationUnsentReaction;
 FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsCaptureBlocked;
+FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsUpload;
+FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsAutoSave;
+FOUNDATION_EXPORT NSString *const kSPKNotificationInstantsAutoSaveUserRule;
 
 FOUNDATION_EXPORT NSString *const kSPKNotificationProfileCopyInfo;
 FOUNDATION_EXPORT NSString *const kSPKNotificationProfileAnalyzerComplete;
@@ -121,6 +130,13 @@ SPKNotificationPillView *_Nullable SPKNotifyProgress(NSString *identifier,
                                                         onCancel:(nullable void (^)(void))onCancel;
 - (SPKNotificationPillView *)beginUnmanagedProgressWithTitle:(nullable NSString *)title
                                                     onCancel:(nullable void (^)(void))onCancel;
+// As above, but marks the pill as transient: it covers preparatory work that runs
+// before the real flow starts (e.g. the 4K candidate fetch). It morphs into the real
+// progress pill if a download picks it up, and -dismissTransientProgressPill clears it
+// if the flow instead stops to ask the user something or bails.
+- (SPKNotificationPillView *)beginTransientProgressWithTitle:(nullable NSString *)title
+                                                    onCancel:(nullable void (^)(void))onCancel;
+- (void)dismissTransientProgressPill;
 @end
 
 NS_ASSUME_NONNULL_END

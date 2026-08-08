@@ -22,6 +22,7 @@
         _mediaKind = SPKTrimMediaKindVideo;
         _allowsFrameOnly = YES;
         _allowsAudioOnly = YES;
+        _allowsCrop = YES;
         _minimumDuration = 0.3;
         _title = @"Trim";
     }
@@ -40,6 +41,7 @@
     config.sourceURL = audioURL;
     config.mediaKind = SPKTrimMediaKindAudio;
     config.allowsFrameOnly = NO;
+    config.allowsCrop = NO;
     config.title = @"Trim Audio";
     return config;
 }

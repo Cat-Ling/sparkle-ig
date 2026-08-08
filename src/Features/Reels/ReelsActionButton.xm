@@ -4,7 +4,9 @@
 #import "../../InstagramHeaders.h"
 #import "../../Shared/ActionButton/ActionButtonCore.h"
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
+#import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 static NSInteger const kSPKReelsActionButtonTag = 921342;
 static const void *kSPKReelsActionBottomConstraintAssocKey = &kSPKReelsActionBottomConstraintAssocKey;
@@ -15,6 +17,61 @@ static const void *kSPKReelsActionButtonMediaKey = &kSPKReelsActionButtonMediaKe
 static const void *kSPKReelsActionButtonCarouselIndexKey = &kSPKReelsActionButtonCarouselIndexKey;
 static CGFloat const kSPKReelsActionButtonSize = 44.0;
 static CGFloat const kSPKReelsActionButtonBottomOffset = -5.0;
+
+// Instagram changes the native reel-UFI tint when the current media enters or
+// leaves HDR/EDR. Reuse that tint instead of pinning Sparkle's icon to white.
+static UIColor *SPKReelsNativeUFIColor(UIView *verticalUFIView) {
+    if (!verticalUFIView)
+        return UIColor.whiteColor;
+
+    id likeButton = nil;
+    SEL selector = @selector(ufiLikeButton);
+    if ([verticalUFIView respondsToSelector:selector]) {
+        likeButton = ((id (*)(id, SEL))objc_msgSend)(verticalUFIView, selector);
+    }
+
+    if (![likeButton isKindOfClass:[UIButton class]])
+        return UIColor.whiteColor;
+
+    UIButton *like = (UIButton *)likeButton;
+    UIColor *tint = like.imageView.tintColor ?: like.tintColor;
+    return tint ?: UIColor.whiteColor;
+}
+
+static void SPKApplyReelsNativeUFIColor(UIButton *button, UIColor *color) {
+    if (![button isKindOfClass:[UIButton class]])
+        return;
+
+    color = color ?: UIColor.whiteColor;
+    // Instagram's UFI icon is EDR-capable. Sparkle's icon is nested inside
+    // SPKChromeCanvas, so opt the custom layers into the same compositing path.
+    SPKChromeEnableExtendedDynamicRangeContent(button);
+    button.tintAdjustmentMode = UIViewTintAdjustmentModeNormal;
+    button.tintColor = color;
+
+    UIImageView *buttonImageView = button.imageView;
+    if (buttonImageView) {
+
+        buttonImageView.tintAdjustmentMode = UIViewTintAdjustmentModeNormal;
+        buttonImageView.tintColor = color;
+        UIImage *image = buttonImageView.image;
+        if (image && image.renderingMode != UIImageRenderingModeAlwaysTemplate)
+            buttonImageView.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+
+    // Sparkle action buttons use a private icon view so bundled Instagram icons
+    // and SF Symbols share the same chrome. Keep that path in sync as well.
+    if ([button isKindOfClass:[SPKChromeButton class]]) {
+        SPKChromeButton *chromeButton = (SPKChromeButton *)button;
+        chromeButton.iconTint = color;
+
+        chromeButton.iconView.tintAdjustmentMode = UIViewTintAdjustmentModeNormal;
+        chromeButton.iconView.tintColor = color;
+        UIImage *image = chromeButton.iconView.image;
+        if (image && image.renderingMode != UIImageRenderingModeAlwaysTemplate)
+            chromeButton.iconView.image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+}
 
 // MARK: - View hierarchy helpers
 
@@ -383,6 +440,11 @@ void SPKInstallReelsActionButton(UIView *verticalUFIView) {
         return;
     }
 
+    // This must run before the layout/media early return: HDR/EDR changes can
+    // update Instagram's like tint without changing the reel or our constraints.
+    if (button)
+        SPKApplyReelsNativeUFIColor(button, SPKReelsNativeUFIColor(verticalUFIView));
+
     // Resolve current media to detect whether we need to reconfigure
     id currentMedia = SPKReelsMediaProvider(verticalUFIView);
     NSInteger currentCarouselIdx = SPKReelsCurrentIndexForContext(verticalUFIView);
@@ -434,6 +496,7 @@ void SPKInstallReelsActionButton(UIView *verticalUFIView) {
     verticalUFIView.layer.masksToBounds = NO;
     [verticalUFIView bringSubviewToFront:button];
     SPKApplyButtonStyle(button, SPKActionButtonSourceReels);
+    SPKApplyReelsNativeUFIColor(button, SPKReelsNativeUFIColor(verticalUFIView));
 }
 
 %group SPKReelsActionButtonHooks
@@ -441,6 +504,7 @@ void SPKInstallReelsActionButton(UIView *verticalUFIView) {
 %hook IGSundialViewerVerticalUFI
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ReelsActionButton.layoutSubviews");
     SPKInstallReelsActionButton((UIView *)self);
 }
 %end

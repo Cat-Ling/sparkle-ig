@@ -20,8 +20,9 @@ marked **(restart)** and prompt for a relaunch when changed.
 - **Confirm Create Group**: Confirmation alert before creating a group on Instagram send/share sheet.
 - **Confirm Send**: Confirmation alert before sending a post.
 
-### Media Preview
-- **Show Media Info**: Overlays the author and post date over the expanded photo preview. Tap the media to hide it together with the controls. (Photos only — video previews are left untouched so the scrubber and controls stay clear.)
+### Media Preview & Menu
+- **Show Media Info**: Overlays the author and post date (including time for live previews) over the expanded photo preview. Tap the media to hide it together with the controls. (Photos only — video previews are left untouched so the scrubber and controls stay clear.)
+- **Show Date in Menu**: Shows the exact date and time a post was made in the action button menu title.
 
 ### Recommendations
 - **Ads**: Per-surface ad hiding: Feed, Stories, Reels, Explore, plus Reels shopping CTA.
@@ -64,7 +65,8 @@ Per-feature control of the Sparkle notification pill and its haptics. See **Noti
 - **Swipe Between Tabs**: `Default`, `Enabled`, or `Disabled`.
 - **Hide Tabs**:
   - Individually hide the Feed, Explore, Messages, Reels, Create, and Profile tabs. **(restart)**
-  - Settings access is safeguarded: if Quick Settings Access is on but the Home tab is hidden (or taken by the Gallery shortcut), the long-press to open Sparkle Settings automatically moves to another visible tab, so you can't hide your way out of reaching Settings.
+  - **Hide Tab Bar in Messages Only**: Hides the bottom tab bar entirely when all tabs except Messages are hidden, for a clean messages-only interface.
+  - Settings access is safeguarded: if Quick Settings Access is on but the Home tab is hidden (or taken by the Gallery shortcut), the long-press to open Sparkle Settings automatically moves to another visible tab, so you can't hide your way out of reaching Settings. Additionally, settings can always be opened in DMs by long-pressing the new message composer button (if the tab bar is hidden).
 
 ### Explore & Search
 - **Hide Explore Posts Grid**: Hides the suggested-post grid on Explore.
@@ -72,7 +74,7 @@ Per-feature control of the Sparkle notification pill and its haptics. See **Noti
 - **Open Clipboard Link**: Long-press the Explore tab to open an Instagram URL from the clipboard.
 
 ### Capture
-- **Hide UI on Capture**: Redacts Sparkle overlay buttons (action button, seen/mentions buttons, etc.) from screenshots, screen recordings, and mirroring.
+- **Hide UI on Capture**: Redacts Sparkle overlay buttons and labels (action button, seen/mentions buttons, poll vote-count badges, etc.) from screenshots, screen recordings, and mirroring.
 
 ### Liquid Glass *(iOS 26+)*
 - **Liquid Glass**: Force-enables Instagram's native Liquid Glass UI for accounts/devices that don't already have it. **(restart)** Only ever forces it *on*; turning it off never suppresses Liquid Glass that Instagram already renders natively (server-rollout accounts) or that Sparkle's own screens (Gallery, Settings, etc.) pick up automatically from iOS 26: so Sparkle's UI never looks inconsistent with Instagram's regardless of this switch.
@@ -144,12 +146,16 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 - **Unlock Story Preview**: Unlocks the Instagram Plus "Story Preview" — long-pressing a story shows the real preview (photo, video, auto-advance) instead of the blurred upgrade upsell, without appearing on the viewer list. Also removes the "Try Instagram Plus" row from the long-press menu. Works from the feed story tray and DMs.
 - **Hide Viewer List Plus Button**: Hides the Instagram Plus button in your story's viewer list.
 
+### Creation
+- **Allow Videos in Photo Sticker**: Allows selecting video files in addition to photos when using the native photo sticker in Stories.
+- **Show Gallery Upload Button**: Adds a direct **Sparkle Gallery** button in the photo sticker picker to attach media saved in Sparkle as stickers.
+- **Use Detailed Color Picker**: Long-press the eyedropper for finer text-color control.
+
 ### Other
 - **Search Viewer List**: Adds a search button to your own story's viewer list. Tapping it fetches the complete viewer list and opens a sheet where you can search by username or name and filter by follow relationship (All / Following / Not Following). A fully Sparkle-native alternative to the Instagram Plus viewer search.
-- **Hide Story Midcards** Removes the "Join a trending" / "Add Yours" promo cards from the stories tray. 
-- **Show Story Mentions**: Adds a mentions button listing mentioned users.
+- **Hide Story Midcards**: Removes the "Join a trending" / "Add Yours" promo cards from the stories tray. 
+- **Show Story Mentions**: Adds a mentions button listing mentioned users. Tapping a user opens their real profile over the story viewer instead of closing it, so swiping back or tapping the back button returns you straight to the story.
 - **Show Poll Vote Counts**: Shows vote counts next to poll options.
-- **Use Detailed Color Picker**: Long-press the eyedropper for finer text-color control.
 
 ---
 
@@ -186,6 +192,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 - **Also Show on Chat Media**: Extends the action button to the full-screen viewer for permanent chat media — camera-roll photos and videos opened from a thread or the chat's shared-media grid. Replaces Instagram's native Save button, so media can be downloaded to Photos, the Sparkle Gallery, copied, shared, etc. Chat videos honor the **Download Video Quality** setting: when set to *Always Ask* the quality picker offers the video's full DASH ladder, same as feed/reels. Requires the Messages Action Button toggle.
 
 ### Messaging
+- **Unlock Message Preview (not available in v410.1.0)**: Unlocks the Instagram Plus "Message Preview" (chat peeks) — long-pressing a chat shows the real preview instead of the blurred upgrade upsell.
 - **Manually Mark Seen**: adds an eye button to mark chats seen.
 - **Mark Seen on Message Send / Reply / Reaction / Typing**: auto-seen triggers; disabled unless Manually Mark Seen is on.
 - **Seen Button Position**: choose whether the eye button sits in the top nav bar or as a bubble above the composer, within thumb reach and hidden while you type. The bubble can be dragged aside to peek underneath and snaps back when you scroll. Disabled unless Manually Mark Seen is on.
@@ -204,7 +211,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 ### Interface
 - **Last Active**: Shows the exact time someone was last active in the chat header ("Active at 1:15 AM") instead of a relative label ("Active 2h ago"). Only reformats the presence Instagram already shows — no extra tracking — and leaves the live "Active now" window untouched. Choose **Off**, **Smart** (time alone for today, adds the date for older days), or **Date & Time** (always shows both).
 - **Hide Typing Status**: Suppresses your typing indicator.
-- **Hide Reels Blend Button**, **Hide Audio Call Button**, **Hide Video Call Button**, **No Suggested Chats**. Call-button visibility changes apply after reopening the DM thread.
+- **Hide Reels Blend Button**, **Hide Audio Call Button**, **Hide Video Call Button**, **Hide Flag Button**, **No Suggested Chats**.
 
 ### Visual Messages
 - **Manually Mark Seen** + **Advance After Manual Seen**.
@@ -247,7 +254,10 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 - **Disable Instants Creation**: Hard-blocks the Instant shutter (photo and video); the shutter is darkened and capture is blocked, with an optional notification + haptic. Received Instants still work.
 - **Skip Camera After Instants**: Skips the camera page Instagram opens after viewing the last Instant.
 - **Disable Camera Control**: Stops the hardware Camera Control button (iPhone 16/17) from taking an Instant. Only available on devices that have Camera Control.
-- **Upload from Gallery**: Adds a gallery button to the Instants camera to upload from Photos, Files, or the Sparkle Gallery.
+- **Camera View Button**: Adds one Sparkle button to the Instants camera view, in the slot the action button uses in the viewer, wearing the glyph set by **Open Menu Icon** in General settings. Its menu has three groups: upload a photo or video from **Photos / Gallery / Files** (see below); **Browse Saved Instants**; and **Instants Settings**.
+- **Upload a photo**: The picked photo opens in the Sparkle photo editor in locked-square mode, so you frame it exactly as it will be sent. Tap the shutter to send it.
+- **Upload a video**: The picked video opens in the trim editor, capped at the 6 second Instant length and pre-framed to the square, so it is ready to send without opening the crop editor (open it to reframe). Press and hold the shutter to record it, exactly as you would a live Instant: the clip plays into the camera from its first frame the moment you hold, and holds still on that frame until then, so the take always starts at the beginning of the clip rather than mid-playback.
+- **Browse Saved Instants**: Lists everyone you have saved Instants from, with a count per user. Picking one navigates to the Gallery filtered to that user's Instants (across folders), titled with their username and with a back chevron to the list; filter and search are dropped there, since the screen already is the filter. Behind the Gallery lock when one is set.
 
 ### Confirmation
 - **Confirm Instant Capture**: Freezes the preview on the exact frame you captured and asks before sending it, so the sent frame is what you saw (cancel resumes the live camera). **Currently unavailable.**
@@ -288,21 +298,30 @@ logs, and Profile Analyzer data live locally under `Documents/Sparkle/`.
 
 ### Browsing
 - **Show Favorites at Top**: Pins favorites within the current sort/folder.
+- **Show Files From Subfolders**: Lists everything in one grid/list instead of only the current folder's own files, so the Gallery root shows all your media without opening a single folder. Folders stay in the chip bar and still narrow the list to their own subtree, and each item shows the folder it lives in. Searching **All Folders** works as before.
 - **Grid density**: Pinch the grid to switch between 2 / 3 / 5 columns (persisted).
 - **Folder chips**: Subfolders appear as a horizontally-scrolling chip strip above the media.
 - **Source & username overlays**: Grid items can show the source-type icon and `@username` (toggleable; username shows at lower densities). Video/audio items show a duration label.
 - **Grid / list view** and **sort / filter** controls in the bottom toolbar.
-- **Item actions**: Each item's menu can **Open Story / Reel / Post** (the label and link match the saved source: stories open `instagram.com/stories/...`; posts/reels open their canonical `instagram.com/p/...` or `instagram.com/reel/...` permalink when available, with the authenticated media deep link kept as a fallback) and **Open Profile**, plus favorite, rename, move, share, **Trim** (videos and audio), **Edit** (photos: see Editing), and delete.
+- **Picker sheets**: Anywhere Sparkle asks you to choose saved media — Direct uploads, the comment composer, Instants, story stickers — you get the same browser as the Gallery itself: folder chips with item counts, grid/list toggle, pinch density, sort, filter, and search with a **This Folder** / **All Folders** scope. Folders open in place with a back button rather than stacking sheets, and your scroll position is restored when you come back out. An empty sheet explains itself rather than showing a bare grid. Picking an item whose file has since gone missing reports it instead of failing silently. Multi-select pickers show the running count on the **Add** button.
+- **Item actions**: Each item's menu can **Open Story / Reel / Post** (the label and link match the saved source: posts and reels open on their own page over the Gallery, so you return straight to where you were when done, and the `instagram.com/p/...` or `instagram.com/reel/...` permalink is kept as a fallback; stories open `instagram.com/stories/...`) and **Open Profile** (opens the real profile over the Gallery the same way; older items saved without an account attached are looked up once and remembered, so every later open is instant), plus favorite, rename, move, share, **Trim** (videos and audio), **Edit** (photos: see Editing), and delete.
 - **Automatic Live Text**: Static image previews enable native text selection on supported iOS versions. Animated GIF/WebP previews and iOS 15 skip analysis.
 
 ### Trimming
 - **Trim editor**: Trim a video down to a clip, a single still frame, or **audio only**, with a filmstrip scrubber, draggable in/out handles, and mode chips. Reachable from a Gallery video or audio's **Trim** menu action, the **media preview** bottom toolbar (videos and audio), and the **Trim & Save** action button (see below). Picking **Audio Only** on a video switches the editor into the audio trimmer (waveform + artwork) and exports the selected range as an M4A, discarding the picture: if you don't touch the scrubber it saves the whole audio; the chip is hidden for silent videos. Trimming an audio file (or expanded audio) opens the same waveform editor directly. Frame-accurate re-encode via the FFmpeg pipeline honoring your **Download Encoding** settings (codec/CRF/bitrate/preset/resolution; falls back to AVFoundation); single-frame extraction is exported as HEIC/JPEG, turning a "photo + song" video into a real photo; audio exports as native AAC. Rendering runs in the background behind a progress pill: the app stays usable.
+- **Crop (in the trim editor)**: A **Crop** button in the trim editor's top bar (sitting in its own bubble beside **Save**) opens a full-screen framing editor over a looping preview of the clip: pan/zoom to frame, rotate ±90°, flip horizontally, and pick a crop aspect. Confirming re-frames the trim editor's own preview to exactly what will be rendered, so the result is visible before you commit. The crop is applied in the same encode pass as the trim, never a second re-encode, and resolution limits from your **Download Encoding** settings measure the cropped picture rather than the original. The button appears only for a trimmed video: a single frame is cropped in the photo editor behind **Edit Frame**, and **Audio Only** has no picture.
+- **Scrubber**: Drag the in/out handles to set the clip, drag inside the selection to slide the whole selection along the video, and tap anywhere to move the playhead. Handles keep their position under your finger instead of jumping to it. Dragging up or down away from the filmstrip slows the movement to a half, a quarter, then a tenth, with a haptic tick at each step, so you can land on an exact moment; where a maximum clip length applies, the filmstrip shows a zoomed window of the timeline that you pan by dragging outside the selection, rather than squeezing the whole video into one screen width.
 - **Ask to Replace Original**: When trimming or editing a Gallery item, ask whether to replace the original in place or save a copy. Off always saves a copy and keeps the original.
 
 ### Editing
-- **Photo editor**: Crop, pan/zoom, rotate (±90°), and horizontal flip for photos, with a selectable crop aspect. Reachable from: the **media preview** bottom toolbar's **Edit** button (Gallery photos *and* any expanded Instagram photo); a Gallery photo's **Edit** menu action; and the **Edit & Save** action button (see below). For a Gallery photo, saving honors **Ask to Replace Original** (replace in place or save a copy); for an expanded Instagram photo it offers a Done menu of destinations (**Photos / Gallery / Share / Copy**). The same editor powers Instants "Upload from Gallery" positioning in a locked-square mode. *(Note: editing an animated GIF flattens it to a still image.)*
+- **Photo editor**: Crop, pan/zoom, rotate (±90°), and horizontal flip for photos, with a selectable crop aspect. Reachable from: the **media preview** bottom toolbar's **Edit** button (Gallery photos *and* any expanded Instagram photo); a Gallery photo's **Edit** menu action; and the **Edit & Save** action button (see below). For a Gallery photo, saving honors **Ask to Replace Original** (replace in place or save a copy); for an expanded Instagram photo it offers a Done menu of destinations (**Photos / Gallery / Share / Copy**). The same editor powers Instants photo-upload positioning in a locked-square mode. *(Note: editing an animated GIF flattens it to a still image.)*
 - **Trim & Save (action button)**: An opt-in, video-only action you can add to any action-button menu via the customizer (works on feed-inline reels too). It sources the video at your configured **download video quality** (progressive "ready-to-play" or merged DASH; prompts when set to "always ask"), opens the trim editor, then offers a Done menu of destinations (**Photos / Gallery / Share / Copy**; when the output is audio, **Save to Files** replaces Photos). DASH-quality trims download the streams and merge + cut in one pass, encoding only the selected window.
 - **Edit & Save (action button)**: The photo counterpart to Trim & Save: an opt-in, image-only action for any action-button menu. It fetches the photo, opens the editor, then offers a Done menu of destinations (**Photos / Gallery / Share / Copy**).
+
+### Importing
+- **Import Media**: Bring media into the Gallery from the Files app — images, GIFs, videos, and audio — with full editable metadata. Picked files land in a queue you can review before committing: each row previews the file (tap the thumbnail for a full-screen preview) and opens a details form to set its **display name**, **username**, **source**, **date**, and, under **Advanced**, the user/media IDs, shortcode, permalink, pixel size, and duration. **Paste link to autofill** fills the form from a copied Instagram link. A **Shared details** row applies the same values to every queued file that you haven't edited individually, so a batch from one account only needs filling in once. Files are imported into the Gallery folder you opened Settings from.
+- **Queue persistence**: The queue survives leaving the screen and app relaunches — picked files are staged on disk, so a half-filled batch is never lost. Entries are cleared as they import, or via swipe / **Clear Queue**.
+- **Regram Media Vault import**: Coming from Regram? Pick your exported folder, `MediaVault.zip`, or the full `Regram-Data.zip` and Sparkle reads the vault's database directly, enqueueing every file with its metadata already filled in — source, username, dates, dimensions, and favorites — mapped onto Sparkle's own sources. Everything stays editable before import. (ZIP64 archives, which is what macOS and the Files app produce, are supported.)
 
 ### Gallery Settings
 - **Pinch to Zoom**: Enables grid density pinching.
@@ -311,6 +330,7 @@ logs, and Profile Analyzer data live locally under `Documents/Sparkle/`.
 - **This Account Only**: Scopes the Gallery to media saved while logged into the current account (plus older unassigned files); enabling it offers to claim existing unassigned files for the current account. Each saved file is tagged with the account that saved it; reassign a file to another logged-in account from its **Edit Details → Account** row (e.g. to stash media into a different account's Gallery). Non-destructive: turn it off to see everything.
 - **Hidden Sources**: Hides selected sources, from Gallery browsing and Gallery picker sheets without deleting files or excluding them from maintenance and duplicate tracking.
 - **Enable Passcode Lock** + **Change Passcode**: 4–6 digit passcode with Face ID / Touch ID unlock. Hashes are stored in the keychain (PBKDF2-HMAC-SHA256). Enforced globally when opening the Gallery itself and all gallery picker sheets (e.g., when uploading media in Direct Messages or Instants).
+- **Import Media**: Opens the importer (see Importing above) — from Files, or a Regram Media Vault export.
 - **Storage**: Total / image / video / audio counts and total size.
 - **Delete Files**: Bulk-delete tooling: by everything, by type (images/videos/thumbnails), by source (feed/stories/reels/DMs/profile pictures), or by user.
 
@@ -325,17 +345,39 @@ the main settings search.
 - **Downloads**: Action-based download manager with chip filters for All, Active, Queued, Failed, and Recent. Each row represents the user action, not an internal transport task. Multi-item actions expand inline, failed items can be retried individually, Gallery and Photos saves open their matching destination, and single-file results preview locally when applicable. Supports cancellation, destructive-action confirmations, clearing history without deleting saved media, and best-effort retry for reconstructable actions. With **Per-Account Settings** on, the history is scoped to the current account (each download keeps the account that started it); the limit and max-concurrent settings stay global.
 - **Global Queue Pill**: Parallel and queued download work shares one aggregate Downloads pill instead of spawning one pill per item or separate queue-finished toasts.
 
+### Auto-Save
+Saves media automatically as you view it, with no tap. Available for **Stories**, **Messages** (view-once), and **Instants**. The destination, quality, and feedback settings below are shared by every surface; each surface page holds only its own enable switch, filter mode, and list. Media already saved to the chosen destination is skipped, so re-viewing never saves twice — this holds regardless of the *Detect Duplicate Downloads* setting, which auto-save does not use.
+
+Every surface has the same **Filter Mode**: `All` saves everything except what you exclude; `Selected` saves only what you pick. Each mode keeps its own list, so switching back and forth never destroys the other. Lists are per-account, per-surface, and independent of the Manually Mark Seen lists.
+
+- **Stories**: Auto-saves story photos and videos as you watch them. Keyed by user.
+  - **Excluded / Selected Users**: Manageable from the list itself (add by username) or from the story action menu (*Toggle Story Auto-Save*), which adds or removes the user whose story you're watching.
+- **Messages**: Auto-saves view-once and replayable DM photos and videos as you open them — the media you otherwise can't get back. Keyed by **chat**, so group threads work without resolving a per-message sender.
+  - **Excluded / Selected Chats**: Manageable from the list itself (add by username, which resolves your 1:1 thread with them) or from the visual message viewer's action menu (*Toggle Chat Auto-Save*). Groups can only be added from the viewer.
+- **Instants**: Auto-saves instants as you open them. Keyed by **username**, since a resolved snap carries no author id — which also means the list is curated by typing a username, with no lookup needed.
+- **Save To**: `Sparkle Gallery` keeps auto-saved media inside the tweak; `Photos App` saves it to your system photo library (iOS asks for photo library permission the first time). The skip-if-already-saved check follows the destination you pick, so switching destinations re-saves items the new one doesn't have yet — and deleting an item from its destination lets it be saved again next time you view it.
+- **Photo Quality** / **Video Quality**: Quality tier for auto-saved media. `Default` takes Instagram's ready-to-play file — fastest, no re-encode per item; `High` merges DASH video + audio for best quality at the cost of an FFmpeg pass per item (**requires FFmpegKit**). Auto-save never prompts, so there is no `Always Ask`.
+- **Keep in Download History**: Auto-saves are pruned from the download history once saved. Enable to keep them listed.
+- **Notifications**: Feedback is per viewing session, not per item — tapping through twenty stories costs two toasts, not forty. All of it is configured under *Notifications › Auto-Save*, where each toast can be a pill, haptic-only, or silent:
+  - *Story / DM / Instants Auto-Save Started*: posted once, on the session's first save.
+  - *Auto-Save Summary*: posted at the end with the number of items saved; tap it to open the Gallery (or the Photos app, following the destination). It waits for every download and DASH merge to finish, so the count is final.
+  - *Auto-Save Still Working*: only when you leave the viewer while items are mid-flight (typically `High` video quality muxing DASH audio), explaining why the summary hasn't arrived yet.
+
 ### Behavior
 - **Detect Duplicate Downloads**: Skips media already saved: Gallery checks are exact by persistent media identity; Photos checks cover saves Sparkle recorded while tracking is enabled. Existing Photos-library items cannot be discovered retroactively.
 - **Parallel Downloads**: Limits concurrent download work from 1–4 (default 2) across direct saves, carousel items, conversions, and DASH merge pipelines.
 - **History Limit**: Caps saved download actions at a configurable history limit (default 300 entries).
+- **Save to Custom Album**: Toggles saving Photos-destination downloads to a specific custom album in the iOS Photos app.
+- **Album Name**: Configures the title of the custom Photos album (defaults to "Sparkle", disabled when the toggle is off). If empty, saving falls back to the default Recents camera roll.
 
 ### Storage
 - Each download keeps a **staged copy on disk** so its history entry stays previewable on tap; this staged data (plus staged source/preview scratch) is what the **Storage Usage → Downloads** figure counts. Clearing a download from history — via **Clear Finished Downloads**, a swipe-delete, or the history-limit trim — frees its staged copy automatically. Media already saved to Photos or the Gallery is never affected. On launch, Sparkle also sweeps any **orphaned** staged leftovers no longer tied to a history entry (interrupted downloads, crash leftovers, or backlog from older builds), so the cache stays bounded by your history without any manual step.
 
 ### Quality
+- **Fetch 4K Images**: Mimics a desktop web browser to retrieve 4K/high-resolution image candidates from the web version of the Instagram API (fetched on-demand when downloading, copying, or displaying the quality picker — including downloads and copies started from the full-screen media preview).
+- **Default Photo Quality**: `Max` / `High` / `Medium` / `Low` (or `Always Ask`). `Max` leverages web 4K image candidates when enabled; disabling the 4K switch automatically adjusts the setting to `High` and disables `Max`.
+- **Quality Picker Sheet ("Always Ask")**: Cleanly groups photo candidates into dedicated **Web API** and **Mobile API** sections, removes cropped grid thumbnails (e.g. 1:1 cropped square thumbnails on non-1:1 posts), deduplicates identical resolutions, and strips technical subtitle clutter (`11.8 Megapixels • 4:5`). In bulk downloads, presents a single **Batch Quality** action sheet (`Max`, `High`, `Medium`, `Low`) to choose quality once for all items in the batch.
 - **Enhanced Media Resolution**: Requests higher-resolution media for downloads.
-- **Default Photo Quality**: `High` / `Low` (or always ask).
 - **Default Video Quality**: Save/share quality. `High` merges DASH video + audio; `Default` uses ready-to-play files; `Always Ask` prompts each time. **Requires FFmpegKit** for the merge/quality options.
 - **Encoding Settings**: Advanced codec / preset / bitrate / CRF / resolution / audio overrides for the merge step (requires FFmpegKit). A **Reset Encoding Settings** button restores every advanced encoding option to its default (the toggle stays on).
 - **View Encoding Logs**: Inspect and share the FFmpeg loader/merge logs.
@@ -367,6 +409,7 @@ can't be analyzed because a single scan would hit Instagram's rate limits.
   - **You Started Following** / **You Unfollowed**: your following changes over time.
   - **Profile Updates**: username, name, or profile-picture changes for tracked accounts.
   - Each category badges the number of changes you haven't looked at yet; inside, unseen changes are grouped under **Latest** above previously-seen ones under **Previous**. Opening a category clears its badge.
+  - **Swipe any change to delete it** once you've seen it: the entry is dropped from the stored history and the category's count drops to match. Only that entry goes; the rest of the history and your snapshots are untouched.
 - Each list supports search, sorting (A–Z / Z–A / default), tapping a row to open the profile, and inline **Follow / Unfollow** with live follow-state resolution.
 
 ### Tracking
@@ -408,7 +451,7 @@ clearing, and more.
 - **Open FLEX Now**, **Three-finger Hold**, **Open on App Launch**, **Open on App Focus**. Requires `libFLEX.dylib` to be bundled (build the ipa with `--flex` flag or install `libFLEX.dylib` if jailbroken).
 
 ### Tweak
-- **Quick Settings Access**: Long-press the Home tab to open Sparkle Settings. **(restart)** If the Home tab is hidden or claimed by the Gallery shortcut, the long-press automatically falls back to another visible tab so Settings is always reachable.
+- **Quick Settings Access**: Long-press the Home tab to open Sparkle Settings. **(restart)** If the Home tab is hidden or claimed by the Gallery shortcut, the long-press automatically falls back to another visible tab so Settings is always reachable. Additionally, you can long-press the new message composer button in DMs to open Sparkle Settings (when the tab bar is hidden).
 - **Shortcut Haptics**: Light haptic feedback when opening Settings / Gallery.
 - **Show Settings on App Launch**.
 - **Disable All Settings**: Master kill switch; only Settings access remains. **(restart)**
@@ -420,8 +463,8 @@ clearing, and more.
 - **Enable Settings Passcode Lock** + **Change Settings Passcode**: Uses an independent keychain-backed passcode and Face ID / Touch ID unlock. Protects full Settings and topic sheets opened from action buttons; Settings remains unlocked until its modal is dismissed.
 
 ### Instagram
-- **Hide TestFlight Popup**: Suppresses the Instagram Beta update popup. On by default and only shown on sideloaded builds (hidden on jailbroken installs, where the nag never appears). **(restart)**
-- **Fix Duplicate Notifications**: Drops the duplicate in-app banner sideloaded Instagram posts while the notification extension is already delivering the same push. Only acts while the app is foregrounded.
+- **Hide TestFlight Popup**: Suppresses the Instagram Beta update popup. This is always active on release builds to support sideloading (and is configurable on developer builds).
+- **Fix Duplicate Notifications**: Drops the local copy Instagram re-adds for a push its notification extension is already delivering. Instagram normally handles this itself, so leave it off unless duplicates actually reach you.
 - **Disable Safe Mode**: Prevents Instagram from resetting settings after repeated crashes (use with care).
 
 ---

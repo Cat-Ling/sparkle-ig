@@ -120,6 +120,9 @@ static NSArray *SPKMessagesSettingsSections(void) {
                         @"Choose what tapping the action button does. Long press opens the full menu.\n"
                         @"\"Also Show on Chat Media\" adds it to camera-roll photos and videos opened in a chat."),
         SPKTopicSection(@"Messaging", @[
+            [SPKSetting switchCellWithTitle:@"Unlock Message Preview"
+                                       icon:SPKSettingsIcon(@"story_preview")
+                                defaultsKey:@"msgs_unlock_preview"],
             [SPKSetting switchCellWithTitle:@"Manually Mark Seen"
                                        icon:SPKSettingsIcon(@"eye")
                                 defaultsKey:@"msgs_manual_seen"],
@@ -130,19 +133,21 @@ static NSArray *SPKMessagesSettingsSections(void) {
             seenOnTyping,
             manualSeenList,
         ],
-                        manualSeen ? @"1. Prevents automatic seen receipts and adds an eye button to mark chats as seen.\n"
-                                     @"2. Places the seen button in the top nav bar, or as a draggable bubble above the composer within thumb reach (scroll to snap it back).\n"
-                                     @"3. Marks a chat as seen when you send a message.\n"
-                                     @"4. Marks a chat as seen when you reply.\n"
-                                     @"5. Marks a chat as seen when you react.\n"
-                                     @"6. Marks a chat as seen when you start typing a reply.\n\n"
+                        manualSeen ? @"1. Unlock \"Message Preview\": the chat long-press menu shows the actual chat preview without marking the messages as seen.\n"
+                                     @"2. Prevents automatic seen receipts and adds an eye button to mark chats as seen.\n"
+                                     @"3. Places the seen button in the top nav bar, or as a draggable bubble above the composer within thumb reach (scroll to snap it back).\n"
+                                     @"4. Marks a chat as seen when you send a message.\n"
+                                     @"5. Marks a chat as seen when you reply.\n"
+                                     @"6. Marks a chat as seen when you react.\n"
+                                     @"7. Marks a chat as seen when you start typing a reply.\n\n"
                                      @"Excluded Chats keep Instagram's normal seen behavior. Manage them from the eye button, an inbox long press, or the list above."
-                                   : @"1. Prevents automatic seen receipts and adds an eye button to mark chats as seen.\n"
-                                     @"2. Places the seen button in the top nav bar, or as a draggable bubble above the composer within thumb reach (scroll to snap it back).\n"
-                                     @"3. Marks a chat as seen when you send a message.\n"
-                                     @"4. Marks a chat as seen when you reply.\n"
-                                     @"5. Marks a chat as seen when you react.\n"
-                                     @"6. Marks a chat as seen when you start typing a reply.\n\n"
+                                   : @"1. Unlock \"Message Preview\": the chat long-press menu shows the actual chat preview without marking the messages as seen.\n"
+                                     @"2. Prevents automatic seen receipts and adds an eye button to mark chats as seen.\n"
+                                     @"3. Places the seen button in the top nav bar, or as a draggable bubble above the composer within thumb reach (scroll to snap it back).\n"
+                                     @"4. Marks a chat as seen when you send a message.\n"
+                                     @"5. Marks a chat as seen when you reply.\n"
+                                     @"6. Marks a chat as seen when you react.\n"
+                                     @"7. Marks a chat as seen when you start typing a reply.\n\n"
                                      @"Included Chats require the eye button or the auto-seen triggers above. Manage them from the eye button, an inbox long press, or the list above."),
         SPKTopicSection(@"Deleted Messages", @[
             [SPKSetting switchCellWithTitle:@"Keep Deleted Messages"
@@ -185,6 +190,9 @@ static NSArray *SPKMessagesSettingsSections(void) {
             [SPKSetting switchCellWithTitle:@"Hide Video Call Button"
                                        icon:SPKSettingsIcon(@"video")
                                 defaultsKey:@"msgs_hide_video_call_btn"],
+            [SPKSetting switchCellWithTitle:@"Hide Flag Button"
+                                       icon:SPKSettingsIcon(@"flag")
+                                defaultsKey:@"msgs_hide_flag_btn"],
             [SPKSetting switchCellWithTitle:@"No Suggested Chats"
                                        icon:SPKSettingsIcon(@"question")
                                 defaultsKey:@"msgs_hide_suggested_chats"],
@@ -195,7 +203,8 @@ static NSArray *SPKMessagesSettingsSections(void) {
                         @"3. Removes the Reels Blend button from the inbox.\n"
                         @"4. Hides the audio call button in the chat header.\n"
                         @"5. Hides the video call button in the chat header.\n"
-                        @"6. Removes suggested chats from the inbox."),
+                        @"6. Hides the flag button in the chat header.\n"
+                        @"7. Removes suggested chats from the inbox."),
         SPKTopicSection(@"Visual Messages", @[
             [SPKSetting switchCellWithTitle:@"Manually Mark Seen"
                                        icon:SPKSettingsIcon(@"eye")

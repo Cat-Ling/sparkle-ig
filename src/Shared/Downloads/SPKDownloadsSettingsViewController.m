@@ -5,6 +5,7 @@
 #import "../../Settings/SPKSetting.h"
 #import "../../Settings/SPKTopicSettingsSupport.h"
 #import "../../Utils.h"
+#import "../AutoSave/SPKAutoSaveSettingsViewController.h"
 #import "../MediaDownload/SPKMediaFFmpeg.h"
 #import "../MediaDownload/SPKMediaQualityManager.h"
 #import "SPKDownloadTypes.h"
@@ -60,14 +61,27 @@
     encodingLogs.userInfo = @{@"enabled" : @YES};
 
     NSString *qualityFooter = ffmpegAvailable
-        ? @"1. Fetch the highest-resolution variant Instagram exposes for photos and videos.\n"
-          @"2. Preferred quality for downloaded photos.\n"
-          @"3. \"High\" merges DASH files for best quality, \"Default\" uses ready-to-play files, \"Always Ask\" prompts for selection each time.\n"
-          @"4. Configure how merged videos are re-encoded (codec, container, bitrate).\n"
-          @"5. Review the FFmpeg output from recent encoding jobs."
-        : @"FFmpegKit is required for video quality options and encoding features.";
+        ? @"1. Request 4K image candidates by mimicking a web browser (extra call to the web API).\n"
+          @"2. Fetch the highest-resolution variant Instagram exposes for photos and videos.\n"
+          @"3. Preferred quality for downloaded photos.\n"
+          @"4. \"High\" merges DASH files for best quality, \"Default\" uses ready-to-play files, \"Always Ask\" prompts for selection each time.\n"
+          @"5. Configure how merged videos are re-encoded (codec, container, bitrate).\n"
+          @"6. Review the FFmpeg output from recent encoding jobs."
+        : @"1. Request 4K image candidates by mimicking a web browser (extra call to the web API).\n"
+          @"2. Fetch the highest-resolution variant Instagram exposes for photos and videos.\n"
+          @"FFmpegKit is required for video quality options and encoding features.";
+
+    SPKSetting *autoSave = [SPKSetting navigationCellWithTitle:@"Auto-Save"
+                                                      subtitle:@""
+                                                          icon:SPKSettingsIcon(@"download")
+                                                viewController:[SPKAutoSaveSettingsViewController new]];
+    autoSave.searchSectionsProvider = ^NSArray * {
+        return [SPKAutoSaveSettingsViewController searchSections];
+    };
 
     return @[
+        SPKTopicSection(@"Auto-Save", @[ autoSave ],
+                        @"Automatically download media as you view it."),
         SPKTopicSection(@"Behavior", @[
             [SPKSetting switchCellWithTitle:@"Detect Duplicate Downloads"
                                        icon:SPKSettingsIcon(@"duplicate")
@@ -90,11 +104,47 @@
                                         step:50
                                        label:@"entries"
                                singularLabel:@"entry"],
+            ({
+                SPKSetting *toggle = [SPKSetting switchCellWithTitle:@"Save to Custom Album"
+                                                                icon:SPKSettingsIcon(@"photo_gallery")
+                                                         defaultsKey:@"downloads_photos_album_enabled"];
+                toggle.reloadsTableOnSwitchChange = YES;
+                toggle;
+            }),
+            ({
+                SPKSetting *album = [SPKSetting textFieldCellWithTitle:@"Album Name"
+                                                           placeholder:@"Sparkle"
+                                                          keyboardType:UIKeyboardTypeDefault
+                                                           defaultsKey:@"downloads_photos_album"];
+                album.icon = SPKSettingsIcon(@"folder");
+                album.enabledProvider = ^BOOL {
+                    return [SPKUtils getBoolPref:@"downloads_photos_album_enabled"];
+                };
+                album;
+            }),
         ],
                         @"1. Check before downloading and skip media already saved. Gallery checks are exact; Photos checks cover media Sparkle saved while tracking is enabled.\n"
                         @"2. How many downloads may run at the same time.\n"
-                        @"3. How many finished entries the download history keeps before trimming the oldest."),
+                        @"3. How many finished entries the download history keeps before trimming the oldest.\n"
+                        @"4. Group saved Photos media under a specific custom album."),
         SPKTopicSection(@"Quality", @[
+            ({
+                SPKSetting *toggle = [SPKSetting switchCellWithTitle:@"Fetch 4K Images"
+                                                                icon:SPKSettingsIcon(@"web")
+                                                         defaultsKey:@"downloads_fetch_4k_images"];
+                toggle.switchChangeHandler = ^(BOOL isOn) {
+                    [[NSUserDefaults standardUserDefaults] setBool:isOn forKey:SPKEffectivePreferenceKey(@"downloads_fetch_4k_images")];
+                    if (!isOn) {
+                        NSString *qualityKey = SPKEffectivePreferenceKey(@"downloads_photo_quality");
+                        NSString *quality = [[NSUserDefaults standardUserDefaults] stringForKey:qualityKey];
+                        if ([quality isEqualToString:@"max"]) {
+                            [[NSUserDefaults standardUserDefaults] setObject:@"high" forKey:qualityKey];
+                        }
+                    }
+                };
+                toggle.reloadsTableOnSwitchChange = YES;
+                toggle;
+            }),
             [SPKSetting switchCellWithTitle:@"Enhanced Media Resolution"
                                        icon:SPKSettingsIcon(@"hd")
                                 defaultsKey:@"downloads_enhanced_media_resolution"],

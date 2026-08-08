@@ -1,6 +1,8 @@
 #import <UIKit/UIKit.h>
 
-@class SPKMediaItem, SPKGalleryFile, SPKGallerySaveMetadata;
+#import "SPKMediaItem.h"  // for SPKMediaItemType
+
+@class SPKGalleryFile, SPKGallerySaveMetadata;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -27,6 +29,14 @@ typedef void (^SPKMediaPreviewPlaybackBlock)(void);
 @property (nonatomic, assign) BOOL isFromGallery;
 @property (nonatomic, weak, nullable) id<SPKFullScreenMediaPlayerDelegate> delegate;
 
+/// Silences the preview for a screen pushed over this player (a post or profile),
+/// remembering that the pause was ours.
+- (void)pauseForNavigationAway;
+/// Resumes what -pauseForNavigationAway paused, once that screen is closed. Needed
+/// because the player is presented *over*, never replaced, so it receives no
+/// appearance callbacks for the trip.
+- (void)resumeAfterNavigationBack;
+
 - (void)playItems:(NSArray<SPKMediaItem *> *)items
        startingAtIndex:(NSInteger)index
     fromViewController:(UIViewController *)presenter;
@@ -37,7 +47,11 @@ typedef void (^SPKMediaPreviewPlaybackBlock)(void);
 
 /// Bare, read-only preview of a local file: media + close + zoom only, no action toolbar and no
 /// metadata (so nothing attempts remote resolution). Used by the Files-import queue.
-+ (void)showLocalFilePreview:(NSURL *)fileURL;
+///
+/// The media type is required rather than sniffed from the extension, because the extension can lie:
+/// a Regram vault stores audio inside an `.mp4` container, which would otherwise open as a black
+/// "video" showing AVPlayer's generic QuickTime placeholder instead of the audio artwork overlay.
++ (void)showLocalFilePreview:(NSURL *)fileURL mediaType:(SPKMediaItemType)mediaType;
 
 + (void)showGalleryFiles:(NSArray<SPKGalleryFile *> *)files
          startingAtIndex:(NSInteger)index
@@ -79,6 +93,8 @@ typedef void (^SPKMediaPreviewPlaybackBlock)(void);
             resumePlayback:(nullable SPKMediaPreviewPlaybackBlock)resumePlayback;
 /// Profile / avatar long-press: sets Gallery source + optional username for “Save to Gallery”.
 + (void)showRemoteImageURL:(NSURL *)url profileUsername:(nullable NSString *)username;
+/// Read-only preview without bottom action toolbar (used by options sheet).
++ (void)showRemoteImageURLPreview:(NSURL *)url;
 
 @end
 

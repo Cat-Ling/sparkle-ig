@@ -12,7 +12,14 @@ FOUNDATION_EXPORT NSString *const kSPKGalleryGridColumnsKey;                    
 FOUNDATION_EXPORT NSString *const kSPKGalleryGridPinchDisabledKey;              // BOOL, YES disables pinch-to-zoom
 FOUNDATION_EXPORT NSString *const kSPKGalleryGridShowSourceUsernameDisabledKey; // BOOL, YES hides source icon + username overlays
 FOUNDATION_EXPORT NSString *const kSPKGalleryFolderBarPinDisabledKey;           // BOOL, YES unpins the folder bar (lets it scroll away)
+// BOOL, YES lists the files inside subfolders alongside the current folder's own,
+// so the whole gallery can be browsed from the root without entering folders.
+// Read it through [SPKUtils getBoolPref:] — it is per-account like other prefs.
+FOUNDATION_EXPORT NSString *const kSPKGalleryFlatBrowsingKey;
 FOUNDATION_EXPORT NSString *const kSPKGalleryGridControlsChangedNotification;
+// Posted when a pref that changes *which* files a gallery screen lists (as opposed
+// to how they look) is toggled, so open screens can refetch.
+FOUNDATION_EXPORT NSString *const kSPKGalleryBrowsingScopeChangedNotification;
 
 /// Whether the folder bar (subfolder chips) stays pinned to the top while
 /// scrolling. Defaults to YES; the backing pref stores the disabled state.

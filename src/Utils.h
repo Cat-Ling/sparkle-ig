@@ -113,6 +113,13 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 /// spk_localizedTimeComponent so dates follow the user's regional format.
 + (NSString *)spk_localizedDateComponentIncludingYear:(BOOL)includeYear;
 
+/// Recursively extracts the posted date (taken_at, created_at, upload_time, etc.) from an Instagram media object.
++ (nullable NSDate *)postedDateFromMediaObject:(nullable id)media;
+
+/// Formats a date into a localized date-and-time header string (e.g. "Jul 18, 2026 at 5:30 PM").
++ (nullable NSString *)spk_formattedDateHeader:(nullable NSDate *)date;
+
+
 + (NSString *)cacheAutoClearMode;
 + (BOOL)shouldAutomaticallyClearCacheNow;
 + (void)markCacheClearedNow;
@@ -146,8 +153,38 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 + (NSError *)errorWithDescription:(NSString *)errorDesc code:(NSInteger)errorCode;
 + (BOOL)openURL:(NSURL *)url;
 + (void)dismissPresentedViewControllers;
++ (nullable NSString *)sanitizedInstagramUsername:(nullable NSString *)rawUsername;
 + (BOOL)openInstagramProfileForUsername:(NSString *)username;
++ (BOOL)openInstagramProfileForUsername:(NSString *)username fromViewController:(nullable UIViewController *)presentingVC;
++ (BOOL)openInstagramProfileForUser:(nullable id)user pk:(nullable NSString *)pk username:(nullable NSString *)username fromViewController:(nullable UIViewController *)presentingVC;
+// Username -> pk, memoised for the session and showing the transient progress
+// pill while it is in flight. Completion runs on the main thread, with nil when
+// the username could not be resolved. Exposed so a caller that can PERSIST the
+// answer (the gallery) never has to look it up twice.
+//
+// fullName is the display name the handle carries RIGHT NOW, so a caller holding
+// a name from when the media was saved can tell whether the handle still belongs
+// to the same person. It is nil on a memo hit, where the answer is already known.
++ (void)resolvePKForUsername:(NSString *)username
+                  completion:(void (^)(NSString *_Nullable pk, NSString *_Nullable fullName))completion;
 + (BOOL)openInstagramMediaURL:(NSURL *)url;
+/// As above, but `dismiss` NO leaves whatever is presented on screen. Only for
+/// callers that intercept the resulting navigation themselves; with a modal still
+/// up, the router's push lands behind it and is invisible.
++ (BOOL)openInstagramMediaURL:(NSURL *)url dismissingPresentedViewControllers:(BOOL)dismiss;
+
+/// Presents an invisible full-screen host stack over `presentingVC` and pushes
+/// `viewController` onto it, so the push runs IG's own navigation transition and
+/// its swipe-back pops straight back to whatever was on screen. Returns NO when
+/// IGNavigationController cannot be subclassed, leaving the caller to fall back.
++ (BOOL)pushViewControllerOnNativeHost:(UIViewController *)viewController
+                    fromViewController:(nullable UIViewController *)presentingVC;
+/// As above. `onDismiss` runs when the pushed screen is popped and the presenter is
+/// live again -- the presenter gets no appearance callbacks of its own, because the
+/// host sits over it rather than replacing it.
++ (BOOL)pushViewControllerOnNativeHost:(UIViewController *)viewController
+                    fromViewController:(nullable UIViewController *)presentingVC
+                             onDismiss:(nullable void (^)(void))onDismiss;
 + (BOOL)openPhotosApp;
 + (nullable NSURL *)sanitizedInstagramShareURL:(NSURL *)url;
 + (nullable NSString *)appendImgIndex:(NSInteger)imgIndex toURLString:(nullable NSString *)urlString;

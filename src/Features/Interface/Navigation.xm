@@ -1,5 +1,7 @@
 #import "../../Utils.h"
+#import "../../App/SPKStabilityGuard.h"
 #import <objc/message.h>
+#import "../../App/SPKPerfMeter.h"
 
 static NSString *SPKSelectorForLaunchTabPreference(NSString *preference) {
     if ([preference isEqualToString:@"feed"])
@@ -15,7 +17,27 @@ static NSString *SPKSelectorForLaunchTabPreference(NSString *preference) {
     return nil;
 }
 
+static NSString *SPKSelectorForSurfaceIntent(IGMainAppSurfaceIntent *surface) {
+    if (!surface || ![surface isKindOfClass:%c(IGMainAppSurfaceIntent)])
+        return nil;
+    NSString *tab = [surface tabStringFromSurfaceIntent];
+    if ([tab isEqualToString:@"FEED"])
+        return @"_timelineButtonPressed";
+    if ([tab isEqualToString:@"CLIPS"])
+        return @"_discoverVideoButtonPressed";
+    if ([tab isEqualToString:@"DIRECT"])
+        return @"_directInboxButtonPressed";
+    if ([tab isEqualToString:@"SEARCH"])
+        return @"_exploreButtonPressed";
+    if ([tab isEqualToString:@"PROFILE"])
+        return @"_profileButtonPressed";
+    return nil;
+}
+
 BOOL isSurfaceShown(IGMainAppSurfaceIntent *surface) {
+    if (SPKStabilityGuardIsSafeStartupMode()) {
+        return YES;
+    }
     BOOL isShown = YES;
 
     // Feed
@@ -66,6 +88,19 @@ NSArray *filterSurfacesArray(NSArray *surfaces) {
     return filteredSurfaces;
 }
 
+static BOOL SPKIsMessagesOnlyMode(void) {
+    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
+    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
+    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
+    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
+    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
+    
+    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
+    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
+    
+    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
+}
+
 ///////////////////////////////////////////////
 
 %group SPKNavigationHooks
@@ -78,6 +113,25 @@ NSArray *filterSurfacesArray(NSArray *surfaces) {
 %end
 
 %hook IGTabBarController
+- (void)viewDidLoad {
+    %orig;
+    NSArray *surfaces = [SPKUtils getIvarForObj:self name:"_tabBarSurfaces"];
+    if (surfaces) {
+        [SPKUtils setIvarForObj:self name:"_tabBarSurfaces" value:filterSurfacesArray(surfaces)];
+    }
+}
+
+- (void)viewDidLayoutSubviews {
+    %orig;
+    SPK_PERF_SCOPE(@"Navigation.viewDidLayoutSubviews");
+    if (SPKStabilityGuardIsSafeStartupMode()) {
+        return;
+    }
+    if ([SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"] && SPKIsMessagesOnlyMode()) {
+        self.tabBar.hidden = YES;
+    }
+}
+
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
 
@@ -86,10 +140,71 @@ NSArray *filterSurfacesArray(NSArray *surfaces) {
         return;
     appliedLaunchTab = YES;
 
-    NSString *selectorName = SPKSelectorForLaunchTabPreference([SPKUtils getStringPref:@"interface_launch_tab"]);
+    NSString *launchPref = [SPKUtils getStringPref:@"interface_launch_tab"];
+    NSString *selectorName = SPKSelectorForLaunchTabPreference(launchPref);
+
+    NSArray *rawSurfaces = [SPKUtils getIvarForObj:self name:"_tabBarSurfaces"];
+    NSArray *enabledSurfaces = filterSurfacesArray(rawSurfaces);
+
+    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
+
+    if ([launchPref isEqualToString:@"default"]) {
+        BOOL feedIsEnabled = NO;
+        for (IGMainAppSurfaceIntent *s in enabledSurfaces) {
+            if ([[s tabStringFromSurfaceIntent] isEqualToString:@"FEED"]) {
+                feedIsEnabled = YES;
+                break;
+            }
+        }
+        if ((!feedIsEnabled || feedHidden) && enabledSurfaces.count > 0) {
+            selectorName = SPKSelectorForSurfaceIntent(enabledSurfaces.firstObject);
+        } else if (feedHidden) {
+            // Fallback preference check if surface array is unavailable
+            if (![SPKUtils getBoolPref:@"interface_hide_msgs_tab"]) {
+                selectorName = @"_directInboxButtonPressed";
+            } else if (![SPKUtils getBoolPref:@"interface_hide_reels_tab"]) {
+                selectorName = @"_discoverVideoButtonPressed";
+            } else if (![SPKUtils getBoolPref:@"interface_hide_explore_tab"]) {
+                selectorName = @"_exploreButtonPressed";
+            } else if (![SPKUtils getBoolPref:@"interface_hide_profile_tab"]) {
+                selectorName = @"_profileButtonPressed";
+            }
+        }
+    } else if (selectorName.length > 0) {
+        BOOL chosenIsEnabled = NO;
+        for (IGMainAppSurfaceIntent *s in enabledSurfaces) {
+            NSString *sel = SPKSelectorForSurfaceIntent(s);
+            if ([sel isEqualToString:selectorName]) {
+                chosenIsEnabled = YES;
+                break;
+            }
+        }
+        if (!chosenIsEnabled && enabledSurfaces.count > 0) {
+            selectorName = SPKSelectorForSurfaceIntent(enabledSurfaces.firstObject);
+        }
+    }
+
     SEL selector = selectorName.length > 0 ? NSSelectorFromString(selectorName) : nil;
     if (selector && [self respondsToSelector:selector]) {
         ((void (*)(id, SEL))objc_msgSend)(self, selector);
+    }
+
+    if (!SPKStabilityGuardIsSafeStartupMode()) {
+        if ([self respondsToSelector:@selector(_updateTabBarVisibilityForController:)] && self.selectedViewController) {
+            [self _updateTabBarVisibilityForController:self.selectedViewController];
+        }
+    }
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    if (SPKStabilityGuardIsSafeStartupMode()) {
+        return;
+    }
+    if ([SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"] && SPKIsMessagesOnlyMode()) {
+        if ([self respondsToSelector:@selector(_updateTabBarVisibilityForController:)] && self.selectedViewController) {
+            [self _updateTabBarVisibilityForController:self.selectedViewController];
+        }
     }
 }
 
@@ -111,6 +226,16 @@ NSArray *filterSurfacesArray(NSArray *surfaces) {
     }
 
     return button;
+}
+
+- (BOOL)_shouldTabBarBeHiddenForController:(id)controller {
+    if (SPKStabilityGuardIsSafeStartupMode()) {
+        return %orig;
+    }
+    if ([SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"] && SPKIsMessagesOnlyMode()) {
+        return YES;
+    }
+    return %orig;
 }
 %end
 
@@ -148,6 +273,7 @@ NSArray *filterSurfacesArray(NSArray *surfaces) {
 %hook IGHomeFeedHeaderView
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"Navigation.didMoveToWindow");
 
     if ([SPKUtils getBoolPref:@"interface_hide_msgs_tab"]) {
         // IG 436+ is a Swift class: the DM button is the `directButton` @property
@@ -173,6 +299,26 @@ NSArray *filterSurfacesArray(NSArray *surfaces) {
 }
 %end
 
+%hook IGMainAppScrollingContainerViewController
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture {
+    if ([SPKUtils getBoolPref:@"interface_hide_feed_tab"]) {
+        if ([gesture isKindOfClass:[UIPanGestureRecognizer class]]) {
+            UIPanGestureRecognizer *pan = (UIPanGestureRecognizer *)gesture;
+            CGPoint velocity = [pan velocityInView:pan.view];
+            CGPoint translation = [pan translationInView:pan.view];
+            if (velocity.x > 0 || translation.x > 0) {
+                UIViewController *activeVC = [self valueForKey:@"_activeViewController"];
+                UIViewController *creationVC = [self valueForKey:@"_creationViewController"];
+                if (activeVC && creationVC && activeVC != creationVC) {
+                    return NO;
+                }
+            }
+        }
+    }
+    return %orig;
+}
+%end
+
 %end
 
 extern "C" void SPKInstallNavigationHooksIfNeeded(void) {
@@ -184,7 +330,8 @@ extern "C" void SPKInstallNavigationHooksIfNeeded(void) {
                          [SPKUtils getBoolPref:@"interface_hide_msgs_tab"] ||
                          [SPKUtils getBoolPref:@"interface_hide_explore_tab"] ||
                          [SPKUtils getBoolPref:@"interface_hide_profile_tab"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_create_tab"];
+                         [SPKUtils getBoolPref:@"interface_hide_create_tab"] ||
+                         [SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"];
     if (!shouldInstall)
         return;
 

@@ -4,6 +4,7 @@
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Utils.h"
 #import "CaptureHiding.h"
+#import "../../App/SPKPerfMeter.h"
 
 static const void *kSPKCaptureFieldKey = &kSPKCaptureFieldKey;
 static const void *kSPKCaptureCanvasKey = &kSPKCaptureCanvasKey;
@@ -172,6 +173,7 @@ static void SPKEnsureSecureCanvas(UIView *button) {
 
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"CaptureHiding.didMoveToWindow");
     // Fast path: 99.9% of views have tag 0 — exit without any ObjC messaging.
     if (!SPKCaptureTagMayMatch(self.tag))
         return;
@@ -183,11 +185,16 @@ static void SPKEnsureSecureCanvas(UIView *button) {
 }
 
 - (void)addSubview:(UIView *)view {
-    // Fast path: skip ObjC work for the overwhelming majority of views.
+    // Deliberately unscoped: this hooks every UIView in the process, so a scope
+    // spanning %orig bills UIKit's own addSubview: work to Sparkle. Our share is
+    // the two integer compares below, and measuring those would cost more than
+    // they do. The redirect branch, which is the only part that does real work,
+    // is scoped instead.
     if (!SPKCaptureTagMayMatch(self.tag)) {
         %orig;
         return;
     }
+    SPK_PERF_SCOPE(@"CaptureHiding.redirect");
     if (![self isKindOfClass:SPKChromeButtonClass()] &&
         [SPKCaptureHiddenTags() containsObject:@(self.tag)]) {
         // If this is the secure field itself, let it pass

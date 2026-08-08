@@ -42,6 +42,13 @@ typedef NS_ENUM(NSInteger, SPKPAListKind) {
 // menu, so the owner can wipe stored visits. Optional.
 @property (nonatomic, copy, nullable) void (^onClearHistory)(void);
 
+// Change lists: setting this enables swipe-to-delete on the rows, and hands back the
+// item the user removed (a `SPKProfileAnalyzerUser`, or a
+// `SPKProfileAnalyzerProfileChange` for Profile Updates) so the owner can drop the
+// matching event from the durable change log. Setting it is what turns the swipe on,
+// so a list whose owner cannot persist a deletion never offers one. Optional.
+@property (nonatomic, copy, nullable) void (^onRemoveEntry)(id item);
+
 @end
 
 NS_ASSUME_NONNULL_END

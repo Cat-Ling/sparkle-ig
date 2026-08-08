@@ -24,6 +24,9 @@
 @property (nonatomic, strong) UIView *highlightOverlay;
 @property (nonatomic, strong) UIView *separator;
 @property (nonatomic, strong) NSLayoutConstraint *thumbnailLeadingConstraint;
+/// Bumped on every reconfigure so an async thumbnail that finishes after the cell
+/// has been recycled is dropped instead of painted onto the wrong row.
+@property (nonatomic, assign) NSUInteger thumbnailToken;
 
 @end
 
@@ -257,22 +260,18 @@
 
 - (void)prepareForReuse {
     [super prepareForReuse];
-    self.thumbnailView.image = nil;
-    self.titleLabel.text = nil;
-    self.technicalLabel.text = nil;
-    self.pillLabel.text = nil;
-    self.dateLabel.text = nil;
-    [self setFolderContextName:nil];
-    self.favoriteIcon.hidden = YES;
+    // Minimal for the same reason as SPKGalleryGridCell: configureWithGalleryFile:
+    // (plus the setMoreActionsMenu: that callers pair with it) reassigns all of
+    // this immediately after dequeue, and clearing it here costs an Auto Layout
+    // invalidation per property, per cell -- which measured as essentially the
+    // entire dequeue cost while scrolling.
+    self.thumbnailToken++;
     self.file = nil;
+    self.thumbnailView.image = nil;
+    // The menu is the one thing not every caller sets, and a stale one would
+    // attach the previous row's actions to this cell.
     self.moreButton.menu = nil;
     self.moreButton.showsMenuAsPrimaryAction = NO;
-    self.selectionIndicator.hidden = YES;
-    self.selectionIndicator.image = nil;
-    self.selectionIndicator.alpha = 0.0;
-    self.thumbnailLeadingConstraint.constant = 16.0;
-    self.moreButton.hidden = NO;
-    self.moreButton.alpha = 1.0;
 }
 
 - (UIImage *)selectionIndicatorImageSelected:(BOOL)selected {
@@ -315,21 +314,21 @@
 
     [self setSelectionMode:selectionMode selected:selected animated:NO];
 
-    UIImage *thumb = [SPKGalleryFile loadThumbnailForFile:file];
+    // In-memory hits only on the main thread; disk reads and decodes happen on a
+    // background queue so scrolling never stalls on them. See the grid cell.
+    NSUInteger token = ++self.thumbnailToken;
+    UIImage *thumb = [SPKGalleryFile cachedThumbnailForFile:file];
     if (thumb) {
         self.thumbnailView.image = thumb;
     } else {
+        self.thumbnailView.image = nil;
         __weak typeof(self) weakSelf = self;
-        [SPKGalleryFile generateThumbnailForFile:file
-                                      completion:^(BOOL ok) {
-                                          if (!ok)
-                                              return;
-                                          if (weakSelf.file != file)
-                                              return;
-                                          UIImage *img = [SPKGalleryFile loadThumbnailForFile:file];
-                                          if (img)
-                                              weakSelf.thumbnailView.image = img;
-                                      }];
+        [SPKGalleryFile loadThumbnailAsyncForFile:file
+                                       completion:^(UIImage *loaded) {
+                                           if (loaded && weakSelf.thumbnailToken == token) {
+                                               weakSelf.thumbnailView.image = loaded;
+                                           }
+                                       }];
     }
 }
 
@@ -339,19 +338,19 @@
         self.selectionIndicator.hidden = NO;
     }
     if (!selectionMode) {
-        self.moreButton.hidden = NO;
+        self.moreButton.hidden = (self.moreButton.menu == nil);
     }
 
     self.thumbnailLeadingConstraint.constant = selectionMode ? 56.0 : 16.0;
 
     void (^applyState)(void) = ^{
         self.selectionIndicator.alpha = selectionMode ? 1.0 : 0.0;
-        self.moreButton.alpha = selectionMode ? 0.0 : 1.0;
+        self.moreButton.alpha = (selectionMode || self.moreButton.menu == nil) ? 0.0 : 1.0;
         [self.contentView layoutIfNeeded];
     };
     void (^finishState)(void) = ^{
         self.selectionIndicator.hidden = !selectionMode;
-        self.moreButton.hidden = selectionMode;
+        self.moreButton.hidden = selectionMode || (self.moreButton.menu == nil);
     };
 
     if (animated) {
@@ -371,6 +370,14 @@
 - (void)setMoreActionsMenu:(UIMenu *)menu {
     self.moreButton.menu = menu;
     self.moreButton.showsMenuAsPrimaryAction = (menu != nil);
+
+    BOOL hidden = (menu == nil);
+    self.moreButton.hidden = hidden;
+    // Callers configure the cell first and attach the menu second, so
+    // setSelectionMode:selected:animated: has already run and computed the
+    // button's alpha from a menu that was still nil -- leaving it at 0. Without
+    // re-deriving alpha here the button unhides but stays fully transparent.
+    self.moreButton.alpha = hidden ? 0.0 : 1.0;
 }
 
 @end

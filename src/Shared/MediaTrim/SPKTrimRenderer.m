@@ -10,6 +10,72 @@ static NSError *SPKTrimRendererError(NSString *description) {
                            userInfo:@{NSLocalizedDescriptionKey : description ?: @"Render failed"}];
 }
 
+// The video's size as the viewer sees it — natural size with the track's
+// display transform applied. Both crop backends work in this space.
+static CGSize SPKTrimOrientedSize(AVAsset *asset) {
+    AVAssetTrack *track = [asset tracksWithMediaType:AVMediaTypeVideo].firstObject;
+    if (!track)
+        return CGSizeZero;
+    CGSize rendered = CGSizeApplyAffineTransform(track.naturalSize, track.preferredTransform);
+    return CGSizeMake(fabs(rendered.width), fabs(rendered.height));
+}
+
+// Builds the video composition that realizes a crop on the AVFoundation fallback
+// path. The transform is assembled in application order — orient, rotate, mirror,
+// then shift the crop origin to (0,0) — because every step but the first needs a
+// translation to keep the picture in the positive quadrant AVFoundation renders.
+static AVVideoComposition *SPKTrimCropComposition(AVAsset *asset, SPKTrimCrop *crop) {
+    AVAssetTrack *track = [asset tracksWithMediaType:AVMediaTypeVideo].firstObject;
+    if (!track)
+        return nil;
+    CGSize oriented = SPKTrimOrientedSize(asset);
+    if (oriented.width <= 0.0 || oriented.height <= 0.0)
+        return nil;
+    CGRect pixels = [crop pixelRectForOrientedSize:oriented];
+    if (pixels.size.width <= 0.0 || pixels.size.height <= 0.0)
+        return nil;
+
+    // 1. natural -> oriented.
+    CGAffineTransform t = track.preferredTransform;
+
+    // 2. quarter turns clockwise. In AVFoundation's y-down render space a
+    //    positive rotation is clockwise; each turn leaves the picture in a
+    //    negative quadrant, so it is translated straight back.
+    CGSize size = oriented;
+    for (NSInteger i = 0; i < crop.rotationQuarters; i++) {
+        t = CGAffineTransformConcat(t, CGAffineTransformMakeRotation((CGFloat)M_PI_2));
+        t = CGAffineTransformConcat(t, CGAffineTransformMakeTranslation(size.height, 0.0));
+        size = CGSizeMake(size.height, size.width);
+    }
+
+    // 3. horizontal mirror within the rotated frame.
+    if (crop.mirrored) {
+        t = CGAffineTransformConcat(t, CGAffineTransformMakeScale(-1.0, 1.0));
+        t = CGAffineTransformConcat(t, CGAffineTransformMakeTranslation(size.width, 0.0));
+    }
+
+    // 4. move the crop rect's origin to the render origin.
+    t = CGAffineTransformConcat(t, CGAffineTransformMakeTranslation(-pixels.origin.x, -pixels.origin.y));
+
+    AVMutableVideoCompositionLayerInstruction *layer =
+        [AVMutableVideoCompositionLayerInstruction videoCompositionLayerInstructionWithAssetTrack:track];
+    [layer setTransform:t atTime:kCMTimeZero];
+
+    AVMutableVideoCompositionInstruction *instruction = [AVMutableVideoCompositionInstruction videoCompositionInstruction];
+    instruction.timeRange = CMTimeRangeMake(kCMTimeZero, asset.duration);
+    instruction.layerInstructions = @[ layer ];
+
+    AVMutableVideoComposition *composition = [AVMutableVideoComposition videoComposition];
+    composition.renderSize = pixels.size;
+    CMTime frameDuration = track.minFrameDuration;
+    if (!CMTIME_IS_VALID(frameDuration) || CMTIME_COMPARE_INLINE(frameDuration, ==, kCMTimeZero)) {
+        frameDuration = CMTimeMake(1, 30);
+    }
+    composition.frameDuration = frameDuration;
+    composition.instructions = @[ instruction ];
+    return composition;
+}
+
 @interface SPKTrimRenderer ()
 + (void)generateFrameForAsset:(AVAsset *)asset
                     atSeconds:(NSTimeInterval)seconds
@@ -38,7 +104,7 @@ static NSURL *SPKTrimWriteCGImage(CGImageRef image, NSString *basename) {
     }
 
     NSURL *jpgURL = [NSURL fileURLWithPath:[tmp stringByAppendingPathComponent:[basename stringByAppendingPathExtension:@"jpg"]]];
-    NSData *data = UIImageJPEGRepresentation([UIImage imageWithCGImage:image], 0.95);
+    NSData *data = UIImageJPEGRepresentation([UIImage imageWithCGImage:image], 0.85);
     if (data && [data writeToURL:jpgURL atomically:YES])
         return jpgURL;
     return nil;
@@ -52,14 +118,23 @@ static NSURL *SPKTrimWriteCGImage(CGImageRef image, NSString *basename) {
                          asset:(AVAsset *)asset
                   startSeconds:(NSTimeInterval)startSeconds
                durationSeconds:(NSTimeInterval)durationSeconds
+                          crop:(SPKTrimCrop *)crop
                       basename:(NSString *)basename
                       progress:(SPKTrimRenderProgressBlock)progress
                     completion:(SPKTrimRenderCompletionBlock)completion
                      cancelOut:(void (^)(dispatch_block_t))cancelOut {
+    if (crop.isIdentity)
+        crop = nil;
+    CGSize oriented = SPKTrimOrientedSize(asset ?: [AVURLAsset URLAssetWithURL:sourceURL options:nil]);
+    NSString *cropFilter = [crop ffmpegFilterForOrientedSize:oriented];
+    CGRect cropPixels = crop ? [crop pixelRectForOrientedSize:oriented] : CGRectZero;
+
     if ([SPKMediaFFmpeg isAvailable]) {
         [SPKMediaFFmpeg trimVideoFileURL:sourceURL
             startSeconds:startSeconds
             durationSeconds:durationSeconds
+            cropFilter:cropFilter
+            croppedSize:cropPixels.size
             preferredBasename:basename
             progress:^(double p, NSString *stage) {
                 if (progress)
@@ -81,6 +156,7 @@ static NSURL *SPKTrimWriteCGImage(CGImageRef image, NSString *basename) {
                                            asset:asset
                                     startSeconds:startSeconds
                                  durationSeconds:durationSeconds
+                                            crop:crop
                                         basename:basename
                                       completion:completion];
 }
@@ -91,6 +167,7 @@ static NSURL *SPKTrimWriteCGImage(CGImageRef image, NSString *basename) {
                                          asset:(AVAsset *)asset
                                   startSeconds:(NSTimeInterval)startSeconds
                                durationSeconds:(NSTimeInterval)durationSeconds
+                                          crop:(SPKTrimCrop *)crop
                                       basename:(NSString *)basename
                                     completion:(SPKTrimRenderCompletionBlock)completion {
     AVAsset *workingAsset = asset ?: [AVURLAsset URLAssetWithURL:sourceURL options:nil];
@@ -111,6 +188,11 @@ static NSURL *SPKTrimWriteCGImage(CGImageRef image, NSString *basename) {
     export.outputFileType = AVFileTypeMPEG4;
     export.shouldOptimizeForNetworkUse = YES;
     export.timeRange = CMTimeRangeMake(start, duration);
+    if (crop && !crop.isIdentity) {
+        AVVideoComposition *composition = SPKTrimCropComposition(workingAsset, crop);
+        if (composition)
+            export.videoComposition = composition;
+    }
 
     [export exportAsynchronouslyWithCompletionHandler:^{
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -132,6 +214,7 @@ static NSURL *SPKTrimWriteCGImage(CGImageRef image, NSString *basename) {
                           audioURL:(NSURL *)audioURL
                       startSeconds:(NSTimeInterval)startSeconds
                    durationSeconds:(NSTimeInterval)durationSeconds
+                              crop:(SPKTrimCrop *)crop
                              width:(NSInteger)width
                             height:(NSInteger)height
                           basename:(NSString *)basename
@@ -143,10 +226,21 @@ static NSURL *SPKTrimWriteCGImage(CGImageRef image, NSString *basename) {
             completion(nil, SPKTrimRendererError(@"FFmpeg is required to merge this quality."));
         return;
     }
+    NSString *cropFilter = nil;
+    if (crop && !crop.isIdentity) {
+        CGSize oriented = (width > 0 && height > 0)
+                              ? CGSizeMake(width, height)
+                              : SPKTrimOrientedSize([AVURLAsset URLAssetWithURL:videoURL options:nil]);
+        cropFilter = [crop ffmpegFilterForOrientedSize:oriented];
+        CGRect pixels = [crop pixelRectForOrientedSize:oriented];
+        width = (NSInteger)lround(pixels.size.width);
+        height = (NSInteger)lround(pixels.size.height);
+    }
     [SPKMediaFFmpeg trimMergeVideoURL:videoURL
         audioURL:audioURL
         startSeconds:startSeconds
         durationSeconds:durationSeconds
+        cropFilter:cropFilter
         preferredBasename:basename
         width:width
         height:height

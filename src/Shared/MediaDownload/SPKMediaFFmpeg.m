@@ -641,10 +641,14 @@ static void SPKFFmpegAppendTrimAudioOptions(NSMutableArray<NSString *> *args, SP
 // mirrors the advanced merge's codec/CRF/bitrate/profile/level/pixel-format/
 // max-resolution options. Shared by the single-input trim and the DASH
 // trim+merge so both respect the same settings.
+// `leadingVideoFilter` runs before everything else in the -vf chain: it is the
+// framing edit (crop / transpose / hflip), which has to happen before any
+// max-resolution scale so the scale applies to the cropped picture.
 static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
                                               NSInteger width,
                                               NSInteger height,
                                               NSInteger sourceBitrate,
+                                              NSString *leadingVideoFilter,
                                               NSString *extraVideoFilter) {
     BOOL useAdvanced = [SPKUtils getBoolPref:@"downloads_adv_encoding"];
 
@@ -662,8 +666,15 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
             @"-level",
             @"4.0",
         ]];
+        NSMutableArray<NSString *> *basicFilters = [NSMutableArray array];
+        if (leadingVideoFilter.length > 0) {
+            [basicFilters addObject:leadingVideoFilter];
+        }
         if (extraVideoFilter.length > 0) {
-            [args addObjectsFromArray:@[ @"-vf", extraVideoFilter ]];
+            [basicFilters addObject:extraVideoFilter];
+        }
+        if (basicFilters.count > 0) {
+            [args addObjectsFromArray:@[ @"-vf", [basicFilters componentsJoinedByString:@","] ]];
         }
         return;
     }
@@ -671,6 +682,9 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
     // Collect video filters (max-resolution scale + any caller-supplied filter,
     // e.g. a setpts re-stamp) into a single -vf chain.
     NSMutableArray<NSString *> *videoFilters = [NSMutableArray array];
+    if (leadingVideoFilter.length > 0) {
+        [videoFilters addObject:leadingVideoFilter];
+    }
     NSString *maxResolution = SPKFFmpegStringPref(@"downloads_encoding_max_resolution", @"original");
     NSInteger targetMaxResolution = [maxResolution isEqualToString:@"original"] ? 0 : MAX(maxResolution.integerValue, 0);
     if (targetMaxResolution > 0 && width > 0 && height > 0) {
@@ -739,6 +753,7 @@ static NSArray<NSString *> *SPKFFmpegTrimArguments(NSURL *videoFileURL,
                                                    NSInteger width,
                                                    NSInteger height,
                                                    NSInteger sourceBitrate,
+                                                   NSString *cropFilter,
                                                    SPKFFmpegTrimAudioMode audioMode) {
     NSMutableArray<NSString *> *args = [NSMutableArray arrayWithArray:@[
         @"-y",
@@ -757,7 +772,7 @@ static NSArray<NSString *> *SPKFFmpegTrimArguments(NSURL *videoFileURL,
         [args addObjectsFromArray:@[ @"-map", @"0:v:0", @"-map", @"0:a:0" ]];
     }
 
-    SPKFFmpegAppendVideoEncodeOptions(args, width, height, sourceBitrate, nil);
+    SPKFFmpegAppendVideoEncodeOptions(args, width, height, sourceBitrate, cropFilter, nil);
     SPKFFmpegAppendTrimAudioOptions(args, audioMode);
     [args addObject:outputURL.path];
     return args;
@@ -775,7 +790,8 @@ static NSArray<NSString *> *SPKFFmpegTrimMergeArguments(NSString *videoSource,
                                                         NSTimeInterval startSeconds,
                                                         NSTimeInterval durationSeconds,
                                                         NSInteger width,
-                                                        NSInteger height) {
+                                                        NSInteger height,
+                                                        NSString *cropFilter) {
     NSMutableArray<NSString *> *args = [NSMutableArray arrayWithArray:@[
         @"-y",
         @"-hide_banner",
@@ -792,7 +808,7 @@ static NSArray<NSString *> *SPKFFmpegTrimMergeArguments(NSString *videoSource,
         @"-map",
         @"1:a:0",
     ]];
-    SPKFFmpegAppendVideoEncodeOptions(args, width, height, 0, nil);
+    SPKFFmpegAppendVideoEncodeOptions(args, width, height, 0, cropFilter, nil);
     SPKFFmpegAppendTrimAudioOptions(args, SPKFFmpegTrimAudioAAC);
     [args addObject:outputURL.path];
     return args;
@@ -816,6 +832,72 @@ static NSError *SPKFFmpegError(NSString *description, NSInteger code) {
     return [NSError errorWithDomain:@"Sparkle.MediaFFmpeg"
                                code:code
                            userInfo:@{NSLocalizedDescriptionKey : description ?: @"FFmpeg failed"}];
+}
+
+/// FFmpeg's failure output is the entire session log: banner, build flags, then
+/// the input path, and only somewhere in there the actual reason. Surfacing that
+/// verbatim produces a notification that is all path and no reason, so distil it
+/// to the one line that says what went wrong. The full log is still written to
+/// the FFmpeg logs directory and carried on the error under SPKFFmpegLogKey.
+NSString *const SPKFFmpegLogKey = @"SPKFFmpegLog";
+
+static NSString *SPKFFmpegConciseFailureMessage(NSString *logs) {
+    if (logs.length == 0)
+        return @"FFmpeg command failed";
+
+    static NSArray<NSString *> *markers = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        markers = @[ @"error", @"invalid", @"unable", @"no such file", @"not supported",
+                     @"unsupported", @"unknown", @"failed", @"denied", @"permission" ];
+    });
+
+    NSCharacterSet *whitespace = [NSCharacterSet whitespaceAndNewlineCharacterSet];
+    NSString *chosen = nil;
+    NSString *lastNonEmpty = nil;
+    for (NSString *raw in [logs componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]]) {
+        NSString *line = [raw stringByTrimmingCharactersInSet:whitespace];
+        if (line.length == 0)
+            continue;
+        lastNonEmpty = line;
+        // "Conversion failed!" is FFmpeg's last word on every failure and says
+        // nothing; the useful line is the one before it.
+        if ([line hasPrefix:@"Conversion failed"])
+            continue;
+        NSString *lowered = line.lowercaseString;
+        for (NSString *marker in markers) {
+            if ([lowered containsString:marker]) {
+                chosen = line;
+                break;
+            }
+        }
+    }
+    NSString *message = chosen ?: lastNonEmpty;
+    if (message.length == 0)
+        return @"FFmpeg command failed";
+
+    // Lines about a file are prefixed with its full path; the reason follows.
+    if ([message hasPrefix:@"/"]) {
+        NSRange separator = [message rangeOfString:@": "];
+        if (separator.location != NSNotFound && separator.location + separator.length < message.length) {
+            message = [message substringFromIndex:separator.location + separator.length];
+        } else {
+            message = message.lastPathComponent;
+        }
+    }
+    if (message.length > 160) {
+        message = [[message substringToIndex:159] stringByAppendingString:@"…"];
+    }
+    return message;
+}
+
+static NSError *SPKFFmpegErrorWithLog(NSString *description, NSInteger code, NSString *logs) {
+    NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
+    userInfo[NSLocalizedDescriptionKey] = description ?: @"FFmpeg failed";
+    if (logs.length > 0) {
+        userInfo[SPKFFmpegLogKey] = logs;
+    }
+    return [NSError errorWithDomain:@"Sparkle.MediaFFmpeg" code:code userInfo:userInfo];
 }
 
 // Pre-convert an arbitrary audio source (including xHE-AAC, which the bundled
@@ -978,8 +1060,14 @@ static void _SPKFFmpegRunAsyncImpl(id commandOrArgs,
                 completion(successURL, nil);
             return;
         }
-        if (completion)
-            completion(nil, SPKFFmpegError(description, cancelled ? NSUserCancelledError : 3));
+        if (completion) {
+            NSString *message = cancelled ? @"Cancelled" : SPKFFmpegConciseFailureMessage(logs);
+            if (!cancelled) {
+                SPKLog(@"FFmpeg", @"[Sparkle] command failed: %@ (full log in %@)", message,
+                       SPKFFmpegLogsDirectoryPath());
+            }
+            completion(nil, SPKFFmpegErrorWithLog(message, cancelled ? NSUserCancelledError : 3, logs));
+        }
     };
 
     id logBlock = ^(__unused id log) {
@@ -1815,6 +1903,8 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
 + (void)trimVideoFileURL:(NSURL *)videoFileURL
             startSeconds:(NSTimeInterval)startSeconds
          durationSeconds:(NSTimeInterval)durationSeconds
+              cropFilter:(NSString *)cropFilter
+             croppedSize:(CGSize)croppedSize
        preferredBasename:(NSString *)preferredBasename
                 progress:(SPKMediaFFmpegProgressBlock)progress
               completion:(SPKMediaFFmpegCompletionBlock)completion
@@ -1837,6 +1927,12 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         width = (NSInteger)lround(fabs(rendered.width));
         height = (NSInteger)lround(fabs(rendered.height));
     }
+    // With a crop in the chain the encoder sees the cropped picture, so the
+    // max-resolution decision has to be made against that size.
+    if (croppedSize.width > 0.0 && croppedSize.height > 0.0) {
+        width = (NSInteger)lround(croppedSize.width);
+        height = (NSInteger)lround(croppedSize.height);
+    }
 
     NSArray<NSNumber *> *audioModes = hasAudio
                                           ? @[ @(SPKFFmpegTrimAudioAAC), @(SPKFFmpegTrimAudioCopy), @(SPKFFmpegTrimAudioNone) ]
@@ -1852,7 +1948,7 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         [attempts addObject:@{
             @"identifier" : [NSString stringWithFormat:@"trim-%ld", (long)mode],
             @"stage" : @"Trimming video",
-            @"arguments" : SPKFFmpegTrimArguments(videoFileURL, encodeURL, startSeconds, durationSeconds, width, height, 0, mode),
+            @"arguments" : SPKFFmpegTrimArguments(videoFileURL, encodeURL, startSeconds, durationSeconds, width, height, 0, cropFilter, mode),
             @"mainOutputURL" : encodeURL,
             @"postProcessArguments" : SPKFFmpegFaststartArguments(encodeURL, outputURL),
             @"cleanupPaths" : @[ encodeURL.path ?: @"" ]
@@ -1876,6 +1972,7 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
                  audioURL:(NSURL *)audioURL
              startSeconds:(NSTimeInterval)startSeconds
           durationSeconds:(NSTimeInterval)durationSeconds
+               cropFilter:(NSString *)cropFilter
         preferredBasename:(NSString *)preferredBasename
                     width:(NSInteger)width
                    height:(NSInteger)height
@@ -1901,7 +1998,7 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         NSArray<NSDictionary<NSString *, id> *> *attempts = @[ @{
             @"identifier" : @"trim-merge",
             @"stage" : @"Trimming video",
-            @"arguments" : SPKFFmpegTrimMergeArguments(videoSource, audioSource, encodeURL, startSeconds, durationSeconds, width, height),
+            @"arguments" : SPKFFmpegTrimMergeArguments(videoSource, audioSource, encodeURL, startSeconds, durationSeconds, width, height, cropFilter),
             @"mainOutputURL" : encodeURL,
             @"postProcessArguments" : SPKFFmpegFaststartArguments(encodeURL, outputURL),
             @"cleanupPaths" : @[ encodeURL.path ?: @"" ]

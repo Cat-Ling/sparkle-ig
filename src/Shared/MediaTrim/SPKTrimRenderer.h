@@ -1,6 +1,8 @@
 #import <AVFoundation/AVFoundation.h>
 #import <Foundation/Foundation.h>
 
+#import "SPKTrimCrop.h"
+
 NS_ASSUME_NONNULL_BEGIN
 
 typedef void (^SPKTrimRenderProgressBlock)(double progress);
@@ -12,11 +14,13 @@ typedef void (^SPKTrimRenderCompletionBlock)(NSURL *_Nullable outputURL, NSError
 
 /// Renders a frame-accurate trimmed clip to a temp mp4. Uses the FFmpeg pipeline
 /// (libx264, honoring `downloads_encoding_*` prefs) when available, otherwise
-/// falls back to `AVAssetExportSession`.
+/// falls back to `AVAssetExportSession`. A non-nil `crop` is applied in the same
+/// pass (an FFmpeg filter chain, or a video composition on the fallback path).
 + (void)renderTrimForSourceURL:(NSURL *)sourceURL
                          asset:(nullable AVAsset *)asset
                   startSeconds:(NSTimeInterval)startSeconds
                durationSeconds:(NSTimeInterval)durationSeconds
+                          crop:(nullable SPKTrimCrop *)crop
                       basename:(NSString *)basename
                       progress:(nullable SPKTrimRenderProgressBlock)progress
                     completion:(SPKTrimRenderCompletionBlock)completion
@@ -29,6 +33,7 @@ typedef void (^SPKTrimRenderCompletionBlock)(NSURL *_Nullable outputURL, NSError
                           audioURL:(NSURL *)audioURL
                       startSeconds:(NSTimeInterval)startSeconds
                    durationSeconds:(NSTimeInterval)durationSeconds
+                              crop:(nullable SPKTrimCrop *)crop
                              width:(NSInteger)width
                             height:(NSInteger)height
                           basename:(NSString *)basename

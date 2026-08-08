@@ -6,6 +6,7 @@
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../../Features/Instants/InstantsResolver.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 // The aggregated media viewer (IGDirectAggregatedMediaViewerViewController) is the
 // full-screen viewer opened when tapping a permanent photo/video in a DM thread
@@ -315,6 +316,7 @@ static void SPKAggregatedForceSavable(UIViewController *controller) {
 %hook SPKAggregatedTitleView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"AggregatedMediaActionButton.layoutSubviews");
     if (SPKAggregatedActionButtonEnabled()) {
         SPKInstallAggregatedActionButton((UIView *)self);
     } else {

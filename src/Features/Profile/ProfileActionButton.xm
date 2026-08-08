@@ -12,6 +12,8 @@
 #import "../../Shared/Gallery/SPKGalleryOriginController.h"
 #import "../../Shared/Gallery/SPKGallerySaveMetadata.h"
 #import "../../Shared/MediaPreview/SPKFullScreenMediaPlayer.h"
+#import "../../Shared/UI/SPKChromeGlassMirror.h"
+#import "../../App/SPKPerfMeter.h"
 
 static CGFloat const kSPKProfileActionButtonWidth = 44.0;
 static CGFloat const kSPKProfileActionButtonHeight = 44.0;
@@ -160,9 +162,8 @@ static UIViewController *SPKProfileSourceController(id sourceObject, UIView *sou
 @property (nonatomic, weak) id sourceObject;
 @property (nonatomic, assign) BOOL spkDidConfigure;
 @property (nonatomic, assign) BOOL fallbackToCurrentUser;
-@property (nonatomic, strong) UIVisualEffectView *spkGlassView;
+@property (nonatomic, strong) UIView *spkGlassView;
 @property (nonatomic, assign) BOOL spkGlassUnavailable;
-@property (nonatomic, strong) CADisplayLink *spkGlassSyncLink;
 @end
 
 static void SPKConfigureProfileActionButton(SPKProfileHeaderActionButton *button);
@@ -192,6 +193,7 @@ static void SPKProfileUpdateGlass(SPKProfileHeaderActionButton *button, UIView *
 }
 
 - (void)didMoveToWindow {
+    SPK_PERF_SCOPE(@"ProfileActionButton.didMoveToWindow");
     [super didMoveToWindow];
     if (self.window && !self.spkDidConfigure) {
         self.spkDidConfigure = YES;
@@ -199,45 +201,9 @@ static void SPKProfileUpdateGlass(SPKProfileHeaderActionButton *button, UIView *
             SPKConfigureProfileActionButton(self);
         });
     }
-    // The Liquid Glass bubble fades with scroll offset, which doesn't always
-    // re-run the header's layoutSubviews (e.g. scrolling back up to the top). A
-    // display link keeps our bubble's alpha tracking IG's continuously while the
-    // button is on screen; it's paused as soon as we leave the window.
-    if (self.window) {
-        [self spkStartGlassSync];
-    } else {
-        [self spkStopGlassSync];
-    }
-}
-
-- (void)spkStartGlassSync {
-    if (self.spkGlassUnavailable || self.spkGlassSyncLink)
-        return;
-    CADisplayLink *link = [CADisplayLink displayLinkWithTarget:self selector:@selector(spkGlassSyncTick:)];
-    [link addToRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
-    self.spkGlassSyncLink = link;
-}
-
-- (void)spkStopGlassSync {
-    [self.spkGlassSyncLink invalidate];
-    self.spkGlassSyncLink = nil;
-}
-
-- (void)spkGlassSyncTick:(CADisplayLink *)link {
-    UIView *header = self.superview;
-    if (!self.window || ![header isKindOfClass:[UIView class]]) {
-        [self spkStopGlassSync];
-        return;
-    }
-    if (self.spkGlassUnavailable) {
-        [self spkStopGlassSync];
-        return;
-    }
-    SPKProfileUpdateGlass(self, header);
-}
-
-- (void)dealloc {
-    [_spkGlassSyncLink invalidate];
+    // The bubble stays in sync without polling: SPKChromeGlassMirror hooks setAlpha:
+    // on IG's own bubbles, so the header is marked for layout whenever IG fades one
+    // (the scroll-collapse doesn't otherwise re-run its layoutSubviews).
 }
 
 - (void)setSourceObject:(id)sourceObject {
@@ -475,75 +441,16 @@ static BOOL SPKProfileIsOwnProfile(id headerView) {
 
 // MARK: - Liquid glass background (iOS 26)
 
-// IG's nav buttons render a Liquid Glass "bubble" behind the icon that fades in
-// with scroll (alpha 0 flush -> 1 collapsed). That fade lives on the private
-// IGLiquidGlass *TouchForwardingVisualEffectView*. We mirror its alpha so our
-// overlay button matches. Returns < 0 when no glass exists (iOS < 26 / flush).
-static void SPKProfileAccumulateGlassAlpha(UIView *view, CGFloat *maxAlpha) {
-    if (!view)
-        return;
-    if ([NSStringFromClass([view class]) containsString:@"TouchForwardingVisualEffectView"]) {
-        CGFloat alpha = view.alpha;
-        if (alpha > *maxAlpha)
-            *maxAlpha = alpha;
-    }
-    for (UIView *subview in view.subviews) {
-        SPKProfileAccumulateGlassAlpha(subview, maxAlpha);
-    }
-}
-
-static CGFloat SPKProfileHeaderGlassProgress(UIView *headerView) {
-    CGFloat maxAlpha = -1.0;
-    SPKProfileAccumulateGlassAlpha(headerView, &maxAlpha);
-    return maxAlpha;
-}
-
-// A UIGlassEffect-backed circle. UIGlassEffect ships in the iOS 26 SDK only, so
-// we instantiate it at runtime; on older systems the class is absent and we
-// return nil (the button stays a bare icon, which already matches pre-26 IG).
-static UIVisualEffectView *SPKProfileMakeGlassBackground(void) {
-    Class glassEffectClass = NSClassFromString(@"UIGlassEffect");
-    if (!glassEffectClass)
-        return nil;
-
-    UIVisualEffect *effect = nil;
-    @try {
-        effect = [[glassEffectClass alloc] init];
-        // Reactive glass: stretches / highlights on touch like IG's own buttons.
-        [effect setValue:@YES forKey:@"interactive"];
-        // Default glass reads as clear. Tint it with IG's primary text colour
-        // inverted: that's light in light mode / dark in dark mode (so it reads like
-        // IG's fill) and is the exact opposite of the icon colour, keeping the glyph
-        // legible. Opacity is easy to tune if it reads too strong/weak on device.
-        UIColor *tint = [UIColor colorWithDynamicProvider:^UIColor *(UITraitCollection *traits) {
-            UIColor *primary = [[SPKUtils SPKColor_InstagramPrimaryText] resolvedColorWithTraitCollection:traits];
-            // Take only IG's hue; the primary text colour is fully opaque, so its
-            // own alpha is ignored (NULL) in favour of our own light tint strength.
-            CGFloat r = 0.0, g = 0.0, b = 0.0;
-            [primary getRed:&r green:&g blue:&b alpha:NULL];
-            return [UIColor colorWithRed:(1.0 - r) green:(1.0 - g) blue:(1.0 - b) alpha:0.5];
-        }];
-        [effect setValue:tint forKey:@"tintColor"];
-    } @catch (__unused NSException *exception) {
-    }
-    if (![effect isKindOfClass:[UIVisualEffect class]])
-        return nil;
-
-    UIVisualEffectView *glassView = [[UIVisualEffectView alloc] initWithEffect:effect];
-    glassView.userInteractionEnabled = NO;
-    glassView.clipsToBounds = YES;
-    glassView.layer.cornerCurve = kCACornerCurveContinuous;
-    glassView.accessibilityIdentifier = @"sparkle-profile-action-glass";
-    return glassView;
-}
+// The bubble itself, and the mirroring of IG's neighbouring one, are shared with
+// the feed / inbox header buttons — see SPKChromeGlassMirror.
 
 static void SPKProfileUpdateGlass(SPKProfileHeaderActionButton *button, UIView *headerView) {
     if (!button || button.spkGlassUnavailable)
         return;
 
-    UIVisualEffectView *glassView = button.spkGlassView;
+    UIView *glassView = button.spkGlassView;
     if (!glassView) {
-        glassView = SPKProfileMakeGlassBackground();
+        glassView = SPKChromeGlassMirrorMakeBubble(@"sparkle-profile-action-glass");
         if (!glassView) {
             button.spkGlassUnavailable = YES; // iOS < 26: don't retry every layout
             return;
@@ -551,21 +458,10 @@ static void SPKProfileUpdateGlass(SPKProfileHeaderActionButton *button, UIView *
         button.spkGlassView = glassView;
     }
 
-    // Host the glass INSIDE the chrome canvas (the same secure CanvasView the icon
-    // lives in) so "hide UI on capture" redacts the bubble too. iconView.superview
-    // is that content container; fall back to the button before the canvas attaches.
-    UIView *host = button.iconView.superview ?: button;
-    if (glassView.superview != host) {
-        [host insertSubview:glassView atIndex:0];
-    }
-    [host sendSubviewToBack:glassView]; // stay behind the icon (and bubble)
+    SPKChromeGlassMirrorAttach(glassView, button);
 
-    CGRect bounds = host.bounds;
-    glassView.frame = bounds;
-    glassView.layer.cornerRadius = MIN(bounds.size.width, bounds.size.height) / 2.0;
-
-    CGFloat progress = SPKProfileHeaderGlassProgress(headerView);
-    glassView.alpha = progress > 0.0 ? MIN(progress, 1.0) : 0.0;
+    // Adopt the bell / more bubble's own effect + ring, and fade with it.
+    SPKChromeGlassMirrorSync(glassView, headerView);
 }
 
 // MARK: - Long-username overlap

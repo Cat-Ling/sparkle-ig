@@ -9,6 +9,7 @@
 #import "SPKGalleryFile.h"
 #import "SPKGalleryGridDensity.h"
 #import "SPKGalleryHiddenSources.h"
+#import "SPKGalleryImportViewController.h"
 #import "SPKGalleryLockViewController.h"
 #import "SPKGalleryManager.h"
 
@@ -100,6 +101,9 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
             [SPKSetting switchCellWithTitle:@"Show Favorites at Top"
                                        icon:SPKSettingsIcon(@"heart")
                                 defaultsKey:kFavoritesAtTopKey],
+            [SPKSetting switchCellWithTitle:@"Show Files From Subfolders"
+                                       icon:SPKSettingsIcon(@"folder")
+                                defaultsKey:kSPKGalleryFlatBrowsingKey],
             [SPKSetting navigationCellWithTitle:@"Hidden Sources"
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"eye_off")
@@ -129,6 +133,18 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
                                      }]
         ],
                         @"Lock the Gallery with a passcode or biometrics."),
+        SPKTopicSection(@"Import", @[
+            // A navigation row, not a button: this mirror feeds the settings search index, and a
+            // button row's action is what search runs on tap — an empty one silently does nothing.
+            // The framework pushes navViewController itself, so the result is actually reachable.
+            // No folder context from search, so it imports to the gallery root (nil).
+            [SPKSetting navigationCellWithTitle:@"Import Media"
+                                       subtitle:nil
+                                           icon:SPKSettingsIcon(@"media")
+                                 viewController:[[SPKGalleryImportViewController alloc] initWithDestinationFolderPath:nil]]
+        ],
+                        @"Import media from the Files app with full editable metadata.\n"
+                        @"Coming from Regram? Pick your exported folder or MediaVault.zip here to bring your whole Media Vault over."),
         SPKTopicSection(@"Delete", @[
             [SPKSetting buttonCellWithTitle:@"Delete Files"
                                    subtitle:nil
@@ -204,7 +220,7 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
         [[NSNotificationCenter defaultCenter] postNotificationName:@"SPKGalleryFavoritesSortPreferenceChanged" object:nil];
     };
     // Defaults ON; the backing pref stores the *disabled* state, so the switch inverts.
-    SPKSetting *pinFolderRow = [SPKSetting switchCellWithTitle:@"Pin Folder Bar" icon:SPKSettingsIcon(@"folder") defaultsKey:@""];
+    SPKSetting *pinFolderRow = [SPKSetting switchCellWithTitle:@"Pin Folder Bar" icon:SPKSettingsIcon(@"pin") defaultsKey:@""];
     pinFolderRow.switchValueProvider = ^BOOL {
         return ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryFolderBarPinDisabledKey];
     };
@@ -212,9 +228,14 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
         [[NSUserDefaults standardUserDefaults] setBool:!isOn forKey:kSPKGalleryFolderBarPinDisabledKey];
         [[NSNotificationCenter defaultCenter] postNotificationName:kSPKGalleryGridControlsChangedNotification object:nil];
     };
-    [sections addObject:SPKTopicSection(@"Browsing", @[favoritesRow, pinFolderRow],
+    SPKSetting *flatBrowsingRow = [SPKSetting switchCellWithTitle:@"Show Files From Subfolders" icon:SPKSettingsIcon(@"folder") defaultsKey:kSPKGalleryFlatBrowsingKey];
+    flatBrowsingRow.action = ^{
+        [[NSNotificationCenter defaultCenter] postNotificationName:kSPKGalleryBrowsingScopeChangedNotification object:nil];
+    };
+    [sections addObject:SPKTopicSection(@"Browsing", @[favoritesRow, pinFolderRow, flatBrowsingRow],
                                         @"1. Pin favorites above other files inside the current sort and folder context.\n"
-                                        @"2. Keep the subfolder bar pinned to the top while scrolling.")];
+                                        @"2. Keep the subfolder bar pinned to the top while scrolling.\n"
+                                        @"3. Show files from all folders instead of only the current folder's files. The folders stay in the bar above and still narrow the list.")];
 
     [sections addObject:SPKTopicSection(@"Editing", @[
                   [SPKSetting switchCellWithTitle:@"Ask to Replace Original"
@@ -299,6 +320,17 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
     [lockRows addObject:changePasscode];
 
     [sections addObject:SPKTopicSection(@"Lock", lockRows, @"Lock the Gallery with a passcode or biometrics.")];
+
+    SPKSetting *importRow = [SPKSetting buttonCellWithTitle:@"Import Media"
+                                                   subtitle:nil
+                                                       icon:SPKSettingsIcon(@"media")
+                                                     action:^{
+                                                         SPKGalleryImportViewController *vc = [[SPKGalleryImportViewController alloc] initWithDestinationFolderPath:self.importDestinationFolderPath];
+                                                         [self.navigationController pushViewController:vc animated:YES];
+                                                     }];
+    [sections addObject:SPKTopicSection(@"Import", @[ importRow ],
+                                        @"Import media from the Files app with full editable metadata.\n"
+                                        @"Coming from Regram? Pick your exported folder or MediaVault.zip here to bring your whole Media Vault over.")];
 
     SPKSetting *deleteRow = [SPKSetting buttonCellWithTitle:@"Delete Files"
                                                    subtitle:nil

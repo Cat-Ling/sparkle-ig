@@ -9,6 +9,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// Posted by the settings toggle so live instances can refresh `secureTextEntry`.
 FOUNDATION_EXPORT NSNotificationName const SPKHideUIOnCapturePreferenceDidChangeNotification;
 
+/// Opts a custom button/icon hierarchy into the runtime EDR compositing path when
+/// the installed OS supports it. Uses runtime lookup because Sparkle builds with
+/// the iOS 16.2 SDK, where this CALayer property is not declared on CALayer.
+FOUNDATION_EXPORT void SPKChromeEnableExtendedDynamicRangeContent(UIView *view);
+
 // MARK: - SPKChromeCanvas
 
 @interface SPKChromeCanvas : UIView
@@ -56,6 +61,25 @@ BOOL SPKChromeCanvasOwnsSecureField(UITextField *field);
 
 /// IG-styled glyph via `+[SPKAssetUtils instagramIconNamed:]`. Clears `symbolName`.
 - (void)setIconResource:(NSString *)resourceName pointSize:(CGFloat)pointSize;
+
+- (instancetype)init NS_UNAVAILABLE;
+- (instancetype)initWithFrame:(CGRect)frame NS_UNAVAILABLE;
+- (instancetype)initWithCoder:(NSCoder *)coder NS_UNAVAILABLE;
+@end
+
+// MARK: - SPKChromeLabel
+
+/// A self-sizing, capture-redacted label with an optional leading glyph. Hosts
+/// its content inside an SPKChromeCanvas so the text/icon disappear from
+/// screenshots/recordings when "Hide UI on Capture" is on — no external tag or
+/// `addSubview:` interception needed. Reports `intrinsicContentSize`, so pinning
+/// just two edges (e.g. leading + bottom to a container) both places and sizes
+/// it. Content is fixed at init; build a new instance to change it.
+@interface SPKChromeLabel : UIView
+- (instancetype)initWithText:(nullable NSString *)text
+                        icon:(nullable UIImage *)icon
+                        font:(UIFont *)font
+                       color:(UIColor *)color NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithFrame:(CGRect)frame NS_UNAVAILABLE;

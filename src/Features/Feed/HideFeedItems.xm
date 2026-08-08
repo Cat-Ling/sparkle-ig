@@ -1,5 +1,6 @@
 #import "../../InstagramHeaders.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 typedef NS_ENUM(NSInteger, SPKFeedFilterSurface) {
     SPKFeedFilterSurfaceFeed,
@@ -323,6 +324,7 @@ static NSArray *spkSundialFilterAndLimit(NSArray *list) {
 %hook _TtC32IGSundialOrganicCTAContainerView32IGSundialOrganicCTAContainerView
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"HideFeedItems.didMoveToWindow");
 
     if ([SPKUtils getBoolPref:@"general_hide_reels_shopping_cta"]) {
         [self removeFromSuperview];

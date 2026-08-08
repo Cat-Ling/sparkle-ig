@@ -474,6 +474,14 @@ static CGFloat const kZoomEpsilon = 0.02;
         ((void (*)(id, SEL, id))objc_msgSend)(_imageView, setAnimatedImage, nil);
     }
     _imageView.image = nil;
+    // The item outlives this page, so clearing only the image view left the
+    // full-size image alive on the item -- browsing a long run of photos kept
+    // every one of them in memory. Drop it whenever it can be reloaded from disk
+    // (an item made straight from a UIImage has no file to reload from, so it
+    // keeps its copy); the shared image cache still serves the way back.
+    if (self.mediaItem.fileURL || self.mediaItem.resolvedFileURL) {
+        self.mediaItem.image = nil;
+    }
 }
 
 @end

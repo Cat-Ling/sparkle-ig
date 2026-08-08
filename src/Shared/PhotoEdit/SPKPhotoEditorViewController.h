@@ -1,14 +1,8 @@
 #import <UIKit/UIKit.h>
 
-NS_ASSUME_NONNULL_BEGIN
+#import "../Crop/SPKCropCanvasView.h"
 
-/// Crop-rectangle aspect behaviour for the photo editor.
-typedef NS_ENUM(NSInteger, SPKPhotoEditorAspectMode) {
-    /// A single fixed 1:1 crop, no ratio picker (Instants positioning).
-    SPKPhotoEditorAspectModeLockedSquare = 0,
-    /// Freeform + ratio presets for general editing.
-    SPKPhotoEditorAspectModeFreeform = 1,
-};
+NS_ASSUME_NONNULL_BEGIN
 
 /// One destination choice in the editor's Done menu (mirrors the trim editor's
 /// `SPKTrimDoneOption`). When a configuration carries `doneOptions`, the Done
@@ -26,13 +20,17 @@ typedef NS_ENUM(NSInteger, SPKPhotoEditorAspectMode) {
 /// Configures a photo editor instance. Instants uses `lockedSquareConfiguration`;
 /// the Gallery uses `freeformConfiguration`.
 @interface SPKPhotoEditorConfiguration : NSObject
-@property (nonatomic, assign) SPKPhotoEditorAspectMode aspectMode;
+@property (nonatomic, assign) SPKCropAspectMode aspectMode;
 /// Title of the confirm button (e.g. "Use" for Instants, "Done" for Gallery).
 @property (nonatomic, copy) NSString *confirmButtonTitle;
 /// When non-empty, Done becomes a destination menu (Photos / Gallery / Share /
 /// Copy ...). The chosen id is delivered via the destination completion. Empty =
 /// a plain confirm that returns just the image (gallery/instants flows).
 @property (nonatomic, copy, nullable) NSArray<SPKPhotoEditorDoneOption *> *doneOptions;
+/// YES when confirming hands the result back to another editor rather than
+/// committing it (the trim editor's Frame Only pass). Only the final Done in a
+/// flow is prominent, so an intermediate one stays a plain button.
+@property (nonatomic, assign) BOOL intermediateConfirm;
 
 + (instancetype)lockedSquareConfiguration; // confirm = "Use"
 + (instancetype)freeformConfiguration;     // confirm = "Done"

@@ -4,9 +4,9 @@
 
 # Sparkle for Instagram
 
-`v1.1.0` · Tested on versions **438.0.0** and **410.1.0**
+`v1.2.0` · Tested on versions **441.0.0** and **410.1.0**
 
-[📣 Telegram Channel](https://t.me/sparkle_ig) · [💬 Chat & Support](https://t.me/+f-Xo21HnfCY3NmE0) · [📥 Releases](https://github.com/efibalogh/sparkle-ig/releases/latest) · [🐛 Issues](https://github.com/efibalogh/sparkle-ig/issues/new/choose) · [☕ Donate](https://ko-fi.com/sparkle_ig)
+[📣 IPA Releases](https://t.me/sparkle_ig) · [💬 Chat & Support](https://t.me/+f-Xo21HnfCY3NmE0) · [📥 DEB Releases](https://github.com/efibalogh/sparkle-ig/releases/latest) · [🐛 Issues](https://github.com/efibalogh/sparkle-ig/issues/new/choose) · [❤️ Support](https://ko-fi.com/sparkle_ig)
 
 </div>
 
@@ -14,7 +14,7 @@
 
 > [!NOTE]
 > - To open Sparkle's settings, see [Opening Sparkle Settings](#opening-sparkle-settings).
-> - Releases and announcements go out on the [Telegram channel](https://t.me/sparkle_ig); questions and help happen in the [chat group](https://t.me/+f-Xo21HnfCY3NmE0).
+> - IPA releases go out on the [Telegram channel](https://t.me/sparkle_ig); for questions and help join the [chat group](https://t.me/+f-Xo21HnfCY3NmE0).
 > - Feature request or bug report? [Open an issue](https://github.com/efibalogh/sparkle-ig/issues/new/choose).
 
 ## What is Sparkle?
@@ -33,12 +33,17 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
 
 - **Media downloads**:
   - Save feed posts, reels, stories, DMs, Instants, and comments.
+  - Auto-save stories, view-once DM media, and instants straight to the Gallery or Photos as you view them.
   - An action-based download manager with a queue, retries, duplicate detection, and configurable concurrency.
   - High-quality DASH video+audio merging via FFmpegKit.
 - **Private Gallery**:
   - An on-device media library with folders, search, metadata, source overlays, and an optional passcode / Face ID / Touch ID lock. Nothing ever leaves your device.
+  - Import your own media from Files with editable metadata, or bring your whole Regram Media Vault over in one go.
+  - Browse saved Instants by user straight from the Instants camera.
+  - Send any photo or video you already have as an Instant, from Photos, Files, or the Gallery.
 - **Built-in editors**:
   - Trim any video down to a clip, a single still frame, or audio-only.
+  - Crop, pan/zoom, rotate, and flip a video's framing, applied in the same pass as the trim.
   - A photo editor with crop / pan-zoom / rotate / flip.
   - Reachable from the gallery, media preview, or an opt-in action button.
 - **Action buttons everywhere**:
@@ -143,7 +148,7 @@ The `ipa` command takes composable flags:
 | `--patch` | Run `ipapatch` |
 | `--no-ext` | Strip all `.appex` bundles before injection |
 | `--sidestore` | Shorthand for `--release --no-ext` (for SideStore) |
-| `--dev` | `DEV=1` build |
+| `--dev` | `DEV=1` build (also enables the developer diagnostics: performance meter and hook bisect, under Settings → Tools → Diagnostics) |
 | `--buildonly` | Build dylibs only, skip IPA packaging |
 | `--bundle-id <id>` | Override the bundle ID |
 
@@ -196,6 +201,14 @@ Sparkle takes a lot of time to develop and maintain as Instagram changes constan
 - [**@n3d1117** • InstaSane](https://github.com/n3d1117/InstaSane): the Following-feed mode.
 - [**@asdfzxcvbn** • zxPluginsInject / ipapatch / cyan](https://github.com/asdfzxcvbn): tooling and fixes for sideloaded installs.
 - [**@BillyCurtis** • OpenInstagramSafariExtension](https://github.com/BillyCurtis/OpenInstagramSafariExtension): open Instagram links in Safari in the sideloaded IPA.
+
+## Official builds
+
+Sparkle is free and always will be. It is only distributed here and on the official [Telegram channel](https://t.me/sparkle_ig). There is no paid version, no subscription, and no store that sells it.
+
+Sparkle is licensed under the GPL-3.0. Anyone may modify it and even charge for it, but only if they give their users the complete source of their build and keep the original license and attribution intact.
+
+[**SKInstagram**](https://t.me/ikurdstore/4799?embed=1) (backup links in case the post gets deleted: [link 1](https://archive.ph/znSIh), [link 2](https://web.archive.org/web/20260808011714/https://t.me/ikurdstore/4799?embed=1)), credited to the "SideKit team" and distributed through the iKURD Store, appears to be built from Sparkle and is offered behind that store's paid subscription. It ships no source and no attribution, which means it is not licensed to be distributed at all. If you paid for it, you were charged for free software that you can get here for nothing.
 
 ## License
 

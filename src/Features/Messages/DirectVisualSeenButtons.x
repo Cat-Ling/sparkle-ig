@@ -9,6 +9,7 @@
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Tweak.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -578,6 +579,7 @@ static void SPKInstallDirectSeenButton(UIViewController *controller) {
 %hook IGDirectVisualMessageViewerController
 - (void)viewDidLayoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"DirectVisualSeenButtons.viewDidLayoutSubviews");
     if (!SPKDirectSeenHooksNeeded())
         return;
     UIView *inputView = SPKDirectInputViewFromController((UIViewController *)self);

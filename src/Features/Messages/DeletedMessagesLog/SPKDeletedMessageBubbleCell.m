@@ -3,6 +3,7 @@
 #import "../../../Utils.h"
 #import "SPKDeletedMessagesAvatarView.h"
 #import "SPKDeletedMessagesDate.h"
+#import "../../../App/SPKPerfMeter.h"
 
 NSString *const SPKDeletedMessageBubbleCellReuseID = @"SPKDeletedMessageBubbleCell";
 
@@ -446,6 +447,7 @@ static NSString *SPKDeletedFormatDuration(double seconds);
 }
 
 - (void)layoutSubviews {
+    SPK_PERF_SCOPE(@"SPKDeletedMessageBubbleCell.layoutSubviews");
     [super layoutSubviews];
     // Keep media a comfortable square; cards/text wrap naturally.
 }

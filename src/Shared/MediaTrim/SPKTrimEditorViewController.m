@@ -6,6 +6,8 @@
 #import "../UI/SPKChipBar.h"
 #import "../UI/SPKMediaChrome.h"
 #import "SPKTrimScrubberView.h"
+#import "SPKVideoCropContentView.h"
+#import "SPKVideoCropViewController.h"
 
 #import <AVFoundation/AVFoundation.h>
 
@@ -46,6 +48,13 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 @property (nonatomic, strong) SPKChipBar *modeChips;
 @property (nonatomic, copy) NSArray<NSNumber *> *availableModes;
 @property (nonatomic, strong) UIBarButtonItem *doneMenuItem;
+@property (nonatomic, strong) UIBarButtonItem *cropItem;
+@property (nonatomic, strong) UIBarButtonItem *doneItem;
+@property (nonatomic, copy, nullable) SPKTrimCrop *pendingCrop; // framing edit carried onto the result
+@property (nonatomic, assign) BOOL seedingLockedCrop;          // re-entry guard for the locked-ratio default
+@property (nonatomic, strong) UIView *cropPreviewHost;                  // clips the preview to the crop rect
+@property (nonatomic, strong) SPKVideoCropContentView *cropPreviewContent;
+@property (nonatomic, assign) CGSize orientedSize;
 
 @property (nonatomic, assign) BOOL isPlaying;
 @property (nonatomic, assign) BOOL playerReady;
@@ -142,6 +151,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 - (void)viewDidLayoutSubviews {
     [super viewDidLayoutSubviews];
     self.playerLayer.frame = self.playerContainer.bounds;
+    [self layoutCropPreview];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
@@ -164,8 +174,159 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     } else {
         doneItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check", self, @selector(doneTapped), UIBarButtonItemStyleDone, [SPKUtils SPKColor_InstagramBlue], @"Save");
     }
+    self.doneItem = doneItem;
+    if (_configuration.mediaKind == SPKTrimMediaKindVideo && _configuration.allowsCrop) {
+        // Framing lives on its own screen (like Frame Only's editor) so the trim
+        // controls keep the whole bottom of the display.
+        self.cropItem = SPKMediaChromeTopBarButtonItem(@"crop", self, @selector(cropTapped));
+        self.cropItem.accessibilityLabel = @"Crop";
+    }
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ cancelItem ]);
-    SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, @[ doneItem ]);
+    [self refreshTrailingTopBarItems];
+}
+
+// Crop only has meaning for a trimmed *video*: a single frame is cropped by the
+// photo editor behind Edit Frame, and Audio Only has no picture. The button is
+// therefore added and removed with the mode, in its own group so iOS 26 renders
+// it as a separate glass bubble beside Save rather than merging the two.
+- (void)refreshTrailingTopBarItems {
+    if (!self.doneItem)
+        return;
+    BOOL cropApplies = (self.cropItem != nil && [self currentSelectedMode] == SPKTrimResultModeTrimmedVideo);
+    if (cropApplies) {
+        SPKMediaChromeSetTrailingTopBarItemGroups(self.navigationItem, @[ @[ self.cropItem ], @[ self.doneItem ] ]);
+    } else {
+        SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, @[ self.doneItem ]);
+    }
+}
+
+#pragma mark - Crop
+
+// Opens the framing editor on the source clip. The crop is only recorded here —
+// it is applied by the renderer in the same pass as the trim.
+- (void)cropTapped {
+    [self.player pause];
+    self.isPlaying = NO;
+    [self updatePlaybackControls];
+    __weak typeof(self) weakSelf = self;
+    [SPKVideoCropViewController presentForVideoURL:self.configuration.sourceURL
+                                 lockedAspectRatio:self.configuration.lockedCropAspectRatio
+                                       initialCrop:self.pendingCrop
+                                             title:@"Crop"
+                                              from:self
+                                        completion:^(SPKTrimCrop *crop) {
+                                            [weakSelf applyCrop:crop];
+                                        }];
+}
+
+/// With a locked ratio the destination's shape is not negotiable, so start from
+/// the largest centred crop at that ratio. Without this, confirming the editor
+/// without touching the crop would render the source's own aspect and leave the
+/// destination to pad it with black bars.
+- (void)seedLockedAspectCropIfNeeded {
+    CGFloat ratio = self.configuration.lockedCropAspectRatio;
+    if (ratio <= 0.0 || self.pendingCrop || !self.configuration.allowsCrop || self.seedingLockedCrop)
+        return;
+    CGSize oriented = self.orientedSize;
+    if (oriented.width <= 0.0 || oriented.height <= 0.0)
+        return;
+
+    CGSize box = (oriented.width / oriented.height > ratio)
+                     ? CGSizeMake(oriented.height * ratio, oriented.height)
+                     : CGSizeMake(oriented.width, oriented.width / ratio);
+    CGRect normalized = CGRectMake((oriented.width - box.width) / 2.0 / oriented.width,
+                                   (oriented.height - box.height) / 2.0 / oriented.height,
+                                   box.width / oriented.width,
+                                   box.height / oriented.height);
+    SPKTrimCrop *seed = [SPKTrimCrop cropWithNormalizedRect:normalized rotationQuarters:0 mirrored:NO];
+    // A source already at the locked ratio needs no crop at all, and applying an
+    // identity one would bounce straight back here through applyCrop:.
+    if (seed.isIdentity)
+        return;
+    self.seedingLockedCrop = YES;
+    [self applyCrop:seed];
+    self.seedingLockedCrop = NO;
+}
+
+- (void)applyCrop:(SPKTrimCrop *)crop {
+    self.pendingCrop = (crop && !crop.isIdentity) ? crop : nil;
+    // Cancelling the crop editor must not drop a locked ratio back to the
+    // source's shape; fall back to the centred default instead of no crop.
+    if (!self.pendingCrop && self.configuration.lockedCropAspectRatio > 0.0) {
+        [self seedLockedAspectCropIfNeeded];
+        return;
+    }
+    // Tint the button while a crop is active, so the state is legible even when
+    // the framing change itself is subtle.
+    UIColor *tint = self.pendingCrop ? [SPKUtils SPKColor_InstagramBlue]
+                                     : ([SPKUtils SPKColor_InstagramPrimaryText] ?: [UIColor whiteColor]);
+    self.cropItem.tintColor = tint;
+    UIView *custom = self.cropItem.customView;
+    if ([custom isKindOfClass:[UIButton class]]) {
+        ((UIButton *)custom).tintColor = tint;
+    }
+    [self updateCropPreview];
+}
+
+// Shows the confirmed framing in the player pane: the pane stops being a plain
+// aspect-fit of the source and becomes exactly what the render will produce.
+// An AVPlayer drives one AVPlayerLayer at a time, so the player is handed over
+// rather than left attached to both layers.
+- (void)updateCropPreview {
+    SPKTrimCrop *crop = self.pendingCrop;
+    BOOL active = (crop != nil && self.orientedSize.width > 0.0 && self.orientedSize.height > 0.0 &&
+                   [self currentSelectedMode] == SPKTrimResultModeTrimmedVideo);
+
+    if (!active) {
+        self.cropPreviewHost.hidden = YES;
+        self.cropPreviewContent.playerLayer.player = nil;
+        self.playerLayer.player = self.player;
+        self.playerLayer.hidden = ([self currentSelectedMode] == SPKTrimResultModeTrimmedAudio ||
+                                   self.configuration.mediaKind == SPKTrimMediaKindAudio);
+        return;
+    }
+
+    if (!self.cropPreviewHost) {
+        self.cropPreviewHost = [[UIView alloc] init];
+        self.cropPreviewHost.backgroundColor = [UIColor blackColor];
+        self.cropPreviewHost.clipsToBounds = YES;
+        [self.playerContainer insertSubview:self.cropPreviewHost atIndex:0];
+        self.cropPreviewContent = [[SPKVideoCropContentView alloc] initWithPlayer:nil
+                                                                     orientedSize:self.orientedSize];
+        [self.cropPreviewHost addSubview:self.cropPreviewContent];
+    }
+    self.cropPreviewContent.rotationQuarters = crop.rotationQuarters;
+    self.cropPreviewContent.mirrored = crop.mirrored;
+    self.playerLayer.player = nil;
+    self.playerLayer.hidden = YES;
+    self.cropPreviewContent.playerLayer.player = self.player;
+    self.cropPreviewHost.hidden = NO;
+    [self layoutCropPreview];
+}
+
+- (void)layoutCropPreview {
+    SPKTrimCrop *crop = self.pendingCrop;
+    if (!crop || self.cropPreviewHost.hidden)
+        return;
+    CGRect pane = self.playerContainer.bounds;
+    CGRect pixels = [crop pixelRectForOrientedSize:self.orientedSize];
+    CGSize rotated = [crop rotatedSizeForOrientedSize:self.orientedSize];
+    if (pixels.size.width <= 0.0 || pixels.size.height <= 0.0 ||
+        pane.size.width <= 0.0 || pane.size.height <= 0.0) {
+        return;
+    }
+
+    // Aspect-fit the *cropped* rectangle in the pane, then place the whole
+    // rotated picture behind it so the kept region lands exactly on the box.
+    CGFloat scale = MIN(pane.size.width / pixels.size.width, pane.size.height / pixels.size.height);
+    CGSize box = CGSizeMake(pixels.size.width * scale, pixels.size.height * scale);
+    self.cropPreviewHost.frame = CGRectMake(CGRectGetMidX(pane) - box.width / 2.0,
+                                            CGRectGetMidY(pane) - box.height / 2.0,
+                                            box.width, box.height);
+    self.cropPreviewContent.frame = CGRectMake(-pixels.origin.x * scale,
+                                               -pixels.origin.y * scale,
+                                               rotated.width * scale,
+                                               rotated.height * scale);
 }
 
 - (void)setupPlayerContainer {
@@ -245,6 +406,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     _scrubber = [[SPKTrimScrubberView alloc] init];
     _scrubber.translatesAutoresizingMaskIntoConstraints = NO;
     _scrubber.minimumDuration = _configuration.minimumDuration;
+    _scrubber.maximumDuration = _configuration.maximumDuration;
     _scrubber.delegate = self;
     [_bottomContent addSubview:_scrubber];
 
@@ -405,8 +567,21 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
         [self.playerContainer.layer insertSublayer:self.playerLayer atIndex:0];
     }
 
+    AVAssetTrack *videoTrack = [self.asset tracksWithMediaType:AVMediaTypeVideo].firstObject;
+    if (videoTrack) {
+        CGSize rendered = CGSizeApplyAffineTransform(videoTrack.naturalSize, videoTrack.preferredTransform);
+        self.orientedSize = CGSizeMake(fabs(rendered.width), fabs(rendered.height));
+        [self seedLockedAspectCropIfNeeded];
+    }
+
     self.scrubber.duration = duration;
-    [self.scrubber setStartTime:0.0 endTime:duration];
+    // A caller-imposed ceiling (an Instant is capped) pre-selects the first
+    // allowed window rather than the whole clip.
+    NSTimeInterval initialEnd = duration;
+    if (self.configuration.maximumDuration > 0.0) {
+        initialEnd = MIN(duration, self.configuration.maximumDuration);
+    }
+    [self.scrubber setStartTime:0.0 endTime:initialEnd];
     self.scrubber.playheadTime = 0.0;
     if (isAudio) {
         // No video track — audio album-art in the pane + waveform in the scrubber.
@@ -461,6 +636,14 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 - (void)setAudioPresentation:(BOOL)audio {
     self.playerLayer.hidden = audio;
     [self ensureAudioArtworkView].hidden = !audio;
+    // The cropped preview is a picture, so it goes away with the rest of the
+    // picture; switching back to a video mode restores it (updateCropPreview).
+    if (audio) {
+        self.cropPreviewHost.hidden = YES;
+        self.cropPreviewContent.playerLayer.player = nil;
+    } else {
+        [self updateCropPreview];
+    }
     if (audio) {
         // loadWaveformForAsset: also flips the scrubber into waveform mode.
         if (!self.waveformLoaded) {
@@ -552,8 +735,11 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
         return;
     }
     __weak typeof(self) weakSelf = self;
+    // The edit comes back here to be saved, so its confirm is not the final one.
+    SPKPhotoEditorConfiguration *configuration = [SPKPhotoEditorConfiguration freeformConfiguration];
+    configuration.intermediateConfirm = YES;
     [SPKPhotoEditorViewController presentWithSourceImage:frame
-                                           configuration:[SPKPhotoEditorConfiguration freeformConfiguration]
+                                           configuration:configuration
                                                     from:self
                                               completion:^(UIImage *edited) {
                                                   [weakSelf applyEditedFrame:edited];
@@ -585,7 +771,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 }
 
 - (void)applyEditedFrame:(UIImage *)edited {
-    NSData *data = edited ? UIImageJPEGRepresentation(edited, 0.95) : nil;
+    NSData *data = edited ? UIImageJPEGRepresentation(edited, 0.85) : nil;
     if (!data)
         return;
     [self clearPendingEditedFrame];
@@ -644,6 +830,8 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     [self updatePlaybackControls];
     [self updateTimeLabel];
     [self refreshDoneMenu];
+    [self refreshTrailingTopBarItems];
+    [self updateCropPreview];
 }
 
 - (void)updateTimeLabel {
@@ -796,6 +984,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
                                       sourceURL:self.configuration.sourceURL
                                    startSeconds:self.scrubber.startTime
                                 durationSeconds:(self.scrubber.endTime - self.scrubber.startTime)];
+        result.crop = self.pendingCrop;
     }
     result.destinationTag = destinationTag;
     [self finishWithResult:result];

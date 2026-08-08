@@ -445,12 +445,14 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 
     if (!isGroup && self.group.senderUsername.length) {
         NSString *username = self.group.senderUsername;
+        // See the header button: passing the pk avoids a lookup round trip.
+        NSString *senderPK = self.group.senderPk;
         UIAction *openProfileAction = [UIAction actionWithTitle:@"Open Profile"
                                                           image:[SPKAssetUtils menuIconNamed:@"user"]
                                                      identifier:nil
-                                                        handler:^(__unused UIAction *a) {
-                                                            [SPKUtils openInstagramProfileForUsername:username];
-                                                        }];
+                                                         handler:^(__unused UIAction *a) {
+                                                             [SPKUtils openInstagramProfileForUser:nil pk:senderPK username:username fromViewController:weakSelf];
+                                                         }];
         return @[ openProfileAction, pinAction, blockAction, refreshAvatarsAction, destructiveSection ];
     }
 
@@ -504,6 +506,9 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     // "Open Profile" button (only when username is known).
     if (self.group.senderUsername.length) {
         NSString *username = self.group.senderUsername;
+        // Sender pk when we have one: it skips the username -> pk lookup that
+        // otherwise delays the profile appearing. Empty for group threads.
+        NSString *senderPK = self.group.isGroup ? nil : self.group.senderPk;
         UIButton *openBtn = [UIButton buttonWithType:UIButtonTypeSystem];
         openBtn.translatesAutoresizingMaskIntoConstraints = NO;
         UIImage *icon = [SPKAssetUtils instagramIconNamed:@"external_link" pointSize:18.0 renderingMode:UIImageRenderingModeAlwaysTemplate];
@@ -516,7 +521,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
                                                image:nil
                                           identifier:nil
                                              handler:^(__unused UIAction *a) {
-                                                 [SPKUtils openInstagramProfileForUsername:username];
+                                                 [SPKUtils openInstagramProfileForUser:nil pk:senderPK username:username fromViewController:self];
                                              }]
             forControlEvents:UIControlEventTouchUpInside];
         [container addSubview:openBtn];

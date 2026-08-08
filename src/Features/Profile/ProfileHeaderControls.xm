@@ -1,5 +1,6 @@
 #import "../../Utils.h"
 #import <objc/runtime.h>
+#import "../../App/SPKPerfMeter.h"
 
 static const void *kSPKProfileHeaderSavedHiddenKey = &kSPKProfileHeaderSavedHiddenKey;
 static const void *kSPKProfileHeaderSavedAlphaKey = &kSPKProfileHeaderSavedAlphaKey;
@@ -81,6 +82,7 @@ static void SPKApplyProfileHeaderControls(UIViewController *vc) {
 %hook IGProfileViewController
 - (void)viewDidLayoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"ProfileHeaderControls.viewDidLayoutSubviews");
     SPKApplyProfileHeaderControls((UIViewController *)self);
 }
 

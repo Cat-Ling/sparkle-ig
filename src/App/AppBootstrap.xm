@@ -3,12 +3,28 @@
 #import "../Utils.h"
 #import "SPKCore.h"
 #import "SPKFlexLoader.h"
+#import "SPKPerfMeter.h"
 #import "SPKStabilityGuard.h"
 #import "SPKStartupProfiler.h"
 
 static BOOL sSPKAppDidBecomeActive = NO;
 static BOOL sSPKStagedHooksFinished = NO;
 static BOOL sSPKStabilityCompletionScheduled = NO;
+static BOOL sSPKSafeModeAlertScheduled = NO;
+
+// Safe mode suppresses every feature hook, which is indistinguishable from
+// Sparkle being broken unless we say so. Explain it once per launch, and keep
+// explaining on later launches until the user turns it off — a missed alert
+// otherwise leaves them stuck with a silently inert tweak.
+static void SPKPresentSafeModeAlertIfNeeded(void) {
+    if (sSPKSafeModeAlertScheduled || !SPKStabilityGuardIsSafeStartupMode()) {
+        return;
+    }
+    sSPKSafeModeAlertScheduled = YES;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        SPKStabilityGuardPresentSafeModeAlertIfNeeded();
+    });
+}
 
 static void SPKMarkLaunchStableIfReady(void) {
     if (!sSPKAppDidBecomeActive || !sSPKStagedHooksFinished || sSPKStabilityCompletionScheduled) {
@@ -33,30 +49,52 @@ static void SPKScheduleHookPhase(NSTimeInterval delay, NSString *name, dispatch_
     });
 }
 
+static BOOL SPKIsMessagesOnlyMode(void) {
+    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
+    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
+    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
+    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
+    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
+    
+    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
+    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
+    
+    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
+}
+
 static void SPKScheduleStagedFeatureHooks(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        SPKScheduleHookPhase(0.25, @"general UI", ^{
+        BOOL msgOnly = SPKIsMessagesOnlyMode();
+        
+        NSTimeInterval generalDelay = 0.25;
+        NSTimeInterval feedDelay = msgOnly ? 0.65 : 0.35;
+        NSTimeInterval storiesDelay = msgOnly ? 0.75 : 0.45;
+        NSTimeInterval reelsDelay = msgOnly ? 0.85 : 0.55;
+        NSTimeInterval messagesDelay = msgOnly ? 0.10 : 0.65;
+        NSTimeInterval profileDelay = msgOnly ? 0.95 : 0.75;
+
+        SPKScheduleHookPhase(generalDelay, @"general UI", ^{
             SPKCoreInstallSurfaceHooks(SPKSurfaceGeneralUI);
         },
                              NO);
-        SPKScheduleHookPhase(0.35, @"feed", ^{
+        SPKScheduleHookPhase(feedDelay, @"feed", ^{
             SPKCoreInstallSurfaceHooks(SPKSurfaceFeed);
         },
                              NO);
-        SPKScheduleHookPhase(0.45, @"stories", ^{
+        SPKScheduleHookPhase(storiesDelay, @"stories", ^{
             SPKCoreInstallSurfaceHooks(SPKSurfaceStories);
         },
                              NO);
-        SPKScheduleHookPhase(0.55, @"reels", ^{
+        SPKScheduleHookPhase(reelsDelay, @"reels", ^{
             SPKCoreInstallSurfaceHooks(SPKSurfaceReels);
         },
                              NO);
-        SPKScheduleHookPhase(0.65, @"messages", ^{
+        SPKScheduleHookPhase(messagesDelay, @"messages", ^{
             SPKCoreInstallSurfaceHooks(SPKSurfaceMessages);
         },
                              NO);
-        SPKScheduleHookPhase(0.75, @"profile", ^{
+        SPKScheduleHookPhase(profileDelay, @"profile", ^{
             SPKCoreInstallSurfaceHooks(SPKSurfaceProfile);
         },
                              YES);
@@ -85,6 +123,7 @@ static void SPKScheduleStagedFeatureHooks(void) {
     BOOL result = %orig;
     SPKStartupMark(@"didFinishLaunching orig returned");
     SPKScheduleStagedFeatureHooks();
+    SPKPerfMeterStartIfEnabled();
 
     double openDelay = [SPKUtils getBoolPref:@"tools_open_settings_on_launch"] ? 0.0 : 5.0;
 
@@ -105,6 +144,9 @@ static void SPKScheduleStagedFeatureHooks(void) {
     %orig;
     sSPKAppDidBecomeActive = YES;
     SPKMarkLaunchStableIfReady();
+    // The HUD needs a window scene, which is not guaranteed at didFinishLaunching.
+    SPKPerfMeterStartIfEnabled();
+    SPKPresentSafeModeAlertIfNeeded();
 
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
         [SPKUtils evaluateAutomaticCacheClearIfNeeded];

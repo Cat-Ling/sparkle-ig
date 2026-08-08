@@ -57,6 +57,7 @@ static SPKQuickSnapLayoutIMP orig_cameraControlViewLayoutSubviews = NULL;
 
 static SPKQuickSnapVoidOneArgIMP orig_quickSnapPeekViewDidSelectCamera = NULL;
 static SPKQuickSnapVoidLongLongIMP orig_didTapCameraButtonWithCameraEntryPoint = NULL;
+static SPKQuickSnapVoidIMP orig_headerDidTapCameraButton = NULL;
 static SPKQuickSnapViewAppearIMP orig_consumptionViewDidAppear = NULL;
 static SPKQuickSnapViewAppearIMP orig_consumptionViewDidDisappear = NULL;
 static SPKQuickSnapViewAppearIMP orig_creationViewWillAppear = NULL;
@@ -352,6 +353,17 @@ static void replaced_didTapCameraButtonWithCameraEntryPoint(id self, SEL _cmd, l
         orig_didTapCameraButtonWithCameraEntryPoint(self, _cmd, point);
 }
 
+// The camera button in the viewer's own navigation bar. It is a *third* entry point, with
+// its own zero-argument selector on the header button controller — distinct from the peek
+// view's and the history section's. Without marking it, tapping it while the skip flag is
+// armed made the creation page open and immediately get dismissed again, which read as
+// "the camera button just closes the viewer".
+static void replaced_headerDidTapCameraButton(id self, SEL _cmd) {
+    SPKMarkQuickSnapExplicitCameraEntry();
+    if (orig_headerDidTapCameraButton)
+        orig_headerDidTapCameraButton(self, _cmd);
+}
+
 static void replaced_consumptionViewDidAppear(id self, SEL _cmd, _Bool animated) {
     if (orig_consumptionViewDidAppear)
         orig_consumptionViewDidAppear(self, _cmd, animated);
@@ -470,6 +482,10 @@ void SPKInstallDisableInstantsCreationHooksIfEnabled(void) {
                               @selector(didTapCameraButtonWithCameraEntryPoint:),
                               (IMP)replaced_didTapCameraButtonWithCameraEntryPoint,
                               (IMP *)&orig_didTapCameraButtonWithCameraEntryPoint);
+        SPKHookInstanceMethod("_TtC45IGQuickSnapNavigationV3HeaderButtonController45IGQuickSnapNavigationV3HeaderButtonController",
+                              @selector(didTapCameraButton),
+                              (IMP)replaced_headerDidTapCameraButton,
+                              (IMP *)&orig_headerDidTapCameraButton);
 
         // Viewing (consumption) lifecycle — arm/disarm the skip flag.
         SPKHookInstanceMethod("_TtC26IGQuickSnapConsumptionCore36IGQuickSnapConsumptionViewController",

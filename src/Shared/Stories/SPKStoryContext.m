@@ -118,19 +118,14 @@ static NSArray *SPKStoryItemsFromCandidate(id candidate) {
     return nil;
 }
 
+// `currentIndex` is only ever used to index `allMedia`, so locating the displayed item in
+// that array beats asking IG for a number: IG's `currentIndex` & friends count the
+// viewer's own item list, while `allMedia` is filtered to the current user below, so a
+// single foreign item ahead of the displayed one shifts IG's number out of range. Which of
+// those four selectors answers at all also varies with the story type, which is what made
+// the mismatch look random rather than systematic. The reported index stays as the
+// fallback for when the displayed media isn't in the list.
 static NSInteger SPKStoryCurrentIndexFromControllerOrSection(id sectionController, UIViewController *controller, id currentMedia, NSArray *allMedia) {
-    for (id target in @[ sectionController ?: (id)NSNull.null, controller ?: (id)NSNull.null ]) {
-        if (target == (id)NSNull.null)
-            continue;
-        for (NSString *selectorName in @[ @"currentIndex", @"currentItemIndex", @"itemIndex", @"currentPage" ]) {
-            NSNumber *number = [SPKUtils numericValueForObj:target selectorName:selectorName];
-            if (number && number.integerValue >= 0)
-                return number.integerValue;
-            id value = SPKKVCObject(target, selectorName);
-            if ([value respondsToSelector:@selector(integerValue)] && [value integerValue] >= 0)
-                return [value integerValue];
-        }
-    }
     if (currentMedia && allMedia.count > 0) {
         NSUInteger idx = [allMedia indexOfObjectIdenticalTo:currentMedia];
         if (idx != NSNotFound)
@@ -142,6 +137,18 @@ static NSInteger SPKStoryCurrentIndexFromControllerOrSection(id sectionControlle
                 if ([candidateID isEqualToString:currentID])
                     return (NSInteger)i;
             }
+        }
+    }
+    for (id target in @[ sectionController ?: (id)NSNull.null, controller ?: (id)NSNull.null ]) {
+        if (target == (id)NSNull.null)
+            continue;
+        for (NSString *selectorName in @[ @"currentIndex", @"currentItemIndex", @"itemIndex", @"currentPage" ]) {
+            NSNumber *number = [SPKUtils numericValueForObj:target selectorName:selectorName];
+            if (number && number.integerValue >= 0)
+                return number.integerValue;
+            id value = SPKKVCObject(target, selectorName);
+            if ([value respondsToSelector:@selector(integerValue)] && [value integerValue] >= 0)
+                return [value integerValue];
         }
     }
     return 0;
@@ -760,55 +767,47 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
 }
 
 - (void)lookupUsername:(NSString *)rawUsername {
-    NSString *username = [[[rawUsername ?: @"" stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet] lowercaseString] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"@"]];
+    NSString *username = [SPKUtils sanitizedInstagramUsername:rawUsername];
     if (username.length == 0)
-        return;
-    NSString *encodedUsername = [username stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
-    if (encodedUsername.length == 0)
         return;
 
     __weak typeof(self) weakSelf = self;
-    [SPKInstagramAPI sendRequestWithMethod:@"GET"
-                                      path:[NSString stringWithFormat:@"users/web_profile_info/?username=%@", encodedUsername]
-                                      body:nil
-                                completion:^(NSDictionary *response, NSError *error) {
-                                    __strong typeof(weakSelf) strongSelf = weakSelf;
-                                    if (!strongSelf)
-                                        return;
-                                    NSDictionary *user = response[@"data"][@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]])
-                                        user = response[@"user"];
-                                    if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                        [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
-                                        return;
-                                    }
-                                    NSString *pk = SPKStringFromValue(user[@"id"] ?: user[@"pk"]);
-                                    NSString *resolvedUsername = SPKStringFromValue(user[@"username"]) ?: username;
-                                    NSString *fullName = SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
-                                    NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
-                                    if (pk.length == 0) {
-                                        [strongSelf presentError:@"Could not resolve this user's Instagram ID."];
-                                        return;
-                                    }
+    [SPKInstagramAPI resolveUserForUsername:username
+                                  completion:^(NSDictionary *user, NSError *error) {
+                                      __strong typeof(weakSelf) strongSelf = weakSelf;
+                                      if (!strongSelf)
+                                          return;
+                                      if (![user isKindOfClass:[NSDictionary class]] || error) {
+                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          return;
+                                      }
+                                      NSString *pk = SPKStringFromValue(user[@"pk"] ?: user[@"id"]);
+                                      NSString *resolvedUsername = SPKStringFromValue(user[@"username"]) ?: username;
+                                      NSString *fullName = SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
+                                      NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
+                                      if (pk.length == 0) {
+                                          [strongSelf presentError:@"Could not resolve this user's Instagram ID."];
+                                          return;
+                                      }
 
-                                    NSString *message = fullName.length > 0
-                                                            ? [NSString stringWithFormat:@"@%@ (%@)", resolvedUsername, fullName]
-                                                            : [@"@" stringByAppendingString:resolvedUsername];
+                                      NSString *message = fullName.length > 0
+                                                              ? [NSString stringWithFormat:@"@%@ (%@)", resolvedUsername, fullName]
+                                                              : [@"@" stringByAppendingString:resolvedUsername];
 
-                                    [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
-                                                                                  title:@"Add to List?"
-                                                                                message:message
-                                                                                actions:@[
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
-                                                                                                                style:SPKIGAlertActionStyleCancel
-                                                                                                              handler:nil],
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Add"
-                                                                                                                style:SPKIGAlertActionStyleDefault
-                                                                                                              handler:^{
-                                                                                                                  [strongSelf addResolvedUserPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];
-                                                                                                              }],
-                                                                                ]];
-                                }];
+                                      [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
+                                                                                    title:@"Add to List?"
+                                                                                  message:message
+                                                                                  actions:@[
+                                                                                      [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                                                                                  style:SPKIGAlertActionStyleCancel
+                                                                                                                handler:nil],
+                                                                                      [SPKIGAlertAction actionWithTitle:@"Add"
+                                                                                                                  style:SPKIGAlertActionStyleDefault
+                                                                                                                handler:^{
+                                                                                                                    [strongSelf addResolvedUserPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];
+                                                                                                                }],
+                                                                                  ]];
+                                  }];
 }
 
 - (void)addResolvedUserPK:(NSString *)pk username:(NSString *)username fullName:(NSString *)fullName profilePicUrl:(NSString *)profilePicUrl {

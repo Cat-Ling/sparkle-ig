@@ -98,6 +98,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 @property (nonatomic, strong) CAShapeLayer *progressRingLayer;
 @property (nonatomic, strong) UIPanGestureRecognizer *panGesture;
 @property (nonatomic, assign) CGPoint panOriginCenter;
+@property (nonatomic, assign) BOOL indeterminate;
 
 - (void)applyCurrentVisualStyleAnimated:(BOOL)animated;
 - (void)spk_applyProgressModeInfoIcon;
@@ -111,6 +112,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 - (NSString *)spk_progressSubtitleForProgress:(float)progress;
 - (NSString *)spk_progressSubtitleForProgress:(float)progress bytesWritten:(int64_t)bytesWritten totalBytesExpected:(int64_t)totalBytesExpected;
 - (void)spk_applyAutomaticProgressSubtitleIfNeeded;
+- (void)spk_stopIndeterminateSpin;
 - (void)handlePan:(UIPanGestureRecognizer *)pan;
 @end
 
@@ -687,6 +689,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 }
 
 - (void)configureForProgressMode {
+    [self spk_stopIndeterminateSpin];
     self.mode = SPKNotificationPillModeProgress;
     self.isCompleted = NO;
     self.isErrorState = NO;
@@ -862,6 +865,62 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     [self setProgress:progress bytesWritten:self.currentBytesWritten totalBytesExpected:self.currentBytesExpected animated:animated];
 }
 
+// Work with no measurable progress (a single API request) has nothing to report as a
+// percentage, so the ring spins as a short arc and the subtitle row is dropped
+// entirely rather than sitting at a misleading "0%". Any real progress update takes
+// the pill straight back to the determinate presentation.
+- (void)setProgressIndeterminate:(BOOL)indeterminate {
+    if (self.mode != SPKNotificationPillModeProgress) {
+        [self configureForProgressMode];
+    }
+    if (self.indeterminate == indeterminate)
+        return;
+
+    if (!indeterminate) {
+        [self spk_stopIndeterminateSpin];
+        self.usesAutomaticProgressSubtitle = YES;
+        [self spk_applyAutomaticProgressSubtitleIfNeeded];
+        self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
+        [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:self.subtitleLabel.text hasButton:!self.closeButton.hidden];
+        [self layoutIfNeeded];
+        return;
+    }
+
+    self.indeterminate = YES;
+    self.usesAutomaticProgressSubtitle = NO;
+    self.subtitleLabel.text = nil;
+    self.subtitleLabel.hidden = YES;
+    self.heightConstraint.constant = kDynamicPillHeight;
+    [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:nil hasButton:!self.closeButton.hidden];
+
+    [self setProgressVisible:YES];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    self.progressRingLayer.strokeEnd = 0.28;
+    [CATransaction commit];
+
+    CABasicAnimation *spin = [CABasicAnimation animationWithKeyPath:@"transform.rotation.z"];
+    spin.fromValue = @(0.0);
+    spin.toValue = @(2.0 * M_PI);
+    spin.duration = 0.9;
+    spin.repeatCount = HUGE_VALF;
+    spin.removedOnCompletion = NO;
+    [self.progressRingLayer addAnimation:spin forKey:@"spk_indeterminateSpin"];
+
+    [self layoutIfNeeded];
+}
+
+- (void)spk_stopIndeterminateSpin {
+    if (!self.indeterminate)
+        return;
+    self.indeterminate = NO;
+    [self.progressRingLayer removeAnimationForKey:@"spk_indeterminateSpin"];
+    [CATransaction begin];
+    [CATransaction setDisableActions:YES];
+    self.progressRingLayer.strokeEnd = (CGFloat)self.currentProgress;
+    [CATransaction commit];
+}
+
 - (void)setProgress:(float)progress
           bytesWritten:(int64_t)bytesWritten
     totalBytesExpected:(int64_t)totalBytesExpected
@@ -869,6 +928,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     if (self.mode != SPKNotificationPillModeProgress) {
         [self configureForProgressMode];
     }
+    [self setProgressIndeterminate:NO];
 
     _currentProgress = [self sanitizedProgressValue:progress];
     self.currentBytesWritten = MAX((int64_t)0, bytesWritten);
@@ -916,6 +976,8 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
         [self configureForProgressMode];
     }
 
+    [self spk_stopIndeterminateSpin];
+
     self.isCompleted = NO;
     self.isErrorState = NO;
     self.titleLabel.text = title.length > 0 ? title : @"Downloading...";
@@ -951,6 +1013,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 }
 
 - (void)showSuccessWithTitle:(NSString *)title subtitle:(NSString *)subtitle icon:(UIImage *)icon {
+    [self spk_stopIndeterminateSpin];
     if (self.mode != SPKNotificationPillModeProgress) {
         [self configureForProgressMode];
     }
@@ -994,6 +1057,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 }
 
 - (void)showErrorWithTitle:(NSString *)title subtitle:(NSString *)subtitle icon:(UIImage *)icon {
+    [self spk_stopIndeterminateSpin];
     if (self.mode != SPKNotificationPillModeProgress) {
         [self configureForProgressMode];
     }
@@ -1039,6 +1103,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 }
 
 - (void)showInfoWithTitle:(NSString *)title subtitle:(NSString *)subtitle icon:(UIImage *)icon {
+    [self spk_stopIndeterminateSpin];
     if (self.mode != SPKNotificationPillModeProgress) {
         [self configureForProgressMode];
     }

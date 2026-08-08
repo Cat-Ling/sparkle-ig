@@ -1,5 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#import <CoreMedia/CoreMedia.h>
+#import <AVFoundation/AVFoundation.h>
 #include <objc/NSObject.h>
 
 #ifdef __cplusplus
@@ -46,6 +48,29 @@
 - (NSString *)ig_imageName;
 @end
 
+// Built only by ivar injection -- see SPKUtils spk_userReferenceForUser:. The
+// factory methods you would expect (+user:, +username:, ...) are Swift-only and
+// throw "unrecognized selector sent to class", so they are deliberately absent.
+@interface IGUserReference : NSObject
+- (nullable NSString *)pk;
+- (nullable NSString *)username;
+- (nullable id)user;
+@end
+
+@interface IGURLHandler : NSObject
++ (BOOL)openInternalURL:(id)url presentationConfig:(nullable id)config controller:(nullable id)controller animated:(BOOL)animated userSession:(id)session annotation:(nullable id)annotation;
++ (void)openURL:(id)url userSession:(id)session completionHandler:(nullable id /* block */)handler;
+@end
+
+@interface IGProfileConfig : NSObject
+- (instancetype)initWithUserReference:(id)userReference userSession:(id)userSession previousAnalyticsModule:(nullable NSString *)module;
+- (instancetype)initWithUserReference:(id)userReference userSession:(id)userSession;
+@end
+
+@interface IGProfileViewController : UIViewController
+- (instancetype)initWithConfiguration:(id)configuration accountSwitcherPresenter:(nullable id)presenter isMainProfileSurface:(BOOL)isMainProfileSurface;
+@end
+
 @interface IGProfileMenuSheetViewController : IGViewController
 @end
 
@@ -64,8 +89,21 @@
 @end
 
 @interface IGTabBarController : UIViewController
+@property (readonly, nonatomic) UIView *tabBar;
+@property (readonly, nonatomic) UIViewController *selectedViewController;
 - (NSInteger)tabBarStyle;
 - (void)_exploreButtonLongPressed:(id)gesture;
+- (void)_updateTabBarVisibilityForController:(id)controller;
+@end
+
+@interface IGMainAppScrollingContainerViewController : UIViewController
+@end
+
+@interface IGDirectInboxNavigationHeaderView : UIView
+@property (readonly, nonatomic) UIButton *messageButton;
+// v410's legacy Obj-C header additionally exposes cameraButton; used to detect
+// that older header shape (v439's Swift header does not respond to this).
+@property (readonly, nonatomic) UIButton *cameraButton;
 @end
 
 @interface IGTableViewCell : UITableViewCell
@@ -211,6 +249,11 @@
 - (id)gestureDelegate;
 @end
 
+// Real superclass is IGViewController; UIViewController is enough for the
+// appearance callbacks Sparkle hooks here.
+@interface IGStoryViewerViewController : UIViewController
+@end
+
 @interface IGDirectVisualMessageViewerController : UIViewController
 @end
 
@@ -267,6 +310,7 @@
 @end
 
 @interface IGTapButton : UIButton
+- (void)setEDR:(_Bool)edr;
 @end
 
 // Your-own-story viewer list (swipe up on your story). `_item` is the
@@ -393,6 +437,10 @@
 @interface IGDirectInboxConfig : NSObject
 @end
 
+@interface IGDirectInboxFeatureManager : NSObject
+- (BOOL)_isChatPeekEligibleForThreadId:(id)threadId;
+@end
+
 @interface IGDirectMediaPickerConfig : NSObject
 @end
 
@@ -441,10 +489,20 @@
 
 // IGConsumerSubsStoryPeekDirectPlugin.IGConsumerSubsStoryPeekDirectManager — the
 // DM-inbox story peek entry. It calls presentPeek… (real) or presentPeekUpsell…
-// (subscribe dead-end) based on entitlement.
+// (subscribe dead-end) based on entitlement. IG 440 and earlier only; 441 folded
+// it into the unified manager below.
 @interface _TtC35IGConsumerSubsStoryPeekDirectPlugin36IGConsumerSubsStoryPeekDirectManager : NSObject
 - (void)presentPeekWithSourceView:(id)view reelPK:(id)pk presenting:(id)presenting onTapToOpenStory:(id)onTapToOpenStory onViewProfile:(id)onViewProfile;
 - (void)presentPeekUpsellWithSourceView:(id)view reelPK:(id)pk presenting:(id)presenting onSubscribeToInstagramPlus:(id)onSubscribe onViewProfile:(id)onViewProfile;
+@end
+
+// IGConsumerSubsStoryPeekPlugin.IGConsumerSubsStoryPeekManager — IG 441+. The
+// per-surface Direct and Profile plugins were replaced by this single manager,
+// and the upsell is no longer a separate presenter: both entry points call one
+// presentPeek… and pass the real-vs-upsell decision in `peekMode` (0 = real).
+@interface _TtC29IGConsumerSubsStoryPeekPlugin30IGConsumerSubsStoryPeekManager : NSObject
+- (void)presentPeekWithReelPK:(id)pk source:(id)source pogPosition:(long long)position peekMode:(long long)mode context:(id)context actions:(id)actions presenting:(id)presenting;
+- (void)presentPeekWithViewModel:(id)model source:(id)source pogPosition:(long long)position peekMode:(long long)mode context:(id)context actions:(id)actions presenting:(id)presenting;
 @end
 
 @interface IGUFIInteractionCountsView : UIView
@@ -464,6 +522,8 @@
 @end
 
 @interface IGSundialViewerVerticalUFI : UIView
+// Native like control used as the source of the reel UFI's HDR/EDR tint.
+@property (readonly, nonatomic) UIButton *ufiLikeButton;
 - (void)_didTapLikeButton:(id)arg1;
 - (void)_didTapRepostButton:(id)arg1;
 // IG 436+ renamed handlers (no underscore prefix, no argument).
@@ -555,6 +615,61 @@
 @end
 
 @interface IGDirectMessageContentMutation : NSObject
+@end
+
+@interface IGStickerGalleryViewController : UIViewController
+@property (retain, nonatomic) NSArray *preferredMediaTypes;
+@end
+
+@interface IGGalleryDataSource : NSObject
+@property (retain, nonatomic) NSArray *preferredMediaTypes;
+@end
+
+@interface IGGalleryAssetProvider : NSObject
+@property (retain, nonatomic) NSArray *preferredMediaTypes;
+@end
+
+@interface IGStoryGalleryConfiguration : NSObject
+@property (readonly, copy, nonatomic) NSArray *preferredMediaTypes;
+@end
+
+@interface IGGalleryImageStickerView : UIView
+- (id)initWithImage:(id)image showStyleEducation:(_Bool)education isCroppingEnabled:(_Bool)enabled;
+@end
+
+@interface IGVideoClip : NSObject
+@property (nonatomic) CMTime endTime;
+@property (nonatomic) CMTimeRange compositionTimeRange;
+@property (nonatomic) CGRect cropRect;
+@property (nonatomic) CGSize renderSize;
+- (id)initWithAsset:(id)asset position:(long long)position sourceType:(long long)type;
+- (id)initWithAsset:(id)asset position:(long long)position sourceType:(long long)type shouldBeSquare:(_Bool)square;
+@end
+
+@interface IGGalleryVideoStickerModel : NSObject
+- (id)initWithVideoClip:(id)clip;
+@end
+
+@interface IGGalleryVideoStickerView : UIView
+- (id)initWithModel:(id)model;
+@end
+
+@interface IGStoryMediaCompositionEditingViewController : UIViewController
+@property (readonly, nonatomic) id stickerController;
+- (void)didAddSticker:(id)sticker;
+- (void)setEditingControlsOverlayViewHidden:(_Bool)hidden animated:(_Bool)animated;
+/// Composition playback. Used to quiet the canvas while a Sparkle sheet covers it,
+/// since IG's overFullScreen tray presentation leaves the editor mounted and live.
+- (void)pause;
+- (void)play;
+@end
+
+@interface IGStoryStickerTrayViewController : UIViewController
+@end
+
+/// Outer container for the story editor. Hosts IGStoryMediaCompositionEditingViewController
+/// as a child and is what actually presents the sticker tray / sticker gallery.
+@interface IGStoryPostCaptureEditingViewController : UIViewController
 @end
 
 /////////////////////////////////////////////////////////////////////////////

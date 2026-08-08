@@ -7,9 +7,11 @@
 #import "../../Shared/Messages/SPKDirectSeenContext.h"
 #import "../../Shared/Stories/SPKStoryButtonPlacement.h"
 #import "../../Shared/Stories/SPKStoryContext.h"
+#import "../../Shared/Stories/SPKStoryDynamicRange.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Tweak.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -143,6 +145,7 @@ static void SPKApplyStorySeenButtonStyle(UIButton *button) {
     if (!button)
         return;
     SPKApplyButtonStyle(button, kSPKActionButtonSourceDirect);
+    SPKStoryApplyDynamicRangeToButton(button);
 }
 
 static UIView *SPKStoryFooterContainerFromOverlay(UIView *overlayView) {
@@ -426,6 +429,7 @@ UIView *SPKActiveStoryOverlayForInteractions(void) {
 %hook IGStoryFullscreenOverlayView
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"StorySeenButtons.layoutSubviews");
 
     UIView *overlayView = (UIView *)self;
     SPKActiveStoryOverlayView = overlayView;

@@ -24,12 +24,18 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         @"interface_hide_explore_tab" : @(NO),
         @"interface_hide_create_tab" : @(NO),
         @"interface_hide_profile_tab" : @(NO),
+        @"interface_hide_tab_bar_in_messages_only" : @(NO),
+        @"interface_show_header_button_in_messages_only" : @(YES),
         @"interface_open_clipboard_link" : @(YES),
         @"tools_settings_shortcut" : @(YES),
         @"tools_shortcut_haptics" : @(YES),
         @"gallery_quick_access_tab" : @"direct-inbox-tab",
         @"tools_open_settings_on_launch" : @(NO),
         @"tools_disable_all" : @(NO),
+#if SPK_DEV
+        @"tools_perf_meter" : @(NO),
+        @"tools_perf_hud" : @(NO),
+#endif
         @"app_safe_startup" : @(NO),
         @"general_hide_ads_stories" : @(YES),
         @"feed_mode" : @"default",
@@ -41,10 +47,8 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"general_copy_text" : @(NO),
         @"stories_detailed_color_picker" : @(NO),
         @"msgs_disable_screenshot_detection" : @(YES),
-#if SPK_SIDELOAD
+#if SPK_DEV
         @"tools_hide_testflight_popup" : @(YES),
-#else
-        @"tools_hide_testflight_popup" : @(NO),
 #endif
         @"tools_fix_duplicate_notifications" : @(NO),
         @"general_hold_send_copy_link" : @(YES),
@@ -55,6 +59,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"msgs_confirm_refresh" : @(NO),
         @"msgs_hide_audio_call_btn" : @(NO),
         @"msgs_hide_video_call_btn" : @(NO),
+        @"msgs_hide_flag_btn" : @(NO),
         @"msgs_advance_visual_on_seen" : @(NO),
         @"msgs_stop_visual_auto_advance" : @(NO),
         @"feed_confirm_post_like" : @(NO),
@@ -101,12 +106,26 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"feed_long_press_expand" : @(NO),
         @"feed_expanded_vid_start_muted" : @(NO),
         @"general_preview_show_metadata" : @(YES),
+        @"general_action_btn_show_date" : @(NO),
         @"gallery_preview_show_metadata" : @(YES),
+        @"stories_allow_video_sticker" : @(NO),
+        @"stories_gallery_upload_sticker" : @(NO),
         @"stories_hide_join_trending" : @(NO),
         @"stories_mentions_btn" : @(NO),
         @"stories_unlock_preview" : @(NO),
         @"stories_hide_ig_plus_button" : @(NO),
         @"stories_search_viewer_list" : @(NO),
+        @"stories_auto_save" : @(NO),
+        @"stories_auto_save_filter_mode" : @"all",
+        @"msgs_auto_save" : @(NO),
+        @"msgs_unlock_preview" : @(NO),
+        @"msgs_auto_save_filter_mode" : @"all",
+        @"instants_auto_save" : @(NO),
+        @"instants_auto_save_filter_mode" : @"all",
+        @"downloads_autosave_destination" : @"gallery",
+        @"downloads_autosave_video_quality" : @"high_ignore_dash",
+        @"downloads_autosave_photo_quality" : @"high",
+        @"downloads_autosave_keep_history" : @(NO),
         @"feed_disable_appicon_gesture" : @(NO),
         @"reels_tap_control" : @"default",
         @"instants_disable_creation" : @(YES),
@@ -117,7 +136,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"instants_action_btn_default_action" : @"none",
         @"instants_allow_screenshot" : @(NO),
         @"instants_confirm_reaction" : @(NO),
-        @"instants_upload_from_gallery" : @(NO),
+        @"instants_camera_btn" : @(YES),
         @"msgs_disable_vanish_swipe_up" : @(NO),
         @"msgs_hide_vanish_screenshot" : @(NO),
         @"reels_disable_auto_unmute" : @(NO),
@@ -125,9 +144,12 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"feed_disable_bg_refresh" : @(NO),
         @"general_cache_auto_clear" : @"never",
         @"downloads_enhanced_media_resolution" : @(YES),
+        @"downloads_fetch_4k_images" : @(NO),
         @"downloads_detect_duplicates" : @(YES),
         @"downloads_max_concurrent" : @(2),
         @"downloads_history_limit" : @(100),
+        @"downloads_photos_album_enabled" : @(NO),
+        @"downloads_photos_album" : @"Sparkle",
         @"general_hide_ads_feed" : @(YES),
         @"general_hide_ads_stories" : @(YES),
         @"general_hide_ads_reels" : @(YES),
@@ -197,6 +219,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"reels_hide_repost_btn" : @(NO),
         @"stories_poll_vote_counts" : @(NO),
         @"gallery_show_favorites_top" : @(NO),
+        @"gallery_flat_browsing" : @(NO),
         @"gallery_hidden_sources" : @[],
         @"gallery_filter_current_account" : @(NO),
         @"general_per_account_settings" : @(NO),
@@ -210,6 +233,37 @@ static NSDictionary *SPKFeatureDefaults(void) {
     [defaults addEntriesFromDictionary:SPKNotificationDefaultPreferences()];
 
     return defaults;
+}
+
+/// One-time rename of the Instants camera-screen preference.
+///
+/// `instants_upload_from_gallery` shipped as its own toggle for the upload button; that
+/// button and the saved-instants button are now one button with a menu, behind
+/// `instants_camera_btn`. Anyone who explicitly turned the old toggle on or off gets that
+/// choice carried over; everyone else takes the new default. Values are copied per
+/// namespace, since per-account preferences live under `u_<pk>_<key>` and a single global
+/// read would silently drop every account's setting but one.
+static void SPKCoreMigrateInstantsCameraButtonPreference(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    static NSString *const migratedKey = @"instants_camera_btn_migrated";
+    if ([defaults boolForKey:migratedKey])
+        return;
+
+    NSString *legacyKey = @"instants_upload_from_gallery";
+    NSString *newKey = @"instants_camera_btn";
+    for (NSString *key in [defaults dictionaryRepresentation].allKeys) {
+        if (![key isEqualToString:legacyKey] && ![key hasSuffix:[@"_" stringByAppendingString:legacyKey]])
+            continue;
+        id value = [defaults objectForKey:key];
+        if (value != nil) {
+            NSString *target = [[key substringToIndex:key.length - legacyKey.length] stringByAppendingString:newKey];
+            if ([defaults objectForKey:target] == nil)
+                [defaults setObject:value forKey:target];
+        }
+        [defaults removeObjectForKey:key];
+    }
+
+    [defaults setBool:YES forKey:migratedKey];
 }
 
 void SPKCoreRegisterBootstrapDefaults(void) {
@@ -226,6 +280,7 @@ void SPKCoreRegisterDefaults(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         [[NSUserDefaults standardUserDefaults] registerDefaults:SPKFeatureDefaults()];
+        SPKCoreMigrateInstantsCameraButtonPreference();
         SPKStartupMark(@"feature defaults registered");
     });
 }

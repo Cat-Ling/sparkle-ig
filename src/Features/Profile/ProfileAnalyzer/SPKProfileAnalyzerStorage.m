@@ -255,6 +255,33 @@ static BOOL spkWriteJSON(NSString *path, NSDictionary *dict) {
         spkPostDataChanged(userPK);
 }
 
++ (void)removeChangeEventsWithIDs:(NSArray<NSString *> *)eventIDs forUserPK:(NSString *)userPK {
+    if (!eventIDs.count)
+        return;
+    NSSet *doomed = [NSSet setWithArray:eventIDs];
+    __block BOOL changed = NO;
+    dispatch_sync(spkChangeLogQueue(), ^{
+        NSArray *existing = spkReadJSON(spkPath(userPK, @"changelog"))[@"events"];
+        if (![existing isKindOfClass:[NSArray class]])
+            return;
+        NSMutableArray *list = [NSMutableArray arrayWithCapacity:existing.count];
+        for (NSDictionary *d in existing) {
+            // `eventID` is derived (type + pk + date), not stored, so rebuild to compare —
+            // the same thing `appendChangeEvents:` does to de-dup.
+            SPKProfileAnalyzerChangeEvent *e = [SPKProfileAnalyzerChangeEvent eventFromJSONDict:d];
+            if (e && [doomed containsObject:e.eventID]) {
+                changed = YES;
+                continue;
+            }
+            [list addObject:d];
+        }
+        if (changed)
+            spkWriteJSON(spkPath(userPK, @"changelog"), @{@"events" : list});
+    });
+    if (changed)
+        spkPostDataChanged(userPK);
+}
+
 + (void)clearChangeLogForUserPK:(NSString *)userPK {
     dispatch_sync(spkChangeLogQueue(), ^{
         [[NSFileManager defaultManager] removeItemAtPath:spkPath(userPK, @"changelog") error:nil];

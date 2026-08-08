@@ -7,6 +7,7 @@
 #import "../UI/SPKMediaChrome.h"
 #import "SPKGalleryCoreDataStack.h"
 #import "SPKGalleryFile.h"
+#import "SPKGalleryFilterViewController.h"
 #import "SPKGalleryFolderChipBar.h"
 #import "SPKGalleryGridCell.h"
 #import "SPKGalleryGridDensity.h"
@@ -14,6 +15,32 @@
 #import "SPKGalleryListCollectionCell.h"
 #import "SPKGalleryLockViewController.h"
 #import "SPKGalleryManager.h"
+#import "SPKGallerySortViewController.h"
+
+NSNotificationName const SPKGalleryPickerDidDismissNotification = @"SPKGalleryPickerDidDismissNotification";
+
+// The picker gets its own UIWindow rather than being presented into IG's. From
+// the story composer IG keeps its editor mounted behind the picker (it presents
+// the sticker tray overFullScreen), and sharing a window with it made the
+// picker's grid scroll several times slower than the same grid opened from
+// Direct. A separate window keeps the picker's view hierarchy to itself.
+//
+// Held in a global rather than on the picker: the window retains its root, which
+// retains the navigation controller, which retains the picker, so a back
+// reference from the picker would be a cycle.
+static UIWindow *sSPKGalleryPickerWindow = nil;
+static __weak UIWindow *sSPKGalleryPickerPreviousKeyWindow = nil;
+
+static void SPKGalleryPickerTeardownWindow(void) {
+    if (!sSPKGalleryPickerWindow) {
+        return;
+    }
+    [sSPKGalleryPickerPreviousKeyWindow makeKeyWindow];
+    sSPKGalleryPickerWindow.hidden = YES;
+    sSPKGalleryPickerWindow.rootViewController = nil;
+    sSPKGalleryPickerWindow = nil;
+    sSPKGalleryPickerPreviousKeyWindow = nil;
+}
 
 static NSString *const kSPKGalleryPickerListCellID = @"SPKGalleryPickerListCell";
 static NSString *const kSPKGalleryPickerGridCellID = @"SPKGalleryPickerGridCell";
@@ -30,22 +57,48 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
                                               UICollectionViewDelegate,
                                               UICollectionViewDelegateFlowLayout,
                                               UIAdaptivePresentationControllerDelegate,
-                                              UISearchResultsUpdating>
+                                              UISearchResultsUpdating,
+                                              UISearchBarDelegate,
+                                              SPKGallerySortViewControllerDelegate,
+                                              SPKGalleryFilterViewControllerDelegate>
+// Folders are browsed in place (re-scoping this one controller) rather than by
+// pushing a picker per folder, matching the Gallery — the nav bar, search field
+// and toolbar are never recreated, so the chrome never flashes mid-transition.
+// `folderTrail` is the stack of folder paths from root to the current folder
+// (empty at root); `folderScrollOffsets` holds the parallel grid scroll position
+// to restore on the way back.
 @property (nonatomic, copy, nullable) NSString *folderPath;
+@property (nonatomic, strong) NSMutableArray<NSString *> *folderTrail;
+@property (nonatomic, strong) NSMutableArray<NSValue *> *folderScrollOffsets;
 @property (nonatomic, copy) NSString *pickerTitle;
 @property (nonatomic, strong, nullable) NSSet<NSNumber *> *allowedMediaTypes;
 @property (nonatomic, assign) BOOL allowsMultipleSelection;
 @property (nonatomic, copy) SPKGalleryPickerCompletion completion;
 @property (nonatomic, strong) UICollectionView *collectionView;
-@property (nonatomic, strong) UILabel *emptyLabel;
+@property (nonatomic, strong) UIView *emptyStateView;
+@property (nonatomic, strong) UILabel *emptyStateLabel;
+@property (nonatomic, strong) UILabel *emptyStateSubtitle;
 @property (nonatomic, strong) UISearchController *searchController;
 @property (nonatomic, copy) NSString *searchQuery;
+// When YES (and a query is active), search ignores the folder scope and matches
+// across all folders; the search bar scope buttons toggle it. Same affordance as
+// the Gallery, so a file you know is filed away is still findable from the root.
+@property (nonatomic, assign) BOOL searchAllFolders;
 @property (nonatomic, strong) NSArray<NSString *> *subfolders;
 @property (nonatomic, strong) NSArray<SPKGalleryFile *> *files;
 @property (nonatomic, strong) NSMutableArray<NSString *> *selectedIDs;
 @property (nonatomic, strong) NSMutableDictionary<NSString *, SPKGalleryFile *> *selectedFilesByID;
 @property (nonatomic, assign) SPKGalleryPickerViewMode viewMode;
 @property (nonatomic, assign) NSInteger gridColumns;
+@property (nonatomic, assign) SPKGallerySortMode sortMode;
+@property (nonatomic, assign) BOOL sortGroupByMediaType;
+@property (nonatomic, strong) NSMutableSet<NSNumber *> *filterTypes;
+@property (nonatomic, strong) NSMutableSet<NSNumber *> *filterSources;
+@property (nonatomic, assign) BOOL filterFavoritesOnly;
+@property (nonatomic, strong) NSMutableSet<NSString *> *filterUsernames;
+@property (nonatomic, strong) UIBarButtonItem *cachedSearchToolbarItem;
+
+- (void)presentInOwnWindowAbove:(UIViewController *)presenter navigationController:(UINavigationController *)nav;
 @end
 
 @implementation SPKGalleryPickerViewController
@@ -86,7 +139,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
                                                                   completion:completion];
         UINavigationController *nav = [[SPKChromeNavigationController alloc] initWithRootViewController:picker];
         nav.modalPresentationStyle = UIModalPresentationFullScreen;
-        [presenter presentViewController:nav animated:YES completion:nil];
+        [picker presentInOwnWindowAbove:presenter navigationController:nav];
     };
 
     if (mgr.isLockEnabled && !mgr.isUnlocked) {
@@ -99,6 +152,42 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     } else {
         presentPicker();
     }
+}
+
+- (void)presentInOwnWindowAbove:(UIViewController *)presenter navigationController:(UINavigationController *)nav {
+    UIWindow *presenterWindow = presenter.viewIfLoaded.window;
+
+    UIWindow *window = nil;
+    if (@available(iOS 13.0, *)) {
+        UIWindowScene *scene = presenterWindow.windowScene;
+        if (scene) {
+            window = [[UIWindow alloc] initWithWindowScene:scene];
+        }
+    }
+    if (!window) {
+        CGRect frame = CGRectGetWidth(presenterWindow.bounds) > 0.0 ? presenterWindow.bounds : UIScreen.mainScreen.bounds;
+        window = [[UIWindow alloc] initWithFrame:frame];
+    }
+
+    // Just above whatever we were launched over, so IG's own chrome stays behind
+    // the picker without competing with system windows (alerts, status bar).
+    window.windowLevel = (presenterWindow ? presenterWindow.windowLevel : UIWindowLevelNormal) + 1.0;
+    // Clear, so IG shows through during the present/dismiss transition exactly as
+    // it did when the picker was presented into IG's own window.
+    window.backgroundColor = [UIColor clearColor];
+    window.opaque = NO;
+
+    UIViewController *host = [[UIViewController alloc] init];
+    host.view.backgroundColor = [UIColor clearColor];
+    host.view.opaque = NO;
+    window.rootViewController = host;
+
+    sSPKGalleryPickerPreviousKeyWindow = presenterWindow.isKeyWindow ? presenterWindow : UIApplication.sharedApplication.keyWindow;
+    sSPKGalleryPickerWindow = window;
+    // Key, or the search field would never get the keyboard.
+    [window makeKeyAndVisible];
+
+    [host presentViewController:nav animated:YES completion:nil];
 }
 
 - (instancetype)initWithTitle:(NSString *)title
@@ -120,6 +209,11 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     self = [super initWithNibName:nil bundle:nil];
     if (self) {
         _folderPath = [folderPath copy];
+        _folderTrail = [NSMutableArray array];
+        _folderScrollOffsets = [NSMutableArray array];
+        if (_folderPath.length > 0) {
+            [_folderTrail addObject:_folderPath];
+        }
         _pickerTitle = [title.length > 0 ? title : @"Gallery" copy];
         _allowedMediaTypes = [allowedMediaTypes copy];
         _allowsMultipleSelection = allowsMultipleSelection;
@@ -131,6 +225,12 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
         _selectedFilesByID = [NSMutableDictionary dictionary];
         _viewMode = (SPKGalleryPickerViewMode)[[NSUserDefaults standardUserDefaults] integerForKey:kSPKGalleryPickerViewModeKey];
         _gridColumns = SPKGalleryGridColumns();
+        _sortMode = SPKGallerySortModeDateAddedDesc;
+        _sortGroupByMediaType = NO;
+        _filterTypes = [NSMutableSet set];
+        _filterSources = [NSMutableSet set];
+        _filterFavoritesOnly = NO;
+        _filterUsernames = [NSMutableSet set];
     }
     return self;
 }
@@ -141,11 +241,9 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
                                              selector:@selector(hiddenSourcesChanged:)
                                                  name:SPKGalleryHiddenSourcesDidChangeNotification
                                                object:nil];
-    // Match the real gallery: use the Instagram palette (dynamic colors that
-    // adapt to light/dark) rather than a plain system background or a forced
-    // appearance style.
+
     self.view.backgroundColor = [SPKUtils SPKColor_InstagramBackground];
-    self.title = self.folderPath.length > 0 ? self.folderPath.lastPathComponent : self.pickerTitle;
+    [self updateFolderTitle];
 
     self.collectionView = [[UICollectionView alloc] initWithFrame:CGRectZero collectionViewLayout:[self makeLayout]];
     self.collectionView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -163,46 +261,45 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     UIPinchGestureRecognizer *pinch = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handleGridPinch:)];
     [self.collectionView addGestureRecognizer:pinch];
 
-    self.emptyLabel = [[UILabel alloc] init];
-    self.emptyLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    self.emptyLabel.text = @"No matching Gallery files";
-    self.emptyLabel.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
-    self.emptyLabel.textAlignment = NSTextAlignmentCenter;
-    self.emptyLabel.font = [UIFont systemFontOfSize:16.0 weight:UIFontWeightMedium];
-    self.emptyLabel.numberOfLines = 0;
-    [self.view addSubview:self.emptyLabel];
+    [self setupEmptyState];
 
     [NSLayoutConstraint activateConstraints:@[
         [self.collectionView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
         [self.collectionView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
         [self.collectionView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
-        [self.collectionView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
-        [self.emptyLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor
-                                                      constant:24.0],
-        [self.emptyLabel.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor
-                                                       constant:-24.0],
-        [self.emptyLabel.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor]
+        [self.collectionView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor]
     ]];
 
-    // Only the root picker shows "Cancel"; pushed folder screens keep the system
-    // back button (and its swipe-to-go-back gesture).
-    BOOL isRoot = (self.navigationController.viewControllers.firstObject == self || self.folderPath.length == 0);
-    if (isRoot) {
-        UIBarButtonItem *cancelItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(cancelTapped));
-        cancelItem.accessibilityLabel = @"Cancel";
-        self.navigationItem.leftBarButtonItem = cancelItem;
-    }
+    [self refreshLeadingNavItem];
     [self refreshNavigationRightItems];
 
     self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
     self.searchController.searchResultsUpdater = self;
     self.searchController.obscuresBackgroundDuringPresentation = NO;
+    self.searchController.hidesNavigationBarDuringPresentation = NO;
     self.searchController.searchBar.placeholder = @"Search Gallery";
+    self.searchController.searchBar.delegate = self;
     [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                              forSearchBarIcon:UISearchBarIconSearch
                                         state:UIControlStateNormal];
+    // Scope toggle: search the current folder, or across all folders. Let the
+    // search controller manage the scope bar's visibility (shown while searching).
+    self.searchController.searchBar.scopeButtonTitles = @[ @"This Folder", @"All Folders" ];
+    self.searchController.automaticallyShowsScopeBar = YES;
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = YES;
+
+    if (@available(iOS 26.0, *)) {
+        @try {
+            [self.navigationItem setValue:@(4) forKey:@"preferredSearchBarPlacement"];
+            [self.searchController loadViewIfNeeded];
+            UIBarButtonItem *vended = [self.navigationItem valueForKey:@"searchBarPlacementBarButtonItem"];
+            if ([vended isKindOfClass:[UIBarButtonItem class]]) {
+                self.cachedSearchToolbarItem = vended;
+            }
+        } @catch (__unused NSException *exception) {
+        }
+    }
     self.definesPresentationContext = YES;
 
     if (self.navigationController.viewControllers.firstObject == self) {
@@ -223,6 +320,12 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    if (self.navigationController) {
+        self.navigationController.navigationBar.prefersLargeTitles = NO;
+        SPKApplyMediaChromeNavigationBar(self.navigationController.navigationBar);
+    }
+    self.navigationController.toolbarHidden = NO;
+    [self refreshBottomToolbarItems];
     [self reloadData];
 }
 
@@ -233,6 +336,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     if (self.isMovingFromParentViewController)
         return;
     if (self.isBeingDismissed || self.navigationController.isBeingDismissed) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:SPKGalleryPickerDidDismissNotification object:self];
         if ([SPKGalleryManager sharedManager].isLockEnabled) {
             [[SPKGalleryManager sharedManager] lockGallery];
         }
@@ -240,6 +344,9 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 }
 
 - (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
+    // Interactive dismissal bypasses dismissPickerWithCompletion:, so the host
+    // window has to be released here too or it would linger above IG forever.
+    SPKGalleryPickerTeardownWindow();
     if ([SPKGalleryManager sharedManager].isLockEnabled) {
         [[SPKGalleryManager sharedManager] lockGallery];
     }
@@ -280,16 +387,47 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     return predicates.count > 0 ? [NSCompoundPredicate andPredicateWithSubpredicates:predicates] : nil;
 }
 
+/// The scope toggle is only meaningful while a query is active — with no query,
+/// "All Folders" would flatten the whole gallery into the folder you are in.
+- (BOOL)searchingAllFolders {
+    if (!self.searchAllFolders)
+        return NO;
+    NSString *query = [self.searchQuery stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    return query.length > 0;
+}
+
 - (NSArray<SPKGalleryFile *> *)fetchFiles {
     NSFetchRequest *request = [[NSFetchRequest alloc] initWithEntityName:@"SPKGalleryFile"];
-    request.predicate = [self filePredicateForFolderPath:self.folderPath includeDescendants:NO];
-    request.sortDescriptors = @[
-        [NSSortDescriptor sortDescriptorWithKey:@"dateAdded"
-                                      ascending:NO],
-        [NSSortDescriptor sortDescriptorWithKey:@"relativePath"
-                                      ascending:YES
-                                       selector:@selector(localizedStandardCompare:)]
-    ];
+    NSMutableArray<NSPredicate *> *predicates = [NSMutableArray array];
+
+    // "All Folders" only applies while actually searching; otherwise stay scoped
+    // to the folder being browsed. Passing a nil path with descendants included
+    // drops the folder predicate entirely, which is exactly "everywhere".
+    NSPredicate *basePred = [self searchingAllFolders]
+                                ? [self filePredicateForFolderPath:nil includeDescendants:YES]
+                                : [self filePredicateForFolderPath:self.folderPath includeDescendants:NO];
+    if (basePred) [predicates addObject:basePred];
+
+    NSPredicate *filterPred = [SPKGalleryFilterViewController predicateForTypes:self.filterTypes
+                                                                        sources:self.filterSources
+                                                                  favoritesOnly:self.filterFavoritesOnly
+                                                                      usernames:self.filterUsernames
+                                                                     folderPath:self.folderPath
+                                                                  scopeToFolder:NO];
+    if (filterPred) [predicates addObject:filterPred];
+
+    request.predicate = predicates.count > 0 ? [NSCompoundPredicate andPredicateWithSubpredicates:predicates] : nil;
+
+    NSArray<NSSortDescriptor *> *sortDescriptors = [SPKGallerySortViewController sortDescriptorsForMode:self.sortMode groupByMediaType:self.sortGroupByMediaType];
+    if (sortDescriptors.count > 0) {
+        request.sortDescriptors = sortDescriptors;
+    } else {
+        request.sortDescriptors = @[
+            [NSSortDescriptor sortDescriptorWithKey:@"dateAdded" ascending:NO],
+            [NSSortDescriptor sortDescriptorWithKey:@"relativePath" ascending:YES selector:@selector(localizedStandardCompare:)]
+        ];
+    }
+
     NSArray<SPKGalleryFile *> *fetched = [[SPKGalleryCoreDataStack shared].viewContext executeFetchRequest:request error:nil] ?: @[];
     NSMutableArray<SPKGalleryFile *> *existing = [NSMutableArray arrayWithCapacity:fetched.count];
     for (SPKGalleryFile *file in fetched) {
@@ -372,27 +510,63 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     SPKGalleryGridSetColumns(clamped);
 }
 
-/// Trailing nav-bar items: the grid/list toggle, plus the "Add" confirm button
-/// when multi-selecting.
-- (void)refreshNavigationRightItems {
+- (UIBarButtonItem *)pickerBottomBarItemWithResource:(NSString *)resourceName accessibility:(NSString *)label action:(SEL)action {
+    return SPKMediaChromeBottomBarButtonItem(resourceName, label, self, action);
+}
+
+- (UIBarButtonItem *)bottomToolbarSearchItem {
+    UIBarButtonItem *searchItem = self.cachedSearchToolbarItem;
+    if (!searchItem) {
+        if (@available(iOS 26.0, *)) {
+            @try {
+                UIBarButtonItem *vended = [self.navigationItem valueForKey:@"searchBarPlacementBarButtonItem"];
+                if ([vended isKindOfClass:[UIBarButtonItem class]]) {
+                    searchItem = vended;
+                    self.cachedSearchToolbarItem = vended;
+                }
+            } @catch (__unused NSException *exception) {
+            }
+        }
+    }
+    if (!searchItem) {
+        searchItem = [self pickerBottomBarItemWithResource:@"search" accessibility:@"Search" action:@selector(activateSearch)];
+    }
+    return searchItem;
+}
+
+- (void)activateSearch {
+    if (!self.searchController.active) {
+        self.searchController.active = YES;
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.searchController.searchBar becomeFirstResponder];
+    });
+}
+
+- (void)refreshBottomToolbarItems {
+    SPKMediaChromeConfigureBottomToolbar(self.navigationController.toolbar);
+
     NSString *toggleResource = self.viewMode == SPKGalleryPickerViewModeGrid ? @"list" : @"grid";
     NSString *toggleAX = self.viewMode == SPKGalleryPickerViewModeGrid ? @"List view" : @"Grid view";
-    UIBarButtonItem *toggleItem = [[UIBarButtonItem alloc] initWithImage:[SPKAssetUtils instagramIconNamed:toggleResource pointSize:24.0]
-                                                                   style:UIBarButtonItemStylePlain
-                                                                  target:self
-                                                                  action:@selector(togglePickerViewMode)];
-    toggleItem.accessibilityLabel = toggleAX;
-    toggleItem.tintColor = [SPKUtils SPKColor_InstagramPrimaryText];
+    UIBarButtonItem *toggleItem = [self pickerBottomBarItemWithResource:toggleResource accessibility:toggleAX action:@selector(togglePickerViewMode)];
 
+    UIBarButtonItem *sortItem = [self pickerBottomBarItemWithResource:@"sort" accessibility:@"Sort" action:@selector(presentSort)];
+    UIBarButtonItem *filterItem = [self pickerBottomBarItemWithResource:@"filter" accessibility:@"Filter" action:@selector(presentFilter)];
+
+    NSArray<UIBarButtonItem *> *primary = @[ toggleItem, sortItem, filterItem ];
+    self.toolbarItems = SPKMediaChromeBottomToolbarItemsWithTrailingGroup(primary, @[ [self bottomToolbarSearchItem] ]);
+}
+
+- (void)refreshNavigationRightItems {
     if (self.allowsMultipleSelection) {
         UIBarButtonItem *addItem = [[UIBarButtonItem alloc] initWithTitle:@"Add"
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
                                                                    action:@selector(doneTapped)];
         addItem.enabled = self.selectedIDs.count > 0;
-        self.navigationItem.rightBarButtonItems = @[ addItem, toggleItem ];
+        self.navigationItem.rightBarButtonItems = @[ addItem ];
     } else {
-        self.navigationItem.rightBarButtonItems = @[ toggleItem ];
+        self.navigationItem.rightBarButtonItems = @[];
     }
 }
 
@@ -401,7 +575,133 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     [[NSUserDefaults standardUserDefaults] setInteger:self.viewMode forKey:kSPKGalleryPickerViewModeKey];
     [self.collectionView setCollectionViewLayout:[self makeLayout] animated:NO];
     [self.collectionView reloadData];
-    [self refreshNavigationRightItems];
+    [self refreshBottomToolbarItems];
+}
+
+#pragma mark - Sort & Filter Presentation
+
+- (void)configureGallerySheetForNavigation:(UINavigationController *)nav {
+    nav.modalPresentationStyle = UIModalPresentationPageSheet;
+    UISheetPresentationController *sheet = nav.sheetPresentationController;
+    if (sheet) {
+        sheet.detents = @[
+            UISheetPresentationControllerDetent.mediumDetent,
+            UISheetPresentationControllerDetent.largeDetent
+        ];
+        sheet.prefersGrabberVisible = YES;
+    }
+}
+
+- (CGFloat)sheetFitHeightForContentHeight:(CGFloat)contentHeight {
+    CGFloat bottomSafe = self.view.window.safeAreaInsets.bottom;
+    CGFloat navBar = 56.0;
+    return navBar + contentHeight + bottomSafe + 8.0;
+}
+
+- (CGFloat)sheetContentWidth {
+    return CGRectGetWidth(self.view.bounds);
+}
+
+- (void)presentSort {
+    SPKGallerySortViewController *vc = [[SPKGallerySortViewController alloc] init];
+    vc.delegate = self;
+    vc.currentSortMode = self.sortMode;
+    vc.currentGroupByMediaType = self.sortGroupByMediaType;
+    UINavigationController *nav = [[SPKChromeNavigationController alloc] initWithRootViewController:vc];
+    [self configureGallerySheetForNavigation:nav];
+
+    UISheetPresentationController *sheet = nav.sheetPresentationController;
+    if (sheet) {
+        if (@available(iOS 16.0, *)) {
+            CGFloat fitHeight = [self sheetFitHeightForContentHeight:[vc spkContentHeightForWidth:[self sheetContentWidth]]];
+            UISheetPresentationControllerDetent *fit = [UISheetPresentationControllerDetent
+                customDetentWithIdentifier:@"sparkle.picker.sort.fit"
+                                  resolver:^CGFloat(id<UISheetPresentationControllerDetentResolutionContext> context) {
+                                      return MIN(context.maximumDetentValue, fitHeight);
+                                  }];
+            sheet.detents = @[ fit ];
+            sheet.selectedDetentIdentifier = fit.identifier;
+        } else {
+            sheet.detents = @[ UISheetPresentationControllerDetent.mediumDetent ];
+        }
+        sheet.prefersScrollingExpandsWhenScrolledToEdge = NO;
+    }
+
+    [self presentViewController:nav animated:YES completion:nil];
+}
+
+- (NSArray<NSString *> *)availableSourceUsernames {
+    NSFetchRequest *req = [[NSFetchRequest alloc] initWithEntityName:@"SPKGalleryFile"];
+    req.resultType = NSDictionaryResultType;
+    req.propertiesToFetch = @[ @"sourceUsername" ];
+    req.returnsDistinctResults = YES;
+    NSArray<NSDictionary *> *rows = [[SPKGalleryCoreDataStack shared].viewContext executeFetchRequest:req error:nil] ?: @[];
+    NSMutableSet<NSString *> *set = [NSMutableSet set];
+    for (NSDictionary *row in rows) {
+        NSString *u = row[@"sourceUsername"];
+        if (u.length > 0) [set addObject:u];
+    }
+    return [[set allObjects] sortedArrayUsingSelector:@selector(localizedStandardCompare:)];
+}
+
+- (void)presentFilter {
+    SPKGalleryFilterViewController *vc = [[SPKGalleryFilterViewController alloc] init];
+    vc.delegate = self;
+    vc.filterTypes = self.filterTypes;
+    vc.filterSources = self.filterSources;
+    vc.filterFavoritesOnly = self.filterFavoritesOnly;
+    vc.filterUsernames = [self.filterUsernames mutableCopy];
+    NSArray<NSString *> *available = [self availableSourceUsernames];
+    vc.availableUsernames = available.count > 1 ? available : @[];
+    UINavigationController *nav = [[SPKChromeNavigationController alloc] initWithRootViewController:vc];
+    [self configureGallerySheetForNavigation:nav];
+
+    UISheetPresentationController *sheet = nav.sheetPresentationController;
+    if (sheet) {
+        if (@available(iOS 16.0, *)) {
+            CGFloat fitHeight = [self sheetFitHeightForContentHeight:[vc spkContentHeightForWidth:[self sheetContentWidth]]];
+            UISheetPresentationControllerDetent *fit = [UISheetPresentationControllerDetent
+                customDetentWithIdentifier:@"sparkle.picker.filter.fit"
+                                  resolver:^CGFloat(id<UISheetPresentationControllerDetentResolutionContext> context) {
+                                      return MIN(context.maximumDetentValue, fitHeight);
+                                  }];
+            sheet.detents = @[ fit ];
+            sheet.selectedDetentIdentifier = fit.identifier;
+        } else {
+            sheet.detents = @[ UISheetPresentationControllerDetent.mediumDetent ];
+        }
+        sheet.prefersScrollingExpandsWhenScrolledToEdge = NO;
+    }
+
+    [self presentViewController:nav animated:YES completion:nil];
+}
+
+#pragma mark - Sort & Filter Delegates
+
+- (void)sortController:(SPKGallerySortViewController *)controller didSelectSortMode:(SPKGallerySortMode)mode groupByMediaType:(BOOL)groupByMediaType {
+    self.sortMode = mode;
+    self.sortGroupByMediaType = groupByMediaType;
+    [self reloadData];
+}
+
+- (void)filterController:(SPKGalleryFilterViewController *)controller
+           didApplyTypes:(NSSet<NSNumber *> *)types
+                 sources:(NSSet<NSNumber *> *)sources
+           favoritesOnly:(BOOL)favoritesOnly
+               usernames:(NSSet<NSString *> *)usernames {
+    self.filterTypes = [types mutableCopy];
+    self.filterSources = [sources mutableCopy];
+    self.filterFavoritesOnly = favoritesOnly;
+    self.filterUsernames = [usernames mutableCopy] ?: [NSMutableSet set];
+    [self reloadData];
+}
+
+- (void)filterControllerDidClear:(SPKGalleryFilterViewController *)controller {
+    [self.filterTypes removeAllObjects];
+    [self.filterSources removeAllObjects];
+    self.filterFavoritesOnly = NO;
+    [self.filterUsernames removeAllObjects];
+    [self reloadData];
 }
 
 - (void)handleGridPinch:(UIPinchGestureRecognizer *)pinch {
@@ -423,10 +723,101 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     }
 }
 
+#pragma mark - Empty State
+
+/// Same icon + title + subtitle treatment as the Gallery, so an empty picker
+/// reads as a deliberate state rather than a blank sheet with one grey line.
+- (void)setupEmptyState {
+    _emptyStateView = [[UIView alloc] initWithFrame:CGRectZero];
+    _emptyStateView.translatesAutoresizingMaskIntoConstraints = NO;
+    _emptyStateView.hidden = YES;
+    [self.view addSubview:_emptyStateView];
+
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[SPKAssetUtils instagramIconNamed:@"media_empty"
+                                                                                   pointSize:96.0]];
+    icon.translatesAutoresizingMaskIntoConstraints = NO;
+    icon.contentMode = UIViewContentModeScaleAspectFit;
+    icon.tintColor = [SPKUtils SPKColor_InstagramTertiaryText];
+    [_emptyStateView addSubview:icon];
+
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectZero];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    label.textColor = [SPKUtils SPKColor_InstagramPrimaryText];
+    label.font = [UIFont systemFontOfSize:17.0 weight:UIFontWeightMedium];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.numberOfLines = 0;
+    [_emptyStateView addSubview:label];
+    _emptyStateLabel = label;
+
+    UILabel *subtitle = [[UILabel alloc] initWithFrame:CGRectZero];
+    subtitle.translatesAutoresizingMaskIntoConstraints = NO;
+    subtitle.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
+    subtitle.font = [UIFont systemFontOfSize:14.0];
+    subtitle.textAlignment = NSTextAlignmentCenter;
+    subtitle.numberOfLines = 0;
+    [_emptyStateView addSubview:subtitle];
+    _emptyStateSubtitle = subtitle;
+
+    [NSLayoutConstraint activateConstraints:@[
+        [_emptyStateView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [_emptyStateView.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor
+                                                      constant:-40.0],
+        [_emptyStateView.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.view.leadingAnchor
+                                                                   constant:40.0],
+        [_emptyStateView.trailingAnchor constraintLessThanOrEqualToAnchor:self.view.trailingAnchor
+                                                                 constant:-40.0],
+
+        [icon.topAnchor constraintEqualToAnchor:_emptyStateView.topAnchor],
+        [icon.centerXAnchor constraintEqualToAnchor:_emptyStateView.centerXAnchor],
+        [icon.widthAnchor constraintEqualToConstant:96.0],
+        [icon.heightAnchor constraintEqualToConstant:96.0],
+
+        [label.topAnchor constraintEqualToAnchor:icon.bottomAnchor
+                                        constant:20.0],
+        [label.leadingAnchor constraintEqualToAnchor:_emptyStateView.leadingAnchor],
+        [label.trailingAnchor constraintEqualToAnchor:_emptyStateView.trailingAnchor],
+
+        [subtitle.topAnchor constraintEqualToAnchor:label.bottomAnchor
+                                           constant:8.0],
+        [subtitle.leadingAnchor constraintEqualToAnchor:_emptyStateView.leadingAnchor],
+        [subtitle.trailingAnchor constraintEqualToAnchor:_emptyStateView.trailingAnchor],
+        [subtitle.bottomAnchor constraintEqualToAnchor:_emptyStateView.bottomAnchor],
+    ]];
+}
+
 - (void)updateEmptyState {
     BOOL empty = self.subfolders.count == 0 && self.files.count == 0;
-    self.emptyLabel.hidden = !empty;
+    self.emptyStateView.hidden = !empty;
     self.collectionView.hidden = empty;
+
+    if (!empty)
+        return;
+
+    BOOL hasFilters = self.filterTypes.count > 0 || self.filterSources.count > 0 ||
+                      self.filterFavoritesOnly || self.filterUsernames.count > 0;
+    NSString *query = [self.searchQuery stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
+    NSString *folderName = self.folderPath.length > 0 ? self.folderPath.lastPathComponent : nil;
+
+    NSString *title;
+    NSString *subtitle;
+    if (query.length > 0) {
+        title = @"No results";
+        // Point at the scope toggle: the match may simply live in another folder.
+        subtitle = (!self.searchAllFolders && folderName.length > 0)
+                       ? @"Nothing in this folder matches your search. Try All Folders."
+                       : @"No media matches your search.";
+    } else if (hasFilters) {
+        title = @"No matching files";
+        subtitle = @"Try adjusting your filters.";
+    } else if (folderName.length > 0) {
+        title = @"This folder is empty";
+        subtitle = @"Nothing here can be selected.";
+    } else {
+        title = @"Nothing to select";
+        subtitle = @"There is no Gallery media of this kind yet.";
+    }
+    self.emptyStateLabel.text = title;
+    self.emptyStateSubtitle.text = subtitle;
 }
 
 - (void)updateDoneButton {
@@ -459,7 +850,15 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 
 - (void)dismissPickerWithCompletion:(void (^)(void))completion {
     UIViewController *controller = self.navigationController ?: self;
-    [controller dismissViewControllerAnimated:YES completion:completion];
+    [controller dismissViewControllerAnimated:YES
+                                   completion:^{
+                                       // After the transition, so the window stays
+                                       // around to host it.
+                                       SPKGalleryPickerTeardownWindow();
+                                       if (completion) {
+                                           completion();
+                                       }
+                                   }];
 }
 
 - (NSInteger)numberOfSectionsInCollectionView:(UICollectionView *)collectionView {
@@ -526,15 +925,117 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 - (void)openSubfolderAtIndex:(NSInteger)index {
     if (index < 0 || index >= (NSInteger)self.subfolders.count)
         return;
-    NSString *folder = self.subfolders[index];
-    SPKGalleryPickerViewController *child = [[SPKGalleryPickerViewController alloc] initWithFolderPath:folder
-                                                                                                 title:self.pickerTitle
-                                                                                     allowedMediaTypes:self.allowedMediaTypes
-                                                                               allowsMultipleSelection:self.allowsMultipleSelection
-                                                                                            completion:self.completion];
-    child.selectedIDs = self.selectedIDs;
-    child.selectedFilesByID = self.selectedFilesByID;
-    [self.navigationController pushViewController:child animated:YES];
+    [self navigateIntoFolder:self.subfolders[index]];
+}
+
+#pragma mark - Folder Navigation
+
+- (BOOL)canNavigateBackInFolders {
+    return self.folderTrail.count > 0;
+}
+
+/// Descends into `subfolderPath` by re-scoping this screen's data instead of
+/// pushing another picker, so the chrome and the running selection stay intact.
+- (void)navigateIntoFolder:(NSString *)subfolderPath {
+    if (subfolderPath.length == 0)
+        return;
+    // Remember where we were so returning restores the grid position.
+    [self.folderScrollOffsets addObject:[NSValue valueWithCGPoint:self.collectionView.contentOffset]];
+    [self.folderTrail addObject:subfolderPath];
+    self.folderPath = subfolderPath;
+
+    [self prepareForFolderChange];
+    __weak typeof(self) weakSelf = self;
+    [self replaceGridContentWithCrossfade:^{
+        [weakSelf reloadData];
+        [weakSelf scrollGridToTop];
+    }];
+    [self updateFolderTitle];
+    [self refreshLeadingNavItem];
+}
+
+/// Returns to the parent folder, restoring its previous scroll position.
+- (void)navigateBackInFolders {
+    if (![self canNavigateBackInFolders])
+        return;
+    [self.folderTrail removeLastObject];
+    self.folderPath = self.folderTrail.lastObject; // nil at root
+
+    CGPoint restoreOffset = CGPointZero;
+    BOOL hasRestoreOffset = NO;
+    if (self.folderScrollOffsets.count > 0) {
+        restoreOffset = [self.folderScrollOffsets.lastObject CGPointValue];
+        [self.folderScrollOffsets removeLastObject];
+        hasRestoreOffset = YES;
+    }
+
+    [self prepareForFolderChange];
+    __weak typeof(self) weakSelf = self;
+    [self replaceGridContentWithCrossfade:^{
+        [weakSelf reloadData];
+        if (hasRestoreOffset) {
+            [weakSelf.collectionView setContentOffset:restoreOffset animated:NO];
+        } else {
+            [weakSelf scrollGridToTop];
+        }
+    }];
+    [self updateFolderTitle];
+    [self refreshLeadingNavItem];
+}
+
+/// A folder change starts fresh: a search scoped to the folder we just left
+/// would otherwise silently carry over and hide the new folder's contents.
+- (void)prepareForFolderChange {
+    if (self.searchController.active) {
+        self.searchController.active = NO;
+    }
+    self.searchQuery = @"";
+    self.searchController.searchBar.text = nil;
+    self.searchAllFolders = NO;
+    self.searchController.searchBar.selectedScopeButtonIndex = 0;
+}
+
+- (void)searchBar:(UISearchBar *)searchBar selectedScopeButtonIndexDidChange:(NSInteger)selectedScope {
+    BOOL allFolders = (selectedScope == 1);
+    if (allFolders == self.searchAllFolders)
+        return;
+    self.searchAllFolders = allFolders;
+    [self reloadData];
+}
+
+- (void)scrollGridToTop {
+    CGFloat topY = -self.collectionView.adjustedContentInset.top;
+    [self.collectionView setContentOffset:CGPointMake(0.0, topY) animated:NO];
+}
+
+/// Cross-dissolves the grid's contents (no positional slide, so no layout jank)
+/// as a stand-in for the push animation we no longer perform.
+- (void)replaceGridContentWithCrossfade:(void (^)(void))contentUpdate {
+    if (!contentUpdate)
+        return;
+    [UIView transitionWithView:self.collectionView
+                      duration:0.22
+                       options:(UIViewAnimationOptionTransitionCrossDissolve | UIViewAnimationOptionAllowUserInteraction)
+                    animations:contentUpdate
+                    completion:nil];
+}
+
+- (void)updateFolderTitle {
+    self.title = self.folderPath.length > 0 ? self.folderPath.lastPathComponent : self.pickerTitle;
+}
+
+/// Close at the root, back while inside a folder — the only affordance for
+/// leaving a folder now that there is no navigation stack to pop.
+- (void)refreshLeadingNavItem {
+    UIBarButtonItem *leadingItem;
+    if ([self canNavigateBackInFolders]) {
+        leadingItem = SPKMediaChromeTopBarButtonItem(@"chevron_left", self, @selector(navigateBackInFolders));
+        leadingItem.accessibilityLabel = @"Back";
+    } else {
+        leadingItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(cancelTapped));
+        leadingItem.accessibilityLabel = @"Cancel";
+    }
+    SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ leadingItem ]);
 }
 
 - (CGSize)collectionView:(UICollectionView *)collectionView

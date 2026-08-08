@@ -2,6 +2,7 @@
 
 #import <objc/message.h>
 #import <objc/runtime.h>
+#import <substrate.h>
 
 #import "../../AssetUtils.h"
 #import "../../InstagramHeaders.h"
@@ -9,9 +10,11 @@
 #import "../../Shared/Downloads/SPKDownloadService.h"
 #import "../../Shared/Gallery/SPKGalleryViewController.h"
 #import "../../Shared/UI/SPKChrome.h"
+#import "../../Shared/UI/SPKChromeGlassMirror.h"
 #import "../../Utils.h"
 #import "../Messages/DeletedMessagesLog/SPKDeletedMessagesViewController.h"
 #import "../Profile/ProfileAnalyzer/SPKProfileAnalyzerViewController.h"
+#import "../../App/SPKPerfMeter.h"
 
 NSString *const kSPKHeaderButtonEnabledKey = @"feed_header_button";
 NSString *const kSPKHeaderButtonDefaultActionKey = @"feed_header_button_default";
@@ -38,9 +41,27 @@ static const CGFloat kSPKHeaderButtonGlyph = 24.0;   // glyph point size
 static const CGFloat kSPKHeaderButtonSpacing = 8.0;
 static const CGFloat kSPKHeaderButtonLeftInset = 16.0;
 
+static BOOL SPKIsMessagesOnlyMode(void) {
+    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
+    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
+    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
+    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
+    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
+    
+    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
+    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
+    
+    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
+}
+
+static const void *kSPKInboxHeaderButtonAssocKey = &kSPKInboxHeaderButtonAssocKey;
+static const void *kSPKInboxHeaderButtonLastFrameAssocKey = &kSPKInboxHeaderButtonLastFrameAssocKey;
+static const void *kSPKInboxHeaderGlassViewKey = &kSPKInboxHeaderGlassViewKey;
+
 static const void *kSPKHeaderButtonAssocKey = &kSPKHeaderButtonAssocKey;
 static const void *kSPKHeaderButtonConfigSignatureAssocKey = &kSPKHeaderButtonConfigSignatureAssocKey;
 static const void *kSPKHeaderButtonLastFrameAssocKey = &kSPKHeaderButtonLastFrameAssocKey;
+static const void *kSPKHeaderGlassViewKey = &kSPKHeaderGlassViewKey;
 
 #pragma mark - Destination model
 
@@ -192,6 +213,7 @@ static UIView *SPKHeaderSubview(id header, NSArray<NSString *> *keys) {
 - (void)spk_installHeaderActionButtonIfNeeded;
 - (void)spk_layoutHeaderActionButton;
 - (void)spk_configureHeaderActionButton:(SPKFeedHeaderActionButton *)button;
+- (void)spk_updateHeaderGlass:(SPKFeedHeaderActionButton *)button;
 @end
 
 @implementation UIView (SPKHeaderButton)
@@ -238,7 +260,8 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
     NSMutableArray<NSString *> *ids = [NSMutableArray array];
     for (SPKHeaderDestination *destination in enabled)
         [ids addObject:destination.identifier];
-    return [NSString stringWithFormat:@"%@|%@", [ids componentsJoinedByString:@","], defaultAction ?: @""];
+    NSString *menuIcon = [SPKUtils getStringPref:@"general_action_btn_default_menu_icon"];
+    return [NSString stringWithFormat:@"%@|%@|%@", [ids componentsJoinedByString:@","], defaultAction ?: @"", menuIcon ?: @""];
 }
 
 - (void)spk_configureHeaderActionButton:(SPKFeedHeaderActionButton *)button {
@@ -282,7 +305,9 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
     } else {
         // Tap = open menu, glyph = the Sparkle menu icon.
         button.showsMenuAsPrimaryAction = YES;
-        [button setIconResource:kSPKHeaderMenuIconName pointSize:kSPKHeaderButtonGlyph];
+        NSString *menuIcon = [SPKUtils getStringPref:@"general_action_btn_default_menu_icon"];
+        if (menuIcon.length == 0) menuIcon = kSPKHeaderMenuIconName;
+        [button setIconResource:menuIcon pointSize:kSPKHeaderButtonGlyph];
     }
 
     objc_setAssociatedObject(button, kSPKHeaderButtonConfigSignatureAssocKey,
@@ -389,6 +414,7 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
     NSValue *lastVal = objc_getAssociatedObject(button, kSPKHeaderButtonLastFrameAssocKey);
     CGRect lastFrame = lastVal ? [lastVal CGRectValue] : CGRectNull;
     if (button.superview == self && !CGRectIsNull(lastFrame) && CGRectEqualToRect(expectedFrame, lastFrame)) {
+        [self spk_updateHeaderGlass:button];
         return;
     }
 
@@ -398,11 +424,239 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
     SPKLog(@"HeaderButton", @"[Sparkle] Laid out header button haveHeart=%@ haveMessages=%@ alpha=%.2f heart=%@ frame=%@",
            haveHeart ? @"YES" : @"NO", haveMessages ? @"YES" : @"NO", effectiveAlpha,
            NSStringFromCGRect(heartFrame), NSStringFromCGRect(expectedFrame));
+    [self spk_updateHeaderGlass:button];
+}
+
+- (void)spk_updateHeaderGlass:(SPKFeedHeaderActionButton *)button {
+    UIView *glassView = objc_getAssociatedObject(button, kSPKHeaderGlassViewKey);
+    if (!glassView) {
+        glassView = SPKChromeGlassMirrorMakeBubble(@"sparkle-header-action-glass");
+        if (!glassView) {
+            return;
+        }
+        objc_setAssociatedObject(button, kSPKHeaderGlassViewKey, glassView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+
+    SPKChromeGlassMirrorAttach(glassView, button);
+
+    // Adopt the neighbouring IG nav bubble's own effect + ring, and fade with it.
+    SPKChromeGlassMirrorSync(glassView, self);
+}
+
+@end
+
+
+
+@interface UIView (SPKInboxHeaderButton)
+- (SPKFeedHeaderActionButton *)spk_inboxHeaderButton;
+- (void)spk_installInboxHeaderActionButtonIfNeeded;
+- (void)spk_layoutInboxHeaderActionButton;
+- (void)spk_updateInboxHeaderGlass:(SPKFeedHeaderActionButton *)button;
+@end
+
+@implementation UIView (SPKInboxHeaderButton)
+
+- (SPKFeedHeaderActionButton *)spk_inboxHeaderButton {
+    return objc_getAssociatedObject(self, kSPKInboxHeaderButtonAssocKey);
+}
+
+- (void)spk_installInboxHeaderActionButtonIfNeeded {
+    BOOL messagesOnly = [SPKUtils getBoolPref:@"interface_show_header_button_in_messages_only"] &&
+                         SPKIsMessagesOnlyMode();
+    if (!messagesOnly) {
+        SPKFeedHeaderActionButton *button = [self spk_inboxHeaderButton];
+        if (button) {
+            button.hidden = YES;
+            [button removeFromSuperview];
+            objc_setAssociatedObject(self, kSPKInboxHeaderButtonAssocKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            objc_setAssociatedObject(self, kSPKInboxHeaderButtonLastFrameAssocKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        return;
+    }
+
+    if ([self spk_inboxHeaderButton])
+        return;
+
+    SPKFeedHeaderActionButton *button = [[SPKFeedHeaderActionButton alloc] initWithSymbol:@""
+                                                                                pointSize:kSPKHeaderButtonGlyph
+                                                                                 diameter:kSPKHeaderButtonSide];
+    button.accessibilityIdentifier = @"spk-inbox-header-action-button";
+    button.accessibilityLabel = @"Sparkle";
+    button.translatesAutoresizingMaskIntoConstraints = YES;
+    button.bubbleColor = UIColor.clearColor;
+
+    UIButton *composer = nil;
+    if ([self respondsToSelector:@selector(messageButton)]) {
+        composer = [self valueForKey:@"messageButton"];
+    }
+    button.iconTint = composer.tintColor ?: [UIColor labelColor];
+
+    __weak SPKFeedHeaderActionButton *weakButton = button;
+    button.menuWillDisplayHandler = ^{
+        (void)weakButton;
+        SPKHeaderFireShortcutHaptic();
+    };
+    [button addTarget:button action:@selector(spk_primaryTapped) forControlEvents:UIControlEventTouchUpInside];
+
+    objc_setAssociatedObject(self, kSPKInboxHeaderButtonAssocKey, button, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    // v410's IGCustomHeaderView keeps its real content (title, buttons, search
+    // bar) inside a dedicated contentView, not as direct subviews of self —
+    // self typically only has 1-2 direct children. Host our button there too,
+    // so it's a true sibling of the native controls instead of sitting outside
+    // whatever compositing/backing contentView itself uses.
+    UIView *host = SPKHeaderSubview(self, @[ @"contentView" ]) ?: self;
+    [host addSubview:button];
+    SPKLog(@"HeaderButton", @"[Sparkle] Installed inbox header action button into %@ (host=%@)", NSStringFromClass(self.class), NSStringFromClass(host.class));
+
+    [self spk_configureHeaderActionButton:button];
+}
+
+- (void)spk_layoutInboxHeaderActionButton {
+    SPKFeedHeaderActionButton *button = [self spk_inboxHeaderButton];
+    if (!button)
+        return;
+
+    BOOL messagesOnly = [SPKUtils getBoolPref:@"interface_show_header_button_in_messages_only"] &&
+                         SPKIsMessagesOnlyMode();
+    if (!messagesOnly) {
+        button.hidden = YES;
+        return;
+    }
+
+    NSArray<SPKHeaderDestination *> *enabled = SPKHeaderButtonEnabledDestinations();
+    NSString *defaultAction = [SPKUtils getStringPref:kSPKHeaderButtonDefaultActionKey];
+    NSString *signature = SPKHeaderButtonConfigSignature(enabled, defaultAction);
+    NSString *storedSignature = objc_getAssociatedObject(button, kSPKHeaderButtonConfigSignatureAssocKey);
+    if (![signature isEqualToString:storedSignature]) {
+        [self spk_configureHeaderActionButton:button];
+    }
+    if (enabled.count == 0) {
+        button.hidden = YES;
+        return;
+    }
+
+    UIButton *composer = nil;
+    if ([self respondsToSelector:@selector(messageButton)]) {
+        composer = [self valueForKey:@"messageButton"];
+    }
+
+    CGRect composerFrame = CGRectNull;
+    if (composer && composer.window) {
+        composerFrame = [self convertRect:composer.bounds fromView:composer];
+    }
+
+    CGFloat side = kSPKHeaderButtonSide;
+    CGRect expectedFrame;
+    if (!CGRectIsNull(composerFrame) && composerFrame.size.width > 1.0) {
+        CGFloat rightInset = CGRectGetWidth(self.bounds) - CGRectGetMaxX(composerFrame);
+        CGFloat centerY = CGRectGetMidY(composerFrame);
+        expectedFrame = CGRectMake(floor(rightInset), floor(centerY - side / 2.0), side, side);
+    } else {
+        CGFloat leftX = self.safeAreaInsets.left + kSPKHeaderButtonLeftInset;
+        expectedFrame = CGRectMake(floor(leftX), floor(CGRectGetHeight(self.bounds) / 2.0 - side / 2.0), side, side);
+    }
+
+    // v410's inbox header is the legacy Obj-C IGCustomHeaderView subclass,
+    // which exposes cameraButton alongside messageButton and never fades or
+    // hides those buttons on this screen — unlike v439's Swift header, which
+    // can collapse behind a scroll-driven glass effect (that's what the
+    // ancestor alpha/hidden walk below exists for). Skip that walk on the
+    // legacy header: mirroring it there did nothing but risk hiding Sparkle's
+    // button if some transient ancestor state briefly reported hidden/alpha 0.
+    BOOL legacyHeader = [self respondsToSelector:@selector(cameraButton)];
+    CGFloat effectiveAlpha = 1.0;
+    if (!legacyHeader && composer && composer.window) {
+        BOOL anyHidden = NO;
+        for (UIView *v = composer; v && v != self; v = v.superview) {
+            effectiveAlpha *= v.alpha;
+            if (v.hidden)
+                anyHidden = YES;
+        }
+        if (anyHidden) {
+            button.hidden = YES;
+            return;
+        }
+    }
+    button.hidden = NO;
+    button.alpha = effectiveAlpha;
+
+    // Mirror the install-time host choice: reparent onto contentView (when the
+    // header exposes one) so we're a true sibling of the native controls
+    // rather than sitting outside whatever compositing contentView itself
+    // uses — the frame math above stays in self's coordinate space and gets
+    // converted only for the final assignment.
+    UIView *host = SPKHeaderSubview(self, @[ @"contentView" ]) ?: self;
+    if (button.superview != host) {
+        [host addSubview:button];
+    }
+    CGRect hostFrame = (host == self) ? expectedFrame : [self convertRect:expectedFrame toView:host];
+
+    NSValue *lastVal = objc_getAssociatedObject(button, kSPKInboxHeaderButtonLastFrameAssocKey);
+    CGRect lastFrame = lastVal ? [lastVal CGRectValue] : CGRectNull;
+    if (button.superview == host && !CGRectIsNull(lastFrame) && CGRectEqualToRect(expectedFrame, lastFrame)) {
+        // Frame is unchanged, but the native header may have re-inserted its
+        // own subviews above ours on this pass (list reload, scroll-driven
+        // relayout, etc.) without ever changing our frame. Always re-assert
+        // z-order — cheap no-op if we're already frontmost — so Sparkle's
+        // button can't silently end up buried behind native chrome.
+        [host bringSubviewToFront:button];
+        [self spk_updateInboxHeaderGlass:button];
+        return;
+    }
+
+    button.frame = hostFrame;
+    objc_setAssociatedObject(button, kSPKInboxHeaderButtonLastFrameAssocKey, [NSValue valueWithCGRect:expectedFrame], OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    [host bringSubviewToFront:button];
+    SPKLog(@"HeaderButton", @"[Sparkle] Laid out inbox header button legacy=%@ frame=%@ host=%@ hostFrame=%@ siblingCount=%lu iconImage=%@ iconHidden=%@",
+           legacyHeader ? @"YES" : @"NO", NSStringFromCGRect(expectedFrame), NSStringFromClass(host.class),
+           NSStringFromCGRect(hostFrame), (unsigned long)host.subviews.count,
+           button.iconView.image ? @"YES" : @"NO", button.iconView.hidden ? @"YES" : @"NO");
+
+    [self spk_updateInboxHeaderGlass:button];
+}
+
+- (void)spk_updateInboxHeaderGlass:(SPKFeedHeaderActionButton *)button {
+    UIView *glassView = objc_getAssociatedObject(button, kSPKInboxHeaderGlassViewKey);
+    if (!glassView) {
+        glassView = SPKChromeGlassMirrorMakeBubble(@"sparkle-inbox-action-glass");
+        if (!glassView) {
+            return;
+        }
+        objc_setAssociatedObject(button, kSPKInboxHeaderGlassViewKey, glassView, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+
+    SPKChromeGlassMirrorAttach(glassView, button);
+
+    // Adopt the neighbouring IG nav bubble's own effect + ring, and fade with it.
+    SPKChromeGlassMirrorSync(glassView, self);
 }
 
 @end
 
 #pragma mark - Hooks
+
+%group SPKInboxHeaderActionButtonHooks
+
+%hook IGDirectInboxNavigationHeaderView
+
+- (void)didMoveToWindow {
+    %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.didMoveToWindow");
+    if ([(UIView *)self window])
+        [self spk_installInboxHeaderActionButtonIfNeeded];
+}
+
+- (void)layoutSubviews {
+    %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.layoutSubviews");
+    if ([(UIView *)self window])
+        [self spk_installInboxHeaderActionButtonIfNeeded];
+    [self spk_layoutInboxHeaderActionButton];
+}
+
+%end
+
+%end
 
 %group SPKHeaderActionButtonHooks
 
@@ -410,12 +664,14 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
 
 - (void)didMoveToWindow {
     %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.didMoveToWindow2");
     if ([(UIView *)self window])
         [self spk_installHeaderActionButtonIfNeeded];
 }
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"HeaderActionButton.layoutSubviews2");
     // Install here too: the feed header is usually created before our delayed
     // Feed-surface hooks land, so its first didMoveToWindow already fired. Every
     // relayout gives us a reliable, idempotent chance to inject the button.
@@ -460,6 +716,21 @@ static void SPKKickExistingHeader(Class headerClass) {
     });
 }
 
+static void SPKKickExistingInboxHeader(Class headerClass) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        for (UIWindow *window in UIApplication.sharedApplication.windows) {
+            UIView *header = SPKFindViewOfClass(window, headerClass);
+            if (!header)
+                continue;
+            SPKLog(@"HeaderButton", @"[Sparkle] Kicking existing inbox header %@", NSStringFromClass(header.class));
+            [header spk_installInboxHeaderActionButtonIfNeeded];
+            [header setNeedsLayout];
+            [header spk_layoutInboxHeaderActionButton];
+            return;
+        }
+    });
+}
+
 void SPKInstallHeaderActionButtonHooksIfEnabled(void) {
     // Register the account-change observer once, BEFORE the master-toggle gate, so
     // it fires even when the launch account had the button disabled. On a live
@@ -476,10 +747,17 @@ void SPKInstallHeaderActionButtonHooksIfEnabled(void) {
                                                           Class headerClass = SPKResolveIGClass(@"IGHomeFeedHeader.IGHomeFeedHeaderView", @"IGHomeFeedHeaderView");
                                                           if (headerClass)
                                                               SPKKickExistingHeader(headerClass);
+                                                          Class inboxHeaderClass = SPKResolveIGClass(@"IGDirectInboxNavigationHeaderView.IGDirectInboxNavigationHeaderView", @"IGDirectInboxNavigationHeaderView");
+                                                          if (inboxHeaderClass)
+                                                              SPKKickExistingInboxHeader(inboxHeaderClass);
                                                       }];
     });
 
-    if (![SPKUtils getBoolPref:kSPKHeaderButtonEnabledKey]) {
+    BOOL feedEnabled = [SPKUtils getBoolPref:kSPKHeaderButtonEnabledKey];
+    BOOL inboxEnabled = [SPKUtils getBoolPref:@"interface_show_header_button_in_messages_only"] &&
+                        SPKIsMessagesOnlyMode();
+
+    if (!feedEnabled && !inboxEnabled) {
         SPKLog(@"HeaderButton", @"[Sparkle] Header action button disabled — skipping install");
         return;
     }
@@ -487,12 +765,21 @@ void SPKInstallHeaderActionButtonHooksIfEnabled(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         Class headerClass = SPKResolveIGClass(@"IGHomeFeedHeader.IGHomeFeedHeaderView", @"IGHomeFeedHeaderView");
-        if (!headerClass) {
-            SPKLog(@"HeaderButton", @"[Sparkle] Could not resolve IGHomeFeedHeaderView — header button unavailable");
-            return;
+        if (headerClass) {
+            %init(SPKHeaderActionButtonHooks, IGHomeFeedHeaderView = headerClass);
+            SPKLog(@"HeaderButton", @"[Sparkle] Installed header action button hooks class=%@", NSStringFromClass(headerClass));
+            SPKKickExistingHeader(headerClass);
+        } else {
+            SPKLog(@"HeaderButton", @"[Sparkle] Could not resolve IGHomeFeedHeaderView");
         }
-        %init(SPKHeaderActionButtonHooks, IGHomeFeedHeaderView = headerClass);
-        SPKLog(@"HeaderButton", @"[Sparkle] Installed header action button hooks class=%@", NSStringFromClass(headerClass));
-        SPKKickExistingHeader(headerClass);
+
+        Class inboxHeaderClass = SPKResolveIGClass(@"IGDirectInboxNavigationHeaderView.IGDirectInboxNavigationHeaderView", @"IGDirectInboxNavigationHeaderView");
+        if (inboxHeaderClass) {
+            %init(SPKInboxHeaderActionButtonHooks, IGDirectInboxNavigationHeaderView = inboxHeaderClass);
+            SPKLog(@"HeaderButton", @"[Sparkle] Installed inbox header action button hooks class=%@", NSStringFromClass(inboxHeaderClass));
+            SPKKickExistingInboxHeader(inboxHeaderClass);
+        } else {
+            SPKLog(@"HeaderButton", @"[Sparkle] Could not resolve IGDirectInboxNavigationHeaderView");
+        }
     });
 }

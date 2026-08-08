@@ -1,5 +1,6 @@
 #import "../../Utils.h"
 #import <objc/runtime.h>
+#import "../../App/SPKPerfMeter.h"
 
 static NSString *const kSPKConfirmCreateGroupButtonPref = @"general_confirm_create_group";
 static NSString *const kSPKHideCreateGroupButtonPref = @"general_hide_create_group";
@@ -148,6 +149,7 @@ static void SPKApplyBottomButtonsCollapse(UIView *view) {
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"CreateGroupButtonControls.layoutSubviews");
     if (SPKShouldHideCreateGroupButton()) {
         SPKApplyCreateGroupButtonVisibility(self);
     }
@@ -219,6 +221,7 @@ static void SPKApplyBottomButtonsCollapse(UIView *view) {
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"CreateGroupButtonControls.layoutSubviews2");
     SPKApplyBottomButtonsCollapse(self);
 }
 
@@ -252,6 +255,7 @@ static void SPKApplyBottomButtonsCollapse(UIView *view) {
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"CreateGroupButtonControls.layoutSubviews3");
     if (!SPKShouldHideCreateGroupButton())
         return;
 

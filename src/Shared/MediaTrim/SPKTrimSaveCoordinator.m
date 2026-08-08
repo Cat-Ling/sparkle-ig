@@ -214,7 +214,7 @@
 
 // Encodes an edited image to a unique temp JPEG. Returns nil on failure.
 + (NSURL *)writeEditedImageToTemp:(UIImage *)image {
-    NSData *data = image ? UIImageJPEGRepresentation(image, 0.95) : nil;
+    NSData *data = image ? UIImageJPEGRepresentation(image, 0.85) : nil;
     if (!data)
         return nil;
     NSString *name = [[[NSProcessInfo processInfo] globallyUniqueString] stringByAppendingPathExtension:@"jpg"];
@@ -423,7 +423,9 @@
             return;
         }
         if (!renderedURL) {
-            [pill showError:error.localizedDescription ?: @"Trim failed"];
+            // The reason goes in the subtitle so the pill always leads with what
+            // failed; an encoder message is too long to read as a title.
+            [pill showErrorWithTitle:@"Trim failed" subtitle:error.localizedDescription icon:nil];
             if (completion)
                 completion(NO);
             return;
@@ -487,6 +489,7 @@
                                            audioURL:result.renderAudioURL
                                        startSeconds:result.startSeconds
                                     durationSeconds:result.durationSeconds
+                                               crop:result.crop
                                               width:result.width
                                              height:result.height
                                            basename:basename
@@ -500,6 +503,7 @@
                                           asset:nil
                                    startSeconds:result.startSeconds
                                 durationSeconds:result.durationSeconds
+                                           crop:result.crop
                                        basename:basename
                                        progress:progressToPill
                                      completion:onRendered

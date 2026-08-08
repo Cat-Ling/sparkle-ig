@@ -6,9 +6,10 @@
 #import "../../Shared/Gallery/SPKGalleryPickerViewController.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
+#import "../../App/SPKPerfMeter.h"
 
 // Long-press the comment composer's photo entry button to attach an image from the
-// in-app Sparkle Gallery (Vault). A normal tap still opens Instagram's own photo
+// in-app Sparkle Gallery. A normal tap still opens Instagram's own photo
 // gallery; the long-press routes through our gallery picker sheet instead and feeds
 // the chosen image into the composer via the same entry point IG uses internally
 // (-setupImageBeforeCommentComposingBeginWithSelectedPhoto:, which takes a UIImage).
@@ -144,6 +145,7 @@ static void SPKCommentComposerInstallLongPress(UIView *composerView) {
 
 - (void)layoutSubviews {
     %orig;
+    SPK_PERF_SCOPE(@"CommentComposerGalleryUpload.layoutSubviews");
     SPKCommentComposerInstallLongPress((UIView *)self);
 }
 

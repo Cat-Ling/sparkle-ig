@@ -562,14 +562,14 @@ static NSArray<NSDictionary *> *SPKStoryMentionsEnriched(UIView *overlayView) {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if (indexPath.row < 0 || indexPath.row >= (NSInteger)self.userInfos.count)
         return;
-    NSString *username = self.userInfos[indexPath.row][@"username"];
-    if (username.length == 0)
+    NSDictionary *info = self.userInfos[indexPath.row];
+    NSString *username = info[@"username"];
+    id userObj = info[@"userObj"];
+    NSString *pk = SPKMentionUserPK(userObj);
+    if (username.length == 0 && !userObj)
         return;
 
-    [self.navigationController dismissViewControllerAnimated:YES
-                                                  completion:^{
-                                                      [SPKUtils openInstagramProfileForUsername:username];
-                                                  }];
+    [SPKUtils openInstagramProfileForUser:userObj pk:pk username:username fromViewController:self];
 }
 
 @end
