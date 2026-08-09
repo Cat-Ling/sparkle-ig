@@ -217,13 +217,17 @@
             [SPKSetting switchCellWithTitle:@"Comment Media Actions"
                                        icon:SPKSettingsIcon(@"action")
                                 defaultsKey:@"general_comments_media_actions"],
+            [SPKSetting switchCellWithTitle:@"Show GIF Title"
+                                       icon:SPKSettingsIcon(@"info")
+                                defaultsKey:@"general_comments_gif_title"],
             [SPKSetting switchCellWithTitle:@"Upload Photo from Gallery"
                                        icon:SPKSettingsIcon(@"photo")
                                 defaultsKey:@"general_comments_gallery_upload"]
         ],
                         @"1. Adds a copy action to comment menus.\n"
                         @"2. Adds Photos, Share, Gallery, and link actions for GIF and photo comments.\n"
-                        @"3. Long-press the composer's photo button to attach an image from your Sparkle Gallery."),
+                        @"3. Look up a GIF comment's name and channel in its menu, then tap to copy. Each lookup asks giphy.com about that GIF.\n"
+                        @"4. Long-press the composer's photo button to attach an image from your Sparkle Gallery."),
         SPKTopicSection(@"", @[
             [SPKSetting switchCellWithTitle:@"Swipe to Close Comments"
                                        icon:SPKSettingsIcon(@"left_right")

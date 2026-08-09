@@ -32,6 +32,7 @@ marked **(restart)** and prompt for a relaunch when changed.
 ### Comments
 - **Swipe to Close Comments** + **Swipe Direction**: Adds a horizontal swipe-to-dismiss gesture to comment sheets.
 - **Comment Menu Actions**: Adds opt-in comment text copying, plus Photos/Share/Gallery/clipboard actions and link copying for both GIF and photo comments (GIF gets a Giphy link, photo gets a direct image download link). Gallery saves use a dedicated `Comments` source.
+- **Show GIF Title**: Long-press a GIF comment and its menu resolves the GIF's real name and the channel that uploaded it, with a tap to copy the name. Off by default, because each lookup asks giphy.com about that one GIF; nothing is requested until you open the menu, and results are cached for the session.
 - **Confirm Comment Like**.
 - **Hide Comment Shopping**: Removes commerce carousels in comment threads.
 - **Hide Gifts Button**: Removes the Gifts shortcut from the comment composer and lets the input use the freed space.
@@ -236,6 +237,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 
 ### Media
 - **Send Photo from Gallery**: Adds a "Send Photo" option to the composer plus (+) menu that sends a photo from the Sparkle Gallery into the chat. **(restart)**
+- **Show GIF Title**: Long-press a GIF or sticker message for its name and the channel that uploaded it, then tap to copy the name. Direct stores no name for a GIF, so the row reads "Looking up GIF title" for a moment and fills itself in when Giphy answers; afterwards that GIF resolves instantly for the rest of the session. Off by default, and nothing is requested until you open a GIF's menu. **(restart)**
 
 ### Confirmation
 - **Confirm Audio Call**, **Confirm Video Call**, **Confirm Double Tap**, **Confirm Reactions**, **Confirm Voice Messages**, **Confirm Follow Requests**, **Confirm Vanish Mode**, **Confirm Changing Theme**.

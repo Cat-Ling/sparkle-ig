@@ -96,6 +96,7 @@ SPK_NOTIF_CONST(kSPKNotificationCopyNoteText, "copy_note_text");
 SPK_NOTIF_CONST(kSPKNotificationShareLongPressCopyLink, "share_long_press_copy_link");
 SPK_NOTIF_CONST(kSPKNotificationCopyComment, "copy_comment");
 SPK_NOTIF_CONST(kSPKNotificationCopyGIFLink, "copy_gif_link");
+SPK_NOTIF_CONST(kSPKNotificationCopyGIFTitle, "copy_gif_title");
 SPK_NOTIF_CONST(kSPKNotificationMediaEncodingLogs, "media_encoding_logs");
 SPK_NOTIF_CONST(kSPKNotificationFlexUnavailable, "flex_unavailable");
 #undef SPK_NOTIF_CONST
@@ -239,6 +240,7 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
           @"items" : @[
               SPKNotificationItem(kSPKNotificationCopyComment, @"Copy Comment", @"copy"),
               SPKNotificationItem(kSPKNotificationCopyGIFLink, @"Copy Media Link", @"link"),
+              SPKNotificationItem(kSPKNotificationCopyGIFTitle, @"Copy GIF Title", @"info"),
           ]},
         @{@"title" : @"Media",
           @"items" : @[

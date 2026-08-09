@@ -263,9 +263,13 @@ static NSArray *SPKMessagesSettingsSections(void) {
         SPKTopicSection(@"Media", @[
             [SPKSetting switchCellWithTitle:@"Upload Photo from Gallery"
                                        icon:SPKSettingsIcon(@"photo")
-                                defaultsKey:@"msgs_upload_gallery_media"]
+                                defaultsKey:@"msgs_upload_gallery_media"],
+            [SPKSetting switchCellWithTitle:@"Show GIF Title"
+                                       icon:SPKSettingsIcon(@"info")
+                                defaultsKey:@"msgs_gif_title"]
         ],
-                        @"Adds an option to the composer plus (+) menu that sends a photo from the Sparkle Gallery into the chat."),
+                        @"1. Adds an option to the composer plus (+) menu that sends a photo from the Sparkle Gallery into the chat.\n"
+                        @"2. Long-press a GIF message for its name and channel, then tap to copy. Direct stores no name for a GIF, so this asks giphy.com about it; the answer is reused for the rest of the session."),
         SPKTopicSection(@"Confirmation", @[
             [SPKSetting switchCellWithTitle:@"Confirm Audio Call"
                                        icon:SPKSettingsIcon(@"call")

@@ -3,489 +3,34 @@
 #import <objc/runtime.h>
 #import <substrate.h>
 
+// Sparkle's injection point for IG's native Direct menus: the composer's plus/
+// overflow menu and the per-message long-press menu. Each row's domain logic
+// lives in a coordinator or resolver; this file only decides which rows exist
+// and splices them into IG's element arrays.
+
 #import "../../AssetUtils.h"
 #import "../../Shared/Audio/SPKAudioDMUploadCoordinator.h"
 #import "../../Shared/Audio/SPKAudioDownloadCoordinator.h"
 #import "../../Shared/Audio/SPKAudioItem.h"
 #import "../../Shared/Gallery/SPKGallerySaveMetadata.h"
 #import "../../Shared/MediaUpload/SPKMediaDMUploadCoordinator.h"
+#import "../../Shared/Messages/SPKDirectAudioResolver.h"
+#import "../../Shared/Messages/SPKDirectMenuElement.h"
+#import "../../Shared/Messages/SPKDirectReflection.h"
 #import "../../Shared/UI/SPKIGAlertPresenter.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
+#import "DMGifTitle.h"
 
 static __unsafe_unretained id sSPKDMComposerForOverflowMenu = nil;
 static BOOL sSPKDMUploadItemInjectedForOverflowMenu = NO;
-static BOOL sSPKDMAudioDownloadPrismMenuPending = NO;
-static id sSPKDMAudioDownloadViewModel = nil;
+static BOOL sSPKDMAudioRowPending = NO;
+static id sSPKDMAudioRowViewModel = nil;
 
-static id (*orig_SPKDMAudioPrismMenuViewInit3)(id, SEL, NSArray *, id, BOOL);
-static id (*orig_SPKDMAudioPrismMenuViewInit5)(id, SEL, NSArray *, id, BOOL, BOOL, BOOL);
+static id (*orig_SPKDMPrismMenuViewInit3)(id, SEL, NSArray *, id, BOOL);
+static id (*orig_SPKDMPrismMenuViewInit5)(id, SEL, NSArray *, id, BOOL, BOOL, BOOL);
 static id (*orig_SPKDMPrismMenuInit3)(id, SEL, NSArray *, id, BOOL);
 
-static id SPKDMAudioCandidateObject(UIView *view);
-
-static id SPKDMAudioIvarValue(id object, const char *name) {
-    if (!object || !name)
-        return nil;
-    @try {
-        for (Class cls = [object class]; cls && cls != NSObject.class; cls = class_getSuperclass(cls)) {
-            Ivar ivar = class_getInstanceVariable(cls, name);
-            if (ivar)
-                return object_getIvar(object, ivar);
-        }
-    } @catch (__unused NSException *exception) {
-    }
-    return nil;
-}
-
-static id SPKDMAudioCall(id object, NSString *selectorName) {
-    SEL selector = NSSelectorFromString(selectorName);
-    if (!object || ![object respondsToSelector:selector])
-        return nil;
-    @try {
-        return ((id (*)(id, SEL))objc_msgSend)(object, selector);
-    } @catch (__unused NSException *exception) {
-        return nil;
-    }
-}
-
-static id SPKDMAudioKVCObject(id object, NSString *key) {
-    if (!object || key.length == 0)
-        return nil;
-    @try {
-        return [object valueForKey:key];
-    } @catch (__unused NSException *exception) {
-        return nil;
-    }
-}
-
-static NSString *SPKDMAudioString(id value) {
-    if ([value isKindOfClass:NSString.class])
-        return [(NSString *)value length] > 0 ? value : nil;
-    if ([value respondsToSelector:@selector(stringValue)]) {
-        NSString *string = [value stringValue];
-        return string.length > 0 ? string : nil;
-    }
-    return nil;
-}
-
-static BOOL SPKDMAudioUsernameLooksUsable(NSString *username) {
-    if (username.length == 0)
-        return NO;
-    NSString *lower = username.lowercaseString;
-    if ([lower isEqualToString:@"direct"] || [lower isEqualToString:@"audio"] || [lower isEqualToString:@"media"])
-        return NO;
-    if ([lower hasPrefix:@"http://"] || [lower hasPrefix:@"https://"] || [lower hasPrefix:@"instagram://"])
-        return NO;
-    if ([username rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]].location != NSNotFound)
-        return NO;
-    if (username.length > 30)
-        return NO;
-    return YES;
-}
-
-static NSString *SPKDMAudioStringForNames(id object, NSArray<NSString *> *names) {
-    for (NSString *name in names) {
-        NSString *string = SPKDMAudioString(SPKDMAudioCall(object, name));
-        if (!string)
-            string = SPKDMAudioString(SPKDMAudioKVCObject(object, name));
-        if (SPKDMAudioUsernameLooksUsable(string))
-            return string;
-    }
-    return nil;
-}
-
-static BOOL SPKDMAudioStringMatchesPK(NSString *string, NSString *pk) {
-    if (string.length == 0 || pk.length == 0)
-        return NO;
-    return [string isEqualToString:pk];
-}
-
-static NSString *SPKDMAudioPKForNames(id object, NSArray<NSString *> *names) {
-    for (NSString *name in names) {
-        NSString *string = SPKDMAudioString(SPKDMAudioCall(object, name));
-        if (!string)
-            string = SPKDMAudioString(SPKDMAudioKVCObject(object, name));
-        if (string.length > 0)
-            return string;
-    }
-    return nil;
-}
-
-static BOOL SPKDMAudioShouldTraverseForUsername(id object) {
-    if (!object)
-        return NO;
-    if ([object isKindOfClass:NSString.class] ||
-        [object isKindOfClass:NSNumber.class] ||
-        [object isKindOfClass:NSDate.class] ||
-        [object isKindOfClass:NSURL.class] ||
-        [object isKindOfClass:NSData.class] ||
-        [object isKindOfClass:UIImage.class] ||
-        [object isKindOfClass:UIView.class] ||
-        [object isKindOfClass:UIViewController.class]) {
-        return NO;
-    }
-    NSString *name = NSStringFromClass([object class]);
-    return [name containsString:@"Direct"] ||
-           [name containsString:@"Message"] ||
-           [name containsString:@"Sender"] ||
-           [name containsString:@"User"] ||
-           [name containsString:@"Participant"] ||
-           [name containsString:@"GraphQL"] ||
-           [name containsString:@"GQL"] ||
-           [name containsString:@"Model"];
-}
-
-static NSString *SPKDMAudioSenderPKFromObject(id object, NSMutableSet<NSValue *> *visited, NSUInteger depth) {
-    if (!object || depth > 5)
-        return nil;
-    if ([object isKindOfClass:NSDictionary.class]) {
-        NSString *direct = SPKDMAudioPKForNames(object, @[ @"senderPk", @"senderPK", @"senderId", @"senderID", @"messageSenderId", @"messageSenderID" ]);
-        if (direct)
-            return direct;
-        for (NSString *key in @[ @"messageMetadata", @"metadata", @"messageCellViewModel", @"viewModel", @"message", @"item" ]) {
-            NSString *pk = SPKDMAudioSenderPKFromObject([(NSDictionary *)object objectForKey:key], visited, depth + 1);
-            if (pk)
-                return pk;
-        }
-        return nil;
-    }
-    if ([object isKindOfClass:NSArray.class] || [object isKindOfClass:NSSet.class])
-        return nil;
-
-    NSValue *identity = [NSValue valueWithNonretainedObject:object];
-    if ([visited containsObject:identity])
-        return nil;
-    [visited addObject:identity];
-
-    NSString *direct = SPKDMAudioPKForNames(object, @[ @"senderPk", @"senderPK", @"senderId", @"senderID", @"messageSenderId", @"messageSenderID" ]);
-    if (direct)
-        return direct;
-
-    for (NSString *name in @[ @"messageMetadata", @"metadata", @"messageCellViewModel", @"viewModel", @"message", @"item" ]) {
-        id nested = SPKDMAudioCall(object, name) ?: SPKDMAudioKVCObject(object, name);
-        if (nested && nested != object) {
-            NSString *pk = SPKDMAudioSenderPKFromObject(nested, visited, depth + 1);
-            if (pk)
-                return pk;
-        }
-    }
-    return nil;
-}
-
-static BOOL SPKDMAudioObjectMatchesPK(id object, NSString *pk) {
-    NSString *objectPK = SPKDMAudioPKForNames(object, @[ @"pk", @"PK", @"userPk", @"userPK", @"userId", @"userID", @"id", @"identifier" ]);
-    return SPKDMAudioStringMatchesPK(objectPK, pk);
-}
-
-static NSString *SPKDMAudioUsernameForPKFromObject(id object, NSString *pk, NSMutableSet<NSValue *> *visited, NSUInteger depth) {
-    if (!object || pk.length == 0 || depth > 7)
-        return nil;
-
-    if ([object isKindOfClass:NSDictionary.class]) {
-        NSDictionary *dict = (NSDictionary *)object;
-        id keyedValue = [dict objectForKey:pk];
-        NSString *username = SPKDMAudioUsernameForPKFromObject(keyedValue, pk, visited, depth + 1);
-        if (username)
-            return username;
-
-        NSString *dictPK = SPKDMAudioPKForNames(dict, @[ @"pk", @"PK", @"userPk", @"userPK", @"userId", @"userID", @"id", @"identifier" ]);
-        if (SPKDMAudioStringMatchesPK(dictPK, pk)) {
-            NSString *direct = SPKDMAudioStringForNames(dict, @[ @"username", @"userName", @"profileUsername", @"displayUsername" ]);
-            if (direct)
-                return direct;
-        }
-
-        for (NSString *key in @[ @"sender", @"senderUser", @"user", @"author", @"owner", @"participant", @"profile", @"threadUsers", @"users", @"participants", @"userMap" ]) {
-            username = SPKDMAudioUsernameForPKFromObject([dict objectForKey:key], pk, visited, depth + 1);
-            if (username)
-                return username;
-        }
-        for (id value in dict.allValues) {
-            username = SPKDMAudioUsernameForPKFromObject(value, pk, visited, depth + 1);
-            if (username)
-                return username;
-        }
-        return nil;
-    }
-
-    if ([object isKindOfClass:NSArray.class] || [object isKindOfClass:NSSet.class]) {
-        for (id value in object) {
-            NSString *username = SPKDMAudioUsernameForPKFromObject(value, pk, visited, depth + 1);
-            if (username)
-                return username;
-        }
-        return nil;
-    }
-
-    if ([object isKindOfClass:NSString.class] ||
-        [object isKindOfClass:NSNumber.class] ||
-        [object isKindOfClass:NSDate.class] ||
-        [object isKindOfClass:NSURL.class] ||
-        [object isKindOfClass:NSData.class] ||
-        [object isKindOfClass:UIImage.class]) {
-        return nil;
-    }
-
-    NSValue *identity = [NSValue valueWithNonretainedObject:object];
-    if ([visited containsObject:identity])
-        return nil;
-    [visited addObject:identity];
-
-    if (SPKDMAudioObjectMatchesPK(object, pk)) {
-        NSString *direct = SPKDMAudioStringForNames(object, @[ @"username", @"userName", @"profileUsername", @"displayUsername" ]);
-        if (direct)
-            return direct;
-    }
-
-    for (NSString *name in @[
-             @"sender", @"senderUser", @"senderInfo", @"senderViewModel", @"messageSender",
-             @"threadMessageSenderViewModel", @"messageSenderViewModel", @"user", @"author",
-             @"owner", @"participant", @"profile", @"threadUsers", @"users", @"participants",
-             @"userMap", @"message", @"messageMetadata", @"metadata", @"viewModel",
-             @"messageViewModel", @"audioMessageViewModel", @"messageCellViewModel", @"model", @"item"
-         ]) {
-        id nested = SPKDMAudioCall(object, name) ?: SPKDMAudioKVCObject(object, name);
-        if (nested && nested != object) {
-            NSString *username = SPKDMAudioUsernameForPKFromObject(nested, pk, visited, depth + 1);
-            if (username)
-                return username;
-        }
-    }
-
-    if (!SPKDMAudioShouldTraverseForUsername(object))
-        return nil;
-    for (Class cls = [object class]; cls && cls != NSObject.class; cls = class_getSuperclass(cls)) {
-        unsigned int count = 0;
-        Ivar *ivars = class_copyIvarList(cls, &count);
-        for (unsigned int i = 0; i < count; i++) {
-            Ivar ivar = ivars[i];
-            const char *encoding = ivar_getTypeEncoding(ivar);
-            if (!encoding || encoding[0] != '@')
-                continue;
-            const char *name = ivar_getName(ivar);
-            NSString *ivarName = name ? [NSString stringWithUTF8String:name] : @"";
-            NSString *lower = ivarName.lowercaseString;
-            BOOL priority = [lower containsString:@"sender"] || [lower containsString:@"user"] || [lower containsString:@"participant"] || [lower containsString:@"message"] || [lower containsString:@"metadata"];
-            if (!priority && depth > 3)
-                continue;
-            id value = nil;
-            @try {
-                value = object_getIvar(object, ivar);
-            } @catch (__unused NSException *exception) {
-                value = nil;
-            }
-            NSString *username = SPKDMAudioUsernameForPKFromObject(value, pk, visited, depth + 1);
-            if (username) {
-                free(ivars);
-                return username;
-            }
-        }
-        free(ivars);
-    }
-    return nil;
-}
-
-static NSString *SPKDMAudioUsernameFromObject(id object, NSMutableSet<NSValue *> *visited, NSUInteger depth) {
-    if (!object || depth > 6)
-        return nil;
-    if ([object isKindOfClass:NSDictionary.class]) {
-        NSString *direct = SPKDMAudioStringForNames(object, @[ @"username", @"userName", @"senderUsername", @"senderUserName", @"sender_name" ]);
-        if (direct)
-            return direct;
-        for (NSString *key in @[ @"sender", @"senderUser", @"user", @"author", @"owner", @"participant", @"profile", @"message", @"viewModel", @"messageMetadata" ]) {
-            id nested = [(NSDictionary *)object objectForKey:key];
-            NSString *username = SPKDMAudioUsernameFromObject(nested, visited, depth + 1);
-            if (username)
-                return username;
-        }
-        for (id value in [(NSDictionary *)object allValues]) {
-            NSString *username = SPKDMAudioUsernameFromObject(value, visited, depth + 1);
-            if (username)
-                return username;
-        }
-        return nil;
-    }
-    if ([object isKindOfClass:NSArray.class] || [object isKindOfClass:NSSet.class]) {
-        for (id value in object) {
-            NSString *username = SPKDMAudioUsernameFromObject(value, visited, depth + 1);
-            if (username)
-                return username;
-        }
-        return nil;
-    }
-
-    NSValue *identity = [NSValue valueWithNonretainedObject:object];
-    if ([visited containsObject:identity])
-        return nil;
-    [visited addObject:identity];
-
-    NSString *direct = SPKDMAudioStringForNames(object, @[
-        @"username", @"userName", @"senderUsername", @"senderUserName",
-        @"senderName", @"senderDisplayName", @"displayUsername", @"profileUsername"
-    ]);
-    if (direct)
-        return direct;
-
-    for (NSString *name in @[
-             @"sender", @"senderUser", @"senderInfo", @"senderViewModel", @"messageSender",
-             @"threadMessageSenderViewModel", @"messageSenderViewModel", @"user", @"author",
-             @"owner", @"participant", @"profile", @"message", @"messageMetadata", @"viewModel",
-             @"messageViewModel", @"audioMessageViewModel", @"model", @"item"
-         ]) {
-        id nested = SPKDMAudioCall(object, name) ?: SPKDMAudioKVCObject(object, name);
-        if (nested && nested != object) {
-            NSString *username = SPKDMAudioUsernameFromObject(nested, visited, depth + 1);
-            if (username)
-                return username;
-        }
-    }
-
-    if (!SPKDMAudioShouldTraverseForUsername(object))
-        return nil;
-    for (Class cls = [object class]; cls && cls != NSObject.class; cls = class_getSuperclass(cls)) {
-        unsigned int count = 0;
-        Ivar *ivars = class_copyIvarList(cls, &count);
-        for (unsigned int i = 0; i < count; i++) {
-            Ivar ivar = ivars[i];
-            const char *encoding = ivar_getTypeEncoding(ivar);
-            if (!encoding || encoding[0] != '@')
-                continue;
-            const char *name = ivar_getName(ivar);
-            NSString *ivarName = name ? [NSString stringWithUTF8String:name] : @"";
-            NSString *lower = ivarName.lowercaseString;
-            BOOL priority = [lower containsString:@"sender"] || [lower containsString:@"user"] || [lower containsString:@"participant"] || [lower containsString:@"message"];
-            if (!priority && depth > 2)
-                continue;
-            id value = nil;
-            @try {
-                value = object_getIvar(object, ivar);
-            } @catch (__unused NSException *exception) {
-                value = nil;
-            }
-            NSString *username = SPKDMAudioUsernameFromObject(value, visited, depth + 1);
-            if (username) {
-                free(ivars);
-                return username;
-            }
-        }
-        free(ivars);
-    }
-    return nil;
-}
-
-static NSString *SPKDMAudioResolvedUsername(id object) {
-    NSString *username = SPKDMAudioUsernameFromObject(object, [NSMutableSet set], 0);
-    if (username)
-        return username;
-
-    NSString *senderPK = SPKDMAudioSenderPKFromObject(object, [NSMutableSet set], 0);
-    if (!senderPK)
-        return nil;
-    return SPKDMAudioUsernameForPKFromObject(object, senderPK, [NSMutableSet set], 0);
-}
-
-static NSString *SPKDMAudioResolvedUsernameNearView(UIView *view, id primaryObject) {
-    NSString *username = SPKDMAudioResolvedUsername(primaryObject);
-    if (username)
-        return username;
-
-    NSString *senderPK = SPKDMAudioSenderPKFromObject(primaryObject, [NSMutableSet set], 0);
-    for (UIView *candidateView = view; candidateView && candidateView != candidateView.window; candidateView = candidateView.superview) {
-        id candidateObject = SPKDMAudioCandidateObject(candidateView);
-        username = SPKDMAudioResolvedUsername(candidateObject);
-        if (username)
-            return username;
-
-        if (senderPK.length > 0) {
-            username = SPKDMAudioUsernameForPKFromObject(candidateObject, senderPK, [NSMutableSet set], 0);
-            if (username)
-                return username;
-        }
-    }
-    return nil;
-}
-
-static id SPKDMAudioCandidateObject(UIView *view) {
-    NSArray<NSString *> *selectors = @[ @"viewModel", @"messageViewModel", @"audioMessageViewModel", @"model", @"message", @"item" ];
-    for (NSString *selector in selectors) {
-        id value = SPKDMAudioCall(view, selector);
-        if (value)
-            return value;
-    }
-    for (NSString *ivar in @[ @"_viewModel", @"_messageViewModel", @"_audioMessageViewModel", @"_model", @"_message", @"_item" ]) {
-        id value = SPKDMAudioIvarValue(view, ivar.UTF8String);
-        if (value)
-            return value;
-    }
-    return view;
-}
-
-static SPKAudioItem *SPKDMAudioItemForView(UIView *view, SPKAudioSource source) {
-    id object = SPKDMAudioCandidateObject(view);
-    SPKAudioItem *item = [SPKAudioDownloadCoordinator audioItemFromMediaObject:object source:source];
-    if (!item && view.superview) {
-        item = [SPKAudioDownloadCoordinator audioItemFromMediaObject:SPKDMAudioCandidateObject(view.superview) source:source];
-    }
-    if (!item)
-        return nil;
-    NSString *username = SPKDMAudioResolvedUsernameNearView(view, object);
-    if (username.length > 0) {
-        item.artist = username;
-    } else if (!item.artist.length) {
-        item.artist = @"direct";
-    }
-    return item;
-}
-
-static void SPKDMPresentAudioActions(UIView *view, SPKAudioSource source) {
-    SPKAudioItem *item = SPKDMAudioItemForView(view, source);
-    if (!item) {
-        SPKNotify(kSPKNotificationDownloadShare, @"Could not find audio URL", @"Refresh the thread and try again if the URL expired.", @"error_filled", SPKNotificationToneError);
-        return;
-    }
-
-    SPKGallerySaveMetadata *metadata = [[SPKGallerySaveMetadata alloc] init];
-    metadata.source = (int16_t)[item gallerySource];
-    metadata.sourceUsername = item.artist.length > 0 ? item.artist : @"direct";
-    metadata.sourceMediaPK = item.mediaIdentifier;
-    metadata.sourceMediaURLString = item.sourceURLString ?: item.url.absoluteString;
-
-    UIViewController *presenter = [SPKUtils viewControllerForAncestralView:view] ?: topMostController();
-    [SPKIGAlertPresenter presentActionSheetFromViewController:presenter
-                                                        title:@"Audio"
-                                                      message:nil
-                                                      actions:@[
-                                                          [SPKIGAlertAction actionWithTitle:@"Save Audio to Files"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionSaveToFiles item:item presenter:presenter sourceView:view metadata:metadata notificationIdentifier:kSPKNotificationDownloadAudio];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Share Audio"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionConvertAndShare item:item presenter:presenter sourceView:view metadata:metadata notificationIdentifier:kSPKNotificationDownloadAudioShare];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Save Audio to Gallery"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionConvertAndSaveToGallery item:item presenter:presenter sourceView:view metadata:metadata notificationIdentifier:kSPKNotificationDownloadAudioGallery];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Play Audio"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionPlay item:item presenter:presenter sourceView:view metadata:metadata notificationIdentifier:kSPKNotificationPlayAudio];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Copy Audio Download URL"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionCopyURL item:item presenter:presenter sourceView:view metadata:metadata notificationIdentifier:kSPKNotificationCopyAudioURL];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Cancel"
-                                                                                      style:SPKIGAlertActionStyleCancel
-                                                                                    handler:nil]
-                                                      ]];
-}
 
 static id SPKDMComposerSenderTarget(id composer) {
     if ([composer respondsToSelector:@selector(buttonDelegate)]) {
@@ -493,7 +38,7 @@ static id SPKDMComposerSenderTarget(id composer) {
     }
     // IG 435+: the overflow controller holds a delegate that may be a wrapper
     // around the composer rather than the composer itself.
-    id innerComposer = SPKDMAudioCall(composer, @"composer");
+    id innerComposer = SPKDirectValueForSelectorNamed(composer, @"composer");
     if ([innerComposer respondsToSelector:@selector(buttonDelegate)]) {
         return ((id (*)(id, SEL))objc_msgSend)(innerComposer, @selector(buttonDelegate));
     }
@@ -504,8 +49,8 @@ static id SPKDMComposerSenderTarget(id composer) {
 // `_delegate` from IG 435 (which is the composer, conforming to the new
 // IGDirectComposerOverflowControllerDelegate protocol).
 static id SPKDMComposerFromOverflowController(id overflowController) {
-    return SPKDMAudioIvarValue(overflowController, "_composer")
-               ?: SPKDMAudioIvarValue(overflowController, "_delegate");
+    return SPKDirectIvarValue(overflowController, "_composer")
+               ?: SPKDirectIvarValue(overflowController, "_delegate");
 }
 
 static BOOL SPKDMUploadMenuEnabled(void) {
@@ -623,7 +168,7 @@ static void SPKDMPresentDownloadAudioActionsForViewModel(id viewModel) {
     }
 
     SPKGallerySaveMetadata *metadata = [[SPKGallerySaveMetadata alloc] init];
-    NSString *username = SPKDMAudioResolvedUsername(viewModel);
+    NSString *username = SPKDirectAudioResolvedUsername(viewModel);
     metadata.source = (int16_t)[audioItem gallerySource];
     metadata.sourceUsername = username.length > 0 ? username : (audioItem.artist.length > 0 ? audioItem.artist : @"direct");
     metadata.sourceMediaPK = audioItem.mediaIdentifier;
@@ -718,42 +263,6 @@ static id SPKDMPrismAudioDownloadElement(id templateElement, id viewModel) {
     return element;
 }
 
-static id SPKDMPrismMenuElement(id templateElement, NSString *title, UIImage *image, void (^handler)(void)) {
-    Class builderClass = NSClassFromString(@"IGDSPrismMenuItemBuilder");
-    if (!builderClass || !templateElement || title.length == 0 || !handler)
-        return nil;
-    SEL initSelector = @selector(initWithTitle:);
-    SEL imageSelector = @selector(withImage:);
-    SEL handlerSelector = @selector(withHandler:);
-    SEL buildSelector = @selector(build);
-    if (![builderClass instancesRespondToSelector:initSelector] ||
-        ![builderClass instancesRespondToSelector:imageSelector] ||
-        ![builderClass instancesRespondToSelector:handlerSelector] ||
-        ![builderClass instancesRespondToSelector:buildSelector]) {
-        return nil;
-    }
-
-    id builder = ((id (*)(id, SEL, id))objc_msgSend)([builderClass alloc], initSelector, title);
-    if (image)
-        builder = ((id (*)(id, SEL, id))objc_msgSend)(builder, imageSelector, image);
-    builder = ((id (*)(id, SEL, id))objc_msgSend)(builder, handlerSelector, handler);
-    id menuItem = ((id (*)(id, SEL))objc_msgSend)(builder, buildSelector);
-    if (!menuItem)
-        return nil;
-
-    id element = [[templateElement class] new];
-    Ivar subtypeIvar = class_getInstanceVariable([templateElement class], "_subtype");
-    Ivar itemIvar = class_getInstanceVariable([templateElement class], "_item_menuItem");
-    if (!element || !subtypeIvar || !itemIvar)
-        return nil;
-
-    ptrdiff_t subtypeOffset = ivar_getOffset(subtypeIvar);
-    *(uint64_t *)((uint8_t *)(__bridge void *)element + subtypeOffset) =
-        *(uint64_t *)((uint8_t *)(__bridge void *)templateElement + subtypeOffset);
-    object_setIvar(element, itemIvar, menuItem);
-    return element;
-}
-
 static NSArray *SPKDMPrismUploadElementsForComposer(id composer, id templateElement) {
     if (!composer || !templateElement || sSPKDMUploadItemInjectedForOverflowMenu)
         return @[];
@@ -764,7 +273,7 @@ static NSArray *SPKDMPrismUploadElementsForComposer(id composer, id templateElem
     if ([SPKUtils getBoolPref:@"msgs_upload_audio_messages"] &&
         [SPKAudioDMUploadCoordinator senderTargetSupportsAudioUpload:senderTarget]) {
         __weak id weakComposer = composer;
-        id audioElement = SPKDMPrismMenuElement(templateElement,
+        id audioElement = SPKDirectPrismMenuElement(templateElement,
                                                 @"Upload Audio",
                                                 [SPKAssetUtils instagramIconNamed:@"audio_upload"
                                                                         pointSize:24.0],
@@ -785,7 +294,7 @@ static NSArray *SPKDMPrismUploadElementsForComposer(id composer, id templateElem
     if ([SPKUtils getBoolPref:@"msgs_upload_gallery_media"] &&
         [SPKMediaDMUploadCoordinator senderTargetSupportsMediaUpload:senderTarget]) {
         __weak id weakComposer = composer;
-        id mediaElement = SPKDMPrismMenuElement(templateElement,
+        id mediaElement = SPKDirectPrismMenuElement(templateElement,
                                                 @"Upload Photo",
                                                 [SPKAssetUtils instagramIconNamed:@"photo"
                                                                         pointSize:24.0],
@@ -807,12 +316,12 @@ static NSArray *SPKDMPrismUploadElementsForComposer(id composer, id templateElem
 }
 
 static NSArray *SPKDMPrismMenuElementsWithAudioDownload(NSArray *elements) {
-    if (!sSPKDMAudioDownloadPrismMenuPending)
+    if (!sSPKDMAudioRowPending)
         return elements;
-    sSPKDMAudioDownloadPrismMenuPending = NO;
+    sSPKDMAudioRowPending = NO;
 
-    id viewModel = sSPKDMAudioDownloadViewModel;
-    sSPKDMAudioDownloadViewModel = nil;
+    id viewModel = sSPKDMAudioRowViewModel;
+    sSPKDMAudioRowViewModel = nil;
     if (![SPKUtils getBoolPref:@"msgs_download_audio_messages"] || ![elements isKindOfClass:NSArray.class] || elements.count == 0) {
         return elements;
     }
@@ -826,8 +335,22 @@ static NSArray *SPKDMPrismMenuElementsWithAudioDownload(NSArray *elements) {
     return [updated copy];
 }
 
+static NSArray *SPKDMPrismMenuElementsWithGifTitle(NSArray *elements) {
+    if (![elements isKindOfClass:NSArray.class] || elements.count == 0)
+        return elements;
+
+    NSArray *titleElements = SPKDMGifTitleElementsForMenu(elements);
+    if (titleElements.count == 0)
+        return elements;
+
+    NSMutableArray *updated = [NSMutableArray arrayWithArray:titleElements];
+    [updated addObjectsFromArray:elements];
+    return [updated copy];
+}
+
 static NSArray *SPKDMPrismMenuElementsWithInjections(NSArray *elements) {
-    NSArray *updated = SPKDMPrismMenuElementsWithAudioDownload(elements);
+    NSArray *updated = SPKDMPrismMenuElementsWithGifTitle(elements);
+    updated = SPKDMPrismMenuElementsWithAudioDownload(updated);
     if (!SPKDMUploadMenuEnabled() || !sSPKDMComposerForOverflowMenu || sSPKDMUploadItemInjectedForOverflowMenu ||
         ![updated isKindOfClass:NSArray.class] || updated.count == 0) {
         return updated;
@@ -844,15 +367,21 @@ static NSArray *SPKDMPrismMenuElementsWithInjections(NSArray *elements) {
 }
 
 static id SPKDMPrismMenuViewInit3(id self, SEL _cmd, NSArray *elements, id headerText, BOOL edrEnabled) {
-    return orig_SPKDMAudioPrismMenuViewInit3(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled);
+    id view = orig_SPKDMPrismMenuViewInit3(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled);
+    SPKDMGifTitleRegisterMenuView(view);
+    return view;
 }
 
 static id SPKDMPrismMenuViewInit5(id self, SEL _cmd, NSArray *elements, id headerText, BOOL edrEnabled, BOOL allowScrollingItems, BOOL allowMixedTextAlignment) {
-    return orig_SPKDMAudioPrismMenuViewInit5(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled, allowScrollingItems, allowMixedTextAlignment);
+    id view = orig_SPKDMPrismMenuViewInit5(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled, allowScrollingItems, allowMixedTextAlignment);
+    SPKDMGifTitleRegisterMenuView(view);
+    return view;
 }
 
 static id SPKDMPrismMenuInit3(id self, SEL _cmd, NSArray *elements, id headerText, BOOL edrEnabled) {
-    return orig_SPKDMPrismMenuInit3(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled);
+    id menu = orig_SPKDMPrismMenuInit3(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled);
+    SPKDMGifTitleRegisterMenuView(menu);
+    return menu;
 }
 
 static void SPKDMSetUploadComposerContext(id composer) {
@@ -865,7 +394,7 @@ static void SPKDMClearUploadComposerContext(void) {
     sSPKDMUploadItemInjectedForOverflowMenu = NO;
 }
 
-%group SPKDMAudioDownloadHooks
+%group SPKDirectMessageMenuHooks
 
 %hook IGDirectComposerOverflowController
 
@@ -997,11 +526,12 @@ static id SPKDMProcessMenuItems(id menuItems) {
                                userSession:(id)userSession
                                 tapHandler:(id)tapHandler {
     id config = %orig(options, viewModel, contentType, isSticker, isMusicSticker, directNuxManager, sessionUserDefaults, launcherSet, userSession, tapHandler);
+    SPKDMGifTitleNoteMenuViewModel(viewModel);
     if ([SPKUtils getBoolPref:@"downloads_audio_enabled"] &&
         [SPKUtils getBoolPref:@"msgs_download_audio_messages"] &&
         [SPKAudioDownloadCoordinator bestAudioURLFromMediaObject:viewModel]) {
-        sSPKDMAudioDownloadPrismMenuPending = YES;
-        sSPKDMAudioDownloadViewModel = viewModel;
+        sSPKDMAudioRowPending = YES;
+        sSPKDMAudioRowViewModel = viewModel;
     }
     return config;
 }
@@ -1010,7 +540,7 @@ static id SPKDMProcessMenuItems(id menuItems) {
 
 %end
 
-extern "C" void SPKInstallDMAudioDownloadHooksIfNeeded(void) {
+extern "C" void SPKInstallDirectMessageMenuHooksIfNeeded(void) {
     // Audio download/upload features sit behind the audio-downloads master switch;
     // gallery photo upload is independent of it.
     BOOL audioFeatureEnabled = [SPKUtils getBoolPref:@"downloads_audio_enabled"] &&
@@ -1018,25 +548,25 @@ extern "C" void SPKInstallDMAudioDownloadHooksIfNeeded(void) {
                                 [SPKUtils getBoolPref:@"msgs_download_notes_audio"] ||
                                 [SPKUtils getBoolPref:@"msgs_upload_audio_messages"]);
     BOOL mediaUploadEnabled = [SPKUtils getBoolPref:@"msgs_upload_gallery_media"];
-    if (!audioFeatureEnabled && !mediaUploadEnabled)
+    if (!audioFeatureEnabled && !mediaUploadEnabled && !SPKDMGifTitleEnabled())
         return;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        %init(SPKDMAudioDownloadHooks);
+        %init(SPKDirectMessageMenuHooks);
         Class prismMenuViewClass = objc_getClass("IGDSPrismMenu.IGDSPrismMenuView");
         SEL init3 = @selector(initWithMenuElements:headerText:edrEnabled:);
         if (prismMenuViewClass && [prismMenuViewClass instancesRespondToSelector:init3]) {
             MSHookMessageEx(prismMenuViewClass,
                             init3,
                             (IMP)SPKDMPrismMenuViewInit3,
-                            (IMP *)&orig_SPKDMAudioPrismMenuViewInit3);
+                            (IMP *)&orig_SPKDMPrismMenuViewInit3);
         }
         SEL init5 = @selector(initWithMenuElements:headerText:edrEnabled:allowScrollingItems:allowMixedTextAlignment:);
         if (prismMenuViewClass && [prismMenuViewClass instancesRespondToSelector:init5]) {
             MSHookMessageEx(prismMenuViewClass,
                             init5,
                             (IMP)SPKDMPrismMenuViewInit5,
-                            (IMP *)&orig_SPKDMAudioPrismMenuViewInit5);
+                            (IMP *)&orig_SPKDMPrismMenuViewInit5);
         }
         Class prismMenuClass = objc_getClass("IGDSPrismMenu.IGDSPrismMenu");
         if (prismMenuClass && [prismMenuClass instancesRespondToSelector:init3]) {

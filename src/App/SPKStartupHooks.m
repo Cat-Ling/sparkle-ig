@@ -91,7 +91,7 @@ FOUNDATION_EXPORT void SPKInstallDMRefreshConfirmHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallCaptureHidingHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallProfileHeaderControlsHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallAudioPageDownloadHooksIfNeeded(void);
-FOUNDATION_EXPORT void SPKInstallDMAudioDownloadHooksIfNeeded(void);
+FOUNDATION_EXPORT void SPKInstallDirectMessageMenuHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallNotesActionsHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallHideDirectCallButtonsHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallHideFlagButtonHooksIfEnabled(void);
@@ -256,7 +256,7 @@ void SPKInstallMessagesSurfaceHooksIfNeeded(void) {
     SPK_INSTALL(SPKInstallDMAudioMsgConfirmHooksIfEnabled);
     SPK_INSTALL(SPKInstallDMInteractionConfirmHooksIfEnabled);
     SPK_INSTALL(SPKInstallDMRefreshConfirmHooksIfEnabled);
-    SPK_INSTALL(SPKInstallDMAudioDownloadHooksIfNeeded);
+    SPK_INSTALL(SPKInstallDirectMessageMenuHooksIfNeeded);
     SPK_INSTALL(SPKInstallNotesActionsHooksIfEnabled);
     SPK_INSTALL(SPKInstallHideDirectCallButtonsHooksIfEnabled);
     SPK_INSTALL(SPKInstallHideFlagButtonHooksIfEnabled);
