@@ -3,7 +3,7 @@ Name: Sparkle for Instagram
 Version: 1.2.0
 Architecture: iphoneos-arm
 Description: Bring the spark back to Instagram!
-Homepage: https://github.com/efibalogh/Sparkle
+Homepage: https://github.com/efibalogh/sparkle-ig
 Maintainer: efibalogh
 Author: efibalogh
 Section: Tweaks

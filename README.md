@@ -6,7 +6,7 @@
 
 `v1.2.0` · Tested on versions **441.0.0** and **410.1.0**
 
-[📣 IPA Releases](https://t.me/sparkle_ig) · [💬 Chat & Support](https://t.me/+f-Xo21HnfCY3NmE0) · [📥 DEB Releases](https://github.com/efibalogh/sparkle-ig/releases/latest) · [🐛 Issues](https://github.com/efibalogh/sparkle-ig/issues/new/choose) · [❤️ Support](https://ko-fi.com/sparkle_ig)
+[📣 IPA Releases](https://t.me/sparkle_ig) · [💬 Chat & Support](https://t.me/+f-Xo21HnfCY3NmE0) · [📦 Jailbreak Repo](https://efibalogh.github.io/sparkle-ig/) · [📥 DEB Releases](https://github.com/efibalogh/sparkle-ig/releases/latest) · [🐛 Issues](https://github.com/efibalogh/sparkle-ig/issues/new/choose) · [❤️ Support](https://ko-fi.com/sparkle_ig)
 
 </div>
 
@@ -70,7 +70,7 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
 ## Installation
 
 > [!IMPORTANT]
-> Sparkle does **not** ship Instagram itself. Pre-injected IPAs are distributed on the [Telegram channel](https://t.me/sparkle_ig), and the jailbroken `.deb` is on [Releases](https://github.com/efibalogh/sparkle-ig/releases/latest).
+> Sparkle does **not** ship Instagram itself. Pre-injected IPAs are distributed on the [Telegram channel](https://t.me/sparkle_ig), and the jailbroken `.deb` is on [Releases](https://github.com/efibalogh/sparkle-ig/releases/latest) or from the [Sparkle repo](https://efibalogh.github.io/sparkle-ig/).
 
 ### Sideloaded
 
@@ -82,6 +82,26 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
 > Sparkle uses Instagram's bundled image assets everywhere. The distributed IPA is a full (un-thinned) build (it contains icons for all screen sizes), so the higher-quality in-app icons render crisply on every device. If you build your own from an IPA that was already thinned to a smaller device, some icon scales may be missing. See [Building from source](#building-from-source).
 
 ### Jailbroken
+
+Add the Sparkle repo to your package manager and you will get updates as they ship.
+
+<div align="left">
+
+[![Add the Sparkle repo](https://img.shields.io/badge/%E2%9C%A6%20Add%20the%20Sparkle%20Repo-ED1E9C?style=for-the-badge)](https://efibalogh.github.io/sparkle-ig/)
+
+</div>
+
+Open that page on your device and tap Sileo or Zebra,
+or add the URL by hand:
+
+```
+https://efibalogh.github.io/sparkle-ig/
+```
+
+The repo serves both the rootless (`iphoneos-arm64`) and rootful (`iphoneos-arm`) builds; your
+package manager picks the right one for your jailbreak automatically.
+
+Rather not add a repo? Install a single `.deb` instead, and update it yourself each release:
 
 1. Download the rootless or rootful `.deb` from [Releases](https://github.com/efibalogh/sparkle-ig/releases/latest).
 2. Open the `.deb` in Sileo/Zebra (or install it with `dpkg -i` over SSH), then respring.

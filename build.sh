@@ -605,8 +605,10 @@ then
 
     echo -e '\033[1m\033[32mBuilding Sparkle tweak for rootless\033[0m'
 
-    export THEOS_PACKAGE_SCHEME=rootless
-    make package
+    # Passed on the command line, not exported: ~/.config/theos/rc.mk assigns
+    # THEOS_PACKAGE_SCHEME as a makefile variable, which overrides the
+    # environment. Only a command-line assignment beats it.
+    make package THEOS_PACKAGE_SCHEME=rootless
 
     ensure_ffmpeg_frameworks
 
@@ -623,8 +625,10 @@ then
 
     echo -e '\033[1m\033[32mBuilding Sparkle tweak for rootful\033[0m'
 
-    unset THEOS_PACKAGE_SCHEME
-    make package
+    # Empty scheme = rootful. Must be a command-line assignment: `unset` here is
+    # useless because ~/.config/theos/rc.mk sets the scheme as a makefile
+    # variable, and those win over the environment.
+    make package THEOS_PACKAGE_SCHEME=
 
     ensure_ffmpeg_frameworks
 
