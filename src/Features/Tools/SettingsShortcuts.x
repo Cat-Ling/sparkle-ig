@@ -263,10 +263,11 @@ static BOOL SPKTabIdentifierMatchesGalleryShortcut(NSString *identifier, NSStrin
     return SPKTabButtonMatchesTarget(identifier, label, SPKResolvedGalleryShortcutTabIdentifier());
 }
 
+// The accessibility label is localized, so it can never be compared against an
+// English string. Identity comes from the identifier match alone.
 static BOOL SPKShouldReplaceProfileTabLongPress(NSString *identifier, NSString *label) {
-    return [SPKGalleryShortcutTabIdentifier() isEqualToString:@"profile-tab"] &&
-           [identifier isEqualToString:@"profile-tab"] &&
-           [(label ?: @"") isEqualToString:@"Profile"];
+    return [SPKResolvedGalleryShortcutTabIdentifier() isEqualToString:@"profile-tab"] &&
+           SPKTabButtonMatchesTarget(identifier, label, @"profile-tab");
 }
 
 // Show Sparkle tweak settings by holding on the settings/more icon under profile for ~1 second
