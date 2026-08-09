@@ -155,13 +155,15 @@ static void SPKAudioDMNotify(NSString *title, NSString *message, BOOL success) {
     return sender && ([sender respondsToSelector:SPKAudioDMSendSelector()] || [sender respondsToSelector:SPKAudioDMSendLegacySelector()]);
 }
 
-+ (void)presentUploadPickerForSenderTarget:(id)senderTarget
-                                 presenter:(UIViewController *)presenter
-                                sourceView:(UIView *)sourceView {
+// Shared setup for both entry points: returns the retained coordinator, or nil
+// when this build has no reachable audio sender.
++ (SPKAudioDMUploadCoordinator *)coordinatorForSenderTarget:(id)senderTarget
+                                                  presenter:(UIViewController *)presenter
+                                                 sourceView:(UIView *)sourceView {
     if (![self senderTargetSupportsAudioUpload:senderTarget] || !presenter) {
         SPKAudioDMNotify(@"Audio upload unavailable", @"This Instagram build does not expose the direct audio sender.", NO);
         SPKWarnLog(@"AudioUpload", @"Missing direct audio sender on target: %@", senderTarget);
-        return;
+        return nil;
     }
 
     SPKAudioDMUploadCoordinator *coordinator = [[SPKAudioDMUploadCoordinator alloc] init];
@@ -169,6 +171,40 @@ static void SPKAudioDMNotify(NSString *title, NSString *message, BOOL success) {
     coordinator.presenter = presenter;
     coordinator.sourceView = sourceView ?: presenter.view;
     sSPKAudioActiveDMUploadCoordinator = coordinator;
+    return coordinator;
+}
+
++ (void)presentUploadPickerForSource:(SPKAudioDMUploadSource)source
+                        senderTarget:(id)senderTarget
+                           presenter:(UIViewController *)presenter
+                          sourceView:(UIView *)sourceView {
+    SPKAudioDMUploadCoordinator *coordinator = [self coordinatorForSenderTarget:senderTarget
+                                                                      presenter:presenter
+                                                                     sourceView:sourceView];
+    if (!coordinator)
+        return;
+
+    switch (source) {
+        case SPKAudioDMUploadSourcePhotos:
+            [coordinator presentLibraryPicker];
+            break;
+        case SPKAudioDMUploadSourceGallery:
+            [coordinator presentGalleryPicker];
+            break;
+        case SPKAudioDMUploadSourceFiles:
+            [coordinator presentFilesPicker];
+            break;
+    }
+}
+
++ (void)presentUploadPickerForSenderTarget:(id)senderTarget
+                                 presenter:(UIViewController *)presenter
+                                sourceView:(UIView *)sourceView {
+    SPKAudioDMUploadCoordinator *coordinator = [self coordinatorForSenderTarget:senderTarget
+                                                                      presenter:presenter
+                                                                     sourceView:sourceView];
+    if (!coordinator)
+        return;
 
     [SPKIGAlertPresenter presentActionSheetFromViewController:presenter
                                                         title:@"Send Audio Message"

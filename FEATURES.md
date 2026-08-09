@@ -231,9 +231,10 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 - _Note actions are not supported on IG 410.1.0 (yet)._
 
 ### Audio
-- **Download Audio Messages**: Adds audio actions to voice/audio message views. **(restart)**
-- **Upload Audio Messages**: Converts a selected audio/video clip to M4A and sends it as a voice message. **(restart)**
+- **Download Audio Messages**: Adds an "Audio Actions" row to a voice message's menu that expands in place into Save Audio to Files, Share Audio, Save Audio to Gallery, Play Audio, and Copy Audio Download URL. **(restart)**
+- **Upload Audio Messages**: Adds an "Upload Audio" row to the composer plus (+) menu that expands into Photos, Gallery, and Files, then converts the clip you pick to M4A and sends it as a voice message. **(restart)**
 - **Trim Before Sending**: When uploading an audio message, offer to trim the audio in the trim editor before it's sent (Send now, or Trim & Send).
+- _Where an Instagram build cannot nest menu rows, both rows fall back to listing the same actions in a sheet._
 
 ### Media
 - **Send Photo from Gallery**: Adds a "Send Photo" option to the composer plus (+) menu that sends a photo from the Sparkle Gallery into the chat. **(restart)**

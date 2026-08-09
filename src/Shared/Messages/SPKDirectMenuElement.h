@@ -24,6 +24,47 @@ FOUNDATION_EXPORT id _Nullable SPKDirectPrismMenuElementWithSubtitle(id template
                                                                      UIImage *_Nullable image,
                                                                      void (^handler)(void));
 
+/// One row inside a submenu built by `SPKDirectPrismSubmenuElement`.
+@interface SPKDirectMenuAction : NSObject
++ (instancetype)actionWithTitle:(NSString *)title
+                          image:(nullable UIImage *)image
+                        handler:(void (^)(void))handler;
+@property (nonatomic, copy, readonly) NSString *title;
+@property (nonatomic, strong, readonly, nullable) UIImage *image;
+@property (nonatomic, copy, readonly) void (^handler)(void);
+@end
+
+/// YES when a submenu row can be built, i.e. when `IGDSPrismMenuElement` is shaped
+/// as expected and no previous attempt on this IG version failed.
+///
+/// The element is a tagged union whose submenu case is built only from Swift, so
+/// its `_subtype` and the type it nests are worked out from the class itself: the
+/// subtype from the order of the payload ivar groups, and the nested type from the
+/// item builder's accessory API, which changed in the same generation that changed
+/// the nesting (IG 410 nests `IGDSPrismMenuItem`, IG 441 nests whole elements).
+/// Both readings are confirmed against those two builds. Since IG bridges the
+/// array into a typed Swift array and dies on a wrong type, the first submenu of
+/// each IG version is probed, and a version whose probe does not survive gets flat
+/// rows from then on. Callers must always keep that flat fallback.
+FOUNDATION_EXPORT BOOL SPKDirectPrismSubmenuAvailable(void);
+
+/// Builds a row that expands into `actions` instead of firing a handler, matching
+/// IG's own "More" row. Returns nil when the shape is not yet known.
+FOUNDATION_EXPORT id _Nullable SPKDirectPrismSubmenuElement(id templateElement,
+                                                            NSString *title,
+                                                            UIImage *_Nullable image,
+                                                            NSArray<SPKDirectMenuAction *> *actions);
+
+/// Remembers the menu a submenu row may have to dismiss. IG dismisses the menu
+/// itself when a top-level row is tapped, but a submenu row's handler is expected
+/// to do it, so Sparkle needs a handle on the presenting menu.
+FOUNDATION_EXPORT void SPKDirectPrismMenuNoteMenu(id _Nullable menu);
+
+/// YES when `elements` carries a submenu row built by Sparkle. IG sizes its
+/// overflow panel from the parent menu unless dynamic width is allowed, which
+/// truncates rows longer than IG's own.
+FOUNDATION_EXPORT BOOL SPKDirectMenuContainsSparkleSubmenu(NSArray *_Nullable elements);
+
 /// YES for an element built by the functions above.
 ///
 /// IG re-inits a menu with the array it was previously given, so an injector

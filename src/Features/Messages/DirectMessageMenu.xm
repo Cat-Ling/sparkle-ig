@@ -23,13 +23,18 @@
 #import "DMGifTitle.h"
 
 static __unsafe_unretained id sSPKDMComposerForOverflowMenu = nil;
-static BOOL sSPKDMUploadItemInjectedForOverflowMenu = NO;
+// Tracked per row: IGDSMenu renders through a prism menu it builds itself, so the
+// same composer menu passes through both injection points and each row must be
+// claimed by exactly one of them.
+static BOOL sSPKDMComposerAudioInjected = NO;
+static BOOL sSPKDMComposerMediaInjected = NO;
 static BOOL sSPKDMAudioRowPending = NO;
 static id sSPKDMAudioRowViewModel = nil;
 
 static id (*orig_SPKDMPrismMenuViewInit3)(id, SEL, NSArray *, id, BOOL);
 static id (*orig_SPKDMPrismMenuViewInit5)(id, SEL, NSArray *, id, BOOL, BOOL, BOOL);
 static id (*orig_SPKDMPrismMenuInit3)(id, SEL, NSArray *, id, BOOL);
+static id (*orig_SPKDMPrismMenuInit6)(id, SEL, NSArray *, id, BOOL, BOOL, BOOL, BOOL);
 
 
 static id SPKDMComposerSenderTarget(id composer) {
@@ -137,24 +142,63 @@ static id SPKDMUploadMediaMenuItemForComposer(id composer) {
 }
 
 // Builds the Sparkle items appended to the composer overflow (+) menu, in order.
+//
+// IGDSMenu carries plain items with no submenu case, but it renders through a
+// prism menu it builds from them, so the audio row is left to that later stage
+// whenever it can be a submenu there.
 static NSArray *SPKDMComposerExtraMenuItems(id composer) {
     NSMutableArray *items = [NSMutableArray array];
     BOOL audioPref = [SPKUtils getBoolPref:@"msgs_upload_audio_messages"];
     BOOL mediaPref = [SPKUtils getBoolPref:@"msgs_upload_gallery_media"];
-    if (audioPref) {
+    if (audioPref && !sSPKDMComposerAudioInjected && !SPKDirectPrismSubmenuAvailable()) {
         id audioItem = SPKDMUploadAudioMenuItemForComposer(composer);
-        if (audioItem)
+        if (audioItem) {
             [items addObject:audioItem];
+            sSPKDMComposerAudioInjected = YES;
+        }
     }
-    if (mediaPref) {
+    if (mediaPref && !sSPKDMComposerMediaInjected) {
         id mediaItem = SPKDMUploadMediaMenuItemForComposer(composer);
-        if (mediaItem)
+        if (mediaItem) {
             [items addObject:mediaItem];
+            sSPKDMComposerMediaInjected = YES;
+        }
     }
     return items;
 }
 
-static void SPKDMPresentDownloadAudioActionsForViewModel(id viewModel) {
+// The audio rows, in the order they appear in both the submenu and the fallback
+// action sheet. Resolution is deferred to tap time so building the menu stays cheap.
+static void SPKDMRunAudioAction(id viewModel, SPKAudioAction action, NSString *notificationIdentifier);
+
+static NSArray<SPKDirectMenuAction *> *SPKDMAudioActionsForViewModel(id viewModel) {
+    __strong id capturedViewModel = viewModel;
+    NSArray<NSArray *> *specs = @[
+        @[ @"Save Audio to Files", @"audio_download", @(SPKAudioActionSaveToFiles), kSPKNotificationDownloadAudio ],
+        @[ @"Share Audio", @"share", @(SPKAudioActionConvertAndShare), kSPKNotificationDownloadAudioShare ],
+        @[ @"Save Audio to Gallery", @"sparkle_gallery", @(SPKAudioActionConvertAndSaveToGallery), kSPKNotificationDownloadAudioGallery ],
+        @[ @"Play Audio", @"play", @(SPKAudioActionPlay), kSPKNotificationPlayAudio ],
+        @[ @"Copy Audio Download URL", @"link", @(SPKAudioActionCopyURL), kSPKNotificationCopyAudioURL ],
+    ];
+
+    NSMutableArray<SPKDirectMenuAction *> *actions = [NSMutableArray arrayWithCapacity:specs.count];
+    for (NSArray *spec in specs) {
+        NSString *title = spec[0];
+        SPKAudioAction action = (SPKAudioAction)[spec[2] integerValue];
+        NSString *notificationIdentifier = spec[3];
+        SPKDirectMenuAction *menuAction =
+            [SPKDirectMenuAction actionWithTitle:title
+                                           image:[SPKAssetUtils instagramIconNamed:spec[1] pointSize:24.0]
+                                         handler:^{
+                                             SPKDMRunAudioAction(capturedViewModel, action, notificationIdentifier);
+                                         }];
+        if (menuAction)
+            [actions addObject:menuAction];
+    }
+    return [actions copy];
+}
+
+static void SPKDMRunAudioAction(id viewModel, SPKAudioAction action, NSString *notificationIdentifier) {
     UIViewController *presenter = topMostController();
     UIView *sourceView = presenter.view;
     SPKAudioItem *audioItem = [SPKAudioDownloadCoordinator audioItemFromMediaObject:viewModel source:SPKAudioSourceDMs];
@@ -174,39 +218,41 @@ static void SPKDMPresentDownloadAudioActionsForViewModel(id viewModel) {
     metadata.sourceMediaPK = audioItem.mediaIdentifier;
     metadata.sourceMediaURLString = audioItem.sourceURLString ?: audioItem.url.absoluteString;
 
+    [SPKAudioDownloadCoordinator performAction:action
+                                          item:audioItem
+                                     presenter:presenter
+                                    sourceView:sourceView
+                                      metadata:metadata
+                        notificationIdentifier:notificationIdentifier];
+}
+
+// Fallback for builds where the menu cannot carry a submenu.
+static void SPKDMPresentDownloadAudioActionsForViewModel(id viewModel) {
+    UIViewController *presenter = topMostController();
+    if (![SPKAudioDownloadCoordinator bestAudioURLFromMediaObject:viewModel]) {
+        SPKNotify(kSPKNotificationDownloadShare,
+                  @"Could not find audio URL",
+                  @"Refresh the thread and try again if the URL expired.",
+                  @"error_filled",
+                  SPKNotificationToneError);
+        return;
+    }
+
+    NSMutableArray<SPKIGAlertAction *> *alertActions = [NSMutableArray array];
+    for (SPKDirectMenuAction *action in SPKDMAudioActionsForViewModel(viewModel)) {
+        void (^handler)(void) = action.handler;
+        [alertActions addObject:[SPKIGAlertAction actionWithTitle:action.title
+                                                            style:SPKIGAlertActionStyleDefault
+                                                          handler:handler]];
+    }
+    [alertActions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                        style:SPKIGAlertActionStyleCancel
+                                                      handler:nil]];
+
     [SPKIGAlertPresenter presentActionSheetFromViewController:presenter
                                                         title:@"Audio"
                                                       message:nil
-                                                      actions:@[
-                                                          [SPKIGAlertAction actionWithTitle:@"Save Audio to Files"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionSaveToFiles item:audioItem presenter:presenter sourceView:sourceView metadata:metadata notificationIdentifier:kSPKNotificationDownloadAudio];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Share Audio"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionConvertAndShare item:audioItem presenter:presenter sourceView:sourceView metadata:metadata notificationIdentifier:kSPKNotificationDownloadAudioShare];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Save Audio to Gallery"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionConvertAndSaveToGallery item:audioItem presenter:presenter sourceView:sourceView metadata:metadata notificationIdentifier:kSPKNotificationDownloadAudioGallery];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Play Audio"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionPlay item:audioItem presenter:presenter sourceView:sourceView metadata:metadata notificationIdentifier:kSPKNotificationPlayAudio];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Copy Audio Download URL"
-                                                                                      style:SPKIGAlertActionStyleDefault
-                                                                                    handler:^{
-                                                                                        [SPKAudioDownloadCoordinator performAction:SPKAudioActionCopyURL item:audioItem presenter:presenter sourceView:sourceView metadata:metadata notificationIdentifier:kSPKNotificationCopyAudioURL];
-                                                                                    }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Cancel"
-                                                                                      style:SPKIGAlertActionStyleCancel
-                                                                                    handler:nil]
-                                                      ]];
+                                                      actions:[alertActions copy]];
 }
 
 static id SPKDMDownloadAudioMenuItemForViewModel(id viewModel) {
@@ -227,6 +273,16 @@ static id SPKDMPrismAudioDownloadElement(id templateElement, id viewModel) {
     Class builderClass = NSClassFromString(@"IGDSPrismMenuItemBuilder");
     if (!builderClass || !templateElement || !viewModel)
         return nil;
+
+    // Preferred shape: the actions expand in place, the way IG's own "More" row
+    // does, instead of covering the thread with an action sheet.
+    id submenu = SPKDirectPrismSubmenuElement(templateElement,
+                                              @"Audio Actions",
+                                              [SPKAssetUtils instagramIconNamed:@"action" pointSize:24.0],
+                                              SPKDMAudioActionsForViewModel(viewModel));
+    if (submenu)
+        return submenu;
+
     SEL initSelector = @selector(initWithTitle:);
     SEL imageSelector = @selector(withImage:);
     SEL handlerSelector = @selector(withHandler:);
@@ -263,17 +319,57 @@ static id SPKDMPrismAudioDownloadElement(id templateElement, id viewModel) {
     return element;
 }
 
+// The three audio sources as submenu rows, each opening its picker directly.
+static NSArray<SPKDirectMenuAction *> *SPKDMAudioUploadSourceActionsForComposer(id composer, id senderTarget) {
+    NSArray<NSArray *> *specs = @[
+        @[ @"Select from Photos", @"photo", @(SPKAudioDMUploadSourcePhotos) ],
+        @[ @"Select from Gallery", @"sparkle_gallery", @(SPKAudioDMUploadSourceGallery) ],
+        @[ @"Select from Files", @"folder", @(SPKAudioDMUploadSourceFiles) ],
+    ];
+
+    __weak id weakComposer = composer;
+    NSMutableArray<SPKDirectMenuAction *> *actions = [NSMutableArray arrayWithCapacity:specs.count];
+    for (NSArray *spec in specs) {
+        SPKAudioDMUploadSource source = (SPKAudioDMUploadSource)[spec[2] integerValue];
+        SPKDirectMenuAction *action =
+            [SPKDirectMenuAction actionWithTitle:spec[0]
+                                           image:[SPKAssetUtils instagramIconNamed:spec[1] pointSize:24.0]
+                                         handler:^{
+                                             id strongComposer = weakComposer;
+                                             if (!strongComposer)
+                                                 return;
+                                             UIView *composerView = [strongComposer isKindOfClass:UIView.class] ? (UIView *)strongComposer : nil;
+                                             UIViewController *presenter = (composerView ? [SPKUtils viewControllerForAncestralView:composerView] : nil) ?: topMostController();
+                                             [SPKAudioDMUploadCoordinator presentUploadPickerForSource:source
+                                                                                          senderTarget:senderTarget
+                                                                                             presenter:presenter
+                                                                                            sourceView:composerView];
+                                         }];
+        if (action)
+            [actions addObject:action];
+    }
+    return [actions copy];
+}
+
 static NSArray *SPKDMPrismUploadElementsForComposer(id composer, id templateElement) {
-    if (!composer || !templateElement || sSPKDMUploadItemInjectedForOverflowMenu)
+    if (!composer || !templateElement)
         return @[];
 
     id senderTarget = SPKDMComposerSenderTarget(composer);
     NSMutableArray *elements = [NSMutableArray array];
 
-    if ([SPKUtils getBoolPref:@"msgs_upload_audio_messages"] &&
+    if (!sSPKDMComposerAudioInjected &&
+        [SPKUtils getBoolPref:@"msgs_upload_audio_messages"] &&
         [SPKAudioDMUploadCoordinator senderTargetSupportsAudioUpload:senderTarget]) {
         __weak id weakComposer = composer;
-        id audioElement = SPKDirectPrismMenuElement(templateElement,
+        // The source picker is a submenu where the menu supports one, so choosing
+        // a source no longer costs an extra action sheet.
+        id audioElement = SPKDirectPrismSubmenuElement(templateElement,
+                                                       @"Upload Audio",
+                                                       [SPKAssetUtils instagramIconNamed:@"audio_upload" pointSize:24.0],
+                                                       SPKDMAudioUploadSourceActionsForComposer(composer, senderTarget));
+        if (!audioElement) {
+            audioElement = SPKDirectPrismMenuElement(templateElement,
                                                 @"Upload Audio",
                                                 [SPKAssetUtils instagramIconNamed:@"audio_upload"
                                                                         pointSize:24.0],
@@ -287,11 +383,15 @@ static NSArray *SPKDMPrismUploadElementsForComposer(id composer, id templateElem
                                                                                                           presenter:presenter
                                                                                                          sourceView:composerView];
                                                 });
-        if (audioElement)
+        }
+        if (audioElement) {
             [elements addObject:audioElement];
+            sSPKDMComposerAudioInjected = YES;
+        }
     }
 
-    if ([SPKUtils getBoolPref:@"msgs_upload_gallery_media"] &&
+    if (!sSPKDMComposerMediaInjected &&
+        [SPKUtils getBoolPref:@"msgs_upload_gallery_media"] &&
         [SPKMediaDMUploadCoordinator senderTargetSupportsMediaUpload:senderTarget]) {
         __weak id weakComposer = composer;
         id mediaElement = SPKDirectPrismMenuElement(templateElement,
@@ -308,8 +408,10 @@ static NSArray *SPKDMPrismUploadElementsForComposer(id composer, id templateElem
                                                                                                                  presenter:presenter
                                                                                                                 sourceView:composerView];
                                                 });
-        if (mediaElement)
+        if (mediaElement) {
             [elements addObject:mediaElement];
+            sSPKDMComposerMediaInjected = YES;
+        }
     }
 
     return elements;
@@ -330,8 +432,15 @@ static NSArray *SPKDMPrismMenuElementsWithAudioDownload(NSArray *elements) {
     if (!newElement)
         return elements;
 
-    NSMutableArray *updated = [NSMutableArray arrayWithObject:newElement];
-    [updated addObjectsFromArray:elements];
+    // A submenu row goes last, where IG puts its own: the overflow panel is
+    // anchored to the parent row and expands from the bottom of the menu, so a
+    // submenu placed first lands on top of the menu it belongs to.
+    NSMutableArray *updated = [NSMutableArray arrayWithArray:elements];
+    if (SPKDirectMenuContainsSparkleSubmenu(@[ newElement ])) {
+        [updated addObject:newElement];
+    } else {
+        [updated insertObject:newElement atIndex:0];
+    }
     return [updated copy];
 }
 
@@ -351,7 +460,7 @@ static NSArray *SPKDMPrismMenuElementsWithGifTitle(NSArray *elements) {
 static NSArray *SPKDMPrismMenuElementsWithInjections(NSArray *elements) {
     NSArray *updated = SPKDMPrismMenuElementsWithGifTitle(elements);
     updated = SPKDMPrismMenuElementsWithAudioDownload(updated);
-    if (!SPKDMUploadMenuEnabled() || !sSPKDMComposerForOverflowMenu || sSPKDMUploadItemInjectedForOverflowMenu ||
+    if (!SPKDMUploadMenuEnabled() || !sSPKDMComposerForOverflowMenu ||
         ![updated isKindOfClass:NSArray.class] || updated.count == 0) {
         return updated;
     }
@@ -362,18 +471,30 @@ static NSArray *SPKDMPrismMenuElementsWithInjections(NSArray *elements) {
 
     NSMutableArray *merged = [NSMutableArray arrayWithArray:updated];
     [merged addObjectsFromArray:uploadElements];
-    sSPKDMUploadItemInjectedForOverflowMenu = YES;
     return [merged copy];
 }
 
+// IG's overflow panel inherits the parent menu's width, which clips Sparkle rows
+// that are longer than IG's own. The view can size a submenu to its contents.
+static void SPKDMAllowSubmenuDynamicWidth(id view, NSArray *elements) {
+    SEL selector = @selector(setShouldAllowSubmenuDynamicWidth:);
+    if (!SPKDirectMenuContainsSparkleSubmenu(elements) || ![view respondsToSelector:selector])
+        return;
+    ((void (*)(id, SEL, BOOL))objc_msgSend)(view, selector, YES);
+}
+
 static id SPKDMPrismMenuViewInit3(id self, SEL _cmd, NSArray *elements, id headerText, BOOL edrEnabled) {
-    id view = orig_SPKDMPrismMenuViewInit3(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled);
+    NSArray *injected = SPKDMPrismMenuElementsWithInjections(elements);
+    id view = orig_SPKDMPrismMenuViewInit3(self, _cmd, injected, headerText, edrEnabled);
+    SPKDMAllowSubmenuDynamicWidth(view, injected);
     SPKDMGifTitleRegisterMenuView(view);
     return view;
 }
 
 static id SPKDMPrismMenuViewInit5(id self, SEL _cmd, NSArray *elements, id headerText, BOOL edrEnabled, BOOL allowScrollingItems, BOOL allowMixedTextAlignment) {
-    id view = orig_SPKDMPrismMenuViewInit5(self, _cmd, SPKDMPrismMenuElementsWithInjections(elements), headerText, edrEnabled, allowScrollingItems, allowMixedTextAlignment);
+    NSArray *injected = SPKDMPrismMenuElementsWithInjections(elements);
+    id view = orig_SPKDMPrismMenuViewInit5(self, _cmd, injected, headerText, edrEnabled, allowScrollingItems, allowMixedTextAlignment);
+    SPKDMAllowSubmenuDynamicWidth(view, injected);
     SPKDMGifTitleRegisterMenuView(view);
     return view;
 }
@@ -384,14 +505,37 @@ static id SPKDMPrismMenuInit3(id self, SEL _cmd, NSArray *elements, id headerTex
     return menu;
 }
 
+// The init IGDSMenu uses for the prism menu behind a composer menu.
+static id SPKDMPrismMenuInit6(id self,
+                              SEL _cmd,
+                              NSArray *elements,
+                              id headerText,
+                              BOOL edrEnabled,
+                              BOOL allowScrollingItems,
+                              BOOL allowMixedTextAlignment,
+                              BOOL enableScrollToDismiss) {
+    id menu = orig_SPKDMPrismMenuInit6(self,
+                                       _cmd,
+                                       SPKDMPrismMenuElementsWithInjections(elements),
+                                       headerText,
+                                       edrEnabled,
+                                       allowScrollingItems,
+                                       allowMixedTextAlignment,
+                                       enableScrollToDismiss);
+    SPKDMGifTitleRegisterMenuView(menu);
+    return menu;
+}
+
 static void SPKDMSetUploadComposerContext(id composer) {
     sSPKDMComposerForOverflowMenu = composer;
-    sSPKDMUploadItemInjectedForOverflowMenu = NO;
+    sSPKDMComposerAudioInjected = NO;
+    sSPKDMComposerMediaInjected = NO;
 }
 
 static void SPKDMClearUploadComposerContext(void) {
     sSPKDMComposerForOverflowMenu = nil;
-    sSPKDMUploadItemInjectedForOverflowMenu = NO;
+    sSPKDMComposerAudioInjected = NO;
+    sSPKDMComposerMediaInjected = NO;
 }
 
 %group SPKDirectMessageMenuHooks
@@ -477,12 +621,11 @@ static void SPKDMClearUploadComposerContext(void) {
 %end
 
 static id SPKDMProcessMenuItems(id menuItems) {
-    if (sSPKDMComposerForOverflowMenu && !sSPKDMUploadItemInjectedForOverflowMenu && [menuItems isKindOfClass:NSArray.class]) {
+    if (sSPKDMComposerForOverflowMenu && [menuItems isKindOfClass:NSArray.class]) {
         NSArray *extraItems = SPKDMComposerExtraMenuItems(sSPKDMComposerForOverflowMenu);
         if (extraItems.count > 0) {
             NSMutableArray *mutableItems = [(NSArray *)menuItems mutableCopy];
             [mutableItems addObjectsFromArray:extraItems];
-            sSPKDMUploadItemInjectedForOverflowMenu = YES;
             return [mutableItems copy];
         }
     }
@@ -574,6 +717,13 @@ extern "C" void SPKInstallDirectMessageMenuHooksIfNeeded(void) {
                             init3,
                             (IMP)SPKDMPrismMenuInit3,
                             (IMP *)&orig_SPKDMPrismMenuInit3);
+        }
+        SEL init6 = @selector(initWithMenuElements:headerText:edrEnabled:allowScrollingItems:allowMixedTextAlignment:enableScrollToDismiss:);
+        if (prismMenuClass && [prismMenuClass instancesRespondToSelector:init6]) {
+            MSHookMessageEx(prismMenuClass,
+                            init6,
+                            (IMP)SPKDMPrismMenuInit6,
+                            (IMP *)&orig_SPKDMPrismMenuInit6);
         }
     });
 }
