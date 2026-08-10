@@ -18,6 +18,7 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         @"interface_nav_order" : @"default",
         @"interface_swipe_tabs" : @"default",
         @"interface_launch_tab" : @"default",
+        @"interface_replace_reels_with_saved" : @(NO),
         @"interface_hide_feed_tab" : @(NO),
         @"interface_hide_reels_tab" : @(NO),
         @"interface_hide_msgs_tab" : @(NO),

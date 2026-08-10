@@ -1,7 +1,388 @@
 #import "../../Utils.h"
 #import "../../App/SPKStabilityGuard.h"
+#import "../../AssetUtils.h"
+#import "../../Shared/Account/SPKAccountManager.h"
 #import <objc/message.h>
+#import <objc/runtime.h>
 #import "../../App/SPKPerfMeter.h"
+
+static const void *kSPKSavedTabIntentPendingKey = &kSPKSavedTabIntentPendingKey;
+static const void *kSPKSavedTabFallbackHostKey = &kSPKSavedTabFallbackHostKey;
+static const void *kSPKSavedTabButtonKey = &kSPKSavedTabButtonKey;
+static const void *kSPKSavedTabButtonIdentityKey = &kSPKSavedTabButtonIdentityKey;
+static const void *kSPKSavedTabOriginalImagesKey = &kSPKSavedTabOriginalImagesKey;
+static const void *kSPKSavedTabOriginalLabelKey = &kSPKSavedTabOriginalLabelKey;
+
+static NSUInteger spk_savedTabRoutingBypassGeneration = 0;
+static NSTimeInterval spk_savedTabRoutingBypassDeadline = 0;
+
+static BOOL SPKSavedTabRoutingBypassActive(void) {
+    return spk_savedTabRoutingBypassDeadline > NSDate.timeIntervalSinceReferenceDate;
+}
+
+extern "C" void SPKBeginSavedTabRoutingBypass(void) {
+    NSUInteger generation = ++spk_savedTabRoutingBypassGeneration;
+    spk_savedTabRoutingBypassDeadline = NSDate.timeIntervalSinceReferenceDate + 2.5;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        if (spk_savedTabRoutingBypassGeneration == generation) {
+            spk_savedTabRoutingBypassDeadline = 0;
+        }
+    });
+}
+
+extern "C" void SPKEndSavedTabRoutingBypass(void) {
+    ++spk_savedTabRoutingBypassGeneration;
+    spk_savedTabRoutingBypassDeadline = 0;
+}
+
+static BOOL SPKReplacesReelsWithSaved(void) {
+    return [SPKUtils getBoolPref:@"interface_replace_reels_with_saved"];
+}
+
+static BOOL SPKSavedTabPreferenceMayEnable(void) {
+    NSString *baseKey = @"interface_replace_reels_with_saved";
+    NSDictionary<NSString *, id> *preferences = NSUserDefaults.standardUserDefaults.dictionaryRepresentation;
+    for (NSString *key in preferences) {
+        if (([key isEqualToString:baseKey] || [key hasSuffix:[@"_" stringByAppendingString:baseKey]]) &&
+            [preferences[key] respondsToSelector:@selector(boolValue)] &&
+            [preferences[key] boolValue]) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
+static BOOL SPKIsReelsSurface(IGMainAppSurfaceIntent *surface) {
+    return [surface isKindOfClass:%c(IGMainAppSurfaceIntent)] &&
+           [[surface tabStringFromSurfaceIntent] isEqualToString:@"CLIPS"];
+}
+
+static BOOL SPKIsSavedViewController(UIViewController *controller) {
+    NSString *className = NSStringFromClass(controller.class);
+    return [className containsString:@"SavedMediaCollectionsViewController"] ||
+           [className containsString:@"IGSavedMediaViewController"];
+}
+
+static UINavigationController *SPKNativeSavedNavigationController(IGTabBarController *controller) {
+    id manager = [SPKUtils getIvarForObj:controller name:"_viewControllerManager"];
+    SEL selector = NSSelectorFromString(@"savedCollectionsNavigationController");
+    if (!manager || ![manager respondsToSelector:selector])
+        return nil;
+
+    id candidate = ((id (*)(id, SEL))objc_msgSend)(manager, selector);
+    return [candidate isKindOfClass:[UINavigationController class]] ? candidate : nil;
+}
+
+// Called from -layoutSubviews of every tab bar button, so the identifier match
+// (which allocates a lowercased copy) is resolved once and cached. A button with
+// no identifier yet is not cached: the answer is not knowable until Instagram
+// sets one, and the tab bar controller tags the real button by ivar anyway.
+static BOOL SPKIsReelsTabButton(IGTabBarButton *button) {
+    if (objc_getAssociatedObject(button, kSPKSavedTabButtonKey))
+        return YES;
+
+    NSNumber *cachedIdentity = objc_getAssociatedObject(button, kSPKSavedTabButtonIdentityKey);
+    if (cachedIdentity)
+        return cachedIdentity.boolValue;
+
+    NSString *identifier = button.accessibilityIdentifier;
+    if (identifier.length == 0)
+        return NO;
+
+    NSString *normalized = identifier.lowercaseString;
+    BOOL isReelsButton = [normalized containsString:@"reels"] || [normalized containsString:@"clips"];
+    objc_setAssociatedObject(button, kSPKSavedTabButtonIdentityKey, @(isReelsButton), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return isReelsButton;
+}
+
+static UIImage *SPKSavedTabImage(BOOL filledImage) {
+    static UIImage *outline;
+    static UIImage *filled;
+    if (filledImage) {
+        if (!filled) {
+            filled = [[SPKAssetUtils instagramIconNamed:@"save_filled" pointSize:24.0]
+                imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+        }
+        return filled;
+    }
+
+    if (!outline) {
+        outline = [[SPKAssetUtils instagramIconNamed:@"save" pointSize:24.0]
+            imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+    return outline;
+}
+
+static void SPKRememberOriginalTabImage(UIButton *button, UIControlState state, UIImage *image) {
+    if (!image || image == SPKSavedTabImage(NO) || image == SPKSavedTabImage(YES))
+        return;
+
+    NSMutableDictionary<NSNumber *, UIImage *> *originalImages = objc_getAssociatedObject(button, kSPKSavedTabOriginalImagesKey);
+    if (!originalImages) {
+        originalImages = [NSMutableDictionary dictionary];
+        objc_setAssociatedObject(button, kSPKSavedTabOriginalImagesKey, originalImages, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    originalImages[@(state)] = image;
+}
+
+static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
+    if (![button isKindOfClass:[UIButton class]])
+        return;
+
+    objc_setAssociatedObject(button, kSPKSavedTabButtonKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+
+    UIControlState states[] = {
+        UIControlStateNormal,
+        UIControlStateHighlighted,
+        UIControlStateSelected,
+        UIControlStateSelected | UIControlStateHighlighted,
+    };
+
+    if (!SPKReplacesReelsWithSaved()) {
+        NSDictionary<NSNumber *, UIImage *> *originalImages = objc_getAssociatedObject(button, kSPKSavedTabOriginalImagesKey);
+        for (NSUInteger index = 0; index < sizeof(states) / sizeof(states[0]); index++) {
+            UIControlState state = states[index];
+            UIImage *originalImage = originalImages[@(state)];
+            if (originalImage && [button imageForState:state] != originalImage) {
+                [button setImage:originalImage forState:state];
+            }
+        }
+        NSString *originalLabel = objc_getAssociatedObject(button, kSPKSavedTabOriginalLabelKey);
+        if (originalLabel && [button.accessibilityLabel isEqualToString:@"Saved"]) {
+            button.accessibilityLabel = originalLabel;
+        }
+        return;
+    }
+
+    if (!objc_getAssociatedObject(button, kSPKSavedTabOriginalLabelKey) &&
+        button.accessibilityLabel.length > 0 &&
+        ![button.accessibilityLabel isEqualToString:@"Saved"]) {
+        objc_setAssociatedObject(button, kSPKSavedTabOriginalLabelKey, button.accessibilityLabel, OBJC_ASSOCIATION_COPY_NONATOMIC);
+    }
+
+    for (NSUInteger index = 0; index < sizeof(states) / sizeof(states[0]); index++) {
+        UIControlState state = states[index];
+        SPKRememberOriginalTabImage(button, state, [button imageForState:state]);
+    }
+
+    UIImage *outline = SPKSavedTabImage(NO);
+    UIImage *filled = SPKSavedTabImage(YES);
+
+    if (outline && [button imageForState:UIControlStateNormal] != outline) {
+        [button setImage:outline forState:UIControlStateNormal];
+    }
+    if (outline && [button imageForState:UIControlStateHighlighted] != outline) {
+        [button setImage:outline forState:UIControlStateHighlighted];
+    }
+    if (filled && [button imageForState:UIControlStateSelected] != filled) {
+        [button setImage:filled forState:UIControlStateSelected];
+    }
+    if (filled && [button imageForState:UIControlStateSelected | UIControlStateHighlighted] != filled) {
+        [button setImage:filled forState:UIControlStateSelected | UIControlStateHighlighted];
+    }
+    if (![button.accessibilityLabel isEqualToString:@"Saved"]) {
+        button.accessibilityLabel = @"Saved";
+    }
+}
+
+static void SPKConfigureSavedTabButton(IGTabBarController *controller) {
+    UIButton *button = [SPKUtils getIvarForObj:controller name:"_discoverVideoButton"];
+    SPKConfigureSavedTabButtonInstance(button);
+}
+
+// Containment only. -presentedViewController resolves through the ancestor chain,
+// so every child would re-walk the same presented subtree and the sweep would cost
+// exponential time on a deep hierarchy. The tab bar controller is never inside a
+// presentation, so there is nothing down there to find anyway.
+static IGTabBarController *SPKFindTabBarController(UIViewController *controller) {
+    if (!controller)
+        return nil;
+    if ([controller isKindOfClass:%c(IGTabBarController)])
+        return (IGTabBarController *)controller;
+
+    for (UIViewController *child in controller.childViewControllers) {
+        IGTabBarController *childMatch = SPKFindTabBarController(child);
+        if (childMatch)
+            return childMatch;
+    }
+    return nil;
+}
+
+static void SPKConfigureExistingSavedTabButton(void) {
+    for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:[UIWindowScene class]])
+            continue;
+        for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+            IGTabBarController *controller = SPKFindTabBarController(window.rootViewController);
+            if (controller) {
+                SPKConfigureSavedTabButton(controller);
+                return;
+            }
+        }
+    }
+
+    IGTabBarController *controller = SPKFindTabBarController(UIApplication.sharedApplication.keyWindow.rootViewController);
+    SPKConfigureSavedTabButton(controller);
+}
+
+static void SPKScheduleSavedTabButtonReconciliation(void) {
+    SPKConfigureExistingSavedTabButton();
+    for (NSNumber *delay in @[ @0.25, @1.0 ]) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay.doubleValue * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            SPKConfigureExistingSavedTabButton();
+        });
+    }
+}
+
+static void SPKFinishSavedTabIntent(UINavigationController *navigationController, NSUInteger attempt) {
+    UIViewController *top = navigationController.topViewController;
+    if (SPKIsSavedViewController(top)) {
+        if (objc_getAssociatedObject(navigationController, kSPKSavedTabFallbackHostKey) &&
+            navigationController.viewControllers.count != 1) {
+            [navigationController setViewControllers:@[ top ] animated:NO];
+        }
+        objc_setAssociatedObject(navigationController, kSPKSavedTabIntentPendingKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        return;
+    }
+
+    if (attempt >= 12) {
+        SPKLog(@"TabBar", @"[Sparkle] Timed out waiting for Instagram's Saved controller");
+        objc_setAssociatedObject(navigationController, kSPKSavedTabIntentPendingKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        return;
+    }
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        SPKFinishSavedTabIntent(navigationController, attempt + 1);
+    });
+}
+
+static void SPKOpenSavedInFallbackNavigationController(IGTabBarController *tabBarController,
+                                                        UINavigationController *navigationController) {
+    if (!navigationController || SPKIsSavedViewController(navigationController.topViewController))
+        return;
+    if (objc_getAssociatedObject(navigationController, kSPKSavedTabIntentPendingKey))
+        return;
+
+    // -fb_intentHandler is a stored per-controller association rather than
+    // something every controller carries, so it answers nil unless something
+    // installed a handler on that exact object. Newer builds set one on the tab's
+    // navigation controller; IG 410 sets none anywhere reachable from this stack
+    // (its -fb_fallbackIntentHandlingAncestorVC chain and the tab bar controller
+    // were both checked on device and came back empty), so the URL route below is
+    // the only way in there. That is expected, not a failure worth a line per tap.
+    id<FBIntentHandler> handler = [navigationController respondsToSelector:@selector(fb_intentHandler)]
+                                      ? [navigationController fb_intentHandler]
+                                      : nil;
+    if (![handler respondsToSelector:@selector(handleIntent:)]) {
+        static dispatch_once_t noticeToken;
+        dispatch_once(&noticeToken, ^{
+            SPKLog(@"TabBar", @"[Sparkle] Saved intent handler unavailable; using instagram://saved for this session");
+        });
+        id userSession = [SPKUtils getIvarForObj:tabBarController name:"_userSession"];
+        Class urlHandlerClass = NSClassFromString(@"IGURLHandler");
+        SEL openSelector = NSSelectorFromString(@"openInternalURL:presentationConfig:controller:animated:userSession:annotation:");
+        if ([urlHandlerClass respondsToSelector:openSelector]) {
+            BOOL opened = ((BOOL (*)(id, SEL, id, id, id, BOOL, id, id))objc_msgSend)(urlHandlerClass,
+                                                                                       openSelector,
+                                                                                       [NSURL URLWithString:@"instagram://saved"],
+                                                                                       nil,
+                                                                                       navigationController,
+                                                                                       NO,
+                                                                                       userSession,
+                                                                                       nil);
+            if (opened) {
+                objc_setAssociatedObject(navigationController, kSPKSavedTabIntentPendingKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                objc_setAssociatedObject(navigationController, kSPKSavedTabFallbackHostKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                SPKFinishSavedTabIntent(navigationController, 0);
+            }
+        }
+        return;
+    }
+
+    Class targetClass = NSClassFromString(@"IGSaveHomeIntentTarget");
+    id target = [targetClass alloc];
+    SEL currentInitializer = NSSelectorFromString(@"initWithEntryModule:selectedTab:");
+    if ([target respondsToSelector:currentInitializer]) {
+        target = ((id (*)(id, SEL, id, id))objc_msgSend)(target, currentInitializer, @"tab_bar", nil);
+    } else {
+        SEL legacyInitializer = NSSelectorFromString(@"initWithEntryModule:");
+        if ([target respondsToSelector:legacyInitializer]) {
+            target = ((id (*)(id, SEL, id))objc_msgSend)(target, legacyInitializer, @"tab_bar");
+        } else {
+            target = nil;
+        }
+    }
+
+    if (!target) {
+        SPKLog(@"TabBar", @"[Sparkle] Unable to construct Instagram's Saved intent target");
+        return;
+    }
+
+    objc_setAssociatedObject(navigationController, kSPKSavedTabIntentPendingKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(navigationController, kSPKSavedTabFallbackHostKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    ((void (*)(id, SEL, id))objc_msgSend)(handler, @selector(handleIntent:), target);
+    SPKFinishSavedTabIntent(navigationController, 0);
+}
+
+static void SPKEnsureSavedTabDestination(IGTabBarController *controller) {
+    if (!SPKReplacesReelsWithSaved())
+        return;
+
+    UINavigationController *nativeSavedNavigationController = SPKNativeSavedNavigationController(controller);
+    if (nativeSavedNavigationController)
+        return;
+
+    UIViewController *selected = controller.selectedViewController;
+    UINavigationController *navigationController = [selected isKindOfClass:[UINavigationController class]]
+                                                       ? (UINavigationController *)selected
+                                                       : [controller discoverVideoNavigationController];
+    SPKOpenSavedInFallbackNavigationController(controller, navigationController);
+}
+
+// Shared bookkeeping for the -_setSelectedTabBarSurface: overloads. The shorter
+// one forwards to the longer on newer builds, so the work is keyed to the
+// outermost call and runs exactly once per selection.
+typedef struct {
+    BOOL bypassesSaved;
+    BOOL selectsSaved;
+    BOOL isOutermost;
+} SPKSavedTabSelection;
+
+static NSUInteger spk_savedTabSelectionDepth = 0;
+
+static SPKSavedTabSelection SPKBeginSavedTabSelection(IGMainAppSurfaceIntent *surface) {
+    BOOL isReelsSurface = SPKIsReelsSurface(surface);
+    BOOL bypassesSaved = isReelsSurface && SPKSavedTabRoutingBypassActive();
+    SPKSavedTabSelection selection = {
+        .bypassesSaved = bypassesSaved,
+        .selectsSaved = isReelsSurface && !bypassesSaved && SPKReplacesReelsWithSaved(),
+        .isOutermost = (spk_savedTabSelectionDepth == 0),
+    };
+    spk_savedTabSelectionDepth++;
+    return selection;
+}
+
+static void SPKFinishSavedTabSelection(IGTabBarController *controller, SPKSavedTabSelection selection) {
+    if (spk_savedTabSelectionDepth > 0) {
+        spk_savedTabSelectionDepth--;
+    }
+    if (!selection.isOutermost)
+        return;
+
+    if (selection.bypassesSaved) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+                       dispatch_get_main_queue(), ^{
+            SPKEndSavedTabRoutingBypass();
+        });
+    }
+    if (selection.selectsSaved) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            SPKConfigureSavedTabButton(controller);
+            SPKEnsureSavedTabDestination(controller);
+        });
+    }
+}
 
 static NSString *SPKSelectorForLaunchTabPreference(NSString *preference) {
     if ([preference isEqualToString:@"feed"])
@@ -103,6 +484,29 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 
 ///////////////////////////////////////////////
 
+// Installed separately from the rest of the navigation hooks: this one runs on
+// every layout pass of every tab bar button, so users who only reordered or hid
+// tabs should not pay for it.
+//
+// -layoutSubviews is the only re-entry point worth hooking here. The obvious
+// alternatives, -setImage:forState: and -setAccessibilityIdentifier:, are
+// inherited from UIButton/UIView rather than implemented by IGTabBarButton, and
+// hooking a method a class only inherits does not reliably bind. Re-applying the
+// icon on the next layout pass covers the same ground: whenever Instagram puts
+// its own image back, the pass that follows swaps it out again.
+%group SPKSavedTabButtonHooks
+
+%hook IGTabBarButton
+- (void)layoutSubviews {
+    %orig;
+    if (SPKIsReelsTabButton(self)) {
+        SPKConfigureSavedTabButtonInstance(self);
+    }
+}
+%end
+
+%end
+
 %group SPKNavigationHooks
 
 %hook IGTabBarControllerSwipeCoordinator
@@ -119,6 +523,74 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     if (surfaces) {
         [SPKUtils setIvarForObj:self name:"_tabBarSurfaces" value:filterSurfacesArray(surfaces)];
     }
+    SPKConfigureSavedTabButton(self);
+}
+
+- (void)_createAndConfigureReelsButtonIfNeeded {
+    %orig;
+    SPKConfigureSavedTabButton(self);
+}
+
+- (id)navigationViewControllerForAppSurfaceIntent:(IGMainAppSurfaceIntent *)surface {
+    if (SPKReplacesReelsWithSaved() &&
+        !SPKSavedTabRoutingBypassActive() &&
+        SPKIsReelsSurface(surface)) {
+        UINavigationController *savedNavigationController = SPKNativeSavedNavigationController(self);
+        if (savedNavigationController)
+            return savedNavigationController;
+    }
+    return %orig;
+}
+
+- (void)_discoverVideoButtonPressed {
+    if (!SPKReplacesReelsWithSaved()) {
+        %orig;
+        return;
+    }
+
+    NSArray *surfaces = [SPKUtils getIvarForObj:self name:"_tabBarSurfaces"];
+    IGMainAppSurfaceIntent *reelsSurface = nil;
+    for (IGMainAppSurfaceIntent *surface in surfaces) {
+        if (SPKIsReelsSurface(surface)) {
+            reelsSurface = surface;
+            break;
+        }
+    }
+
+    if (!reelsSurface) {
+        %orig;
+        return;
+    }
+
+    [self setSelectedTabBarSurface:reelsSurface animated:YES];
+    SPKConfigureSavedTabButton(self);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        SPKEnsureSavedTabDestination(self);
+    });
+}
+
+- (void)_setSelectedTabBarSurface:(IGMainAppSurfaceIntent *)surface
+                   isTabBarAction:(BOOL)isTabBarAction
+                         animated:(BOOL)animated
+                 navigationAction:(NSUInteger)navigationAction
+                skipMainFeedFetch:(BOOL)skipMainFeedFetch {
+    SPKSavedTabSelection selection = SPKBeginSavedTabSelection(surface);
+    %orig;
+    SPKFinishSavedTabSelection(self, selection);
+}
+
+// IG added a second overload carrying a trailing animateIndicator:, and call
+// sites use whichever they were written against. Both have to do the same
+// bookkeeping or the routing bypass is never torn down on the newer path.
+- (void)_setSelectedTabBarSurface:(IGMainAppSurfaceIntent *)surface
+                   isTabBarAction:(BOOL)isTabBarAction
+                         animated:(BOOL)animated
+                 navigationAction:(NSUInteger)navigationAction
+                skipMainFeedFetch:(BOOL)skipMainFeedFetch
+                  animateIndicator:(BOOL)animateIndicator {
+    SPKSavedTabSelection selection = SPKBeginSavedTabSelection(surface);
+    %orig;
+    SPKFinishSavedTabSelection(self, selection);
 }
 
 - (void)viewDidLayoutSubviews {
@@ -198,6 +670,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
+    SPKConfigureSavedTabButton(self);
     if (SPKStabilityGuardIsSafeStartupMode()) {
         return;
     }
@@ -215,6 +688,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     [SPKUtils setIvarForObj:self name:"_tabBarSurfaces" value:filterSurfacesArray(_tabBarSurfaces)];
 
     %orig;
+    SPKConfigureSavedTabButton(self);
 }
 
 - (id)_buttonForTabBarSurface:(id)surface {
@@ -322,7 +796,8 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 %end
 
 extern "C" void SPKInstallNavigationHooksIfNeeded(void) {
-    BOOL shouldInstall = ![[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"default"] ||
+    BOOL shouldInstall = SPKSavedTabPreferenceMayEnable() ||
+                         ![[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"default"] ||
                          ![[SPKUtils getStringPref:@"interface_launch_tab"] isEqualToString:@"default"] ||
                          ![[SPKUtils getStringPref:@"interface_swipe_tabs"] isEqualToString:@"default"] ||
                          [SPKUtils getBoolPref:@"interface_hide_feed_tab"] ||
@@ -339,5 +814,17 @@ extern "C" void SPKInstallNavigationHooksIfNeeded(void) {
     dispatch_once(&onceToken, ^{
         %init(SPKNavigationHooks,
                        IGHomeFeedHeaderView = SPKResolveIGClass(@"IGHomeFeedHeader.IGHomeFeedHeaderView", @"IGHomeFeedHeaderView"));
+        if (SPKSavedTabPreferenceMayEnable()) {
+            %init(SPKSavedTabButtonHooks);
+            [[NSNotificationCenter defaultCenter] addObserverForName:SPKAccountDidChangeNotification
+                                                              object:nil
+                                                               queue:NSOperationQueue.mainQueue
+                                                          usingBlock:^(__unused NSNotification *notification) {
+                SPKScheduleSavedTabButtonReconciliation();
+            }];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                SPKScheduleSavedTabButtonReconciliation();
+            });
+        }
     });
 }

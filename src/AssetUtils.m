@@ -238,7 +238,8 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             // horizontal flip for "left" (no vertical flip). See SPKPhotoEditor.
             @"rotate_left" : @{@"candidates" : @[ @"ig_icon_arrow_bottom_right_bend_outline_24", @"ig_icon_arrow_right_bend_filled_24" ]},
             @"rotate_right" : @{@"candidates" : @[ @"ig_icon_arrow_bottom_right_bend_outline_24", @"ig_icon_arrow_right_bend_filled_24" ]},
-            @"save" : @{@"candidates" : @[ @"ig_icon_save_pano_outline_24", @"ig_icon_save_outline_24" ]},
+            @"save" : @{@"candidates" : @[ @"ig_icon_save_prism_outline_24", @"ig_icon_save_pano_outline_24", @"ig_icon_save_outline_24" ]},
+            @"save_filled" : @{@"candidates" : @[ @"ig_icon_save_prism_filled_24", @"ig_icon_save_pano_filled_24", @"ig_icon_save_filled_24" ]},
             @"search" : @{@"candidates" : @[ @"ig_icon_search_pano_outline_24", @"ig_icon_search_outline_24" ]},
             @"settings" : @{@"candidates" : @[ @"ig_icon_settings_pano_outline_24", @"ig_icon_settings_outline_24" ]},
             @"settings_menu": @{@"candidates": @[ @"ig_icon_menu_outline_24" ]},

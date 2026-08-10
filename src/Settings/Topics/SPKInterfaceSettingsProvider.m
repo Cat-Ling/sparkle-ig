@@ -109,7 +109,16 @@ static SPKSetting *SPKHideTabSwitch(NSString *title, NSString *iconName, NSStrin
                 };
                 hideMessagesTab;
             }),
-            SPKHideTabSwitch(@"Hide Reels Tab", @"reels", @"interface_hide_reels_tab"),
+            [SPKSetting switchCellWithTitle:@"Replace Reels Tab with Saved"
+                                       icon:SPKSettingsIcon(@"save")
+                                defaultsKey:@"interface_replace_reels_with_saved"
+                            requiresRestart:YES],
+            ({
+                BOOL replacesReels = [SPKUtils getBoolPref:@"interface_replace_reels_with_saved"];
+                SPKHideTabSwitch(replacesReels ? @"Hide Saved Tab" : @"Hide Reels Tab",
+                                 replacesReels ? @"save" : @"reels",
+                                 @"interface_hide_reels_tab");
+            }),
             ({
                 // The create button is only a dedicated tab in the Classic tab
                 // order; the other layouts fold it into the composer, so the

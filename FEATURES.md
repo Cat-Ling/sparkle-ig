@@ -61,18 +61,19 @@ marked **(restart)** and prompt for a relaunch when changed.
 Per-feature control of the Sparkle notification pill and its haptics. See **Notifications** below.
 
 ### Tabs
-- **Launch Tab**: Opens Instagram on Feed, Explore, Reels, Messages, Profile, or Instagram's default tab. **(restart)**
+- **Launch Tab**: Opens Instagram on Feed, Explore, Reels/Saved, Messages, Profile, or Instagram's default tab. **(restart)**
 - **Tab Icon Order**: `Default`, `Standard` (Home, Reels, Messages, Explore, Profile), `Classic` (Messages in the top-right), `Alternate` (Home/Reels swapped).
 - **Swipe Between Tabs**: `Default`, `Enabled`, or `Disabled`.
+- **Replace Reels Tab with Saved**: Replaces the Reels tab icon and destination with Instagram's native Saved collections page while preserving the tab's position and swipe behavior. **(restart)**
 - **Hide Tabs**:
-  - Individually hide the Feed, Explore, Messages, Reels, Create, and Profile tabs. **(restart)**
+  - Individually hide the Feed, Explore, Messages, Reels/Saved, Create, and Profile tabs. **(restart)**
   - **Hide Tab Bar in Messages Only**: Hides the bottom tab bar entirely when all tabs except Messages are hidden, for a clean messages-only interface.
   - Settings access is safeguarded: if Quick Settings Access is on but the Home tab is hidden (or taken by the Gallery shortcut), the long-press to open Sparkle Settings automatically moves to another visible tab, so you can't hide your way out of reaching Settings. Additionally, settings can always be opened in DMs by long-pressing the new message composer button (if the tab bar is hidden).
 
 ### Explore & Search
 - **Hide Explore Posts Grid**: Hides the suggested-post grid on Explore.
 - **Hide Trending Searches**: Hides trending searches under the Explore search bar.
-- **Open Clipboard Link**: Long-press the Explore tab to open an Instagram URL from the clipboard.
+- **Open Clipboard Link**: Long-press the Explore tab to open an Instagram URL from the clipboard. When Reels is replaced by Saved, post and reel links use the same native single-post push as the Gallery so deep links do not disturb the tab destination.
 
 ### Capture
 - **Hide UI on Capture**: Redacts Sparkle overlay buttons and labels (action button, seen/mentions buttons, poll vote-count badges, etc.) from screenshots, screen recordings, and mirroring.

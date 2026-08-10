@@ -229,6 +229,7 @@ UIMenu *SPKNavigationIconOrderingMenu(void) {
 }
 
 UIMenu *SPKLaunchTabMenu(void) {
+    BOOL replacesReels = [SPKUtils getBoolPref:@"interface_replace_reels_with_saved"];
     return [UIMenu menuWithChildren:@[
         SPKMenuCommand(@"Default", nil, nil, @"interface_launch_tab", @"default", YES),
         [UIMenu menuWithTitle:@""
@@ -237,7 +238,12 @@ UIMenu *SPKLaunchTabMenu(void) {
                       options:UIMenuOptionsDisplayInline
                      children:@[
                          SPKMenuCommand(@"Feed", @"home", nil, @"interface_launch_tab", @"feed", YES),
-                         SPKMenuCommand(@"Reels", @"reels", nil, @"interface_launch_tab", @"reels", YES),
+                         SPKMenuCommand(replacesReels ? @"Saved" : @"Reels",
+                                        replacesReels ? @"save" : @"reels",
+                                        nil,
+                                        @"interface_launch_tab",
+                                        @"reels",
+                                        YES),
                          SPKMenuCommand(@"Messages", @"messages", nil, @"interface_launch_tab", @"inbox", YES),
                          SPKMenuCommand(@"Explore", @"search", nil, @"interface_launch_tab", @"explore", YES),
                          SPKMenuCommand(@"Profile", @"user_circle", nil, @"interface_launch_tab", @"profile", YES)

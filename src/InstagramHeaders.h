@@ -8,6 +8,8 @@
 #define _Bool bool
 #endif
 
+@class IGMainAppSurfaceIntent;
+
 @interface NSURL ()
 - (id)normalizedURL; // method provided by Instagram app
 @end
@@ -88,12 +90,37 @@
 - (void)setImmersiveConfig:(id)config;
 @end
 
+@interface IGTabBarControllerSwipeCoordinator : NSObject
+@end
+
 @interface IGTabBarController : UIViewController
 @property (readonly, nonatomic) UIView *tabBar;
 @property (readonly, nonatomic) UIViewController *selectedViewController;
 - (NSInteger)tabBarStyle;
+- (void)_createAndConfigureReelsButtonIfNeeded;
+- (void)_discoverVideoButtonPressed;
+- (UINavigationController *)discoverVideoNavigationController;
+- (UINavigationController *)navigationViewControllerForAppSurfaceIntent:(IGMainAppSurfaceIntent *)intent;
+- (void)setSelectedTabBarSurface:(IGMainAppSurfaceIntent *)surface animated:(BOOL)animated;
 - (void)_exploreButtonLongPressed:(id)gesture;
 - (void)_updateTabBarVisibilityForController:(id)controller;
+@end
+
+@interface IGTabBarViewControllerManager : NSObject
+@property (readonly, nonatomic) UINavigationController *savedCollectionsNavigationController;
+@end
+
+@interface IGSaveHomeIntentTarget : NSObject
+- (instancetype)initWithEntryModule:(NSString *)entryModule;
+- (instancetype)initWithEntryModule:(NSString *)entryModule selectedTab:(nullable NSString *)selectedTab;
+@end
+
+@protocol FBIntentHandler <NSObject>
+- (void)handleIntent:(id)intent;
+@end
+
+@interface UIViewController (FBIntentNavigation)
+- (id<FBIntentHandler>)fb_intentHandler;
 @end
 
 @interface IGMainAppScrollingContainerViewController : UIViewController

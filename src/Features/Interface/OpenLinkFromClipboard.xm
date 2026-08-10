@@ -1,7 +1,131 @@
 #import <objc/runtime.h>
+#import <limits.h>
 
 #import "../../InstagramHeaders.h"
+#import "../../Networking/SPKInstagramAPI.h"
 #import "../../Utils.h"
+
+extern "C" void SPKBeginSavedTabRoutingBypass(void);
+extern "C" void SPKEndSavedTabRoutingBypass(void);
+FOUNDATION_EXPORT BOOL SPKOpenPostPushMediaURL(NSURL *url,
+                                               UIViewController *presentingVC,
+                                               void (^fallback)(void),
+                                               void (^onDismiss)(void));
+
+static NSString *SPKStringFromClipboardMediaValue(id value) {
+    if ([value isKindOfClass:[NSString class]])
+        return [(NSString *)value length] > 0 ? value : nil;
+    if ([value isKindOfClass:[NSNumber class]])
+        return [(NSNumber *)value stringValue];
+    return nil;
+}
+
+static NSString *SPKClipboardMediaShortcode(NSURL *url) {
+    if (!url || ![url.scheme.lowercaseString hasPrefix:@"http"])
+        return nil;
+
+    NSArray<NSString *> *components = url.pathComponents;
+    for (NSUInteger index = 0; index + 1 < components.count; index++) {
+        NSString *component = components[index].lowercaseString;
+        if ([component isEqualToString:@"p"] ||
+            [component isEqualToString:@"reel"] ||
+            [component isEqualToString:@"reels"] ||
+            [component isEqualToString:@"tv"]) {
+            NSString *shortcode = components[index + 1];
+            return shortcode.length > 0 ? shortcode : nil;
+        }
+    }
+    return nil;
+}
+
+static NSString *SPKClipboardMediaPKFromShortcode(NSString *shortcode) {
+    if (shortcode.length == 0)
+        return nil;
+
+    static NSString *alphabet = @"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    unsigned long long value = 0;
+    for (NSUInteger index = 0; index < shortcode.length; index++) {
+        NSRange digitRange = [alphabet rangeOfString:[shortcode substringWithRange:NSMakeRange(index, 1)]];
+        if (digitRange.location == NSNotFound || value > (ULLONG_MAX - digitRange.location) / 64)
+            return nil;
+        value = value * 64 + digitRange.location;
+    }
+    return value > 0 ? [NSString stringWithFormat:@"%llu", value] : nil;
+}
+
+static NSURL *SPKClipboardAuthenticatedMediaURL(NSString *fullMediaID) {
+    if (fullMediaID.length == 0 || ![fullMediaID containsString:@"_"])
+        return nil;
+    NSString *encodedID = [fullMediaID stringByAddingPercentEncodingWithAllowedCharacters:NSCharacterSet.URLQueryAllowedCharacterSet];
+    return encodedID.length > 0
+               ? [NSURL URLWithString:[NSString stringWithFormat:@"instagram://media?id=%@", encodedID]]
+               : nil;
+}
+
+static NSString *SPKClipboardFullMediaIDFromResponse(NSDictionary *response, NSString *mediaPK) {
+    NSDictionary *item = nil;
+    id items = response[@"items"];
+    if ([items isKindOfClass:[NSArray class]] && [items count] > 0 && [items[0] isKindOfClass:[NSDictionary class]])
+        item = items[0];
+    if (!item && [response[@"item"] isKindOfClass:[NSDictionary class]])
+        item = response[@"item"];
+    if (!item && [response[@"media"] isKindOfClass:[NSDictionary class]])
+        item = response[@"media"];
+
+    NSString *itemID = SPKStringFromClipboardMediaValue(item[@"id"]);
+    if ([itemID containsString:@"_"])
+        return itemID;
+
+    NSDictionary *user = [item[@"user"] isKindOfClass:[NSDictionary class]] ? item[@"user"] : nil;
+    NSString *ownerPK = SPKStringFromClipboardMediaValue(user[@"pk"] ?: user[@"id"]);
+    NSString *resolvedMediaPK = SPKStringFromClipboardMediaValue(item[@"pk"]) ?: mediaPK;
+    return resolvedMediaPK.length > 0 && ownerPK.length > 0
+               ? [NSString stringWithFormat:@"%@_%@", resolvedMediaPK, ownerPK]
+               : nil;
+}
+
+static BOOL SPKOpenClipboardURLWithSavedRoutingBypass(NSURL *url) {
+    SPKBeginSavedTabRoutingBypass();
+    if ([SPKUtils openInstagramMediaURL:url])
+        return YES;
+    SPKEndSavedTabRoutingBypass();
+    return NO;
+}
+
+static BOOL SPKOpenClipboardMediaLikeGallery(NSURL *webURL) {
+    if (![SPKUtils getBoolPref:@"interface_replace_reels_with_saved"])
+        return NO;
+
+    NSString *shortcode = SPKClipboardMediaShortcode(webURL);
+    NSString *mediaPK = SPKClipboardMediaPKFromShortcode(shortcode);
+    if (mediaPK.length == 0)
+        return NO;
+
+    __weak UIViewController *presenter = topMostController();
+    [SPKInstagramAPI sendRequestWithMethod:@"GET"
+                                      path:[NSString stringWithFormat:@"media/%@/info/", mediaPK]
+                                      body:nil
+                                completion:^(NSDictionary *response, NSError *error) {
+        NSString *fullMediaID = SPKClipboardFullMediaIDFromResponse(response, mediaPK);
+        NSURL *mediaURL = SPKClipboardAuthenticatedMediaURL(fullMediaID);
+        UIViewController *livePresenter = presenter;
+        if (!mediaURL || !livePresenter || !livePresenter.view.window) {
+            SPKWarnLog(@"Interface", @"[Sparkle] Explore long-press: native media resolution failed for %@ (%@), using permalink", shortcode, error);
+            SPKOpenClipboardURLWithSavedRoutingBypass(webURL);
+            return;
+        }
+
+        void (^legacyFallback)(void) = ^{
+            SPKOpenClipboardURLWithSavedRoutingBypass(webURL);
+        };
+        SPKBeginSavedTabRoutingBypass();
+        if (!SPKOpenPostPushMediaURL(mediaURL, livePresenter, legacyFallback, nil)) {
+            SPKEndSavedTabRoutingBypass();
+            legacyFallback();
+        }
+    }];
+    return YES;
+}
 
 static NSURL *SPKNormalizedInstagramClipboardURL(NSString *raw) {
     if (raw.length == 0)
@@ -77,7 +201,9 @@ static BOOL SPKHandleExploreLongPressClipboard(void) {
         return NO;
     }
 
-    if (![SPKUtils openInstagramMediaURL:url]) {
+    if (SPKOpenClipboardMediaLikeGallery(url)) {
+        SPKLog(@"Interface", @"[Sparkle] Explore long-press: resolving clipboard media for native push %@", url);
+    } else if (!SPKOpenClipboardURLWithSavedRoutingBypass(url)) {
         SPKWarnLog(@"Interface", @"[Sparkle] Explore long-press: failed to open %@, falling through to search", url);
         return NO;
     }

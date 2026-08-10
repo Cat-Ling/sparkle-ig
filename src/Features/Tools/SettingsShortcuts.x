@@ -297,19 +297,6 @@ static BOOL SPKShouldReplaceProfileTabLongPress(NSString *identifier, NSString *
     BOOL hostsSettings = settingsHost && SPKTabButtonMatchesTarget(identifier, label, settingsHost);
     BOOL matchesGallery = SPKTabIdentifierMatchesGalleryShortcut(identifier, label);
 
-    SPKLog(@"TabBar", @"[Sparkle] IGTabBarButton layoutSubviews: ID='%@', label='%@', settingsHost='%@', hostsSettings=%d, matchesGallery=%d",
-           identifier, label, settingsHost, hostsSettings, matchesGallery);
-
-    for (UIGestureRecognizer *g in self.gestureRecognizers) {
-        if ([g isKindOfClass:[UILongPressGestureRecognizer class]]) {
-            SPKLog(@"TabBar", @"[Sparkle] Existing gesture before changes: %@, hasGalleryAssoc=%d, hasSettingsAssoc=%d, duration=%f",
-                   NSStringFromClass(g.class),
-                   objc_getAssociatedObject(g, kSPKGalleryTabLongPressAssocKey) != nil,
-                   objc_getAssociatedObject(g, kSPKHomeTabSettingsLongPressAssocKey) != nil,
-                   ((UILongPressGestureRecognizer *)g).minimumPressDuration);
-        }
-    }
-
     if (hostsSettings) {
         [self spk_removeGalleryLongPressIfNeeded];
         [self spk_addLongPressWithAction:@selector(handleHomeTabLongPress:) marker:kSPKHomeTabSettingsLongPressAssocKey minimumDuration:kSPKHomeTabLongPressDuration];
@@ -400,14 +387,11 @@ for (UIGestureRecognizer *gesture in [self.gestureRecognizers copy]) {
 }
 
 %new - (void)handleHomeTabLongPress:(UILongPressGestureRecognizer *)sender {
-SPKLog(@"TabBar", @"[Sparkle] handleHomeTabLongPress: state=%ld, view=%@, window=%@",
-       (long)sender.state, NSStringFromClass([sender.view class]),
-       sender.view.window ? @"YES" : @"NO");
-if (sender.state != UIGestureRecognizerStateBegan)
-    return;
+    if (sender.state != UIGestureRecognizerStateBegan)
+        return;
 
-SPKFireShortcutHaptic();
-[SPKUtils showSettingsVC:[self window]];
+    SPKFireShortcutHaptic();
+    [SPKUtils showSettingsVC:[self window]];
 }
 
 %new - (void)handleDirectInboxTabLongPress:(UILongPressGestureRecognizer *)sender {
