@@ -323,6 +323,12 @@
 @property IGUser *user;
 @end
 
+// The follow controller ships as an Objective-C class on older builds and as a Swift class on newer
+// ones. Both expose this, so Sparkle asks whichever is present through a shared shape.
+@protocol SPKFollowControlling <NSObject>
+@property (nonatomic, readonly) BOOL canShowRelationshipSheetWhenFollowing;
+@end
+
 @interface IGCoreTextView : UIView
 @property (nonatomic, strong) NSString *text;
 - (void)addHandleLongPress;                                     // new
