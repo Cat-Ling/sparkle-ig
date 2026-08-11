@@ -50,6 +50,9 @@ static UIColor *SPKImportAmberColor(void) {
 @property (nonatomic) long long fileSize;
 @property (nonatomic, strong, nullable) UIImage *thumbnail;
 @property (nonatomic) BOOL thumbnailRequested;
+/// Frame grabs that have already been run for this file, so a failed one can be retried without
+/// re-running the generator on every scroll.
+@property (nonatomic) NSInteger thumbnailAttempts;
 /// Set once the user edits this file's own metadata, pinning it against shared-defaults changes.
 @property (nonatomic) BOOL userEdited;
 /// Carried over from a Regram vault import; applied to the saved gallery file.
@@ -1055,12 +1058,18 @@ static UIColor *SPKImportAmberColor(void) {
 
 #pragma mark - Thumbnails
 
+// A frame grab can come back empty for a file that is still settling on disk, while an undecodable
+// one would re-run the generator on every scroll if it were retried forever.
+static const NSInteger kSPKImportThumbnailMaxAttempts = 2;
+
 - (void)ensureThumbnailForItem:(SPKGalleryImportQueuedFile *)item {
     if (item.thumbnail || item.thumbnailRequested || !item.tempFileURL ||
+        item.thumbnailAttempts >= kSPKImportThumbnailMaxAttempts ||
         item.mediaType == SPKGalleryMediaTypeAudio) {
         return; // audio uses the gallery placeholder, no frame to render
     }
     item.thumbnailRequested = YES;
+    item.thumbnailAttempts++;
     CGFloat scale = MAX(UIScreen.mainScreen.scale, 1.0);
     CGSize size = CGSizeMake(SPKImportThumbnailSize * scale, SPKImportThumbnailSize * scale);
     __weak typeof(self) weakSelf = self;
@@ -1069,22 +1078,37 @@ static UIColor *SPKImportAmberColor(void) {
                                        size:size
                                  completion:^(UIImage *_Nullable image) {
                                      if (!image) {
+                                         // Clearing the request lets a later reconfigure try again,
+                                         // bounded by the attempt cap, instead of leaving the row on
+                                         // its placeholder for the rest of the session.
+                                         item.thumbnailRequested = NO;
+                                         SPKLog(@"Gallery", @"[Sparkle] Import thumbnail render failed for %@", item.fileLabel);
                                          return;
                                      }
                                      item.thumbnail = image;
-                                     [weakSelf reloadRowForItem:item];
+                                     [weakSelf refreshRowForItem:item];
                                  }];
 }
 
-- (void)reloadRowForItem:(SPKGalleryImportQueuedFile *)item {
-    NSUInteger row = [self.queuedFiles indexOfObject:item];
+// The frame lands well after the row was configured, and often while that row sits outside the
+// visible set, so asking the table to reload it dropped the update and the placeholder stayed until
+// something else happened to rebuild the cell. The live cell is reconfigured directly instead, and a
+// row without one needs nothing: dequeuing it reads the thumbnail straight off the item.
+- (void)refreshRowForItem:(SPKGalleryImportQueuedFile *)item {
+    NSUInteger row = [self.queuedFiles indexOfObjectIdenticalTo:item];
     if (row == NSNotFound) {
         return;
     }
     NSIndexPath *ip = [NSIndexPath indexPathForRow:(NSInteger)row inSection:SPKGalleryImportMainSectionQueue];
-    if ([[self.tableView indexPathsForVisibleRows] containsObject:ip]) {
-        [self.tableView reloadRowsAtIndexPaths:@[ ip ] withRowAnimation:UITableViewRowAnimationFade];
+    SPKGalleryImportQueueCell *cell = (SPKGalleryImportQueueCell *)[self.tableView cellForRowAtIndexPath:ip];
+    if (![cell isKindOfClass:[SPKGalleryImportQueueCell class]]) {
+        return;
     }
+
+    [cell configureWithItem:item
+              technicalText:[self technicalTextForItem:item]
+                sourceLabel:[self sourceLabelForItem:item]
+               needsDetails:[self needsDetailsForItem:item]];
 }
 
 #pragma mark - Document picker
