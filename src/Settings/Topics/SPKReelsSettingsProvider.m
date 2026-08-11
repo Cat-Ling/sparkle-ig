@@ -1,5 +1,6 @@
 #import "SPKReelsSettingsProvider.h"
 
+#import "../../Features/Reels/HideReelsHeader.h"
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../SPKTopicSettingsSupport.h"
 
@@ -54,9 +55,18 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
                         @"2. Stop loading more reels once the limit below is reached.\n"
                         @"3. How many reels load before Prevent Doom Scrolling kicks in."),
         SPKTopicSection(@"Layout", @[
-            [SPKSetting switchCellWithTitle:@"Hide Reels Header"
-                                       icon:SPKSettingsIcon(@"reels")
-                                defaultsKey:@"reels_hide_header"],
+            ({
+                // The reels viewer keeps one navigation bar per session, so turning this off has
+                // to reach the bar that is already built or it stays hidden until relaunch.
+                SPKSetting *hideHeader = [SPKSetting switchCellWithTitle:@"Hide Reels Header"
+                                                                    icon:SPKSettingsIcon(@"reels")
+                                                             defaultsKey:@"reels_hide_header"];
+                hideHeader.action = ^{
+                    [[NSNotificationCenter defaultCenter] postNotificationName:SPKHideReelsHeaderDidChangeNotification
+                                                                        object:nil];
+                };
+                hideHeader;
+            }),
             [SPKSetting switchCellWithTitle:@"Hide Repost Button"
                                        icon:SPKSettingsIcon(@"repost")
                                 defaultsKey:@"reels_hide_repost_btn"
