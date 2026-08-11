@@ -60,7 +60,7 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
   - Hide ads, Meta AI, and suggested content.
   - Disable seen receipts, typing status, screenshot detection, and view-once limits.
   - Block doom-scrolling.
-  - Hide tabs and UI clutter, or replace the Reels tab with one-tap access to Saved collections.
+  - Build a custom tab bar with a live preview: reorder or hide destinations, choose launch and swipe behavior, trade a hidden tab for one-tap access to Saved collections in the custom layout, and drop the bar entirely when a single tab is left.
 - **Confirmations**:
   - Optional "are you sure?" guards for accidental likes, follows, reposts, calls, comments, and more.
 - **Liquid Glass (iOS 26+)**:

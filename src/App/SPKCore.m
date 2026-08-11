@@ -1,6 +1,7 @@
 #import "SPKCore.h"
 
 #import "../Shared/UI/SPKNotificationCenter.h"
+#import "../Shared/Navigation/SPKTabConfiguration.h"
 #import "../Tweak.h"
 #import "../Utils.h"
 #import "SPKStartupHooks.h"
@@ -16,9 +17,10 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         @"interface_liquid_glass_tabbar_mode" : @"default",
         @"interface_progressive_blur" : @(YES),
         @"interface_nav_order" : @"default",
+        @"interface_custom_tab_order" : @[ @"feed", @"clips", @"direct", @"search", @"profile" ],
         @"interface_swipe_tabs" : @"default",
         @"interface_launch_tab" : @"default",
-        @"interface_replace_reels_with_saved" : @(NO),
+        @"interface_saved_tab_carrier" : @"none",
         @"interface_hide_feed_tab" : @(NO),
         @"interface_hide_reels_tab" : @(NO),
         @"interface_hide_msgs_tab" : @(NO),
@@ -273,6 +275,7 @@ void SPKCoreRegisterBootstrapDefaults(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         [[NSUserDefaults standardUserDefaults] registerDefaults:SPKBootstrapDefaults()];
+        SPKMigrateTabConfigurationIfNeeded();
         SPKStartupMark(@"bootstrap defaults registered");
     });
 }

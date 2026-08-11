@@ -2,6 +2,7 @@
 #import "../../App/SPKStabilityGuard.h"
 #import "../../AssetUtils.h"
 #import "../../Shared/Account/SPKAccountManager.h"
+#import "../../Shared/Navigation/SPKTabConfiguration.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import "../../App/SPKPerfMeter.h"
@@ -12,6 +13,7 @@ static const void *kSPKSavedTabButtonKey = &kSPKSavedTabButtonKey;
 static const void *kSPKSavedTabButtonIdentityKey = &kSPKSavedTabButtonIdentityKey;
 static const void *kSPKSavedTabOriginalImagesKey = &kSPKSavedTabOriginalImagesKey;
 static const void *kSPKSavedTabOriginalLabelKey = &kSPKSavedTabOriginalLabelKey;
+static const void *kSPKSavedTabSuppressedOverlaysKey = &kSPKSavedTabSuppressedOverlaysKey;
 
 static NSUInteger spk_savedTabRoutingBypassGeneration = 0;
 static NSTimeInterval spk_savedTabRoutingBypassDeadline = 0;
@@ -35,26 +37,70 @@ extern "C" void SPKEndSavedTabRoutingBypass(void) {
     spk_savedTabRoutingBypassDeadline = 0;
 }
 
-static BOOL SPKReplacesReelsWithSaved(void) {
-    return [SPKUtils getBoolPref:@"interface_replace_reels_with_saved"];
+static NSString *SPKSavedCarrierIdentifier(void) {
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return SPKTabSavedCarrierNone;
+    return SPKEffectiveSavedCarrier();
+}
+
+// Classic draws Messages in the feed header instead of the bar and the Tab
+// Editor does not offer a toggle for it there, so a hide flag left behind by
+// another layout must not quietly remove the header link (or the swipe) that is
+// then the only way into the inbox.
+static BOOL SPKMessagesTabHidden(void) {
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return NO;
+    NSString *layout = SPKNormalizedTabLayout([SPKUtils getStringPref:SPKPrefTabLayout]);
+    if (!SPKTabOccupiesBarSlot(SPKTabIdentifierDirect, layout))
+        return NO;
+    return [SPKUtils getBoolPref:SPKTabHidePreferenceKey(SPKTabIdentifierDirect)];
+}
+
+// The Create launcher carries no tab string, so it is identified by its surface
+// subtype. Instagram reuses 3 for the camera entry on every supported build.
+static BOOL SPKIsCreateSurface(IGMainAppSurfaceIntent *surface) {
+    if (!surface)
+        return NO;
+    @try {
+        return [(NSNumber *)[surface valueForKey:@"_subtype"] unsignedIntegerValue] == 3;
+    } @catch (__unused NSException *exception) {
+        return NO;
+    }
+}
+
+static BOOL SPKHasSavedTabDestination(void) {
+    return ![SPKSavedCarrierIdentifier() isEqualToString:SPKTabSavedCarrierNone];
 }
 
 static BOOL SPKSavedTabPreferenceMayEnable(void) {
-    NSString *baseKey = @"interface_replace_reels_with_saved";
+    NSString *baseKey = SPKPrefSavedTabCarrier;
     NSDictionary<NSString *, id> *preferences = NSUserDefaults.standardUserDefaults.dictionaryRepresentation;
     for (NSString *key in preferences) {
         if (([key isEqualToString:baseKey] || [key hasSuffix:[@"_" stringByAppendingString:baseKey]]) &&
-            [preferences[key] respondsToSelector:@selector(boolValue)] &&
-            [preferences[key] boolValue]) {
+            ![SPKNormalizedSavedCarrier(preferences[key]) isEqualToString:SPKTabSavedCarrierNone]) {
             return YES;
         }
     }
     return NO;
 }
 
-static BOOL SPKIsReelsSurface(IGMainAppSurfaceIntent *surface) {
-    return [surface isKindOfClass:%c(IGMainAppSurfaceIntent)] &&
-           [[surface tabStringFromSurfaceIntent] isEqualToString:@"CLIPS"];
+static NSString *SPKTabIdentifierForSurface(IGMainAppSurfaceIntent *surface) {
+    if (![surface isKindOfClass:%c(IGMainAppSurfaceIntent)]) return nil;
+    NSString *tab = [surface tabStringFromSurfaceIntent];
+    if ([tab isEqualToString:@"FEED"]) return SPKTabIdentifierFeed;
+    if ([tab isEqualToString:@"CLIPS"]) return SPKTabIdentifierClips;
+    if ([tab isEqualToString:@"DIRECT"]) return SPKTabIdentifierDirect;
+    if ([tab isEqualToString:@"SEARCH"]) return SPKTabIdentifierSearch;
+    if ([tab isEqualToString:@"PROFILE"]) return SPKTabIdentifierProfile;
+    return nil;
+}
+
+static BOOL SPKIsSavedCarrierSurface(IGMainAppSurfaceIntent *surface) {
+    NSString *carrier = SPKSavedCarrierIdentifier();
+    if ([carrier isEqualToString:SPKTabSavedCarrierNone])
+        return NO;
+    NSString *identifier = SPKTabIdentifierForSurface(surface);
+    return identifier && [identifier isEqualToString:carrier];
 }
 
 static BOOL SPKIsSavedViewController(UIViewController *controller) {
@@ -77,22 +123,38 @@ static UINavigationController *SPKNativeSavedNavigationController(IGTabBarContro
 // (which allocates a lowercased copy) is resolved once and cached. A button with
 // no identifier yet is not cached: the answer is not knowable until Instagram
 // sets one, and the tab bar controller tags the real button by ivar anyway.
-static BOOL SPKIsReelsTabButton(IGTabBarButton *button) {
-    if (objc_getAssociatedObject(button, kSPKSavedTabButtonKey))
-        return YES;
-
-    NSNumber *cachedIdentity = objc_getAssociatedObject(button, kSPKSavedTabButtonIdentityKey);
-    if (cachedIdentity)
-        return cachedIdentity.boolValue;
+static NSString *SPKTabIdentifierForButton(IGTabBarButton *button) {
+    id cachedIdentity = objc_getAssociatedObject(button, kSPKSavedTabButtonIdentityKey);
+    if ([cachedIdentity isKindOfClass:[NSString class]])
+        return cachedIdentity;
+    if ([cachedIdentity isKindOfClass:[NSNull class]])
+        return nil;
 
     NSString *identifier = button.accessibilityIdentifier;
     if (identifier.length == 0)
-        return NO;
+        return nil;
 
     NSString *normalized = identifier.lowercaseString;
-    BOOL isReelsButton = [normalized containsString:@"reels"] || [normalized containsString:@"clips"];
-    objc_setAssociatedObject(button, kSPKSavedTabButtonIdentityKey, @(isReelsButton), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    return isReelsButton;
+    NSString *resolved = nil;
+    if ([normalized containsString:@"reels"] || [normalized containsString:@"clips"])
+        resolved = SPKTabIdentifierClips;
+    else if ([normalized containsString:@"direct"] || [normalized containsString:@"inbox"])
+        resolved = SPKTabIdentifierDirect;
+    else if ([normalized containsString:@"explore"] || [normalized containsString:@"search"])
+        resolved = SPKTabIdentifierSearch;
+    else if ([normalized containsString:@"profile"])
+        resolved = SPKTabIdentifierProfile;
+    else if ([normalized containsString:@"feed"] || [normalized containsString:@"timeline"] ||
+             [normalized containsString:@"home"])
+        resolved = SPKTabIdentifierFeed;
+    else if ([normalized containsString:@"camera"] || [normalized containsString:@"create"])
+        resolved = SPKTabIdentifierCreate;
+
+    // A resolved "none" is cached too: without it every layout pass of the
+    // camera/activity buttons re-lowercases their identifier forever.
+    objc_setAssociatedObject(button, kSPKSavedTabButtonIdentityKey, resolved ?: (id)[NSNull null],
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return resolved;
 }
 
 static UIImage *SPKSavedTabImage(BOOL filledImage) {
@@ -129,7 +191,8 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
     if (![button isKindOfClass:[UIButton class]])
         return;
 
-    objc_setAssociatedObject(button, kSPKSavedTabButtonKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    NSString *identifier = SPKTabIdentifierForButton((IGTabBarButton *)button);
+    BOOL shouldDisplaySaved = identifier && [identifier isEqualToString:SPKSavedCarrierIdentifier()];
 
     UIControlState states[] = {
         UIControlStateNormal,
@@ -138,7 +201,55 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
         UIControlStateSelected | UIControlStateHighlighted,
     };
 
-    if (!SPKReplacesReelsWithSaved()) {
+    // The profile button draws the account's avatar over the button's own image,
+    // so setting that image is not enough to show the Saved glyph: whatever is on
+    // top has to go. Instagram uses a couple of different holders for it (a custom
+    // button view, an overlay, or a plain image view added as a subview), and it
+    // rebuilds them on layout, so every candidate is swept on every pass. The
+    // button's own imageView is what draws the Saved glyph and is left alone.
+    NSHashTable<UIView *> *suppressed = objc_getAssociatedObject(button, kSPKSavedTabSuppressedOverlaysKey);
+    if (shouldDisplaySaved) {
+        if (!suppressed) {
+            suppressed = [NSHashTable weakObjectsHashTable];
+            objc_setAssociatedObject(button, kSPKSavedTabSuppressedOverlaysKey, suppressed, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        NSMutableArray<UIView *> *candidates = [NSMutableArray array];
+        for (NSString *ivar in @[ @"_customView", @"_customOverlayView" ]) {
+            UIView *overlay = [SPKUtils getIvarForObj:button name:ivar.UTF8String];
+            if ([overlay isKindOfClass:[UIView class]])
+                [candidates addObject:overlay];
+        }
+        // The profile slot draws the account's avatar in a view of its own that is
+        // not an image view, and on a multi-account install it is the picture, not
+        // a glyph, so nothing but the button's own image may remain. Every other
+        // slot only ever draws over its glyph with an image view, and its dots and
+        // badges are left alone.
+        BOOL drawsAvatar = [identifier isEqualToString:SPKTabIdentifierProfile];
+        for (UIView *subview in button.subviews) {
+            if (subview == button.imageView || subview == button.titleLabel)
+                continue;
+            if (drawsAvatar || [subview isKindOfClass:[UIImageView class]])
+                [candidates addObject:subview];
+        }
+        // Only views this hid are remembered, so a view Instagram had already
+        // hidden for its own reasons is never revealed later.
+        for (UIView *view in candidates) {
+            if (view.hidden)
+                continue;
+            view.hidden = YES;
+            [suppressed addObject:view];
+        }
+        // A slot that drew everything through a custom view may have had no use
+        // for its own image view; it is what carries the Saved glyph now.
+        if (button.imageView.hidden)
+            button.imageView.hidden = NO;
+    } else if (suppressed) {
+        for (UIView *view in suppressed.allObjects)
+            view.hidden = NO;
+        objc_setAssociatedObject(button, kSPKSavedTabSuppressedOverlaysKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+
+    if (!shouldDisplaySaved) {
         NSDictionary<NSNumber *, UIImage *> *originalImages = objc_getAssociatedObject(button, kSPKSavedTabOriginalImagesKey);
         for (NSUInteger index = 0; index < sizeof(states) / sizeof(states[0]); index++) {
             UIControlState state = states[index];
@@ -153,6 +264,9 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
         }
         return;
     }
+
+    objc_setAssociatedObject(button, kSPKSavedTabButtonKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(button, kSPKSavedTabButtonIdentityKey, identifier, OBJC_ASSOCIATION_COPY_NONATOMIC);
 
     if (!objc_getAssociatedObject(button, kSPKSavedTabOriginalLabelKey) &&
         button.accessibilityLabel.length > 0 &&
@@ -185,9 +299,63 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
     }
 }
 
+// The button the bar is actually showing for an identifier. Going through
+// -_buttonForTabBarSurface: rather than the controller's ivars keeps this
+// working when Instagram stores a slot somewhere other than the ivar its name
+// suggests, which is the case for the camera slot on current builds.
+static UIButton *SPKBarButtonForIdentifier(IGTabBarController *controller, NSString *identifier) {
+    if (!identifier || [identifier isEqualToString:SPKTabSavedCarrierNone] ||
+        ![controller respondsToSelector:@selector(_buttonForTabBarSurface:)])
+        return nil;
+    NSArray *surfaces = [SPKUtils getIvarForObj:controller name:"_tabBarSurfaces"];
+    if (![surfaces isKindOfClass:[NSArray class]])
+        return nil;
+    for (IGMainAppSurfaceIntent *surface in surfaces) {
+        if (![identifier isEqualToString:SPKTabIdentifierForSurface(surface)])
+            continue;
+        id button = [controller _buttonForTabBarSurface:surface];
+        return [button isKindOfClass:[UIButton class]] ? button : nil;
+    }
+    return nil;
+}
+
+// Stamps every tab bar button the controller owns with its Sparkle identifier.
+// The ivars are authoritative: accessibility identifiers are only a fallback for
+// buttons reached through -layoutSubviews before the controller is available.
+static void SPKStampTabButtonIdentities(IGTabBarController *controller) {
+    NSDictionary<NSString *, NSString *> *identifiersByIvar = @{
+        @"_timelineButton" : SPKTabIdentifierFeed,
+        @"_discoverVideoButton" : SPKTabIdentifierClips,
+        @"_directInboxButton" : SPKTabIdentifierDirect,
+        @"_exploreButton" : SPKTabIdentifierSearch,
+        @"_profileButton" : SPKTabIdentifierProfile,
+        @"_cameraButton" : SPKTabIdentifierCreate,
+    };
+    for (NSString *ivar in identifiersByIvar) {
+        UIButton *button = [SPKUtils getIvarForObj:controller name:ivar.UTF8String];
+        if (button)
+            objc_setAssociatedObject(button, kSPKSavedTabButtonIdentityKey, identifiersByIvar[ivar], OBJC_ASSOCIATION_COPY_NONATOMIC);
+    }
+}
+
+// Any bar button can be the carrier, so all of them are reconciled: the carrier
+// picks up the Saved glyph and every other button gets its original artwork put
+// back if it used to be the carrier.
 static void SPKConfigureSavedTabButton(IGTabBarController *controller) {
-    UIButton *button = [SPKUtils getIvarForObj:controller name:"_discoverVideoButton"];
-    SPKConfigureSavedTabButtonInstance(button);
+    SPKStampTabButtonIdentities(controller);
+    for (NSString *ivar in @[ @"_timelineButton", @"_discoverVideoButton", @"_directInboxButton",
+                              @"_exploreButton", @"_profileButton", @"_cameraButton" ])
+        SPKConfigureSavedTabButtonInstance([SPKUtils getIvarForObj:controller name:ivar.UTF8String]);
+
+    // The ivars do not always hold the button that is actually on the bar, so
+    // the surface map is the authority: it is the same lookup the bar itself
+    // uses to place buttons.
+    NSString *carrier = SPKSavedCarrierIdentifier();
+    UIButton *carrierButton = SPKBarButtonForIdentifier(controller, carrier);
+    if (carrierButton) {
+        objc_setAssociatedObject(carrierButton, kSPKSavedTabButtonIdentityKey, carrier, OBJC_ASSOCIATION_COPY_NONATOMIC);
+        SPKConfigureSavedTabButtonInstance(carrierButton);
+    }
 }
 
 // Containment only. -presentedViewController resolves through the ancestor chain,
@@ -257,6 +425,19 @@ static void SPKFinishSavedTabIntent(UINavigationController *navigationController
     });
 }
 
+// Instagram's own "open the Saved home" intent. The two-argument initializer is
+// the current one; older builds only take the entry module.
+static id SPKMakeSavedIntentTarget(void) {
+    id target = [NSClassFromString(@"IGSaveHomeIntentTarget") alloc];
+    SEL currentInitializer = NSSelectorFromString(@"initWithEntryModule:selectedTab:");
+    if ([target respondsToSelector:currentInitializer])
+        return ((id (*)(id, SEL, id, id))objc_msgSend)(target, currentInitializer, @"tab_bar", nil);
+    SEL legacyInitializer = NSSelectorFromString(@"initWithEntryModule:");
+    if ([target respondsToSelector:legacyInitializer])
+        return ((id (*)(id, SEL, id))objc_msgSend)(target, legacyInitializer, @"tab_bar");
+    return nil;
+}
+
 static void SPKOpenSavedInFallbackNavigationController(IGTabBarController *tabBarController,
                                                         UINavigationController *navigationController) {
     if (!navigationController || SPKIsSavedViewController(navigationController.topViewController))
@@ -300,20 +481,7 @@ static void SPKOpenSavedInFallbackNavigationController(IGTabBarController *tabBa
         return;
     }
 
-    Class targetClass = NSClassFromString(@"IGSaveHomeIntentTarget");
-    id target = [targetClass alloc];
-    SEL currentInitializer = NSSelectorFromString(@"initWithEntryModule:selectedTab:");
-    if ([target respondsToSelector:currentInitializer]) {
-        target = ((id (*)(id, SEL, id, id))objc_msgSend)(target, currentInitializer, @"tab_bar", nil);
-    } else {
-        SEL legacyInitializer = NSSelectorFromString(@"initWithEntryModule:");
-        if ([target respondsToSelector:legacyInitializer]) {
-            target = ((id (*)(id, SEL, id))objc_msgSend)(target, legacyInitializer, @"tab_bar");
-        } else {
-            target = nil;
-        }
-    }
-
+    id target = SPKMakeSavedIntentTarget();
     if (!target) {
         SPKLog(@"TabBar", @"[Sparkle] Unable to construct Instagram's Saved intent target");
         return;
@@ -326,7 +494,7 @@ static void SPKOpenSavedInFallbackNavigationController(IGTabBarController *tabBa
 }
 
 static void SPKEnsureSavedTabDestination(IGTabBarController *controller) {
-    if (!SPKReplacesReelsWithSaved())
+    if (!SPKHasSavedTabDestination())
         return;
 
     UINavigationController *nativeSavedNavigationController = SPKNativeSavedNavigationController(controller);
@@ -336,7 +504,11 @@ static void SPKEnsureSavedTabDestination(IGTabBarController *controller) {
     UIViewController *selected = controller.selectedViewController;
     UINavigationController *navigationController = [selected isKindOfClass:[UINavigationController class]]
                                                        ? (UINavigationController *)selected
-                                                       : [controller discoverVideoNavigationController];
+                                                       : nil;
+    // Only Reels has a dedicated accessor worth falling back to; for any other
+    // carrier the selected controller is the one being redirected.
+    if (!navigationController && [SPKSavedCarrierIdentifier() isEqualToString:SPKTabIdentifierClips])
+        navigationController = [controller discoverVideoNavigationController];
     SPKOpenSavedInFallbackNavigationController(controller, navigationController);
 }
 
@@ -352,11 +524,11 @@ typedef struct {
 static NSUInteger spk_savedTabSelectionDepth = 0;
 
 static SPKSavedTabSelection SPKBeginSavedTabSelection(IGMainAppSurfaceIntent *surface) {
-    BOOL isReelsSurface = SPKIsReelsSurface(surface);
-    BOOL bypassesSaved = isReelsSurface && SPKSavedTabRoutingBypassActive();
+    BOOL isSavedCarrier = SPKIsSavedCarrierSurface(surface);
+    BOOL bypassesSaved = isSavedCarrier && SPKSavedTabRoutingBypassActive();
     SPKSavedTabSelection selection = {
         .bypassesSaved = bypassesSaved,
-        .selectsSaved = isReelsSurface && !bypassesSaved && SPKReplacesReelsWithSaved(),
+        .selectsSaved = isSavedCarrier && !bypassesSaved,
         .isOutermost = (spk_savedTabSelectionDepth == 0),
     };
     spk_savedTabSelectionDepth++;
@@ -382,6 +554,22 @@ static void SPKFinishSavedTabSelection(IGTabBarController *controller, SPKSavedT
             SPKEnsureSavedTabDestination(controller);
         });
     }
+}
+
+static BOOL SPKHandleSavedCarrierButtonPress(IGTabBarController *controller, NSString *identifier) {
+    if (!identifier || ![SPKSavedCarrierIdentifier() isEqualToString:identifier])
+        return NO;
+    NSArray *surfaces = [SPKUtils getIvarForObj:controller name:"_tabBarSurfaces"];
+    for (IGMainAppSurfaceIntent *surface in surfaces) {
+        NSString *surfaceIdentifier = SPKTabIdentifierForSurface(surface);
+        if (surfaceIdentifier && [surfaceIdentifier isEqualToString:identifier]) {
+            [controller setSelectedTabBarSurface:surface animated:YES];
+            SPKConfigureSavedTabButton(controller);
+            dispatch_async(dispatch_get_main_queue(), ^{ SPKEnsureSavedTabDestination(controller); });
+            return YES;
+        }
+    }
+    return NO;
 }
 
 static NSString *SPKSelectorForLaunchTabPreference(NSString *preference) {
@@ -419,67 +607,156 @@ BOOL isSurfaceShown(IGMainAppSurfaceIntent *surface) {
     if (SPKStabilityGuardIsSafeStartupMode()) {
         return YES;
     }
-    BOOL isShown = YES;
-
-    // Feed
-    if ([[surface tabStringFromSurfaceIntent] isEqualToString:@"FEED"] && [SPKUtils getBoolPref:@"interface_hide_feed_tab"]) {
-        isShown = NO;
-    }
-
-    // Reels
-    else if ([[surface tabStringFromSurfaceIntent] isEqualToString:@"CLIPS"] && [SPKUtils getBoolPref:@"interface_hide_reels_tab"]) {
-        isShown = NO;
-    }
-
-    // Messages
-    else if ([[surface tabStringFromSurfaceIntent] isEqualToString:@"DIRECT"] && [SPKUtils getBoolPref:@"interface_hide_msgs_tab"]) {
-        isShown = NO;
-    }
-
-    // Explore
-    else if ([[surface tabStringFromSurfaceIntent] isEqualToString:@"SEARCH"] && [SPKUtils getBoolPref:@"interface_hide_explore_tab"]) {
-        isShown = NO;
-    }
-
-    // Profile
-    else if ([[surface tabStringFromSurfaceIntent] isEqualToString:@"PROFILE"] && [SPKUtils getBoolPref:@"interface_hide_profile_tab"]) {
-        isShown = NO;
-    }
-
-    // Create
-    else if ([(NSNumber *)[surface valueForKey:@"_subtype"] unsignedIntegerValue] == 3 && [SPKUtils getBoolPref:@"interface_hide_create_tab"]) {
-        isShown = NO;
-    }
-
-    return isShown;
+    NSString *identifier = SPKTabIdentifierForSurface(surface);
+    NSString *carrier = SPKSavedCarrierIdentifier();
+    // The Saved carrier is a hidden slot that Sparkle draws as Saved, so its hide
+    // flag must not remove it: hiding it is exactly what freed the slot.
+    if (identifier && [identifier isEqualToString:carrier])
+        return YES;
+    NSString *hideKey = identifier ? SPKTabHidePreferenceKey(identifier) : nil;
+    if (hideKey.length > 0 && [SPKUtils getBoolPref:hideKey])
+        return NO;
+    if (SPKIsCreateSurface(surface) && [SPKUtils getBoolPref:@"interface_hide_create_tab"])
+        return NO;
+    return YES;
 }
 
 NSArray *filterSurfacesArray(NSArray *surfaces) {
-    NSMutableArray *filteredSurfaces = [NSMutableArray array];
+    if (![surfaces isKindOfClass:[NSArray class]] || SPKStabilityGuardIsSafeStartupMode())
+        return surfaces ?: @[];
 
-    for (IGMainAppSurfaceIntent *surface in surfaces) {
-        if (![surface isKindOfClass:%c(IGMainAppSurfaceIntent)])
-            break;
-
-        if (isSurfaceShown(surface)) {
-            [filteredSurfaces addObject:surface];
-        }
+    NSMutableDictionary<NSString *, id> *knownSurfaces = [NSMutableDictionary dictionary];
+    NSMutableArray *unknownSurfaces = [NSMutableArray array];
+    for (id surface in surfaces) {
+        NSString *identifier = SPKTabIdentifierForSurface(surface);
+        if (identifier.length > 0 && !knownSurfaces[identifier])
+            knownSurfaces[identifier] = surface;
+        else if (!identifier)
+            [unknownSurfaces addObject:surface];
     }
 
-    return filteredSurfaces;
+    NSString *layout = SPKNormalizedTabLayout([SPKUtils getStringPref:SPKPrefTabLayout]);
+    if ([layout isEqualToString:SPKTabLayoutClassic]) {
+        NSMutableArray *classic = [NSMutableArray array];
+        for (id surface in surfaces) {
+            if (isSurfaceShown(surface)) [classic addObject:surface];
+        }
+        BOOL hasDestination = NO;
+        for (id surface in classic) {
+            if (SPKTabIdentifierForSurface(surface)) { hasDestination = YES; break; }
+        }
+        if (!hasDestination) {
+            id fallback = knownSurfaces[SPKTabIdentifierFeed];
+            if (!fallback) {
+                for (NSString *identifier in SPKCanonicalTabIdentifiers()) {
+                    if (knownSurfaces[identifier]) { fallback = knownSurfaces[identifier]; break; }
+                }
+            }
+            if (fallback) [classic insertObject:fallback atIndex:0];
+        }
+        return classic;
+    }
+
+    NSString *savedCarrier = SPKSavedCarrierIdentifier();
+    BOOL usesCustomOrder = [layout isEqualToString:SPKTabLayoutCustom];
+    NSArray<NSString *> *order = usesCustomOrder
+                                     ? SPKNormalizeTabOrder([NSUserDefaults.standardUserDefaults objectForKey:SPKPrefCustomTabOrder])
+                                     : SPKCanonicalTabIdentifiers();
+    NSMutableArray *transformed = [NSMutableArray array];
+    for (NSString *identifier in order) {
+        // Saved has no surface of its own: it is drawn by the carrier, which is
+        // why the carrier is skipped where its own identifier appears. Outside a
+        // custom order there is no Saved entry, so the carrier keeps its native
+        // position and simply renders as Saved.
+        BOOL isSavedEntry = [identifier isEqualToString:SPKTabIdentifierSaved];
+        if (isSavedEntry && !SPKHasSavedTabDestination())
+            continue;
+        if (usesCustomOrder && !isSavedEntry && [identifier isEqualToString:savedCarrier])
+            continue;
+        id surface = knownSurfaces[isSavedEntry ? savedCarrier : identifier];
+        if (surface && isSurfaceShown(surface)) [transformed addObject:surface];
+    }
+    // Keep Instagram surfaces Sparkle does not know about, in their native
+    // relative order, so a future app update does not silently delete them.
+    for (id surface in unknownSurfaces) {
+        if (isSurfaceShown(surface)) [transformed addObject:surface];
+    }
+
+    BOOL hasDestination = NO;
+    for (id surface in transformed) {
+        if (SPKTabIdentifierForSurface(surface)) { hasDestination = YES; break; }
+    }
+    if (!hasDestination) {
+        id fallback = knownSurfaces[SPKTabIdentifierFeed];
+        if (!fallback) {
+            for (NSString *identifier in SPKCanonicalTabIdentifiers()) {
+                if (knownSurfaces[identifier]) { fallback = knownSurfaces[identifier]; break; }
+            }
+        }
+        if (fallback) [transformed insertObject:fallback atIndex:0];
+    }
+    return transformed;
 }
 
-static BOOL SPKIsMessagesOnlyMode(void) {
-    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
-    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
-    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
-    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
-    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
-    
-    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
-    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
-    
-    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
+// Instagram assembles the tab bar from its own fixed button list and only uses
+// the surface array to decide which buttons survive, so reordering
+// _tabBarSurfaces changes the index each surface maps to without moving a single
+// glyph. The visual order is decided exclusively by the order buttons are handed
+// to the bar, which is what this re-applies. Both arrays end up in the same
+// order, which is also what keeps the selection indicator on the right button.
+static void SPKApplyCustomTabButtonOrder(IGTabBarController *controller) {
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return;
+    if (![SPKNormalizedTabLayout([SPKUtils getStringPref:SPKPrefTabLayout]) isEqualToString:SPKTabLayoutCustom])
+        return;
+
+    id<SPKTabBarViewRepresentable> bar = (id<SPKTabBarViewRepresentable>)controller.tabBar;
+    if (![bar respondsToSelector:@selector(addTabButton:)] ||
+        ![bar respondsToSelector:@selector(clearTabButtons)] ||
+        ![bar respondsToSelector:@selector(buttons)] ||
+        ![controller respondsToSelector:@selector(_buttonForTabBarSurface:)])
+        return;
+
+    NSArray *surfaces = [SPKUtils getIvarForObj:controller name:"_tabBarSurfaces"];
+    if (![surfaces isKindOfClass:[NSArray class]] || surfaces.count == 0)
+        return;
+
+    id selectedSurface = [controller respondsToSelector:@selector(selectedTabBarSurface)]
+                             ? [controller selectedTabBarSurface]
+                             : nil;
+    NSMutableArray<UIView *> *desired = [NSMutableArray array];
+    NSInteger selectedIndex = NSNotFound;
+    for (id surface in surfaces) {
+        id button = [controller _buttonForTabBarSurface:surface];
+        if (![button isKindOfClass:[UIView class]])
+            continue;
+        if (selectedSurface && surface == selectedSurface)
+            selectedIndex = (NSInteger)desired.count;
+        [desired addObject:button];
+    }
+    if (desired.count == 0)
+        return;
+
+    NSArray *current = bar.buttons;
+    if ([current isKindOfClass:[NSArray class]] && [current isEqualToArray:desired])
+        return;
+
+    [bar clearTabButtons];
+    for (UIView *button in desired)
+        [bar addTabButton:button];
+    if (selectedIndex != NSNotFound && [bar respondsToSelector:@selector(setSelectedTabBarItemIndex:)])
+        [bar setSelectedTabBarItemIndex:selectedIndex];
+    [controller.tabBar setNeedsLayout];
+}
+
+// Should the tab bar be taken away entirely? Only when the configuration leaves
+// exactly one tab, and only for a tab that keeps a way back into Sparkle
+// Settings without the tab bar long-press.
+static BOOL SPKShouldHideTabBarForSingleTab(void) {
+    if (![SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"])
+        return NO;
+    NSString *single = SPKSingleVisibleTabIdentifierFromPreferences();
+    return single != nil && SPKSingleTabAllowsHidingTabBar(single);
 }
 
 ///////////////////////////////////////////////
@@ -499,9 +776,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 %hook IGTabBarButton
 - (void)layoutSubviews {
     %orig;
-    if (SPKIsReelsTabButton(self)) {
-        SPKConfigureSavedTabButtonInstance(self);
-    }
+    SPKConfigureSavedTabButtonInstance(self);
 }
 %end
 
@@ -512,7 +787,8 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 %hook IGTabBarControllerSwipeCoordinator
 - (id)initWithSurfaces:(id)surfaces parentViewController:(id)controller enableHaptics:(_Bool)haptics launcherSet:(id)set {
     // Removes the surface from the main swipeable app collection view
-    return %orig(filterSurfacesArray(surfaces), controller, haptics, set);
+    NSArray *filtered = filterSurfacesArray(surfaces);
+    return %orig(filtered, controller, haptics, set);
 }
 %end
 
@@ -532,9 +808,9 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 }
 
 - (id)navigationViewControllerForAppSurfaceIntent:(IGMainAppSurfaceIntent *)surface {
-    if (SPKReplacesReelsWithSaved() &&
+    if (SPKHasSavedTabDestination() &&
         !SPKSavedTabRoutingBypassActive() &&
-        SPKIsReelsSurface(surface)) {
+        SPKIsSavedCarrierSurface(surface)) {
         UINavigationController *savedNavigationController = SPKNativeSavedNavigationController(self);
         if (savedNavigationController)
             return savedNavigationController;
@@ -542,31 +818,25 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     return %orig;
 }
 
+// Each of these runs %orig untouched unless that exact tab is the Saved carrier.
+- (void)_timelineButtonPressed {
+    if (!SPKHandleSavedCarrierButtonPress(self, SPKTabIdentifierFeed)) %orig;
+}
+
 - (void)_discoverVideoButtonPressed {
-    if (!SPKReplacesReelsWithSaved()) {
-        %orig;
-        return;
-    }
+    if (!SPKHandleSavedCarrierButtonPress(self, SPKTabIdentifierClips)) %orig;
+}
 
-    NSArray *surfaces = [SPKUtils getIvarForObj:self name:"_tabBarSurfaces"];
-    IGMainAppSurfaceIntent *reelsSurface = nil;
-    for (IGMainAppSurfaceIntent *surface in surfaces) {
-        if (SPKIsReelsSurface(surface)) {
-            reelsSurface = surface;
-            break;
-        }
-    }
+- (void)_directInboxButtonPressed {
+    if (!SPKHandleSavedCarrierButtonPress(self, SPKTabIdentifierDirect)) %orig;
+}
 
-    if (!reelsSurface) {
-        %orig;
-        return;
-    }
+- (void)_exploreButtonPressed {
+    if (!SPKHandleSavedCarrierButtonPress(self, SPKTabIdentifierSearch)) %orig;
+}
 
-    [self setSelectedTabBarSurface:reelsSurface animated:YES];
-    SPKConfigureSavedTabButton(self);
-    dispatch_async(dispatch_get_main_queue(), ^{
-        SPKEnsureSavedTabDestination(self);
-    });
+- (void)_profileButtonPressed {
+    if (!SPKHandleSavedCarrierButtonPress(self, SPKTabIdentifierProfile)) %orig;
 }
 
 - (void)_setSelectedTabBarSurface:(IGMainAppSurfaceIntent *)surface
@@ -599,13 +869,15 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     if (SPKStabilityGuardIsSafeStartupMode()) {
         return;
     }
-    if ([SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"] && SPKIsMessagesOnlyMode()) {
+    if (SPKShouldHideTabBarForSingleTab()) {
         self.tabBar.hidden = YES;
     }
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     %orig;
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return;
 
     static BOOL appliedLaunchTab = NO;
     if (appliedLaunchTab)
@@ -620,6 +892,9 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 
     BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
 
+    BOOL usesCustomOrder = [SPKNormalizedTabLayout([SPKUtils getStringPref:SPKPrefTabLayout])
+        isEqualToString:SPKTabLayoutCustom];
+
     if ([launchPref isEqualToString:@"default"]) {
         BOOL feedIsEnabled = NO;
         for (IGMainAppSurfaceIntent *s in enabledSurfaces) {
@@ -628,7 +903,13 @@ static BOOL SPKIsMessagesOnlyMode(void) {
                 break;
             }
         }
-        if ((!feedIsEnabled || feedHidden) && enabledSurfaces.count > 0) {
+        if (usesCustomOrder && enabledSurfaces.count > 0) {
+            // Instagram always opens on Feed regardless of where Feed sits in the
+            // bar, which leaves a custom layout showing the feed under a first tab
+            // that is drawn selected. "Default" in a custom layout means the first
+            // tab the user arranged.
+            selectorName = SPKSelectorForSurfaceIntent(enabledSurfaces.firstObject);
+        } else if ((!feedIsEnabled || feedHidden) && enabledSurfaces.count > 0) {
             selectorName = SPKSelectorForSurfaceIntent(enabledSurfaces.firstObject);
         } else if (feedHidden) {
             // Fallback preference check if surface array is unavailable
@@ -674,7 +955,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     if (SPKStabilityGuardIsSafeStartupMode()) {
         return;
     }
-    if ([SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"] && SPKIsMessagesOnlyMode()) {
+    if (SPKShouldHideTabBarForSingleTab()) {
         if ([self respondsToSelector:@selector(_updateTabBarVisibilityForController:)] && self.selectedViewController) {
             [self _updateTabBarVisibilityForController:self.selectedViewController];
         }
@@ -689,6 +970,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 
     %orig;
     SPKConfigureSavedTabButton(self);
+    SPKApplyCustomTabButtonOrder(self);
 }
 
 - (id)_buttonForTabBarSurface:(id)surface {
@@ -706,7 +988,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     if (SPKStabilityGuardIsSafeStartupMode()) {
         return %orig;
     }
-    if ([SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"] && SPKIsMessagesOnlyMode()) {
+    if (SPKShouldHideTabBarForSingleTab()) {
         return YES;
     }
     return %orig;
@@ -716,21 +998,24 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 // Demangled name: IGNavConfiguration.IGNavConfiguration
 %hook _TtC18IGNavConfiguration18IGNavConfiguration
 - (NSInteger)tabOrdering {
-
-    if ([[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"])
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return %orig;
+    NSString *layout = SPKNormalizedTabLayout([SPKUtils getStringPref:SPKPrefTabLayout]);
+    if ([layout isEqualToString:SPKTabLayoutClassic])
         return 0;
-    else if ([[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"standard"])
-        return 1;
-    else if ([[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"alternate"])
-        return 2;
-
-    return %orig;
+    // Both Default and Custom use Instagram's standard five-carrier topology.
+    // Custom only changes the shared transformed ordering of those carriers.
+    return 1;
 }
 - (void)setTabOrdering:(NSInteger)arg1 {
-    return;
+    if (SPKStabilityGuardIsSafeStartupMode()) {
+        %orig;
+    }
 }
 
 - (BOOL)isTabSwipingEnabled {
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return %orig;
 
     if ([[SPKUtils getStringPref:@"interface_swipe_tabs"] isEqualToString:@"enabled"])
         return YES;
@@ -740,7 +1025,10 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     return %orig;
 }
 - (void)setIsTabSwipingEnabled:(BOOL)arg1 {
-    return;
+    if (SPKStabilityGuardIsSafeStartupMode() ||
+        [[SPKUtils getStringPref:@"interface_swipe_tabs"] isEqualToString:@"default"]) {
+        %orig;
+    }
 }
 %end
 
@@ -749,7 +1037,10 @@ static BOOL SPKIsMessagesOnlyMode(void) {
     %orig;
     SPK_PERF_SCOPE(@"Navigation.didMoveToWindow");
 
-    if ([SPKUtils getBoolPref:@"interface_hide_msgs_tab"]) {
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return;
+
+    if (SPKMessagesTabHidden()) {
         // IG 436+ is a Swift class: the DM button is the `directButton` @property
         // (KVC-safe). `rightButton` is a bare Swift ivar on 436 (KVC throws) but the
         // KVC key on older ObjC builds — resolve via selector first, guard the rest.
@@ -775,19 +1066,30 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 
 %hook IGMainAppScrollingContainerViewController
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gesture {
-    if ([SPKUtils getBoolPref:@"interface_hide_feed_tab"]) {
-        if ([gesture isKindOfClass:[UIPanGestureRecognizer class]]) {
-            UIPanGestureRecognizer *pan = (UIPanGestureRecognizer *)gesture;
-            CGPoint velocity = [pan velocityInView:pan.view];
-            CGPoint translation = [pan translationInView:pan.view];
-            if (velocity.x > 0 || translation.x > 0) {
-                UIViewController *activeVC = [self valueForKey:@"_activeViewController"];
-                UIViewController *creationVC = [self valueForKey:@"_creationViewController"];
-                if (activeVC && creationVC && activeVC != creationVC) {
-                    return NO;
-                }
-            }
-        }
+    if (SPKStabilityGuardIsSafeStartupMode())
+        return %orig;
+    if (![gesture isKindOfClass:[UIPanGestureRecognizer class]])
+        return %orig;
+
+    UIPanGestureRecognizer *pan = (UIPanGestureRecognizer *)gesture;
+    CGPoint velocity = [pan velocityInView:pan.view];
+    CGPoint translation = [pan translationInView:pan.view];
+    UIViewController *activeVC = [SPKUtils getIvarForObj:self name:"_activeViewController"];
+
+    // Dragging right reveals the camera that sits to the left of the tabs.
+    if ([SPKUtils getBoolPref:@"interface_hide_feed_tab"] && (velocity.x > 0 || translation.x > 0)) {
+        UIViewController *creationVC = [SPKUtils getIvarForObj:self name:"_creationViewController"];
+        if (activeVC && creationVC && activeVC != creationVC)
+            return NO;
+    }
+
+    // Dragging left reveals the inbox that sits to the right of them. Without
+    // this, hiding the Messages tab would only remove the way in that you can
+    // see while the swipe kept working.
+    if (SPKMessagesTabHidden() && (velocity.x < 0 || translation.x < 0)) {
+        UIViewController *inboxVC = [SPKUtils getIvarForObj:self name:"_directInboxNavController"];
+        if (activeVC && inboxVC && activeVC != inboxVC)
+            return NO;
     }
     return %orig;
 }
@@ -796,19 +1098,7 @@ static BOOL SPKIsMessagesOnlyMode(void) {
 %end
 
 extern "C" void SPKInstallNavigationHooksIfNeeded(void) {
-    BOOL shouldInstall = SPKSavedTabPreferenceMayEnable() ||
-                         ![[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"default"] ||
-                         ![[SPKUtils getStringPref:@"interface_launch_tab"] isEqualToString:@"default"] ||
-                         ![[SPKUtils getStringPref:@"interface_swipe_tabs"] isEqualToString:@"default"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_feed_tab"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_reels_tab"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_msgs_tab"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_explore_tab"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_profile_tab"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_create_tab"] ||
-                         [SPKUtils getBoolPref:@"interface_hide_tab_bar_in_messages_only"];
-    if (!shouldInstall)
-        return;
+    SPKMigrateTabConfigurationIfNeeded();
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{

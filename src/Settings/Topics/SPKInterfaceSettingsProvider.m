@@ -4,69 +4,9 @@
 #import "../SPKPreferenceAvailability.h"
 #import "../SPKPreferences.h"
 #import "../SPKTopicSettingsSupport.h"
+#import "../../Shared/Navigation/SPKTabConfiguration.h"
+#import "../SPKTabEditorViewController.h"
 #import "SPKNotificationSettingsProvider.h"
-
-// The navigable tab keys. The create "+" is a composer launcher rather than a
-// destination, so it is excluded — hiding it can never leave the app tab-less.
-static NSArray<NSString *> *SPKDestinationTabHideKeys(void) {
-    return @[
-        @"interface_hide_feed_tab",
-        @"interface_hide_explore_tab",
-        @"interface_hide_reels_tab",
-        @"interface_hide_msgs_tab",
-        @"interface_hide_profile_tab",
-    ];
-}
-
-// YES if turning on `keyToEnable` would leave every navigable tab hidden.
-static BOOL SPKEnablingKeyHidesEveryTab(NSString *keyToEnable) {
-    for (NSString *key in SPKDestinationTabHideKeys()) {
-        if ([key isEqualToString:keyToEnable])
-            continue;
-        if (![SPKUtils getBoolPref:key])
-            return NO;
-    }
-    return YES;
-}
-
-static BOOL SPKIsMessagesOnlyMode(void) {
-    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
-    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
-    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
-    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
-    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
-    
-    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
-    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
-    
-    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
-}
-
-// A "Hide … Tab" switch that can't hide the last remaining navigable tab: when
-// this is the only tab still visible its switch is greyed out and can't be
-// turned on, while any already-hidden tab can always be turned back on.
-static SPKSetting *SPKHideTabSwitch(NSString *title, NSString *iconName, NSString *key) {
-    SPKSetting *row = [SPKSetting switchCellWithTitle:title
-                                                 icon:SPKSettingsIcon(iconName)
-                                          defaultsKey:key
-                                      requiresRestart:YES];
-    row.switchValueProvider = ^BOOL {
-        return [SPKUtils getBoolPref:key];
-    };
-    row.enabledProvider = ^BOOL {
-        if ([SPKUtils getBoolPref:key])
-            return YES;
-        return !SPKEnablingKeyHidesEveryTab(key);
-    };
-    // Toggling one tab decides whether its siblings become the "last" visible
-    // one, so reload to refresh their greyed state.
-    row.reloadsTableOnSwitchChange = YES;
-    row.switchChangeHandler = ^(BOOL isOn) {
-        [[NSUserDefaults standardUserDefaults] setBool:isOn forKey:SPKEffectivePreferenceKey(key)];
-        [SPKUtils showRestartConfirmation];
-    };
-    return row;
-}
 
 @implementation SPKInterfaceSettingsProvider
 
@@ -80,84 +20,12 @@ static SPKSetting *SPKHideTabSwitch(NSString *title, NSString *iconName, NSStrin
         ],
                         nil),
         SPKTopicSection(@"Tabs", @[
-            [SPKSetting menuCellWithTitle:@"Launch Tab"
-                                     icon:SPKSettingsIcon(@"home")
-                                     menu:SPKLaunchTabMenu()],
-            [SPKSetting menuCellWithTitle:@"Tab Icon Order"
-                                     icon:SPKSettingsIcon(@"sort")
-                                     menu:SPKNavigationIconOrderingMenu()],
-            [SPKSetting menuCellWithTitle:@"Swipe Between Tabs"
-                                     icon:SPKSettingsIcon(@"left_right")
-                                     menu:SPKSwipeBetweenTabsMenu()],
+            [SPKSetting navigationCellWithTitle:@"Tab Editor"
+                                       subtitle:nil
+                                           icon:SPKSettingsIcon(@"edit")
+                                 viewController:[[SPKTabEditorViewController alloc] init]],
         ],
-                        @"Control the order of the tabs:\n"
-                        @"   - Default: Instagram default\n"
-                        @"   - Standard: Home, Reels, Messages, Explore, Profile\n"
-                        @"   - Classic: Messages in the top right corner\n"
-                        @"   - Alternate: Home and Reels tabs swapped\n"
-                        @"To get the old layout back, use Classic and disable swiping between tabs."),
-        SPKTopicSection(@"", @[
-            SPKHideTabSwitch(@"Hide Feed Tab", @"home", @"interface_hide_feed_tab"),
-            SPKHideTabSwitch(@"Hide Explore Tab", @"search", @"interface_hide_explore_tab"),
-            ({
-                // Classic puts Messages back in the top-right corner instead of the
-                // bottom bar (that layout is where the Create "+" becomes a tab), so
-                // the "tab" toggle doesn't apply — hide it whenever Create's does show.
-                SPKSetting *hideMessagesTab = SPKHideTabSwitch(@"Hide Messages Tab", @"messages", @"interface_hide_msgs_tab");
-                hideMessagesTab.hiddenProvider = ^BOOL {
-                    return [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
-                };
-                hideMessagesTab;
-            }),
-            [SPKSetting switchCellWithTitle:@"Replace Reels Tab with Saved"
-                                       icon:SPKSettingsIcon(@"save")
-                                defaultsKey:@"interface_replace_reels_with_saved"
-                            requiresRestart:YES],
-            ({
-                BOOL replacesReels = [SPKUtils getBoolPref:@"interface_replace_reels_with_saved"];
-                SPKHideTabSwitch(replacesReels ? @"Hide Saved Tab" : @"Hide Reels Tab",
-                                 replacesReels ? @"save" : @"reels",
-                                 @"interface_hide_reels_tab");
-            }),
-            ({
-                // The create button is only a dedicated tab in the Classic tab
-                // order; the other layouts fold it into the composer, so the
-                // toggle is meaningless there and is hidden.
-                SPKSetting *hideCreateTab = [SPKSetting switchCellWithTitle:@"Hide Create Tab"
-                                                                       icon:SPKSettingsIcon(@"plus")
-                                                                defaultsKey:@"interface_hide_create_tab"
-                                                            requiresRestart:YES];
-                hideCreateTab.hiddenProvider = ^BOOL {
-                    return ![[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
-                };
-                hideCreateTab;
-            }),
-            SPKHideTabSwitch(@"Hide Profile Tab", @"user_circle", @"interface_hide_profile_tab")
-        ],
-                        nil),
-        SPKTopicSection(@"Messages Only Mode", @[
-            ({
-                SPKSetting *s = [SPKSetting switchCellWithTitle:@"Hide Tab Bar"
-                                                           icon:nil
-                                                    defaultsKey:@"interface_hide_tab_bar_in_messages_only"];
-                s.enabledProvider = ^BOOL {
-                    return SPKIsMessagesOnlyMode();
-                };
-                s;
-            }),
-            ({
-                SPKSetting *s = [SPKSetting switchCellWithTitle:@"Header Shortcut Button"
-                                                           icon:nil
-                                                    defaultsKey:@"interface_show_header_button_in_messages_only"];
-                s.enabledProvider = ^BOOL {
-                    return SPKIsMessagesOnlyMode();
-                };
-                s;
-            })
-        ],
-                        @"These settings are accessible when only the Messages tab is enabled.\n"
-                        @"1. Hides the tab bar to free up screen space. Sparkle settings can be accessed via long pressing the right navigation bar button.\n"
-                        @"2. Shows the feed header shortcut on the left side of the Messages navigation bar."),
+                        @"Arrange the tab bar with a live preview. Changes are staged and applied together, then Instagram restarts."),
         SPKTopicSection(@"Explore & Search", @[
             [SPKSetting switchCellWithTitle:@"Hide Explore Posts Grid"
                                        icon:SPKSettingsIcon(@"explore_grid")

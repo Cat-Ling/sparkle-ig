@@ -21,7 +21,7 @@
         [SPKPagedSheetPage pageWithTitle:@"Find Sparkle anytime"
                                     body:@"You can open Sparkle settings anytime by:"
                                     rows:@[
-                                        @{ @"icon": @"settings_menu", @"text": @"Long pressing the menu on your profile" },
+                                        @{ @"icon": @"hamburger", @"text": @"Long pressing the menu on your profile" },
                                         @{ @"icon": @"home", @"text": @"Long pressing the Home tab" },
                                         @{ @"icon": @"action", @"text": @"Enabling the feed header button" },
                                     ]],

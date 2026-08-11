@@ -242,7 +242,7 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"save_filled" : @{@"candidates" : @[ @"ig_icon_save_prism_filled_24", @"ig_icon_save_pano_filled_24", @"ig_icon_save_filled_24" ]},
             @"search" : @{@"candidates" : @[ @"ig_icon_search_pano_outline_24", @"ig_icon_search_outline_24" ]},
             @"settings" : @{@"candidates" : @[ @"ig_icon_settings_pano_outline_24", @"ig_icon_settings_outline_24" ]},
-            @"settings_menu": @{@"candidates": @[ @"ig_icon_menu_outline_24" ]},
+            @"hamburger": @{@"candidates": @[ @"ig_icon_menu_outline_24" ]},
             @"settings_reels" : @{@"candidates" : @[ @"ig_icon_settings_outline_44" ]},
             @"share" : @{@"candidates" : @[ @"ig_icon_share_pano_outline_24" ]},
             @"share_reels" : @{@"candidates" : @[ @"ig_icon_share_outline_44" ]},

@@ -67,26 +67,6 @@ static double SPKNormalizedStepperValue(SPKSetting *row, double value) {
 
 ///
 
-static UIImage *SPKSettingsReorderCompositeImage(UIImage *iconImage, UIColor *tintColor) {
-    UIImageSymbolConfiguration *grabberConfig = [UIImageSymbolConfiguration configurationWithPointSize:12.0 weight:UIImageSymbolWeightSemibold];
-    UIImage *grabber = [[UIImage systemImageNamed:@"line.3.horizontal" withConfiguration:grabberConfig] imageWithTintColor:[SPKUtils SPKColor_InstagramTertiaryText] renderingMode:UIImageRenderingModeAlwaysOriginal];
-    if (!grabber || !iconImage)
-        return iconImage ?: grabber;
-
-    CGFloat spacing = 8.0;
-    CGSize size = CGSizeMake(grabber.size.width + spacing + iconImage.size.width,
-                             MAX(grabber.size.height, iconImage.size.height));
-    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
-    return [renderer imageWithActions:^(UIGraphicsImageRendererContext *_Nonnull context) {
-        CGFloat grabberY = floor((size.height - grabber.size.height) / 2.0);
-        [grabber drawAtPoint:CGPointMake(0.0, grabberY)];
-
-        UIImage *renderedIcon = [iconImage imageWithTintColor:tintColor ?: [SPKUtils SPKColor_InstagramPrimaryText] renderingMode:UIImageRenderingModeAlwaysOriginal];
-        CGFloat iconY = floor((size.height - renderedIcon.size.height) / 2.0);
-        [renderedIcon drawAtPoint:CGPointMake(grabber.size.width + spacing, iconY)];
-    }];
-}
-
 static NSMutableArray *SPKMutableSectionsCopy(NSArray *sections) {
     NSMutableArray *mutableSections = [NSMutableArray array];
     for (NSDictionary *section in sections) {
@@ -492,13 +472,6 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
         } else {
             cellContentConfig.imageProperties.tintColor = row.iconTintColor ?: [SPKUtils SPKColor_InstagramPrimaryText];
         }
-    }
-
-    if ([row.userInfo[@"showsReorderGrabber"] boolValue] && rowIcon != nil) {
-        UIColor *iconTintColor = row.iconTintColor ?: [SPKUtils SPKColor_InstagramPrimaryText];
-        cellContentConfig.image = SPKSettingsReorderCompositeImage(rowIcon, iconTintColor);
-        cellContentConfig.imageProperties.tintColor = nil;
-        cellContentConfig.imageToTextPadding = 12.0;
     }
 
     // Self-healing avatar (SPKAvatarCache, keyed by PK)

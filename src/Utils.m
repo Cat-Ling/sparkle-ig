@@ -1037,8 +1037,21 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
             // Tab/launch layout is configured once at launch and can't re-apply
             // on a live account switch, so it stays global (maintainer's call).
             @"interface_nav_order",
+            @"interface_custom_tab_order",
             @"interface_swipe_tabs",
             @"interface_launch_tab",
+            // The rest of the tab bar configuration goes with the layout for the
+            // same reason, and it has to: the bar is assembled during early
+            // launch, so on the launches where the session has not resolved yet a
+            // per-account key silently reads the global value instead. That made
+            // hidden tabs come and go between launches and account switches.
+            @"interface_hide_feed_tab",
+            @"interface_hide_reels_tab",
+            @"interface_hide_msgs_tab",
+            @"interface_hide_explore_tab",
+            @"interface_hide_profile_tab",
+            @"interface_hide_create_tab",
+            @"interface_saved_tab_carrier",
             // The Settings quick-access long-press is attached to tab-bar buttons
             // as they're built during early launch — before the account session
             // resolves — so a per-account effective key resolves against the

@@ -213,58 +213,6 @@ UIMenu *SPKLastActiveFormatMenu(void) {
     ]];
 }
 
-UIMenu *SPKNavigationIconOrderingMenu(void) {
-    return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"interface_nav_order", @"default", YES),
-        [UIMenu menuWithTitle:@""
-                        image:nil
-                   identifier:nil
-                      options:UIMenuOptionsDisplayInline
-                     children:@[
-                         SPKMenuCommand(@"Classic", nil, nil, @"interface_nav_order", @"classic", YES),
-                         SPKMenuCommand(@"Standard", nil, nil, @"interface_nav_order", @"standard", YES),
-                         SPKMenuCommand(@"Alternate", nil, nil, @"interface_nav_order", @"alternate", YES)
-                     ]]
-    ]];
-}
-
-UIMenu *SPKLaunchTabMenu(void) {
-    BOOL replacesReels = [SPKUtils getBoolPref:@"interface_replace_reels_with_saved"];
-    return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"interface_launch_tab", @"default", YES),
-        [UIMenu menuWithTitle:@""
-                        image:nil
-                   identifier:nil
-                      options:UIMenuOptionsDisplayInline
-                     children:@[
-                         SPKMenuCommand(@"Feed", @"home", nil, @"interface_launch_tab", @"feed", YES),
-                         SPKMenuCommand(replacesReels ? @"Saved" : @"Reels",
-                                        replacesReels ? @"save" : @"reels",
-                                        nil,
-                                        @"interface_launch_tab",
-                                        @"reels",
-                                        YES),
-                         SPKMenuCommand(@"Messages", @"messages", nil, @"interface_launch_tab", @"inbox", YES),
-                         SPKMenuCommand(@"Explore", @"search", nil, @"interface_launch_tab", @"explore", YES),
-                         SPKMenuCommand(@"Profile", @"user_circle", nil, @"interface_launch_tab", @"profile", YES)
-                     ]]
-    ]];
-}
-
-UIMenu *SPKSwipeBetweenTabsMenu(void) {
-    return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"interface_swipe_tabs", @"default", YES),
-        [UIMenu menuWithTitle:@""
-                        image:nil
-                   identifier:nil
-                      options:UIMenuOptionsDisplayInline
-                     children:@[
-                         SPKMenuCommand(@"Enabled", nil, nil, @"interface_swipe_tabs", @"enabled", YES),
-                         SPKMenuCommand(@"Disabled", nil, nil, @"interface_swipe_tabs", @"disabled", YES)
-                     ]]
-    ]];
-}
-
 UIMenu *SPKLiquidGlassTabBarStateMenu(void) {
     return [UIMenu menuWithChildren:@[
         SPKMenuCommand(@"Default", nil, nil, kSPKPrefInterfaceLiquidGlassTabBarMode, @"default", YES),

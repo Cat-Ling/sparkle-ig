@@ -3,6 +3,7 @@
 
 #import "../../InstagramHeaders.h"
 #import "../../Networking/SPKInstagramAPI.h"
+#import "../../Shared/Navigation/SPKTabConfiguration.h"
 #import "../../Utils.h"
 
 extern "C" void SPKBeginSavedTabRoutingBypass(void);
@@ -93,7 +94,7 @@ static BOOL SPKOpenClipboardURLWithSavedRoutingBypass(NSURL *url) {
 }
 
 static BOOL SPKOpenClipboardMediaLikeGallery(NSURL *webURL) {
-    if (![SPKUtils getBoolPref:@"interface_replace_reels_with_saved"])
+    if ([SPKNormalizedSavedCarrier(SPKPreferenceObjectForKey(SPKPrefSavedTabCarrier)) isEqualToString:SPKTabSavedCarrierNone])
         return NO;
 
     NSString *shortcode = SPKClipboardMediaShortcode(webURL);

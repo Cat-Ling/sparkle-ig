@@ -8,6 +8,7 @@
 #import "../../InstagramHeaders.h"
 #import "../../Shared/Account/SPKAccountManager.h"
 #import "../../Shared/Downloads/SPKDownloadService.h"
+#import "../../Shared/Navigation/SPKTabConfiguration.h"
 #import "../../Shared/Gallery/SPKGalleryViewController.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Shared/UI/SPKChromeGlassMirror.h"
@@ -41,17 +42,10 @@ static const CGFloat kSPKHeaderButtonGlyph = 24.0;   // glyph point size
 static const CGFloat kSPKHeaderButtonSpacing = 8.0;
 static const CGFloat kSPKHeaderButtonLeftInset = 16.0;
 
+// This button lives in the Direct inbox header, so it is only offered when
+// Messages is the one tab the configuration leaves standing.
 static BOOL SPKIsMessagesOnlyMode(void) {
-    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
-    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
-    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
-    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
-    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
-    
-    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
-    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
-    
-    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
+    return [SPKSingleVisibleTabIdentifierFromPreferences() isEqualToString:SPKTabIdentifierDirect];
 }
 
 static const void *kSPKInboxHeaderButtonAssocKey = &kSPKInboxHeaderButtonAssocKey;

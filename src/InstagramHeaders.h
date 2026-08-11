@@ -93,12 +93,28 @@
 @interface IGTabBarControllerSwipeCoordinator : NSObject
 @end
 
+// Mirrors Instagram's IGTabBarViewRepresentable. Every bar implementation (the
+// classic IGTabBar, IGNativeTabBar and the iOS 26 Liquid Glass bar) conforms to
+// it, so the tab bar view can be driven without caring which one is installed.
+@protocol SPKTabBarViewRepresentable <NSObject>
+@property (readonly, nonatomic) NSArray *buttons;
+- (void)addTabButton:(id)button;
+- (void)clearTabButtons;
+- (void)setSelectedTabBarItemIndex:(NSInteger)index;
+@end
+
 @interface IGTabBarController : UIViewController
 @property (readonly, nonatomic) UIView *tabBar;
+- (id)_buttonForTabBarSurface:(id)surface;
+- (IGMainAppSurfaceIntent *)selectedTabBarSurface;
 @property (readonly, nonatomic) UIViewController *selectedViewController;
 - (NSInteger)tabBarStyle;
 - (void)_createAndConfigureReelsButtonIfNeeded;
+- (void)_timelineButtonPressed;
 - (void)_discoverVideoButtonPressed;
+- (void)_directInboxButtonPressed;
+- (void)_exploreButtonPressed;
+- (void)_profileButtonPressed;
 - (UINavigationController *)discoverVideoNavigationController;
 - (UINavigationController *)navigationViewControllerForAppSurfaceIntent:(IGMainAppSurfaceIntent *)intent;
 - (void)setSelectedTabBarSurface:(IGMainAppSurfaceIntent *)surface animated:(BOOL)animated;
