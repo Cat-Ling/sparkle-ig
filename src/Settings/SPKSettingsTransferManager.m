@@ -1164,10 +1164,21 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
         });
     };
     void (^failImport)(NSString *) = ^(NSString *message) {
+        SPKLog(@"Transfer", @"Import failed: %@", message);
         dispatch_async(dispatch_get_main_queue(), ^{
             if (scoped)
                 [url stopAccessingSecurityScopedResource];
-            [pill showErrorWithTitle:@"Import failed" subtitle:message icon:nil];
+            // An import failure is terminal and the reason is often a long system message,
+            // so show it in an alert the user can actually read instead of a pill subtitle.
+            [pill dismiss];
+            [SPKIGAlertPresenter presentAlertFromViewController:topMostController()
+                                                          title:@"Import Failed"
+                                                        message:message
+                                                        actions:@[
+                                                            [SPKIGAlertAction actionWithTitle:@"OK"
+                                                                                        style:SPKIGAlertActionStyleCancel
+                                                                                      handler:nil]
+                                                        ]];
         });
     };
 
