@@ -31,6 +31,15 @@ static inline BOOL SPKUnlockMessagePreviewEnabled(void) {
     return %orig;
 }
 
+// IG 442 replaced the launcher set and service arguments with a single session argument. Older
+// builds do not define this selector, so the hook binds nothing there.
++ (BOOL)isUpsellEligibleWithSession:(id)session {
+    if (SPKUnlockMessagePreviewEnabled()) {
+        return NO;
+    }
+    return %orig;
+}
+
 + (BOOL)isThreadEligibleForPreview:(id)preview {
     if (SPKUnlockMessagePreviewEnabled()) {
         return YES;

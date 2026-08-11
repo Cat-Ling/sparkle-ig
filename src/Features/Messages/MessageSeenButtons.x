@@ -526,16 +526,21 @@ static void SPKDirectClearActiveThreadContextForController(id controller, NSStri
     objc_setAssociatedObject(controller, kSPKDirectThreadIdAssocKey, nil, OBJC_ASSOCIATION_ASSIGN);
 }
 
+// Two inbox view controllers implement this delegate callback and which one backs the inbox is
+// decided server side, so both are hooked and each keeps its own original implementation.
 static id (*SPKDirectOrigInboxContextMenuConfiguration)(id, SEL, id);
+static id (*SPKDirectOrigInboxSwiftContextMenuConfiguration)(id, SEL, id);
 
-static id SPKDirectInboxContextMenuConfiguration(id self, SEL _cmd, id indexPath) {
-    id configuration = SPKDirectOrigInboxContextMenuConfiguration(self, _cmd, indexPath);
+static id SPKDirectInboxContextMenuConfigurationCommon(id self, id indexPath, id configuration) {
     if (![configuration isKindOfClass:[UIContextMenuConfiguration class]])
         return configuration;
 
+    // The Swift view controller stores the adapter under an unprefixed ivar name.
     id adapter = SPKKVCObject(self, @"listAdapter");
     if (!adapter)
         adapter = [SPKUtils getIvarForObj:self name:"_listAdapter"];
+    if (!adapter)
+        adapter = [SPKUtils getIvarForObj:self name:"listAdapter"];
     if (!adapter || ![indexPath respondsToSelector:@selector(section)]) {
         SPKLog(@"Messages", @"[Sparkle MessagesSeen] Inbox menu context skipped: missing adapter/indexPath controller=%@<%p>",
                NSStringFromClass([self class]),
@@ -628,17 +633,42 @@ static id SPKDirectInboxContextMenuConfiguration(id self, SEL _cmd, id indexPath
                                                     actionProvider:wrappedProvider];
 }
 
+static id SPKDirectInboxContextMenuConfiguration(id self, SEL _cmd, id indexPath) {
+    return SPKDirectInboxContextMenuConfigurationCommon(
+        self, indexPath, SPKDirectOrigInboxContextMenuConfiguration(self, _cmd, indexPath));
+}
+
+static id SPKDirectInboxSwiftContextMenuConfiguration(id self, SEL _cmd, id indexPath) {
+    return SPKDirectInboxContextMenuConfigurationCommon(
+        self, indexPath, SPKDirectOrigInboxSwiftContextMenuConfiguration(self, _cmd, indexPath));
+}
+
+static BOOL SPKHookInboxContextMenuOnClass(NSString *className, SEL selector, IMP replacement, IMP *orig) {
+    Class inboxClass = NSClassFromString(className);
+    if (!inboxClass || !class_getInstanceMethod(inboxClass, selector))
+        return NO;
+
+    MSHookMessageEx(inboxClass, selector, replacement, orig);
+    SPKLog(@"Messages", @"[Sparkle MessagesSeen] Installed inbox seen list context menu hook class=%@", className);
+    return YES;
+}
+
 static void SPKInstallDirectInboxSeenContextMenuHook(void) {
     SEL selector = NSSelectorFromString(@"networkingCoordinator_contextMenuConfigurationForThreadCellAtIndexPath:");
-    for (NSString *className in @[ @"IGDirectInboxViewController", @"IGDirectInboxViewControllerImpl" ]) {
-        Class inboxClass = NSClassFromString(className);
-        if (!inboxClass || !class_getInstanceMethod(inboxClass, selector))
-            continue;
-        MSHookMessageEx(inboxClass, selector, (IMP)SPKDirectInboxContextMenuConfiguration, (IMP *)&SPKDirectOrigInboxContextMenuConfiguration);
-        SPKLog(@"Messages", @"[Sparkle MessagesSeen] Installed inbox seen list context menu hook class=%@", className);
-        return;
-    }
-    SPKLog(@"Messages", @"[Sparkle MessagesSeen] Inbox seen list context menu hook not installed: selector not found");
+
+    BOOL installed = SPKHookInboxContextMenuOnClass(@"IGDirectInboxViewController",
+                                                    selector,
+                                                    (IMP)SPKDirectInboxContextMenuConfiguration,
+                                                    (IMP *)&SPKDirectOrigInboxContextMenuConfiguration);
+
+    // Demangled: IGDirectInboxSwiftViewController.IGDirectInboxSwiftViewController
+    installed |= SPKHookInboxContextMenuOnClass(@"IGDirectInboxSwiftViewController.IGDirectInboxSwiftViewController",
+                                                selector,
+                                                (IMP)SPKDirectInboxSwiftContextMenuConfiguration,
+                                                (IMP *)&SPKDirectOrigInboxSwiftContextMenuConfiguration);
+
+    if (!installed)
+        SPKLog(@"Messages", @"[Sparkle MessagesSeen] Inbox seen list context menu hook not installed: selector not found");
 }
 
 static id SPKKVCObject(id target, NSString *key) {
