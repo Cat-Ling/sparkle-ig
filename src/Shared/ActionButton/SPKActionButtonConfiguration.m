@@ -126,6 +126,7 @@ NSArray<NSString *> *SPKActionButtonSupportedActionsForSource(SPKActionButtonSou
             kSPKActionEditSave,
             kSPKActionExpand,
             kSPKActionViewThumbnail,
+            kSPKActionToggleInstantsAutoSaveUserRule,
             kSPKActionOpenTopicSettings
         ];
     case SPKActionButtonSourceProfile:
@@ -265,6 +266,8 @@ NSArray<SPKActionMenuSection *> *SPKActionButtonDefaultSectionsForSource(SPKActi
         moreActions = @[ kSPKActionDeletedMessagesLog, kSPKActionToggleDirectAutoSaveThreadRule, kSPKActionOpenTopicSettings ];
     } else if (source == SPKActionButtonSourceProfile) {
         moreActions = @[ kSPKActionToggleProfileStorySeenUserRule, kSPKActionToggleProfileMessagesSeenUserRule, kSPKActionOpenTopicSettings ];
+    } else if (source == SPKActionButtonSourceInstants) {
+        moreActions = @[ kSPKActionToggleInstantsAutoSaveUserRule, kSPKActionOpenTopicSettings ];
     } else {
         moreActions = @[ kSPKActionOpenTopicSettings ];
     }
@@ -361,8 +364,34 @@ NSArray<SPKActionMenuSection *> *SPKActionButtonDefaultSectionsForSource(SPKActi
         }
     }
 
+    // Adopt the Instants auto-save toggle into configs saved before it existed.
+    // Without this, `normalize` files any newly supported action under "unassigned",
+    // so an existing user would never see the action unless they went looking for it
+    // in the action editor -- and the whole point of the action is discoverability.
+    // Only configs that have never mentioned it are touched: once the editor saves,
+    // a deliberate unassign or disable is recorded and respected from then on.
+    if (stored && source == SPKActionButtonSourceInstants) {
+        [configuration adoptAction:kSPKActionToggleInstantsAutoSaveUserRule intoSectionWithIdentifier:@"more"];
+    }
+
     [configuration normalize];
     return configuration;
+}
+
+- (void)adoptAction:(NSString *)identifier intoSectionWithIdentifier:(NSString *)sectionIdentifier {
+    if (![self.supportedActions containsObject:identifier])
+        return;
+    if ([self.disabledActions containsObject:identifier] || [self.unassignedActions containsObject:identifier])
+        return;
+    for (SPKActionMenuSection *section in self.sections) {
+        if ([section.actions containsObject:identifier])
+            return;
+    }
+
+    SPKActionMenuSection *target = [self sectionWithIdentifier:sectionIdentifier];
+    if (!target)
+        return; // the user removed the section; leave the action unassigned
+    target.actions = [target.actions arrayByAddingObject:identifier];
 }
 
 - (NSString *)configDefaultsKey {

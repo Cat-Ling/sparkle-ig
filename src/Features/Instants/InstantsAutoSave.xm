@@ -157,6 +157,15 @@ static void SPKInstantsAutoSaveScheduleConsider(UIView *viewInHierarchy, BOOL ex
     });
 }
 
+// Re-considers the instant already on screen, for callers outside this file that just
+// changed the rule for its author (the action menu's auto-save toggle). `expectsChange`
+// is NO: no tap happened, so the displayed snap is meant to stay the same one.
+void SPKInstantsAutoSaveConsiderCurrentSnapInView(UIView *viewInHierarchy) {
+    if (!viewInHierarchy)
+        return;
+    SPKInstantsAutoSaveScheduleConsider(viewInHierarchy, NO);
+}
+
 /// The tap controller's own "this press was a hold, not a tap" flag -- a Swift Bool
 /// ivar, so it has to be read at its offset rather than via KVC. Defaults to NO when
 /// absent, which just means a hold costs a few wasted resolves.

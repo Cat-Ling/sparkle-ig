@@ -1618,6 +1618,10 @@ static NSString *SPKInstantsCurrentAuthorUsername(UIView *header) {
     return nil;
 }
 
+NSString *SPKInstantsResolveCurrentAuthorUsername(UIView *viewInHierarchy) {
+    return SPKInstantsCurrentAuthorUsername(viewInHierarchy);
+}
+
 #pragma mark - Store-Backed Full List
 
 /// Snapshot of the store's time-ordered list, captured on first resolve during a

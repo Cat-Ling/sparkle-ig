@@ -52,6 +52,123 @@ NSString *SPKInstantsAutoSaveSettingsSummary(void) {
     return SPKAutoSaveFilterSummary(SPKInstantsAutoSaveFilterConfig());
 }
 
+#pragma mark - Current-user rule (action menu)
+
+static NSMutableSet<NSString *> *SPKInstantsAutoSaveSessionKeys(void);
+
+/// Fills in the pk, full name, and avatar for an entry that was added with only a
+/// username, so a rule added from the viewer ends up looking like one added from
+/// Settings. Fire-and-forget: the entry is already valid without any of this, so a
+/// failed or slow lookup costs nothing but a plainer-looking row.
+static void SPKInstantsAutoSaveEnrichEntryForUsername(NSString *username) {
+    NSString *normalized = SPKAutoSaveFilterNormalizedUsername(username);
+    if (normalized.length == 0)
+        return;
+
+    SPKAutoSaveFilterConfig *config = SPKInstantsAutoSaveFilterConfig();
+    for (NSDictionary *entry in SPKAutoSaveFilterList(config)) {
+        if ([SPKAutoSaveFilterNormalizedUsername(entry[@"username"]) isEqualToString:normalized]) {
+            // Already enriched (added from Settings, or a repeat toggle).
+            if (SPKStringFromValue(entry[@"pk"]).length > 0)
+                return;
+            break;
+        }
+    }
+
+    [SPKInstagramAPI resolveUserForUsername:normalized
+                                 completion:^(NSDictionary *user, NSError *error) {
+                                     if (![user isKindOfClass:[NSDictionary class]] || error)
+                                         return;
+                                     NSString *pk = SPKStringFromValue(user[@"pk"] ?: user[@"id"]);
+                                     NSString *fullName = SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]);
+                                     NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
+                                     if (pk.length == 0 && fullName.length == 0 && profilePicUrl.length == 0)
+                                         return;
+
+                                     dispatch_async(dispatch_get_main_queue(), ^{
+                                         // Re-read rather than capture: the user may have
+                                         // toggled the rule off, or switched Filter Mode to
+                                         // the other list, while the lookup was in flight.
+                                         NSArray<NSDictionary *> *current = SPKAutoSaveFilterList(config);
+                                         NSMutableArray<NSDictionary *> *updated = [NSMutableArray arrayWithCapacity:current.count];
+                                         BOOL changed = NO;
+                                         for (NSDictionary *entry in current) {
+                                             if (!changed && [SPKAutoSaveFilterNormalizedUsername(entry[@"username"]) isEqualToString:normalized]) {
+                                                 NSMutableDictionary *enriched = [entry mutableCopy];
+                                                 if (pk.length > 0)
+                                                     enriched[@"pk"] = pk;
+                                                 if (fullName.length > 0)
+                                                     enriched[@"fullName"] = fullName;
+                                                 if (profilePicUrl.length > 0)
+                                                     enriched[@"profilePicUrl"] = profilePicUrl;
+                                                 [updated addObject:enriched.copy];
+                                                 changed = YES;
+                                                 continue;
+                                             }
+                                             [updated addObject:entry];
+                                         }
+                                         if (changed)
+                                             SPKAutoSaveFilterSetList(config, updated);
+                                     });
+                                 }];
+}
+
+// The menu action reads as "does auto-save currently apply to this user?", which in
+// All Users mode means removing them from the exclusion list and in Selected Users
+// mode means adding them to the inclusion list. Both are the same toggle underneath.
+NSString *SPKInstantsAutoSaveActionTitleForUsername(NSString *username) {
+    NSString *normalized = SPKAutoSaveFilterNormalizedUsername(username);
+    if (normalized.length == 0)
+        return nil;
+    return SPKInstantsAutoSaveAppliesToUsername(normalized) ? @"Stop Auto-Saving Instants" : @"Auto-Save Instants";
+}
+
+NSString *SPKInstantsAutoSaveConfirmationTitleForUsername(NSString *username) {
+    return SPKInstantsAutoSaveActionTitleForUsername(username);
+}
+
+NSString *SPKInstantsAutoSaveConfirmationMessageForUsername(NSString *username) {
+    NSString *normalized = SPKAutoSaveFilterNormalizedUsername(username);
+    if (normalized.length == 0)
+        return nil;
+    return SPKInstantsAutoSaveAppliesToUsername(normalized)
+               ? [NSString stringWithFormat:@"Do you want to stop auto-saving instants from @%@?", normalized]
+               : [NSString stringWithFormat:@"Do you want to auto-save every instant from @%@?", normalized];
+}
+
+BOOL SPKInstantsToggleAutoSaveForUsername(NSString *username,
+                                          NSString **notificationTitle,
+                                          NSString **notificationSubtitle) {
+    NSString *normalized = SPKAutoSaveFilterNormalizedUsername(username);
+    if (normalized.length == 0)
+        return NO;
+
+    BOOL appliedBefore = SPKInstantsAutoSaveAppliesToUsername(normalized);
+    // An instant resolved from the view carries no author pk, so only the username is
+    // known at this point. The entry is stored immediately on that alone -- the list
+    // keys on username, so it is already complete as a rule -- and the pk, full name,
+    // and avatar are filled in afterwards without blocking the toggle.
+    BOOL listed = SPKAutoSaveFilterToggleEntry(SPKInstantsAutoSaveFilterConfig(), @{@"username" : normalized});
+    if (listed)
+        SPKInstantsAutoSaveEnrichEntryForUsername(normalized);
+
+    // Users who just started auto-saving shouldn't have to tap forward to get the
+    // instant they're looking at. The snap itself is re-considered by the caller,
+    // which owns the view; all this can do is drop the "already seen" memos so the
+    // next pass isn't short-circuited.
+    if (!appliedBefore)
+        [SPKInstantsAutoSaveSessionKeys() removeAllObjects];
+
+    if (notificationTitle) {
+        *notificationTitle = appliedBefore
+                                 ? [NSString stringWithFormat:@"Auto-save off for @%@", normalized]
+                                 : [NSString stringWithFormat:@"Auto-save on for @%@", normalized];
+    }
+    if (notificationSubtitle)
+        *notificationSubtitle = SPKInstantsAutoSaveListTitle();
+    return YES;
+}
+
 #pragma mark - Auto-saver
 
 // Snap keys already handled this viewer session -- both saved snaps and snaps rejected
@@ -149,8 +266,10 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
                               @"Instants you already have are skipped.";
         self.emptyTitle = @"No users yet";
         self.emptySubtitle = allUsers
-                                 ? @"Add users whose instants should never be auto-saved."
-                                 : @"Add users whose instants should be saved automatically as you open them.";
+                                 ? @"Add users whose instants should never be auto-saved, here or from the instant "
+                                   @"action menu."
+                                 : @"Add users whose instants should be saved automatically as you open them, here or "
+                                   @"from the instant action menu.";
     }
     return self;
 }

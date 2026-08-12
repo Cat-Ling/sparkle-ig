@@ -256,6 +256,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 
 ### Action Button
 - **Instants Action Button**, **Default Tap Action**, **Configure Actions**: Actions resolve the currently visible Instant, preserve each Instant's author in bulk jobs, support photo/video media, and can operate on multiple pending Instants.
+- **Toggle Instant Auto-Save**: Adds or removes the author of the Instant on screen from the Instants auto-save list, mirroring the equivalent story and chat actions. Shown only while *Auto-Save Instants* is on and the author can be read. See *Downloads › Auto-Save › Instants*.
 
 ### Privacy
 - **Allow Screenshots**: Bypasses screenshot/screen-recording detection in the Instants viewer.
@@ -364,7 +365,8 @@ Every surface has the same **Filter Mode**: `All` saves everything except what y
   - **Excluded / Selected Users**: Manageable from the list itself (add by username) or from the story action menu (*Toggle Story Auto-Save*), which adds or removes the user whose story you're watching.
 - **Messages**: Auto-saves view-once and replayable DM photos and videos as you open them — the media you otherwise can't get back. Keyed by **chat**, so group threads work without resolving a per-message sender.
   - **Excluded / Selected Chats**: Manageable from the list itself (add by username, which resolves your 1:1 thread with them) or from the visual message viewer's action menu (*Toggle Chat Auto-Save*). Groups can only be added from the viewer.
-- **Instants**: Auto-saves instants as you open them. Keyed by **username**, since a resolved snap carries no author id — which also means the list is curated by typing a username, with no lookup needed.
+- **Instants**: Auto-saves instants as you open them. Keyed by **username**, since a resolved snap carries no author id — which also means the list can be curated by typing a username, with no lookup needed.
+  - **Excluded / Selected Users**: Manageable from the list itself (add by username) or from the Instants action menu (*Toggle Instant Auto-Save*), which adds or removes the author of the instant on screen. Turning it on re-checks the instant you're looking at, so the current one is saved without tapping forward.
 - **Save To**: `Sparkle Gallery` keeps auto-saved media inside the tweak; `Photos App` saves it to your system photo library (iOS asks for photo library permission the first time). The skip-if-already-saved check follows the destination you pick, so switching destinations re-saves items the new one doesn't have yet — and deleting an item from its destination lets it be saved again next time you view it.
 - **Photo Quality** / **Video Quality**: Quality tier for auto-saved media. `Default` takes Instagram's ready-to-play file — fastest, no re-encode per item; `High` merges DASH video + audio for best quality at the cost of an FFmpeg pass per item (**requires FFmpegKit**). Auto-save never prompts, so there is no `Always Ask`.
 - **Keep in Download History**: Auto-saves are pruned from the download history once saved. Enable to keep them listed.

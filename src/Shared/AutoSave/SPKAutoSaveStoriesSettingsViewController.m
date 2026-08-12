@@ -85,11 +85,13 @@
             return allMode ? @"1. Save instants as you open them, including each one you tap through. Instants you "
                              @"already have are skipped.\n"
                              @"2. All Users saves every instant except from the users you exclude.\n"
-                             @"3. Users whose instants are never auto-saved. Add them here by username."
+                             @"3. Users whose instants are never auto-saved. Add them here by username, or from the "
+                             @"instant action menu."
                            : @"1. Save instants as you open them, including each one you tap through. Instants you "
                              @"already have are skipped.\n"
                              @"2. Selected Users saves only the users you pick.\n"
-                             @"3. Users whose instants are auto-saved. Add them here by username.";
+                             @"3. Users whose instants are auto-saved. Add them here by username, or from the instant "
+                             @"action menu.";
         };
     });
     return descriptor;

@@ -18,6 +18,12 @@ void SPKInstallInstantsResolverHooks(void);
 /// yet (callers should retry rather than treat it as "nothing to save").
 SPKInstantsResolvedSnap *SPKInstantsResolveActiveSnapInView(UIView *viewInHierarchy);
 
+/// Username of the instant currently on screen, read straight off the author label in
+/// the view hierarchy. Deliberately separate from the full snap resolution above: this
+/// touches no media at all, so it is cheap enough for menu construction, where
+/// resolving the snap itself could fall back to re-encoding the screen.
+NSString *SPKInstantsResolveCurrentAuthorUsername(UIView *viewInHierarchy);
+
 @interface SPKInstantsResolvedSnap : NSObject
 @property (nonatomic, strong) NSURL *sparkleMediaURL;
 @property (nonatomic, strong) NSURL *sparklePhotoURL;

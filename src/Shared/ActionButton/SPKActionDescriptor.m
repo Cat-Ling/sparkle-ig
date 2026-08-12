@@ -99,6 +99,9 @@
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleDirectAutoSaveThreadRule
                                                     title:@"Toggle Chat Auto-Save"
                                                  iconName:@"download"],
+            [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleInstantsAutoSaveUserRule
+                                                    title:@"Toggle Instant Auto-Save"
+                                                 iconName:@"download"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleProfileStorySeenUserRule
                                                     title:@"Toggle Story Seen"
                                                  iconName:@"eye"],

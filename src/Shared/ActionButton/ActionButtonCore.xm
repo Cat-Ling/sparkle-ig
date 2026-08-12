@@ -17,6 +17,8 @@
 #import "../MediaDownload/SPKMediaQualityManager.h"
 #import "../MediaPreview/SPKFullScreenMediaPlayer.h"
 #import "../MediaPreview/SPKMediaItem.h"
+#import "../../Features/Instants/InstantsResolver.h"
+#import "../Instants/SPKInstantsAutoSave.h"
 #import "../MediaTrim/SPKTrimEntry.h"
 #import "../Messages/SPKDirectAutoSave.h"
 #import "../Messages/SPKDirectSeenContext.h"
@@ -61,6 +63,7 @@ NSString *const kSPKActionRepost = @"repost";
 NSString *const kSPKActionToggleStorySeenUserRule = @"toggle_story_seen_user_rule";
 NSString *const kSPKActionToggleStoryAutoSaveUserRule = @"toggle_story_auto_save_user_rule";
 NSString *const kSPKActionToggleDirectAutoSaveThreadRule = @"toggle_direct_auto_save_thread_rule";
+NSString *const kSPKActionToggleInstantsAutoSaveUserRule = @"toggle_instants_auto_save_user_rule";
 NSString *const kSPKActionToggleProfileStorySeenUserRule = @"toggle_profile_story_seen_user_rule";
 NSString *const kSPKActionToggleProfileMessagesSeenUserRule = @"toggle_profile_messages_seen_user_rule";
 NSString *const kSPKActionStoryMentionsSheet = @"story_mentions_sheet";
@@ -997,6 +1000,37 @@ static SPKStoryContext *SPKStoryContextForActionButtonContext(SPKActionButtonCon
     return SPKStoryContextFromOverlay(SPKStoryActiveOverlay());
 }
 
+// Author of the instant on screen. Read from the author label only -- resolving the
+// snap itself is far too expensive for menu construction, and can fall back to
+// re-encoding the screen.
+//
+// Even the label lookup is a breadth-first walk of the whole window, and building one
+// menu asks for the author four times (availability, title, icon, signature). The
+// answer is memoized for long enough to collapse those into a single walk and no
+// longer: the author only changes when the user taps to the next instant, which cannot
+// happen and be followed by a menu build inside the window below.
+static NSString *SPKInstantsAutoSaveUsernameForContext(SPKActionButtonContext *context) {
+    if (!context || context.source != SPKActionButtonSourceInstants)
+        return nil;
+    UIView *view = context.view ?: context.controller.view;
+    if (!view)
+        return nil;
+
+    static const CFTimeInterval kMemoWindow = 0.2;
+    static NSString *memoUsername = nil;
+    static __weak UIView *memoView = nil;
+    static CFTimeInterval memoTime = 0;
+
+    CFTimeInterval now = CACurrentMediaTime();
+    if (memoView == view && (now - memoTime) < kMemoWindow)
+        return memoUsername;
+
+    memoUsername = SPKInstantsResolveCurrentAuthorUsername(view);
+    memoView = view;
+    memoTime = now;
+    return memoUsername;
+}
+
 static NSString *SPKActionButtonDisplayTitleForContext(NSString *identifier,
                                                        SPKActionButtonContext *context,
                                                        SPKResolvedMediaEntry *currentEntry) {
@@ -1010,6 +1044,10 @@ static NSString *SPKActionButtonDisplayTitleForContext(NSString *identifier,
     }
     if ([identifier isEqualToString:kSPKActionToggleDirectAutoSaveThreadRule]) {
         NSString *title = SPKDirectAutoSaveCurrentThreadActionTitle(SPKDirectThreadContextFromSource(context.controller));
+        return title ?: SPKActionDescriptorDisplayTitle(identifier, context.settingsTitle);
+    }
+    if ([identifier isEqualToString:kSPKActionToggleInstantsAutoSaveUserRule]) {
+        NSString *title = SPKInstantsAutoSaveActionTitleForUsername(SPKInstantsAutoSaveUsernameForContext(context));
         return title ?: SPKActionDescriptorDisplayTitle(identifier, context.settingsTitle);
     }
     if ([identifier isEqualToString:kSPKActionToggleProfileStorySeenUserRule]) {
@@ -1096,6 +1134,11 @@ static UIImage *SPKIconForActionIdentifier(NSString *identifier, SPKActionButton
     if ([identifier isEqualToString:kSPKActionToggleDirectAutoSaveThreadRule]) {
         SPKDirectThreadContext *threadCtx = SPKDirectThreadContextFromSource(context.controller);
         BOOL applies = threadCtx ? SPKDirectAutoSaveAppliesToCurrentThread(threadCtx) : NO;
+        return [SPKAssetUtils instagramIconNamed:applies ? @"download_off" : @"download" pointSize:size];
+    }
+    if ([identifier isEqualToString:kSPKActionToggleInstantsAutoSaveUserRule]) {
+        NSString *username = SPKInstantsAutoSaveUsernameForContext(context);
+        BOOL applies = username.length > 0 ? SPKInstantsAutoSaveAppliesToUsername(username) : NO;
         return [SPKAssetUtils instagramIconNamed:applies ? @"download_off" : @"download" pointSize:size];
     }
     if ([identifier isEqualToString:kSPKActionToggleProfileStorySeenUserRule]) {
@@ -2291,6 +2334,11 @@ static BOOL SPKIsActionVisible(SPKActionButtonContext *context,
                [SPKUtils getBoolPref:@"msgs_auto_save"] &&
                SPKDirectAutoSaveCurrentThreadActionTitle(SPKDirectThreadContextFromSource(context.controller)).length > 0;
     }
+    if ([identifier isEqualToString:kSPKActionToggleInstantsAutoSaveUserRule]) {
+        return context.source == SPKActionButtonSourceInstants &&
+               [SPKUtils getBoolPref:@"instants_auto_save"] &&
+               SPKInstantsAutoSaveActionTitleForUsername(SPKInstantsAutoSaveUsernameForContext(context)).length > 0;
+    }
     if ([identifier isEqualToString:kSPKActionToggleProfileStorySeenUserRule]) {
         return context.source == SPKActionButtonSourceProfile &&
                SPKResolveMediaForContext(context) != nil;
@@ -2466,6 +2514,9 @@ static NSString *SPKActionButtonMenuSignature(SPKActionButtonContext *context,
     NSString *dynamicDirectAutoSaveTitle = [visibleActions containsObject:kSPKActionToggleDirectAutoSaveThreadRule]
                                                ? SPKDirectAutoSaveCurrentThreadActionTitle(SPKDirectThreadContextFromSource(context.controller))
                                                : @"";
+    NSString *dynamicInstantsAutoSaveTitle = [visibleActions containsObject:kSPKActionToggleInstantsAutoSaveUserRule]
+                                                 ? SPKInstantsAutoSaveActionTitleForUsername(SPKInstantsAutoSaveUsernameForContext(context))
+                                                 : @"";
     NSString *dynamicProfileStoryRuleTitle = [visibleActions containsObject:kSPKActionToggleProfileStorySeenUserRule]
                                                  ? SPKActionButtonDisplayTitleForContext(kSPKActionToggleProfileStorySeenUserRule, context, nil)
                                                  : @"";
@@ -2477,7 +2528,7 @@ static NSString *SPKActionButtonMenuSignature(SPKActionButtonContext *context,
                                          : @"";
     id media = SPKResolveMediaForContext(context);
     NSInteger currentIndex = SPKResolveCurrentIndexForContext(context);
-    return [NSString stringWithFormat:@"%@|%@|%@|bulk:%lu|%@|%@|%@|%@|%@|%@|%@|%p|idx:%ld",
+    return [NSString stringWithFormat:@"%@|%@|%@|bulk:%lu|%@|%@|%@|%@|%@|%@|%@|%@|%p|idx:%ld",
                                       SPKActionButtonTopicKeyForSource(context.source),
                                       defaultIdentifier ?: @"",
                                       [visibleActions componentsJoinedByString:@","],
@@ -2485,6 +2536,7 @@ static NSString *SPKActionButtonMenuSignature(SPKActionButtonContext *context,
                                       dynamicStoryRuleTitle ?: @"",
                                       dynamicStoryAutoSaveTitle ?: @"",
                                       dynamicDirectAutoSaveTitle ?: @"",
+                                      dynamicInstantsAutoSaveTitle ?: @"",
                                       dynamicProfileStoryRuleTitle ?: @"",
                                       dynamicProfileMessagesRuleTitle ?: @"",
                                       profileInfoSignature ?: @"",
@@ -3040,6 +3092,47 @@ static BOOL SPKExecuteToggleDirectAutoSaveThreadRuleAction(SPKActionButtonContex
     return YES;
 }
 
+static BOOL SPKExecuteToggleInstantsAutoSaveUserRuleAction(SPKActionButtonContext *context) {
+    NSString *username = SPKInstantsAutoSaveUsernameForContext(context);
+    NSString *title = SPKInstantsAutoSaveConfirmationTitleForUsername(username);
+    NSString *message = SPKInstantsAutoSaveConfirmationMessageForUsername(username);
+    if (title.length == 0 || message.length == 0) {
+        SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, @"Instant author not found", nil, @"error_filled", SPKNotificationToneError);
+        return YES;
+    }
+
+    __weak UIView *weakView = context.view;
+    [SPKUtils
+        showConfirmation:^{
+            NSString *notificationTitle = nil;
+            NSString *notificationSubtitle = nil;
+            if (!SPKInstantsToggleAutoSaveForUsername(username, &notificationTitle, &notificationSubtitle)) {
+                SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, @"Instant author not found", nil, @"error_filled", SPKNotificationToneError);
+                return;
+            }
+            SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
+            UIView *view = weakView;
+            if (!view)
+                return;
+
+            // Catch the instant that's still on screen rather than making the user
+            // tap forward for the rule to take effect.
+            SPKInstantsAutoSaveConsiderCurrentSnapInView(view);
+
+            // The Instants button builds its menu once per button lifecycle and is
+            // never reconfigured from layout (unlike the story overlay, which a
+            // setNeedsLayout would be enough for), so the action's title would keep
+            // reading the pre-toggle state until the viewer is closed. Rebuild it
+            // here, which is safe: the menu is already dismissed by the time an
+            // action executes, so this cannot fight the iOS 26 menu morph.
+            if ([view isKindOfClass:[UIButton class]])
+                SPKConfigureActionButton((UIButton *)view, context);
+        }
+                   title:title
+                 message:message];
+    return YES;
+}
+
 static BOOL SPKExecuteToggleStorySeenUserRuleAction(SPKActionButtonContext *context) {
     SPKStoryContext *storyContext = SPKStoryContextForActionButtonContext(context);
     NSString *title = SPKStoryCurrentUserRuleConfirmationTitle(storyContext);
@@ -3208,6 +3301,9 @@ BOOL SPKExecuteActionIdentifier(NSString *identifier, SPKActionButtonContext *co
     }
     if ([identifier isEqualToString:kSPKActionToggleDirectAutoSaveThreadRule]) {
         return SPKExecuteToggleDirectAutoSaveThreadRuleAction(context);
+    }
+    if ([identifier isEqualToString:kSPKActionToggleInstantsAutoSaveUserRule]) {
+        return SPKExecuteToggleInstantsAutoSaveUserRuleAction(context);
     }
     if ([identifier isEqualToString:kSPKActionToggleStoryAutoSaveUserRule]) {
         return SPKExecuteToggleStoryAutoSaveUserRuleAction(context);
