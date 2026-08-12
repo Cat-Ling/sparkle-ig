@@ -161,6 +161,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 ### Other
 - **Search Viewer List**: Adds a search button to your own story's viewer list. Tapping it fetches the complete viewer list and opens a sheet where you can search by username or name and filter by follow relationship (All / Following / Not Following). A fully Sparkle-native alternative to the Instagram Plus viewer search.
 - **Hide Story Midcards**: Removes the "Join a trending" / "Add Yours" promo cards from the stories tray. 
+- **Hide Recent Highlights**: Removes resurfaced highlights, the stories Instagram serves once you have watched every unseen story. They are dropped in two places, because the story tray and the story viewer are fed separately: from the tray, so they no longer appear as rings, and from the viewer's own reel list, so tapping forward past the last story no longer walks into them. Opening a highlight yourself from a profile is unaffected.
 - **Show Story Mentions**: Adds a mentions button listing mentioned users. Tapping a user opens their real profile over the story viewer instead of closing it, so swiping back or tapping the back button returns you straight to the story.
 - **Show Poll Vote Counts**: Shows vote counts next to poll options.
 

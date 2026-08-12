@@ -148,6 +148,9 @@ static NSArray *SPKStoriesSettingsSections(void) {
             [SPKSetting switchCellWithTitle:@"Hide Join Trending"
                                        icon:SPKSettingsIcon(@"arrow_up_right")
                                 defaultsKey:@"stories_hide_join_trending"],
+            [SPKSetting switchCellWithTitle:@"Hide Recent Highlights"
+                                       icon:SPKSettingsIcon(@"highlights")
+                                defaultsKey:@"stories_hide_recent_highlights"],
             [SPKSetting switchCellWithTitle:@"Show Story Mentions"
                                        icon:SPKSettingsIcon(@"mention")
                                 defaultsKey:@"stories_mentions_btn"],
@@ -157,8 +160,9 @@ static NSArray *SPKStoriesSettingsSections(void) {
         ],
                         @"1. Add a search button to your story's viewer list to search and filter anyone who viewed it.\n"
                         @"2. Hide the the \"Join a trending\" / \"Add Yours\" promo cards from stories.\n"
-                        @"3. Enabling this will add a button above the bottom story bar, where you can see all mentioned users.\n"
-                        @"4. Display the vote counts for each option the poll has.")
+                        @"3. Remove stories that people recently added to their highlights, both from the story tray and from playing when you tap past the last story. Opening a highlight yourself still works.\n"
+                        @"4. Enabling this will add a button above the bottom story bar, where you can see all mentioned users.\n"
+                        @"5. Display the vote counts for each option the poll has.")
     ];
 }
 

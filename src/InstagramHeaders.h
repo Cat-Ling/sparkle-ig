@@ -608,6 +608,13 @@
 @interface IGStoryTrayViewModel : NSObject
 @property (nonatomic, readonly) NSString *pk;
 @property (nonatomic, readonly) BOOL isUnseenNux;
+- (id)diffIdentifier;
+@end
+
+// One reel inside the story viewer. Resurfaced highlights carry a reelPK of the
+// form "highlightRewind:<id>".
+@interface IGStoryViewerViewModel : NSObject
+@property (nonatomic, readonly, copy) NSString *reelPK;
 @end
 
 @interface _TtC32IGSundialOrganicCTAContainerView32IGSundialOrganicCTAContainerView : UIView
