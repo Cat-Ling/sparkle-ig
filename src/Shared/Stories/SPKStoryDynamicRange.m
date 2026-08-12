@@ -519,6 +519,11 @@ void SPKStoryApplyDynamicRangeToButton(UIButton *button) {
 
     if (!tint) tint = UIColor.whiteColor;
 
+    // This runs from layout callbacks, several times per frame per button, so
+    // only the transitions are worth logging.
+    UIColor *previousTint = button.tintColor;
+    BOOL tintChanged = ![previousTint isEqual:tint];
+
     button.tintAdjustmentMode = UIViewTintAdjustmentModeNormal;
     button.adjustsImageWhenHighlighted = NO;
     button.tintColor = tint;
@@ -532,5 +537,6 @@ void SPKStoryApplyDynamicRangeToButton(UIButton *button) {
     UIImageView *imageView = button.imageView;
     spkApplyEDRTintToImageView(imageView, tint);
 
-    SPKLog(@"Stories", @"[EDR] Applied EDR tint to button (tag=%ld)", (long)button.tag);
+    if (tintChanged)
+        SPKLog(@"Stories", @"[EDR] Applied EDR tint to button (tag=%ld)", (long)button.tag);
 }
