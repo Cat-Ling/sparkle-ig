@@ -252,6 +252,55 @@ static id SPKViewerItemsWithoutHighlights(id items) {
 
 %end // group SPKHideRecentHighlightsViewerHooks
 
+#pragma mark - Viewer paging store
+
+// There are two ways to leave the current person's story: tapping forward past
+// the last item, and swiping horizontally to the next person. They do not read
+// the same list.
+//
+// Tap-forward walks the view controller's own modelItems, which is what the
+// accessor hooks below cover. Horizontal paging is driven by the list adapter,
+// whose sections come from IGStoryAndLiveViewerDataSource -objectsForListAdapter:,
+// and that data source keeps its reels in a separate IGStoryViewerDataStore.
+// Filtering only the view controller therefore leaves the swipe path intact, and
+// worse, leaves the two lists disagreeing: the adapter still builds a page for a
+// resurfaced highlight while the reel behind it can no longer be resolved, so the
+// swipe lands on a blank story from a blank author that spins forever.
+//
+// Filtering the store makes both sides agree. The store is a plain Objective-C
+// class with the same name and shape on 442 and 410 (the maxCount variant is
+// newer, so it is bound only where it exists), and every read goes through
+// -modelItems, so the adapter, the section controllers and the dedupe set all see
+// the same trimmed list.
+
+%group SPKHideRecentHighlightsViewerStoreHooks
+
+%hook IGStoryViewerDataStore
+
+- (void)replaceModelItems:(id)items {
+    %orig(SPKViewerItemsWithoutHighlights(items));
+}
+
+- (id)modelItems {
+    return SPKViewerItemsWithoutHighlightsLogging(%orig, NO);
+}
+
+%end
+
+%end // group SPKHideRecentHighlightsViewerStoreHooks
+
+%group SPKHideRecentHighlightsViewerStoreMaxCountHooks
+
+%hook IGStoryViewerDataStore
+
+- (void)replaceModelItems:(id)items maxCount:(long long)count {
+    %orig(SPKViewerItemsWithoutHighlights(items), count);
+}
+
+%end
+
+%end // group SPKHideRecentHighlightsViewerStoreMaxCountHooks
+
 #pragma mark - Model item accessor discovery
 
 // The selectors that read and write the viewer's reel list are not stable across
@@ -405,6 +454,18 @@ void SPKInstallHideRecentHighlightsHooksIfEnabled(void) {
 
         if (!installedAny)
             SPKLog(@"Stories", @"[Sparkle] No story tray data source found, skipping tray hooks");
+
+        // The paging store is what stops the swipe to the next person.
+        Class storeClass = objc_getClass("IGStoryViewerDataStore");
+        if (storeClass != nil) {
+            %init(SPKHideRecentHighlightsViewerStoreHooks);
+
+            if (class_getInstanceMethod(storeClass,
+                                        @selector(replaceModelItems:maxCount:)) != NULL)
+                %init(SPKHideRecentHighlightsViewerStoreMaxCountHooks);
+        } else {
+            SPKLog(@"Stories", @"[Sparkle] No story viewer data store found, skipping swipe hooks");
+        }
 
         // The viewer hooks are the ones that stop the tap-forward.
         Class viewerClass = objc_getClass("IGStoryViewerViewController");

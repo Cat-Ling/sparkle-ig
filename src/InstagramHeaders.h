@@ -640,6 +640,15 @@
 @property (nonatomic, readonly, copy) NSString *reelPK;
 @end
 
+// Backing store for the reel list the story viewer pages through. The view
+// controller keeps its own copy for tap-forward navigation, while horizontal
+// swipes are driven by the list adapter reading this store.
+@interface IGStoryViewerDataStore : NSObject
+- (id)modelItems;
+- (void)replaceModelItems:(id)items;
+- (void)replaceModelItems:(id)items maxCount:(long long)count;
+@end
+
 @interface _TtC32IGSundialOrganicCTAContainerView32IGSundialOrganicCTAContainerView : UIView
 @end
 
