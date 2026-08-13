@@ -30,6 +30,9 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         @"interface_hide_tab_bar_in_messages_only" : @(NO),
         @"interface_show_header_button_in_messages_only" : @(YES),
         @"interface_open_clipboard_link" : @(YES),
+        // Family name of the imported app-wide font; empty means the default face.
+        // Bootstrap rather than feature defaults: the font hooks install in %ctor.
+        @"interface_custom_font" : @"",
         @"tools_settings_shortcut" : @(YES),
         @"tools_shortcut_haptics" : @(YES),
         @"gallery_quick_access_tab" : @"direct-inbox-tab",

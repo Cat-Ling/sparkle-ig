@@ -62,6 +62,9 @@
                   [SPKSetting valueCellWithTitle:@"Profile Pictures"
                                         subtitle:[self formattedKey:@"avatars"]
                                             icon:SPKSettingsIcon(@"user_circle")],
+                  [SPKSetting valueCellWithTitle:@"Fonts"
+                                        subtitle:[self formattedKey:@"fonts"]
+                                            icon:SPKSettingsIcon(@"text")],
               ],
                                         nil)];
 

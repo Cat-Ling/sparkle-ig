@@ -6,7 +6,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface SPKSettingsViewController : UIViewController <UITableViewDataSource, UITableViewDelegate>
+@interface SPKSettingsViewController : UIViewController <UITableViewDataSource, UITableViewDelegate, UISearchResultsUpdating>
 
 - (instancetype)initWithTitle:(NSString *)title sections:(NSArray *)sections reduceMargin:(BOOL)reduceMargin;
 - (instancetype)init;
@@ -25,6 +25,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// on a menu's value (titles, footers) can override, call super, and rebuild.
 - (void)menuChanged:(UICommand *)command;
 - (SPKSetting *)settingForSender:(id)sender;
+/// Builds the leading/trailing bar buttons. Runs on load and on every appearance,
+/// and resets both sets, so a page adding its own button must override this and
+/// re-add after calling super rather than installing it once.
+- (void)setupNavigationItems;
 - (void)replaceSections:(NSArray *)sections;
 
 /// Re-evaluate every row's `hiddenProvider` and reload the table. Call after

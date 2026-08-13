@@ -1,5 +1,7 @@
 #import "SPKInterfaceSettingsProvider.h"
+#import "../../Shared/Fonts/SPKFontManager.h"
 #import "../../Shared/UI/SPKChrome.h"
+#import "../SPKFontPickerViewController.h"
 #import "../../Utils.h"
 #import "../SPKPreferenceAvailability.h"
 #import "../SPKPreferences.h"
@@ -26,6 +28,19 @@
                                  viewController:[[SPKTabEditorViewController alloc] init]],
         ],
                         @"Arrange the tab bar with a live preview. Changes are staged and applied together, then Instagram restarts."),
+        SPKTopicSection(@"Appearance", @[
+            ({
+                SPKSetting *appFont = [SPKSetting navigationCellWithTitle:@"App Font"
+                                                                 subtitle:nil
+                                                                     icon:SPKSettingsIcon(@"text")
+                                                           viewController:[[SPKFontPickerViewController alloc] init]];
+                appFont.accessoryTextProvider = ^NSString * {
+                    return [SPKFontManager selectedFamilyName] ?: @"Default";
+                };
+                appFont;
+            }),
+        ],
+                        @"Replace the default font app-wide. You can import .otf, .ttf, or .ttc files."),
         SPKTopicSection(@"Explore & Search", @[
             [SPKSetting switchCellWithTitle:@"Hide Explore Posts Grid"
                                        icon:SPKSettingsIcon(@"explore_grid")

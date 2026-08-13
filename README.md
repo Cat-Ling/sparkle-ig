@@ -61,6 +61,8 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
   - Disable seen receipts, typing status, screenshot detection, and view-once limits.
   - Block doom-scrolling.
   - Build a custom tab bar with a live preview: reorder or hide destinations, choose launch and swipe behavior, trade a hidden tab for one-tap access to Saved collections in the custom layout, and drop the bar entirely when a single tab is left.
+- **Custom app font**:
+  - Import your own `.otf`/`.ttf` font and use it across Instagram and Sparkle, matched per weight and previewed face by face before you pick it.
 - **Confirmations**:
   - Optional "are you sure?" guards for accidental likes, follows, reposts, calls, comments, and more.
 - **Liquid Glass (iOS 26+)**:

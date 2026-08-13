@@ -1030,6 +1030,10 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
             @"app_first_run",
             @"app_safe_startup",
             @"app_startup_profiling",
+            // The app font is resolved by the very first view Instagram builds, from
+            // hooks installed in %ctor -- long before any account session exists. A
+            // per-account key would read the global default on every cold launch.
+            @"interface_custom_font",
             @"interface_liquid_glass",
             @"interface_liquid_glass_tabbar_mode",
             @"interface_progressive_blur",

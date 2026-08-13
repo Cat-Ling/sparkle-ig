@@ -164,6 +164,29 @@
 - (UIView *)_rootView;
 @end
 
+// Instagram's design-system font entry points. Every label in the app resolves its
+// typeface through one of these rather than through UIKit directly, which makes them
+// the seam for replacing the app-wide font. Present on 410 through 442; the branded,
+// script, and monospaced-digit members of the category are deliberately omitted here
+// because replacing those would corrupt the logo, the story text tool, and any
+// column-aligned numerals.
+@interface UIFont (Instagram)
++ (UIFont *)ig_systemFontOfSize:(CGFloat)size weight:(CGFloat)weight;
++ (UIFont *)ig_systemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_lightSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_mediumSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_semiboldSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_boldSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_heavySystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_italicSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_systemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_systemDynamicFontOfSize:(CGFloat)size weight:(CGFloat)weight;
++ (UIFont *)ig_lightSystemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_semiboldSystemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_boldSystemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_heavySystemDynamicFontOfSize:(CGFloat)size;
+@end
+
 @interface IGImageSpecifier : NSObject
 @property (readonly, nonatomic) NSURL *url;
 @end

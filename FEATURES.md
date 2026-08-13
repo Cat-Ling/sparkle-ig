@@ -75,6 +75,15 @@ Per-feature control of the Sparkle notification pill and its haptics. See **Noti
   - Leaving the editor keeps your changes staged instead of prompting: come back and they are still there, with Apply waiting. **Discard Changes** puts everything back to the configuration in use, and **Reset to Instagram Default** stages the stock layout. Neither writes anything until you apply.
 - Settings access is safeguarded elsewhere too: if Quick Settings Access is on but the Home tab is hidden (or taken by the Gallery shortcut), the long-press to open Sparkle Settings automatically moves to another visible tab.
 
+### Appearance
+- **App Font**: Replaces Instagram's typeface with a font you import. **(restart)**
+  - Import `.otf`, `.ttf`, or `.ttc` files with the **+** button. A specimen card at the top shows the selected font at a readable size across Regular, Medium, and Bold, so a family missing a real bold is obvious before you commit to it; each row below is set in its own typeface. Files live inside Sparkle, so uninstalling takes them with it.
+  - The replacement covers both Instagram's own text and UIKit's, so the app, its alerts and keyboard, and Sparkle's own screens all follow. Only the *face* is replaced and never the size, so Dynamic Type and any text Instagram sizes specially keep working.
+  - Left alone on purpose: Instagram's logo, the story text tool's fonts, and column-aligned numerals (timers, view counts), which would break or misalign if swapped.
+  - A font family is matched per weight, so bold text stays bold if the family ships a bold face, and falls back to the nearest weight it does ship. Italic requests fall back to the upright face when there is no italic.
+  - Restart to apply everywhere: text already on screen keeps the font it was built with. Deleting the last file of the font in use falls back to the default.
+  - Shared by every account on the device, since fonts are resolved before Instagram knows which account is signed in.
+
 ### Explore & Search
 - **Hide Explore Posts Grid**: Hides the suggested-post grid on Explore.
 - **Hide Trending Searches**: Hides trending searches under the Explore search bar.
@@ -484,7 +493,7 @@ clearing, and more.
 ## Data & Settings
 
 ### Storage
-- **Storage Usage**: Total on-device space used by all Sparkle data, with a per-feature breakdown (Gallery, Downloads, Deleted Messages, Profile Analyzer, and the shared Profile Pictures cache). Includes **Clear Cached Profile Pictures**, which frees the app-wide avatar cache (pictures re-download as needed). Instagram's own cache is not included.
+- **Storage Usage**: Total on-device space used by all Sparkle data, with a per-feature breakdown (Gallery, Downloads, Deleted Messages, Profile Analyzer, the shared Profile Pictures cache, and imported Fonts). Includes **Clear Cached Profile Pictures**, which frees the app-wide avatar cache (pictures re-download as needed). Instagram's own cache is not included.
 
 ### Backup & Transfer
 - **Export / Import**: Export/import any combination of **Settings**, **Gallery** media + metadata, **Deleted Messages**, and **Profile Analyzer** data to a single `.zip` file. Media Recovery Cache assets are intentionally excluded until they belong to an unsent message. Imports also accept backups re-compressed by Files, iCloud, or desktop tools.
