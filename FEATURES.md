@@ -274,7 +274,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 ## Instants
 
 ### Action Button
-- **Instants Action Button**, **Default Tap Action**, **Configure Actions**: Actions resolve the currently visible Instant, preserve each Instant's author in bulk jobs, support photo/video media, and can operate on multiple pending Instants.
+- **Instants Action Button**, **Default Tap Action**, **Configure Actions**: Actions resolve the currently visible Instant with its author, posted date, and full-resolution media. Bulk actions retain every Instant encountered during the current viewer session until it closes, including ones already tapped past.
 - **Toggle Instant Auto-Save**: Adds or removes the author of the Instant on screen from the Instants auto-save list, mirroring the equivalent story and chat actions. Shown only while *Auto-Save Instants* is on and the author can be read. See *Downloads › Auto-Save › Instants*.
 
 ### Privacy

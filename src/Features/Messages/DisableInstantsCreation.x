@@ -56,6 +56,7 @@ static SPKQuickSnapVoidIMP orig_captureButtonDidConfirm = NULL;
 static SPKQuickSnapLayoutIMP orig_cameraControlViewLayoutSubviews = NULL;
 
 static SPKQuickSnapVoidOneArgIMP orig_quickSnapPeekViewDidSelectCamera = NULL;
+static SPKQuickSnapVoidOneArgIMP orig_cornerStackDidSelectCamera = NULL;
 static SPKQuickSnapVoidLongLongIMP orig_didTapCameraButtonWithCameraEntryPoint = NULL;
 static SPKQuickSnapVoidIMP orig_headerDidTapCameraButton = NULL;
 static SPKQuickSnapViewAppearIMP orig_consumptionViewDidAppear = NULL;
@@ -347,6 +348,15 @@ static void replaced_quickSnapPeekViewDidSelectCamera(id self, SEL _cmd, id arg)
         orig_quickSnapPeekViewDidSelectCamera(self, _cmd, arg);
 }
 
+// IG 444 moved the corner-stack camera intent off PresentationManager and onto a
+// dedicated router. Keep a separate replacement/original pair in case a transition build
+// temporarily exposes the selector on both classes.
+static void replaced_cornerStackDidSelectCamera(id self, SEL _cmd, id arg) {
+    SPKMarkQuickSnapExplicitCameraEntry();
+    if (orig_cornerStackDidSelectCamera)
+        orig_cornerStackDidSelectCamera(self, _cmd, arg);
+}
+
 static void replaced_didTapCameraButtonWithCameraEntryPoint(id self, SEL _cmd, long long point) {
     SPKMarkQuickSnapExplicitCameraEntry();
     if (orig_didTapCameraButtonWithCameraEntryPoint)
@@ -478,6 +488,10 @@ void SPKInstallDisableInstantsCreationHooksIfEnabled(void) {
                               @selector(quickSnapPeekViewDidSelectCamera:),
                               (IMP)replaced_quickSnapPeekViewDidSelectCamera,
                               (IMP *)&orig_quickSnapPeekViewDidSelectCamera);
+        SPKHookInstanceMethod("_TtC34IGQuickSnapCornerStackIntentRouter34IGQuickSnapCornerStackIntentRouter",
+                              @selector(quickSnapPeekViewDidSelectCamera:),
+                              (IMP)replaced_cornerStackDidSelectCamera,
+                              (IMP *)&orig_cornerStackDidSelectCamera);
         SPKHookInstanceMethod("_TtC44IGQuickSnapImmersiveViewerSectionControllers45IGQuickSnapStandaloneHistorySectionController",
                               @selector(didTapCameraButtonWithCameraEntryPoint:),
                               (IMP)replaced_didTapCameraButtonWithCameraEntryPoint,
