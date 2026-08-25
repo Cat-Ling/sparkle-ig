@@ -169,7 +169,15 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     // without dismissing first); otherwise it's a plain confirm.
     UIBarButtonItem *doneItem;
     if (_configuration.doneOptions.count > 0) {
-        doneItem = SPKMediaChromeTopBarMenuButtonItem(@"check", [self buildDoneMenu], @"Save");
+        // Keep this as a native menu-backed bar item so it participates in the
+        // navigation bar's iOS 26 group and fixed-space separator layout.
+        doneItem = [[UIBarButtonItem alloc] initWithImage:SPKMediaChromeTopBarIcon(@"check")
+                                                    menu:[self buildDoneMenu]];
+        doneItem.tintColor = [SPKUtils SPKColor_InstagramPrimaryText];
+        doneItem.accessibilityLabel = @"Save";
+        if (@available(iOS 16.0, *)) {
+            doneItem.preferredMenuElementOrder = UIContextMenuConfigurationElementOrderFixed;
+        }
         self.doneMenuItem = doneItem;
     } else {
         doneItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check", self, @selector(doneTapped), UIBarButtonItemStyleDone, [SPKUtils SPKColor_InstagramBlue], @"Save");
@@ -945,10 +953,8 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 // Reassigns the Done menu's button so it reflects the current mode (see
 // buildDoneMenu's Photos→Files swap). No-op when Done is a plain confirm button.
 - (void)refreshDoneMenu {
-    UIView *custom = self.doneMenuItem.customView;
-    if ([custom isKindOfClass:[UIButton class]]) {
-        ((UIButton *)custom).menu = [self buildDoneMenu];
-    }
+    if (self.doneMenuItem)
+        self.doneMenuItem.menu = [self buildDoneMenu];
 }
 
 - (void)doneTapped {

@@ -1,6 +1,7 @@
 #import "SPKMediaChrome.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
+#import <objc/message.h>
 
 CGFloat const SPKMediaChromeTopBarContentHeight = 44.0;
 
@@ -250,8 +251,19 @@ void SPKMediaChromeSetTrailingTopBarItemGroups(UINavigationItem *navigationItem,
         for (NSArray<UIBarButtonItem *> *items in groups) {
             if (items.count == 0)
                 continue;
-            // One group per bubble: adjacent items inside a group share a capsule,
-            // separate groups get their own.
+            // On iOS 26, adjacent UIBarButtonItemGroups are still allowed to
+            // share one Liquid Glass background. UIKit's zero-width fixed-space
+            // group is the explicit separator that prevents that coalescing.
+            // Call it dynamically because Sparkle still builds with the iOS
+            // 16.2 SDK for iOS 15 compatibility.
+            if (itemGroups.count > 0) {
+                SEL fixedSpaceSelector = NSSelectorFromString(@"groupWithFixedSpace");
+                if ([UIBarButtonItemGroup respondsToSelector:fixedSpaceSelector]) {
+                    UIBarButtonItemGroup *separator = ((UIBarButtonItemGroup *(*)(id, SEL))objc_msgSend)(UIBarButtonItemGroup.class, fixedSpaceSelector);
+                    if (separator)
+                        [itemGroups addObject:separator];
+                }
+            }
             [itemGroups addObject:[UIBarButtonItemGroup fixedGroupWithRepresentativeItem:nil items:items]];
         }
         navigationItem.rightBarButtonItems = nil;
