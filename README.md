@@ -57,7 +57,9 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
 - **Profile Analyzer**:
   - Fetches your followers/following and surfaces mutuals, non-followbacks, and a durable change log (new/lost followers, profile updates) across scans.
 - **Per-account settings**:
-  - Each logged-in account keeps its own preferences, gallery scope, and download history.
+  - Each logged-in account keeps its own preferences, gallery scope, and download history, including account-scoped history clearing.
+- **Story viewer tools**:
+  - Search everyone who saw your story, filter non-followers, and star viewers for quick lookup later.
 - **Privacy & focus**:
   - Hide ads, Meta AI, and suggested content.
   - Disable seen receipts, typing status, screenshot detection, and view-once limits.
