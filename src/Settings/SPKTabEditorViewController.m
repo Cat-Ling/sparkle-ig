@@ -723,7 +723,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
                                @"only way into Sparkle Settings.\n", SPKTabTitle(single)];
         }
         [text appendString:@"The header button adds the Sparkle shortcut to the left of the Messages navigation "
-                           @"bar, for when Messages is the tab that is left."];
+                           @"bar, when only the Messages tab is enabled."];
         return text;
     }
     if (section == SPKTabEditorSectionDiscard)

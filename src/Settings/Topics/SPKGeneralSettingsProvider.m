@@ -105,6 +105,11 @@
     };
 
     return SPKTopicNavigationSetting(@"General", @"settings", 24.0, @[
+        SPKTopicSection(@"Accounts", @[
+            [self perAccountSetting],
+            [self perAccountInfoSetting]
+        ],
+                        @"Give each logged-in account its own Sparkle settings."),
         SPKTopicSection(@"Behavior", @[
             [SPKSetting switchCellWithTitle:@"Copy Text"
                                        icon:SPKSettingsIcon(@"text")
@@ -250,11 +255,6 @@
                         @"1. Shows a confirmation alert before liking a comment.\n"
                         @"2. Removes commerce carousels in comment threads.\n"
                         @"3. Removes the gift shortcut from the comment composer."),
-        SPKTopicSection(@"Accounts", @[
-            [self perAccountSetting],
-            [self perAccountInfoSetting]
-        ],
-                        @"Give each logged-in account its own Sparkle settings."),
         SPKTopicSection(@"Storage", @[
             clearCacheSetting,
             [SPKSetting menuCellWithTitle:@"Auto Clear Cache"
