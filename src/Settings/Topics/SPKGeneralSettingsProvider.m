@@ -109,9 +109,10 @@
             [SPKSetting switchCellWithTitle:@"Copy Text"
                                        icon:SPKSettingsIcon(@"text")
                                 defaultsKey:@"general_copy_text"],
-            [SPKSetting switchCellWithTitle:@"No Recent Searches"
+            [SPKSetting switchCellWithTitle:@"Hide Recent Searches"
                                        icon:SPKSettingsIcon(@"search")
-                                defaultsKey:@"general_no_recent_searches"],
+                                defaultsKey:@"general_hide_recent_searches"
+                            requiresRestart:YES],
             [SPKSetting switchCellWithTitle:@"Copy Links Without Tracking"
                                        icon:SPKSettingsIcon(@"user_unfollow")
                                 defaultsKey:@"general_strip_share_link_tracking"],
@@ -120,7 +121,7 @@
                                 defaultsKey:@"general_hold_send_copy_link"],
         ],
                         @"1. Long press on text fields across the app to copy.\n"
-                        @"2. Search bars will no longer save recent searches.\n"
+                        @"2. Hide existing recent searches and stop saving new ones. Requires restart.\n"
                         @"3. Remove the user and tracking identifiers from copied links.\n"
                         @"4. Long press the send/share button to copy the post link."),
         SPKTopicSection(@"Sharing", @[

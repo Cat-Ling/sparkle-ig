@@ -1088,7 +1088,7 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     }
 
     SPKLog(@"General", @"Switch changed: %@", sender.isOn ? @"ON" : @"OFF");
-    if (sender.isOn) {
+    if (sender.isOn && !row.requiresRestart) {
         SPKInstallEnabledFeatureHooks();
     }
 
@@ -1097,6 +1097,9 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     }
 
     if (row.requiresRestart) {
+        // A restart action may terminate the process before defaults flush on
+        // their own. Persist the new state before presenting that action.
+        [[NSUserDefaults standardUserDefaults] synchronize];
         if (self.defersRestartPrompt) {
             self.hasPendingRestartChanges = YES;
             self.applyRestartItem.enabled = YES;

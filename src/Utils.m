@@ -18,6 +18,7 @@
 #import <objc/runtime.h>
 
 NSString *const kSPKPrefPerAccountSettings = @"general_per_account_settings";
+NSNotificationName const SPKHideExploreGridPreferenceDidChangeNotification = @"SPKHideExploreGridPreferenceDidChangeNotification";
 
 // A full screen modal always slides up from the bottom, which reads as "new
 // sheet" rather than "went deeper". This animates it in from the trailing edge
@@ -1037,6 +1038,7 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
             @"interface_liquid_glass",
             @"interface_liquid_glass_tabbar_mode",
             @"interface_progressive_blur",
+            @"interface_hide_ui_on_capture",
             @"downloads_adv_encoding",
             // Tab/launch layout is configured once at launch and can't re-apply
             // on a live account switch, so it stays global (maintainer's call).
@@ -1055,6 +1057,7 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
             @"interface_hide_explore_tab",
             @"interface_hide_profile_tab",
             @"interface_hide_create_tab",
+            @"interface_hide_tab_bar_in_messages_only",
             @"interface_saved_tab_carrier",
             // The Settings quick-access long-press is attached to tab-bar buttons
             // as they're built during early launch — before the account session
@@ -1096,9 +1099,6 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
         return YES;
 #endif
     if ([key hasPrefix:@"gallery_"])
-        return YES;
-    // interface_hide_*_tab (tab layout) + interface_hide_ui_on_capture.
-    if ([key hasPrefix:@"interface_hide_"])
         return YES;
     return NO;
 }

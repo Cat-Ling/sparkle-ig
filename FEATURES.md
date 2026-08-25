@@ -11,7 +11,7 @@ marked **(restart)** and prompt for a relaunch when changed.
 
 ### Behavior
 - **Copy Text**: Long-press text fields across the app to copy them.
-- **No Recent Searches**: Stops search bars from saving recent queries.
+- **Hide Recent Searches** *(restart)*: Hides existing recent searches and stops search bars from saving new queries.
 - **Copy Links Without Tracking**: Strips the username path and tracking parameters from copied links.
 - **Hold Send to Copy Link**: Long-press the send/share button to copy the post link.
 
@@ -85,8 +85,8 @@ Per-feature control of the Sparkle notification pill and its haptics. See **Noti
   - Shared by every account on the device, since fonts are resolved before Instagram knows which account is signed in.
 
 ### Explore & Search
-- **Hide Explore Posts Grid**: Hides the suggested-post grid on Explore.
-- **Hide Trending Searches**: Hides trending searches under the Explore search bar.
+- **Hide Explore Posts Grid**: Hides the suggested-post grid on Explore. This follows the active account when **Per-Account Settings** is enabled.
+- **Hide Trending Searches** *(restart)*: Hides trending searches under the Explore search bar.
 - **Open Clipboard Link**: Long-press the Explore tab to open an Instagram URL from the clipboard. When the Reels slot shows Saved, post and reel links use the same native single-post push as the Gallery so deep links do not disturb the tab destination.
 
 ### Capture

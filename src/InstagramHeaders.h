@@ -44,6 +44,11 @@
 @end
 
 @interface IGExploreGridViewController : IGViewController
+- (void)spk_updateExploreGridVisibility;
+@end
+
+@interface IGExploreViewController : IGViewController
+- (void)spk_updateExploreShimmerVisibility;
 @end
 
 @interface UIImage ()
@@ -510,6 +515,12 @@
 // presence line rendered into the cell's social-context label (Full Last Active).
 @interface IGDSSegmentedPillBarView : UIView
 - (id)delegate;
+- (CGSize)sizeThatFits:(CGSize)size expanded:(BOOL)expanded;
+@end
+
+@interface IGExploreChipBarView : UIView
+- (void)configureWith:(id)topics;
+- (CGSize)sizeThatFits:(CGSize)size expanded:(BOOL)expanded;
 @end
 
 @interface IGImageWithAccessoryButton : IGTapButton

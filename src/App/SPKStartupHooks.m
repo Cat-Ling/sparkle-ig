@@ -46,7 +46,7 @@ FOUNDATION_EXPORT void SPKInstallNavigationHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallSettingsShortcutsHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallDisableHapticsHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallCopyDescriptionHooksIfEnabled(void);
-FOUNDATION_EXPORT void SPKInstallNoRecentSearchesHooksIfEnabled(void);
+FOUNDATION_EXPORT void SPKInstallHideRecentSearchesHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallSearchBarIconRemapHooksIfNeeded(void);
 FOUNDATION_EXPORT void SPKInstallDetailedColorPickerHooksIfEnabled(void);
 FOUNDATION_EXPORT void SPKInstallEnhancedMediaResolutionHooksIfEnabled(void);
@@ -271,7 +271,7 @@ void SPKInstallMessagesSurfaceHooksIfNeeded(void) {
     SPK_INSTALL(SPKInstallHideDirectCallButtonsHooksIfEnabled);
     SPK_INSTALL(SPKInstallHideFlagButtonHooksIfEnabled);
     SPK_INSTALL(SPKInstallUnlockMessagePreviewHooksIfEnabled);
-    SPK_INSTALL(SPKInstallNoRecentSearchesHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideRecentSearchesHooksIfEnabled);
     SPK_INSTALL(SPKInstallDetailedColorPickerHooksIfEnabled);
     SPK_INSTALL(SPKInstallHeaderActionButtonHooksIfEnabled);
 }
@@ -312,7 +312,7 @@ void SPKInstallGeneralUIHooksIfNeeded(void) {
     SPK_INSTALL(SPKInstallSettingsShortcutsHooksIfNeeded);
     SPK_INSTALL(SPKInstallDisableHapticsHooksIfEnabled);
     SPK_INSTALL(SPKInstallCopyDescriptionHooksIfEnabled);
-    SPK_INSTALL(SPKInstallNoRecentSearchesHooksIfEnabled);
+    SPK_INSTALL(SPKInstallHideRecentSearchesHooksIfEnabled);
     SPK_INSTALL(SPKInstallSearchBarIconRemapHooksIfNeeded);
     SPK_INSTALL(SPKInstallEnhancedMediaResolutionHooksIfEnabled);
     SPK_INSTALL(SPKInstallAudioPageDownloadHooksIfNeeded);

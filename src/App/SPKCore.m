@@ -289,6 +289,31 @@ static void SPKCoreMigrateInstantsCameraButtonPreference(void) {
     [defaults setBool:YES forKey:migratedKey];
 }
 
+/// One-time terminology rename for Hide Recent Searches. Copy both the global
+/// value and every per-account namespace before removing the legacy key.
+static void SPKCoreMigrateHideRecentSearchesPreference(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    static NSString *const migratedKey = @"general_hide_recent_searches_migrated";
+    if ([defaults boolForKey:migratedKey])
+        return;
+
+    NSString *legacyKey = @"general_no_recent_searches";
+    NSString *newKey = @"general_hide_recent_searches";
+    for (NSString *key in [defaults dictionaryRepresentation].allKeys) {
+        if (![key isEqualToString:legacyKey] && ![key hasSuffix:[@"_" stringByAppendingString:legacyKey]])
+            continue;
+        id value = [defaults objectForKey:key];
+        if (value != nil) {
+            NSString *target = [[key substringToIndex:key.length - legacyKey.length] stringByAppendingString:newKey];
+            if ([defaults objectForKey:target] == nil)
+                [defaults setObject:value forKey:target];
+        }
+        [defaults removeObjectForKey:key];
+    }
+
+    [defaults setBool:YES forKey:migratedKey];
+}
+
 void SPKCoreRegisterBootstrapDefaults(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -305,6 +330,7 @@ void SPKCoreRegisterDefaults(void) {
     dispatch_once(&onceToken, ^{
         [[NSUserDefaults standardUserDefaults] registerDefaults:SPKFeatureDefaults()];
         SPKCoreMigrateInstantsCameraButtonPreference();
+        SPKCoreMigrateHideRecentSearchesPreference();
         SPKStartupMark(@"feature defaults registered");
     });
 }

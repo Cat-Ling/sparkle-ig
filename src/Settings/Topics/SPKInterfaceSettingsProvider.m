@@ -42,12 +42,20 @@
         ],
                         @"Replace the default font app-wide. You can import .otf, .ttf, or .ttc files."),
         SPKTopicSection(@"Explore & Search", @[
-            [SPKSetting switchCellWithTitle:@"Hide Explore Posts Grid"
-                                       icon:SPKSettingsIcon(@"explore_grid")
-                                defaultsKey:@"interface_hide_explore_grid"],
+            ({
+                SPKSetting *s = [SPKSetting switchCellWithTitle:@"Hide Explore Posts Grid"
+                                                           icon:SPKSettingsIcon(@"explore_grid")
+                                                    defaultsKey:@"interface_hide_explore_grid"];
+                s.switchChangeHandler = ^(BOOL isOn) {
+                    SPKPreferenceSetObject(@(isOn), @"interface_hide_explore_grid");
+                    [[NSNotificationCenter defaultCenter] postNotificationName:SPKHideExploreGridPreferenceDidChangeNotification object:nil];
+                };
+                s;
+            }),
             [SPKSetting switchCellWithTitle:@"Hide Trending Searches"
                                        icon:SPKSettingsIcon(@"trending")
-                                defaultsKey:@"interface_hide_trending_searches"],
+                                defaultsKey:@"interface_hide_trending_searches"
+                            requiresRestart:YES],
             [SPKSetting switchCellWithTitle:@"Open Clipboard Link"
                                        icon:SPKSettingsIcon(@"link")
                                 defaultsKey:@"interface_open_clipboard_link"]
