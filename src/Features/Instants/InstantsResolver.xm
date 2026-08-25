@@ -5,6 +5,7 @@
 
 #import "../../Shared/ActionButton/ActionButtonCore.h"
 #import "../../Shared/ActionButton/ActionButtonLookupUtils.h"
+#import "../../Shared/Account/SPKAccountManager.h"
 #import "../../Utils.h"
 #import "InstantsResolver.h"
 
@@ -43,13 +44,23 @@ static NSArray *sCachedPeekPreviewSnaps = nil;
 static NSArray *sObservedTimeOrderedSnaps = nil;
 static NSArray *sObservedPeekPreviewSnaps = nil;
 static id sTrackedActiveMedia = nil;
+/// Identity of the first still-queued snap after `sTrackedActiveMedia`. When the active
+/// media was already removed before Sparkle could record the full queue, this preserves
+/// its position relative to the surviving session order.
+static NSString *sTrackedActiveSuccessorKey = nil;
 static BOOL sConsumptionSessionActive = NO;
 
-/// Ordered media and resolved fallbacks discovered during the current viewer session.
-/// Instagram removes items from its live queue as they reach the screen, but Expand and
-/// bulk actions should continue to offer everything from this viewer until it is closed.
+/// Canonically ordered media discovered during the current viewer session. Instagram
+/// removes items from its live queue as they reach the screen, but Expand and bulk actions
+/// should continue to offer everything from this viewer until it is closed.
 static NSMutableArray *sSessionMedia = nil;
+/// Resolution/metadata cache only. Its insertion order is deliberately not used for the
+/// expanded viewer because auto-save or active-media resolution may populate it first.
 static NSMutableArray<SPKInstantsResolvedSnap *> *sSessionResolvedSnaps = nil;
+/// Set by the account-change notification and consumed by the next viewer appearance.
+/// This second boundary clear rejects any late callback from the outgoing account's
+/// QuickSnap service that arrived after the notification-driven reset.
+static BOOL sAccountBoundaryPendingViewer = NO;
 
 /// Live IGQuickSnapService instance, captured from the service hooks. Used at action
 /// time to read the backing store's FULL snap list (see SPKInstantsStoreFullMediaList).
@@ -146,6 +157,39 @@ static void SPKInstantsAppendSessionMedia(NSArray *mediaList) {
     }
 }
 
+/// Adds media missing from the canonical order. A service-removal successor is the only
+/// trustworthy position once Instagram has already consumed the active item; without one,
+/// the active item belongs at the front of the remaining queue.
+static void SPKInstantsInsertSessionMedia(id media, NSString *successorKey) {
+    if (!sConsumptionSessionActive || !media)
+        return;
+    if (!sSessionMedia)
+        sSessionMedia = [NSMutableArray array];
+
+    NSString *mediaKey = SPKInstantsServiceObservationKey(media);
+    for (id existing in sSessionMedia) {
+        NSString *existingKey = SPKInstantsServiceObservationKey(existing);
+        if ((mediaKey.length > 0 && [existingKey isEqualToString:mediaKey]) ||
+            (mediaKey.length == 0 && existing == media)) {
+            return;
+        }
+    }
+
+    NSUInteger insertionIndex = 0;
+    if (successorKey.length > 0) {
+        for (NSUInteger i = 0; i < sSessionMedia.count; i++) {
+            NSString *existingKey = SPKInstantsServiceObservationKey(sSessionMedia[i]);
+            if ([existingKey isEqualToString:successorKey]) {
+                insertionIndex = i;
+                break;
+            }
+        }
+    }
+    [sSessionMedia insertObject:media atIndex:insertionIndex];
+    SPKLog(@"Instants", @"session order inserted missing active at=%lu successor=%@",
+           (unsigned long)insertionIndex, successorKey ?: @"(none)");
+}
+
 /// Tracks the media Instagram just removed from a service list. During consumption that
 /// removal means the media became the displayed snap. This avoids relying on the
 /// SingleSnapView z-order, which stays fixed and otherwise keeps resolving the first snap.
@@ -161,6 +205,10 @@ static BOOL SPKInstantsObserveServiceList(NSArray *newList,
     if (!sConsumptionSessionActive || previousList.count == 0)
         return NO;
 
+    // The removed active item only exists in the previous queue. Record that queue before
+    // examining the removal so it cannot disappear from the canonical expanded order.
+    SPKInstantsAppendSessionMedia(previousList);
+
     NSMutableSet<NSString *> *newKeys = [NSMutableSet setWithCapacity:newList.count];
     for (id media in newList) {
         NSString *key = SPKInstantsServiceObservationKey(media);
@@ -171,12 +219,15 @@ static BOOL SPKInstantsObserveServiceList(NSArray *newList,
     // If more than one update was coalesced, the last removed item in the old ordering is
     // the newest displayed one. The normal path removes exactly one item per tap.
     id removedMedia = nil;
+    NSUInteger removedIndex = NSNotFound;
     NSUInteger removedCount = 0;
-    for (id media in previousList) {
+    for (NSUInteger i = 0; i < previousList.count; i++) {
+        id media = previousList[i];
         NSString *key = SPKInstantsServiceObservationKey(media);
         if (key.length == 0 || [newKeys containsObject:key])
             continue;
         removedMedia = media;
+        removedIndex = i;
         removedCount++;
     }
     if (!removedMedia)
@@ -186,11 +237,22 @@ static BOOL SPKInstantsObserveServiceList(NSArray *newList,
         return YES;
 
     sTrackedActiveMedia = removedMedia;
+    sTrackedActiveSuccessorKey = nil;
+    if (removedIndex != NSNotFound) {
+        for (NSUInteger i = removedIndex + 1; i < previousList.count; i++) {
+            NSString *key = SPKInstantsServiceObservationKey(previousList[i]);
+            if (key.length > 0 && [newKeys containsObject:key]) {
+                sTrackedActiveSuccessorKey = [key copy];
+                break;
+            }
+        }
+    }
     NSString *activeIdentityKey = [SPKInstantsIdentityKeysForMedia(removedMedia).allObjects
         sortedArrayUsingSelector:@selector(compare:)].firstObject;
     SPKInstantsNoteActiveIdentityKey(activeIdentityKey);
-    SPKLog(@"Instants", @"active media tracked from %@ removal pk=%@ removed=%lu old=%lu new=%lu",
+    SPKLog(@"Instants", @"active media tracked from %@ removal pk=%@ successor=%@ removed=%lu old=%lu new=%lu",
            source ?: @"service", SPKInstantsCacheMediaPK(removedMedia) ?: @"(nil)",
+           sTrackedActiveSuccessorKey ?: @"(none)",
            (unsigned long)removedCount, (unsigned long)previousList.count,
            (unsigned long)newList.count);
     return YES;
@@ -354,13 +416,14 @@ static void SPKInstantsNoteActiveIdentityKey(NSString *key) {
     sActiveIdentityKey = [key copy];
 }
 
-/// Clears the registry. Called when the viewer closes, which is the session boundary.
-static void SPKInstantsResetMediaRegistry(void) {
+/// Clears the registry at a viewer-session or Instagram-account boundary.
+static void SPKInstantsResetMediaRegistry(NSString *reason) {
     NSUInteger count = sMediaByIdentityKey.count;
     [sMediaByIdentityKey removeAllObjects];
     sActiveIdentityKey = nil;
     if (count > 0)
-        SPKLog(@"Instants", @"registry cleared on viewer close (%lu entries)", (unsigned long)count);
+        SPKLog(@"Instants", @"registry cleared (%@, %lu entries)",
+               reason ?: @"unknown", (unsigned long)count);
 }
 
 /// Returns the merged, deduplicated media list from both cache arrays.
@@ -1332,9 +1395,9 @@ static BOOL SPKInstantsResolvedSnapsMatch(SPKInstantsResolvedSnap *left,
     return leftKeys.count > 0 && rightKeys.count > 0 && [leftKeys intersectsSet:rightKeys];
 }
 
-/// Adds or upgrades one entry in the ordered viewer-session list. An active view fallback
-/// is remembered immediately; when its full media model becomes available later, the
-/// entry is upgraded in place without changing the order or active-index mapping.
+/// Adds or upgrades one entry in the viewer-session resolution cache. Ordering comes only
+/// from `sSessionMedia`; an active view fallback may reach this cache before the store or
+/// service queue without rotating the expanded viewer around that active item.
 static void SPKInstantsRememberResolvedSnap(SPKInstantsResolvedSnap *snap) {
     if (!sConsumptionSessionActive || !snap || !snap.sparkleMediaURL)
         return;
@@ -1356,6 +1419,112 @@ static void SPKInstantsRememberResolvedSnap(SPKInstantsResolvedSnap *snap) {
         return;
     }
     [sSessionResolvedSnaps addObject:snap];
+}
+
+static NSString *SPKInstantsObservationKeyForResolvedSnap(SPKInstantsResolvedSnap *snap) {
+    if (!snap)
+        return nil;
+    if (snap.sourceMediaPK.length > 0)
+        return [@"pk:" stringByAppendingString:snap.sourceMediaPK];
+
+    NSArray<NSString *> *identityKeys = [SPKInstantsIdentityKeysForResolvedSnap(snap).allObjects
+        sortedArrayUsingSelector:@selector(compare:)];
+    NSString *identityKey = identityKeys.firstObject;
+    return identityKey.length > 0 ? [@"cdn:" stringByAppendingString:identityKey] : nil;
+}
+
+static BOOL SPKInstantsResolvedSnapMatchesMedia(SPKInstantsResolvedSnap *snap, id media) {
+    if (!snap || !media)
+        return NO;
+    NSString *mediaPK = SPKInstantsCacheMediaPK(media);
+    if (snap.sourceMediaPK.length > 0 &&
+        [snap.sourceMediaPK isEqualToString:mediaPK]) {
+        return YES;
+    }
+    NSSet<NSString *> *snapKeys = SPKInstantsIdentityKeysForResolvedSnap(snap);
+    NSSet<NSString *> *mediaKeys = SPKInstantsIdentityKeysForMedia(media);
+    return snapKeys.count > 0 && mediaKeys.count > 0 && [snapKeys intersectsSet:mediaKeys];
+}
+
+static NSUInteger SPKInstantsInsertionIndexBeforeSuccessor(NSArray<SPKInstantsResolvedSnap *> *snaps,
+                                                            NSString *successorKey) {
+    if (successorKey.length > 0) {
+        for (NSUInteger i = 0; i < snaps.count; i++) {
+            NSString *key = SPKInstantsObservationKeyForResolvedSnap(snaps[i]);
+            if ([key isEqualToString:successorKey])
+                return i;
+        }
+    }
+    return 0;
+}
+
+/// Materializes the expanded list in Instagram's session order. Resolved snaps are looked
+/// up from the cache by identity, but the cache's own insertion order is never consulted.
+/// The only expected cache-only entry is a view fallback whose backing media disappeared
+/// before the queue was observed; position that active item from its recorded successor.
+static NSMutableArray<SPKInstantsResolvedSnap *> *SPKInstantsOrderedSessionSnaps(
+    SPKInstantsResolvedSnap *activeSnap,
+    NSString *activeSuccessorKey) {
+    NSArray<SPKInstantsResolvedSnap *> *cachedSnaps = [sSessionResolvedSnaps copy] ?: @[];
+    NSMutableIndexSet *usedCacheIndexes = [NSMutableIndexSet indexSet];
+    NSMutableArray<SPKInstantsResolvedSnap *> *ordered = [NSMutableArray array];
+
+    for (id media in [sSessionMedia copy]) {
+        SPKInstantsResolvedSnap *probe = SPKInstantsResolvedSnapFromMedia(media);
+        if (!probe)
+            continue;
+
+        SPKInstantsResolvedSnap *resolved = probe;
+        for (NSUInteger i = 0; i < cachedSnaps.count; i++) {
+            if ([usedCacheIndexes containsIndex:i])
+                continue;
+            SPKInstantsResolvedSnap *cached = cachedSnaps[i];
+            if (!SPKInstantsResolvedSnapsMatch(cached, probe))
+                continue;
+            resolved = cached;
+            [usedCacheIndexes addIndex:i];
+            break;
+        }
+
+        BOOL duplicate = NO;
+        for (SPKInstantsResolvedSnap *existing in ordered) {
+            if (SPKInstantsResolvedSnapsMatch(existing, resolved)) {
+                duplicate = YES;
+                break;
+            }
+        }
+        if (!duplicate)
+            [ordered addObject:resolved];
+    }
+
+    for (NSUInteger i = 0; i < cachedSnaps.count; i++) {
+        if ([usedCacheIndexes containsIndex:i])
+            continue;
+        SPKInstantsResolvedSnap *cached = cachedSnaps[i];
+
+        BOOL duplicate = NO;
+        for (SPKInstantsResolvedSnap *existing in ordered) {
+            if (SPKInstantsResolvedSnapsMatch(existing, cached)) {
+                duplicate = YES;
+                break;
+            }
+        }
+        if (duplicate)
+            continue;
+
+        if (activeSnap && SPKInstantsResolvedSnapsMatch(cached, activeSnap)) {
+            NSUInteger insertionIndex = SPKInstantsInsertionIndexBeforeSuccessor(ordered,
+                                                                                 activeSuccessorKey);
+            [ordered insertObject:cached atIndex:insertionIndex];
+        } else {
+            // No ordering evidence exists for a non-active cache-only fallback. Retaining
+            // it is preferable to dropping a consumed Instant; later service observations
+            // will place its backing media in the canonical ledger.
+            [ordered addObject:cached];
+        }
+    }
+
+    return ordered;
 }
 
 /// Finds a video player view inside a snap view.
@@ -2006,6 +2175,7 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
     sConsumptionSessionActive = YES;
     // Seed the session from whatever Instagram exposed before/while opening the viewer,
     // then keep appending later service updates. These arrays are cleared on genuine exit.
+    SPKInstantsAppendSessionMedia(SPKInstantsStoreSnapshot());
     SPKInstantsAppendSessionMedia(SPKInstantsMergedMediaList());
     SPKInstantsAppendSessionMedia(SPKInstantsCurrentServiceMediaList());
     // Architecture:
@@ -2091,9 +2261,10 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
         activeViewURLKey = SPKInstantsURLIdentityKey(SPKInstantsURLForImageView(activeImageView));
     }
 
-    // Model item at the active slot, when the model list is readable at all. On IG 439 the
-    // stack state's `viewModel` is a Swift struct and comes back empty, so this is a no-op
-    // there; it is kept for the versions where it does resolve.
+    // Resolve the active media from signals that share identity with the visible view.
+    // `displayIndex` addresses the recycled view window, not necessarily `modelItems`: the
+    // device log showed 4 currentImages and 9 modelItems, where using slot 3 against the
+    // model list selected item 3 even though the visible CDN identity belonged to item 0.
     SPKInstantsResolvedSnap *activeSnap = nil;
     NSString *activePK = nil;
     BOOL trackedMatchesView = !sTrackedActiveMedia || activeViewURLKey.length == 0 ||
@@ -2109,7 +2280,20 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
         SPKLog(@"Instants", @"ignored stale removal tracker; visible key=%@ trackedPK=%@",
                activeViewURLKey, SPKInstantsCacheMediaPK(sTrackedActiveMedia) ?: @"(nil)");
     }
-    if (!activeSnap && displayIndex >= 0 && displayIndex < (NSInteger)modelItems.count) {
+
+    // The visible CDN identity maps directly into the full store/session list and remains
+    // valid even when the view window and model list have different sizes.
+    if (!activeSnap && activeViewURLKey.length > 0) {
+        activeSnap = SPKInstantsStoreSnapMatchingIdentityKey(activeViewURLKey);
+        if (activeSnap)
+            activePK = activeSnap.sourceMediaPK;
+    }
+
+    // Positional model lookup is safe only when both arrays describe the same slots.
+    BOOL modelSharesDisplayIndexSpace = modelItems.count > 0 &&
+                                        modelItems.count == currentImages.count;
+    if (!activeSnap && modelSharesDisplayIndexSpace &&
+        displayIndex >= 0 && displayIndex < (NSInteger)modelItems.count) {
         activeSnap = SPKInstantsResolvedSnapFromMedia(modelItems[(NSUInteger)displayIndex]);
         if (activeSnap) {
             activeSnap.resolverPath = @"active.model";
@@ -2117,12 +2301,9 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
         }
     }
     if (!activeSnap && activeSnapView) {
-        activeSnap = SPKInstantsStoreSnapMatchingIdentityKey(activeViewURLKey);
-        if (!activeSnap) {
-            activeSnap = SPKInstantsResolvedSnapFromView(activeSnapView);
-            if (activeSnap)
-                activeSnap.resolverPath = @"active.view";
-        }
+        activeSnap = SPKInstantsResolvedSnapFromView(activeSnapView);
+        if (activeSnap)
+            activeSnap.resolverPath = @"active.view";
         if (activeSnap)
             activePK = activeSnap.sourceMediaPK;
     }
@@ -2137,10 +2318,18 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
            activeViewURLKey ?: @"(nil)");
 
     // --- B. Build the BULK list from this viewer session ---
-    // Remember the displayed snap first because it has already been discarded from IG's
-    // queue. Resolve all accumulated queue models afterward, upgrading any view fallback
-    // in place while retaining Instants the user has already tapped away this session.
-    SPKInstantsRememberResolvedSnap(activeSnap);
+    // The media ledger owns order. The active snap only supplies selection and may upgrade
+    // a matching cached entry; resolving it first must never rotate the expanded list.
+    BOOL activeMatchesTrackedOrder = activeSnap && sTrackedActiveMedia &&
+                                     SPKInstantsResolvedSnapMatchesMedia(activeSnap,
+                                                                        sTrackedActiveMedia);
+    NSString *activeOrderSuccessorKey = activeMatchesTrackedOrder
+                                            ? sTrackedActiveSuccessorKey
+                                            : nil;
+    if (activeSnap.backingMedia) {
+        SPKInstantsInsertSessionMedia(activeSnap.backingMedia,
+                                      activeOrderSuccessorKey);
+    }
     for (id media in [sSessionMedia copy]) {
         SPKInstantsResolvedSnap *snap = SPKInstantsResolvedSnapFromMedia(media);
         if (snap) {
@@ -2148,9 +2337,10 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
             SPKInstantsRememberResolvedSnap(snap);
         }
     }
+    SPKInstantsRememberResolvedSnap(activeSnap);
 
     NSMutableArray<SPKInstantsResolvedSnap *> *snaps =
-        sSessionResolvedSnaps ? [sSessionResolvedSnaps mutableCopy] : [NSMutableArray array];
+        SPKInstantsOrderedSessionSnaps(activeSnap, activeOrderSuccessorKey);
     NSMutableArray *snapIdentityKeys = [NSMutableArray arrayWithCapacity:snaps.count];
     for (SPKInstantsResolvedSnap *snap in snaps) {
         NSSet<NSString *> *keys = SPKInstantsIdentityKeysForResolvedSnap(snap);
@@ -2231,10 +2421,17 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
             // This is only a last-resort recovery; normal active snaps were already added
             // to the ordered session list above.
             if (recovered && recovered.sparkleMediaURL) {
-                [snaps insertObject:recovered atIndex:0];
+                if (recovered.backingMedia) {
+                    SPKInstantsInsertSessionMedia(recovered.backingMedia,
+                                                  activeOrderSuccessorKey);
+                }
+                NSUInteger insertionIndex = SPKInstantsInsertionIndexBeforeSuccessor(
+                    snaps,
+                    activeOrderSuccessorKey);
+                [snaps insertObject:recovered atIndex:insertionIndex];
                 [snapIdentityKeys insertObject:SPKInstantsIdentityKeysForResolvedSnap(recovered) ?: (id)NSNull.null
-                                       atIndex:0];
-                activeIndex = 0;
+                                       atIndex:insertionIndex];
+                activeIndex = (NSInteger)insertionIndex;
                 activeSnap = recovered;
                 SPKInstantsRememberResolvedSnap(recovered);
             }
@@ -2286,7 +2483,7 @@ SPKInstantsResolverResult *SPKInstantsResolveForHeader(UIView *header, NSString 
         result.activeSnap = activeSnap;
         result.path = @"session+active";
 
-        SPKLog(@"Instants", @"resolve reason=%@ path=session+active count=%lu activeIndex=%ld activePK=%@ displayIdx=%ld",
+        SPKLog(@"Instants", @"resolve reason=%@ path=session+active order=session-media count=%lu activeIndex=%ld activePK=%@ displayIdx=%ld",
                reason ?: @"unknown", (unsigned long)snaps.count, (long)activeIndex,
                activePK ?: @"(nil)", (long)displayIndex);
         for (NSUInteger i = 0; i < snaps.count; i++) {
@@ -2424,6 +2621,33 @@ static SPKInstantsVCLifecycleIMP orig_consumptionVCViewWillAppear = NULL;
 typedef SPKInstantsVCLifecycleIMP SPKInstantsVCDisappearIMP;
 static SPKInstantsVCDisappearIMP orig_consumptionVCViewDidDisappear = NULL;
 
+/// Clears every resolver structure whose contents belong to one consumption session.
+/// The identity-to-PK map and retained service intentionally survive an ordinary viewer
+/// close, but both are account-owned and must be discarded when Instagram switches users.
+static void SPKInstantsResetResolverState(BOOL accountBoundary, NSString *reason) {
+    SPKInstantsResetStoreSnapshot();
+    SPKInstantsResetTracking();
+    SPKInstantsResetMediaRegistry(reason);
+    sCachedTimeOrderedSnaps = nil;
+    sCachedPeekPreviewSnaps = nil;
+    sObservedTimeOrderedSnaps = nil;
+    sObservedPeekPreviewSnaps = nil;
+    sTrackedActiveMedia = nil;
+    sTrackedActiveSuccessorKey = nil;
+    sSessionMedia = nil;
+    sSessionResolvedSnaps = nil;
+    sConsumptionSessionActive = NO;
+
+    if (accountBoundary) {
+        sQuickSnapServiceInstance = nil;
+        [sPKByIdentityKey removeAllObjects];
+        sPKByIdentityKey = nil;
+    }
+
+    SPKLog(@"Instants", @"resolver state reset boundary=%@ reason=%@",
+           accountBoundary ? @"account" : @"viewer", reason ?: @"unknown");
+}
+
 // Tap tracking. IG 439 has no `handleTap` on the stack view — the class exposes only
 // willMoveToWindow:/layoutSubviews/sizeThatFits:/quick_flexibilityFor:/initWithFrame: to
 // ObjC — so the tap is taken on the TapController, which does expose
@@ -2453,6 +2677,11 @@ static void replaced_tapControllerDidPress(id self, SEL _cmd, id recognizer) {
 }
 
 static void replaced_consumptionVCViewWillAppear(id self, SEL _cmd, BOOL animated) {
+    if (sAccountBoundaryPendingViewer) {
+        SPKInstantsResetResolverState(YES, @"first viewer after account change");
+        sAccountBoundaryPendingViewer = NO;
+    }
+
     // The topmost Instant can be removed from the service/store before the header action
     // first resolves. Snapshot it before the viewer's appearance work performs that pop,
     // preserving the IGMedia model with its PK, timestamp, and full candidate list.
@@ -2496,19 +2725,7 @@ static void replaced_consumptionVCViewDidDisappear(id self, SEL _cmd, BOOL anima
         }
     }
 
-    SPKInstantsResetStoreSnapshot();
-    SPKInstantsResetTracking();
-    // Everything the registry holds has been consumed by now — Instants do not come back.
-    SPKInstantsResetMediaRegistry();
-    sCachedTimeOrderedSnaps = nil;
-    sCachedPeekPreviewSnaps = nil;
-    sObservedTimeOrderedSnaps = nil;
-    sObservedPeekPreviewSnaps = nil;
-    sTrackedActiveMedia = nil;
-    sSessionMedia = nil;
-    sSessionResolvedSnaps = nil;
-    sConsumptionSessionActive = NO;
-    SPKLog(@"Instants", @"consumption VC disappeared — viewer session, tracking, registry & cache reset");
+    SPKInstantsResetResolverState(NO, @"consumption VC disappeared");
 }
 
 void SPKInstallInstantsResolverHooks(void) {
@@ -2530,6 +2747,25 @@ void SPKInstallInstantsResolverHooks(void) {
            listenerClass ? @"YES" : @"NO",
            badgeClass ? @"YES" : @"NO",
            serviceClass ? @"YES" : @"NO");
+
+    // All resolver caches are process-global because the QuickSnap hooks are process-wide,
+    // while Instagram's service/store belongs to the active user session. An account switch
+    // is therefore a hard ownership boundary even if the old viewer remains covered and
+    // never emits a genuine viewDidDisappear exit.
+    [[NSNotificationCenter defaultCenter] addObserverForName:SPKAccountDidChangeNotification
+                                                      object:nil
+                                                       queue:NSOperationQueue.mainQueue
+                                                  usingBlock:^(NSNotification *note) {
+                                                      NSString *accountPK = [note.userInfo[@"pk"] isKindOfClass:NSString.class]
+                                                                                ? note.userInfo[@"pk"]
+                                                                                : nil;
+                                                      SPKInstantsResetResolverState(
+                                                          YES,
+                                                          accountPK.length > 0
+                                                              ? [NSString stringWithFormat:@"account changed to %@", accountPK]
+                                                              : @"account changed");
+                                                      sAccountBoundaryPendingViewer = YES;
+                                                  }];
 
     SPKInstantsHookInstanceMethod("_TtC30IGQuickSnapServiceListenerImpl30IGQuickSnapServiceListenerImpl",
                                   @selector(quickSnapServiceDidUpdateSnapsWithTimeOrderedQuicksnaps:peekPreviewSnaps:didReceiveNewSnaps:),
