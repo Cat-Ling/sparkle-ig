@@ -67,12 +67,16 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
                 };
                 hideHeader;
             }),
+            [SPKSetting switchCellWithTitle:@"Hide Viewer Comment Bar"
+                                       icon:SPKSettingsIcon(@"comment")
+                                defaultsKey:@"reels_hide_viewer_comment_bar"
+                            requiresRestart:YES],
             [SPKSetting switchCellWithTitle:@"Hide Repost Button"
                                        icon:SPKSettingsIcon(@"repost")
                                 defaultsKey:@"reels_hide_repost_btn"
                             requiresRestart:YES]
         ],
-                        nil),
+                        @"Hides the bottom comment field in the Reels viewer to leave more room for captions on shorter displays."),
         SPKTopicSection(@"Metrics", @[
             [SPKSetting switchCellWithTitle:@"Hide Like Count"
                                        icon:SPKSettingsIcon(@"heart")

@@ -198,6 +198,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"general_hide_suggested_users_subscriptions" : @(NO),
         @"reels_hide_like_count" : @(NO),
         @"reels_hide_comment_count" : @(NO),
+        @"reels_hide_viewer_comment_bar" : @(NO),
         @"reels_hide_repost_count" : @(NO),
         @"reels_hide_reshare_count" : @(NO),
         @"reels_hide_save_count" : @(NO),

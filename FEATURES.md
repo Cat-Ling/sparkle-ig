@@ -193,6 +193,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 
 ### Layout
 - **Hide Reels Header**, **Hide Repost Button** **(restart)**, **Hide Suggested Accounts**.
+- **Hide Viewer Comment Bar**: Removes the bottom "Add a comment..." field from the Reels viewer, reclaiming vertical space for captions on shorter displays. **(restart)**
 
 ### Metrics
 - **Hide Like / Comment / Repost / Reshare / Save Count**.

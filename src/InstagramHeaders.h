@@ -684,6 +684,30 @@
 - (void)didTapLikeButton;
 @end
 
+// Reels viewer footer. IG 443+ uses the Swift feed-footer implementation and
+// represents the fake comment composer with a dedicated config/content pair.
+@interface _TtC19IGSundialFeedFooter30IGSundialViewerBottomBarConfig : NSObject
+@end
+
+@interface _TtC19IGSundialFeedFooter37IGSundialViewerBottomBarCommentConfig : _TtC19IGSundialFeedFooter30IGSundialViewerBottomBarConfig
+@end
+
+@interface _TtC19IGSundialFeedFooter24IGSundialViewerBottomBar : UIView
+@property (nonatomic, retain) _TtC19IGSundialFeedFooter30IGSundialViewerBottomBarConfig *config;
+@end
+
+@interface _TtC19IGSundialFeedFooter42IGSundialViewerBottomBarCommentContentView : UIView
+@end
+
+// IG 410 uses one Objective-C bottom bar. Its initializer already exposes the
+// native switch that removes only the fake comment composer while preserving a
+// CTA when one is present.
+@interface IGSundialViewerBottomBar : UIView
+- (instancetype)initWithCTAButtonType:(NSInteger)type
+                   fakeComposerEnabled:(BOOL)enabled
+                      commentBarDisabled:(BOOL)disabled;
+@end
+
 @interface IGMainAppSurfaceIntent : NSObject
 - (id)tabStringFromSurfaceIntent;
 @end
