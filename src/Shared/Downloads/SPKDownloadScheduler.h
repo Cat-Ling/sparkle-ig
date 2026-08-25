@@ -23,6 +23,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)retryJobID:(NSString *)jobID;
 - (void)retryItemID:(NSString *)itemID inJobID:(NSString *)jobID;
 - (void)clearFinishedHistory;
+- (void)clearFinishedHistoryForAccountPK:(nullable NSString *)accountPK;
 - (void)refreshConcurrencyLimit;
 - (void)removeJobID:(NSString *)jobID;
 

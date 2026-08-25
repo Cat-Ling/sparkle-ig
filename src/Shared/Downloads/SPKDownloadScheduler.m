@@ -899,10 +899,17 @@ static NSString *SPKRenameStagedPath(NSString *stagedPath, SPKDownloadItem *item
 }
 
 - (void)clearFinishedHistory {
+    [self clearFinishedHistoryForAccountPK:nil];
+}
+
+- (void)clearFinishedHistoryForAccountPK:(NSString *)accountPK {
     @synchronized(self) {
         NSMutableArray *remaining = [NSMutableArray array];
         for (SPKDownloadJob *job in self.jobs) {
-            if (SPKDownloadJobHasInFlightItems(job)) {
+            BOOL belongsToScope = accountPK.length == 0 ||
+                                  job.ownerAccountPK.length == 0 ||
+                                  [job.ownerAccountPK isEqualToString:accountPK];
+            if (SPKDownloadJobHasInFlightItems(job) || !belongsToScope) {
                 [remaining addObject:job];
             } else {
                 SPKDeleteJobScratch(job);
