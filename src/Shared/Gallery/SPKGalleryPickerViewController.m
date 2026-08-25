@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryPickerViewController.h"
 
 #import <CoreData/CoreData.h>
@@ -214,7 +215,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
         if (_folderPath.length > 0) {
             [_folderTrail addObject:_folderPath];
         }
-        _pickerTitle = [title.length > 0 ? title : @"Gallery" copy];
+        _pickerTitle = [title.length > 0 ? title : SPKL(@"GALLERY_TITLE") copy];
         _allowedMediaTypes = [allowedMediaTypes copy];
         _allowsMultipleSelection = allowsMultipleSelection;
         _completion = [completion copy];
@@ -277,14 +278,14 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     self.searchController.searchResultsUpdater = self;
     self.searchController.obscuresBackgroundDuringPresentation = NO;
     self.searchController.hidesNavigationBarDuringPresentation = NO;
-    self.searchController.searchBar.placeholder = @"Search Gallery";
+    self.searchController.searchBar.placeholder = SPKL(@"GALLERY_GALLERY_PICKER_SEARCH_GALLERY_TEXT");
     self.searchController.searchBar.delegate = self;
     [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                              forSearchBarIcon:UISearchBarIconSearch
                                         state:UIControlStateNormal];
     // Scope toggle: search the current folder, or across all folders. Let the
     // search controller manage the scope bar's visibility (shown while searching).
-    self.searchController.searchBar.scopeButtonTitles = @[ @"This Folder", @"All Folders" ];
+    self.searchController.searchBar.scopeButtonTitles = @[ SPKL(@"GALLERY_GALLERY_PICKER_FOLDER_TEXT"), SPKL(@"GALLERY_GALLERY_PICKER_FOLDERS_TEXT") ];
     self.searchController.automaticallyShowsScopeBar = YES;
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = YES;
@@ -529,7 +530,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
         }
     }
     if (!searchItem) {
-        searchItem = [self pickerBottomBarItemWithResource:@"search" accessibility:@"Search" action:@selector(activateSearch)];
+        searchItem = [self pickerBottomBarItemWithResource:@"search" accessibility:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_SEARCH_TEXT") action:@selector(activateSearch)];
     }
     return searchItem;
 }
@@ -547,11 +548,11 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     SPKMediaChromeConfigureBottomToolbar(self.navigationController.toolbar);
 
     NSString *toggleResource = self.viewMode == SPKGalleryPickerViewModeGrid ? @"list" : @"grid";
-    NSString *toggleAX = self.viewMode == SPKGalleryPickerViewModeGrid ? @"List view" : @"Grid view";
+    NSString *toggleAX = self.viewMode == SPKGalleryPickerViewModeGrid ? SPKL(@"GALLERY_GALLERY_PICKER_LIST_VIEW_TEXT") : SPKL(@"GALLERY_GALLERY_PICKER_GRID_VIEW_TEXT");
     UIBarButtonItem *toggleItem = [self pickerBottomBarItemWithResource:toggleResource accessibility:toggleAX action:@selector(togglePickerViewMode)];
 
-    UIBarButtonItem *sortItem = [self pickerBottomBarItemWithResource:@"sort" accessibility:@"Sort" action:@selector(presentSort)];
-    UIBarButtonItem *filterItem = [self pickerBottomBarItemWithResource:@"filter" accessibility:@"Filter" action:@selector(presentFilter)];
+    UIBarButtonItem *sortItem = [self pickerBottomBarItemWithResource:@"sort" accessibility:SPKL(@"MENU_SORT") action:@selector(presentSort)];
+    UIBarButtonItem *filterItem = [self pickerBottomBarItemWithResource:@"filter" accessibility:SPKL(@"GALLERY_GALLERY_FILTER_FILTER_TEXT") action:@selector(presentFilter)];
 
     NSArray<UIBarButtonItem *> *primary = @[ toggleItem, sortItem, filterItem ];
     self.toolbarItems = SPKMediaChromeBottomToolbarItemsWithTrailingGroup(primary, @[ [self bottomToolbarSearchItem] ]);
@@ -559,7 +560,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
 
 - (void)refreshNavigationRightItems {
     if (self.allowsMultipleSelection) {
-        UIBarButtonItem *addItem = [[UIBarButtonItem alloc] initWithTitle:@"Add"
+        UIBarButtonItem *addItem = [[UIBarButtonItem alloc] initWithTitle:SPKL(@"ALERT_ACTION_ADD")
                                                                     style:UIBarButtonItemStyleDone
                                                                    target:self
                                                                    action:@selector(doneTapped)];
@@ -801,20 +802,20 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     NSString *title;
     NSString *subtitle;
     if (query.length > 0) {
-        title = @"No results";
+        title = SPKL(@"GALLERY_GALLERY_PICKER_NO_RESULTS_TEXT");
         // Point at the scope toggle: the match may simply live in another folder.
         subtitle = (!self.searchAllFolders && folderName.length > 0)
-                       ? @"Nothing in this folder matches your search. Try All Folders."
-                       : @"No media matches your search.";
+                       ? SPKL(@"GALLERY_GALLERY_PICKER_NOTHING_FOLDER_MATCHES_SEARCH_TRY_FOLDERS_TEXT")
+                       : SPKL(@"GALLERY_GALLERY_PICKER_NO_MEDIA_MATCHES_SEARCH_TEXT");
     } else if (hasFilters) {
-        title = @"No matching files";
-        subtitle = @"Try adjusting your filters.";
+        title = SPKL(@"GALLERY_GALLERY_PICKER_NO_MATCHING_FILES_TEXT");
+        subtitle = SPKL(@"GALLERY_GALLERY_PICKER_TRY_ADJUSTING_FILTERS_TEXT");
     } else if (folderName.length > 0) {
-        title = @"This folder is empty";
-        subtitle = @"Nothing here can be selected.";
+        title = SPKL(@"GALLERY_GALLERY_PICKER_FOLDER_EMPTY_TEXT");
+        subtitle = SPKL(@"GALLERY_GALLERY_PICKER_NOTHING_HERE_CAN_SELECTED_TEXT");
     } else {
-        title = @"Nothing to select";
-        subtitle = @"There is no Gallery media of this kind yet.";
+        title = SPKL(@"GALLERY_GALLERY_PICKER_NOTHING_SELECT_TEXT");
+        subtitle = SPKL(@"GALLERY_GALLERY_PICKER_THERE_NO_GALLERY_MEDIA_KIND_YET_TEXT");
     }
     self.emptyStateLabel.text = title;
     self.emptyStateSubtitle.text = subtitle;
@@ -1030,10 +1031,10 @@ typedef NS_ENUM(NSInteger, SPKGalleryPickerViewMode) {
     UIBarButtonItem *leadingItem;
     if ([self canNavigateBackInFolders]) {
         leadingItem = SPKMediaChromeTopBarButtonItem(@"chevron_left", self, @selector(navigateBackInFolders));
-        leadingItem.accessibilityLabel = @"Back";
+        leadingItem.accessibilityLabel = SPKL(@"GALLERY_GALLERY_PICKER_BACK_TEXT");
     } else {
         leadingItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(cancelTapped));
-        leadingItem.accessibilityLabel = @"Cancel";
+        leadingItem.accessibilityLabel = SPKL(@"ALERT_ACTION_CANCEL");
     }
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ leadingItem ]);
 }

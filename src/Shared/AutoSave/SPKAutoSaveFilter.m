@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKAutoSaveFilter.h"
 
 #import "../../Utils.h"
@@ -29,7 +30,7 @@ BOOL SPKAutoSaveFilterAllMode(SPKAutoSaveFilterConfig *config) {
 
 NSString *SPKAutoSaveFilterListTitle(SPKAutoSaveFilterConfig *config) {
     return [NSString stringWithFormat:@"%@ %@",
-                                      SPKAutoSaveFilterAllMode(config) ? @"Excluded" : @"Selected",
+                                      SPKAutoSaveFilterAllMode(config) ? SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_EXCLUDED_TEXT") : SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_SELECTED_TEXT"),
                                       config.subjectPlural];
 }
 
@@ -170,13 +171,13 @@ void SPKAutoSaveFilterRemoveIdentity(SPKAutoSaveFilterConfig *config, NSString *
 
 NSString *SPKAutoSaveFilterSummary(SPKAutoSaveFilterConfig *config) {
     if (!SPKAutoSaveFilterEnabled(config))
-        return @"Off";
+        return SPKL(@"MENU_OFF");
     NSUInteger count = SPKAutoSaveFilterList(config).count;
     if (SPKAutoSaveFilterAllMode(config)) {
         return count == 0 ? [NSString stringWithFormat:@"All %@", config.subjectPlural]
-                          : [NSString stringWithFormat:@"All · %lu excluded", (unsigned long)count];
+                          : [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_VALUE_EXCLUDED_FORMAT"), (unsigned long)count];
     }
-    return count == 0 ? @"None Selected" : [NSString stringWithFormat:@"%lu Selected", (unsigned long)count];
+    return count == 0 ? SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_NONE_SELECTED_TEXT") : [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_VALUE_SELECTED_FORMAT"), (unsigned long)count];
 }
 
 #pragma mark - List screen
@@ -212,7 +213,7 @@ BOOL SPKAutoSaveFilterListUIVisible(void) {
 }
 
 - (void)listDidUpdateItemCount:(NSUInteger)count {
-    NSString *modeTitle = SPKAutoSaveFilterAllMode(self.config) ? @"Excluded" : @"Selected";
+    NSString *modeTitle = SPKAutoSaveFilterAllMode(self.config) ? SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_EXCLUDED_TEXT") : SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_SELECTED_TEXT");
     self.title = count > 0 ? [NSString stringWithFormat:@"%lu %@", (unsigned long)count, modeTitle]
                            : SPKAutoSaveFilterListTitle(self.config);
 }
@@ -229,7 +230,7 @@ BOOL SPKAutoSaveFilterListUIVisible(void) {
 
     NSString *name = [self removalDisplayNameForEntry:entry];
     SPKNotify(self.config.ruleNotificationIdentifier,
-              name.length > 0 ? [NSString stringWithFormat:@"Removed %@", name] : @"Removed entry",
+              name.length > 0 ? [NSString stringWithFormat:@"Removed %@", name] : SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_REMOVED_ENTRY_TEXT"),
               SPKAutoSaveFilterListTitle(self.config),
               @"circle_check_filled",
               SPKNotificationToneSuccess);

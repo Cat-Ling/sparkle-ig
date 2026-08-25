@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKSettingsViewController.h"
 #import "../App/SPKStartupHooks.h"
 #import "../AssetUtils.h"
@@ -10,6 +11,7 @@
 #import "../Shared/UI/SPKSwitch.h"
 #import "../App/SPKCore.h"
 #import "SPKOnboardingViewController.h"
+#import "SPKLanguagePicker.h"
 #import "SPKPreferenceAvailability.h"
 #import "SPKWhatsNewViewController.h"
 
@@ -62,6 +64,7 @@ static double SPKNormalizedStepperValue(SPKSetting *row, double value) {
 @property (nonatomic) BOOL defersRestartPrompt;
 @property (nonatomic) BOOL hasPendingRestartChanges;
 @property (nonatomic) BOOL didAttemptOnboarding;
+@property (nonatomic) BOOL showsLanguageSelector;
 
 @end
 
@@ -284,6 +287,7 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     self = [self initWithTitle:[SPKTweakSettings title] sections:[SPKTweakSettings sections] reduceMargin:YES];
     if (self) {
         self.searchesAllSettings = YES;
+        self.showsLanguageSelector = YES;
     }
     return self;
 }
@@ -391,17 +395,22 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
                                                    : @[];
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, leadingItems);
 
-    NSArray<UIBarButtonItem *> *trailingItems = @[];
+    NSMutableArray<UIBarButtonItem *> *trailingItems = [NSMutableArray array];
+    if (self.showsLanguageSelector) {
+        [trailingItems addObject:SPKMediaChromeTopBarMenuButtonItem(@"translate",
+                                                                    SPKLanguageMenu(),
+                                                                    SPKL(@"LANGUAGE_TITLE"))];
+    }
     if (self.defersRestartPrompt) {
         UIBarButtonItem *applyItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check",
                                                                              self,
                                                                              @selector(applyRestartChanges),
                                                                              UIBarButtonItemStyleDone,
                                                                              [SPKUtils SPKColor_InstagramPrimaryText],
-                                                                             @"Apply Liquid Glass changes");
+                                                                             SPKL(@"SETTINGS_SETTINGS_APPLY_LIQUID_GLASS_CHANGES_TEXT"));
         applyItem.enabled = self.hasPendingRestartChanges;
         self.applyRestartItem = applyItem;
-        trailingItems = @[ applyItem ];
+        [trailingItems addObject:applyItem];
     } else {
         self.applyRestartItem = nil;
     }
@@ -416,7 +425,7 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                              forSearchBarIcon:UISearchBarIconSearch
                                         state:UIControlStateNormal];
-    self.searchController.searchBar.placeholder = self.searchesAllSettings ? @"Search All Settings" : [NSString stringWithFormat:@"Search %@", self.title ?: @"settings"];
+    self.searchController.searchBar.placeholder = self.searchesAllSettings ? SPKL(@"SETTINGS_SETTINGS_SEARCH_SETTINGS_TEXT") : [NSString stringWithFormat:SPKL(@"SETTINGS_SETTINGS_SEARCH_VALUE_FORMAT"), self.title ?: @"settings"];
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = YES;
     self.definesPresentationContext = YES;

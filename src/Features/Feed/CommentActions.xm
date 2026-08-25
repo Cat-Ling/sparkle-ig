@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import <substrate.h>
@@ -170,16 +171,16 @@ static UIAction *SPKCommentAction(NSString *title, NSString *iconName, void (^ha
 static UIAction *SPKCommentGIFTitleAction(SPKGiphyMetadata *metadata) {
     UIAction *action = SPKCommentAction(metadata.title, @"info", ^{
         UIPasteboard.generalPasteboard.string = metadata.title;
-        SPKNotify(kSPKNotificationCopyGIFTitle, @"GIF title copied", nil, @"copy_filled", SPKNotificationToneSuccess);
+        SPKNotify(kSPKNotificationCopyGIFTitle, SPKL(@"FEED_COMMENT_ACTIONS_GIF_TITLE_COPIED_TITLE"), nil, @"copy_filled", SPKNotificationToneSuccess);
     });
     if (metadata.author.length > 0) {
-        action.subtitle = [NSString stringWithFormat:@"by %@", metadata.author];
+        action.subtitle = [NSString stringWithFormat:SPKL(@"FEED_COMMENT_ACTIONS_VALUE_FORMAT"), metadata.author];
     }
     return action;
 }
 
 static UIAction *SPKCommentGIFTitleUnavailableAction(void) {
-    UIAction *action = SPKCommentAction(@"Title unavailable", @"info", nil);
+    UIAction *action = SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_TITLE_UNAVAILABLE_TITLE"), @"info", nil);
     action.attributes = UIMenuElementAttributesDisabled;
     return action;
 }
@@ -217,16 +218,16 @@ static NSArray<UIMenuElement *> *SPKCommentMediaActionItems(id comment, NSURL *u
     };
 
     NSMutableArray<UIMenuElement *> *actions = [NSMutableArray array];
-    [actions addObject:SPKCommentAction(@"Save to Photos", @"download", ^{
+    [actions addObject:SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_SAVE_PHOTOS_TEXT"), @"download", ^{
                  performDownload(SPKDownloadDestinationPhotos);
              })];
     [actions addObject:SPKCommentAction(@"Share", @"share", ^{
                  performDownload(SPKDownloadDestinationShare);
              })];
-    [actions addObject:SPKCommentAction(@"Save to Gallery", @"sparkle_gallery", ^{
+    [actions addObject:SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_SAVE_GALLERY_TEXT"), @"sparkle_gallery", ^{
                  performDownload(SPKDownloadDestinationGallery);
              })];
-    [actions addObject:SPKCommentAction(@"Copy", @"copy", ^{
+    [actions addObject:SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_COPY_TEXT"), @"copy", ^{
                  performDownload(SPKDownloadDestinationClipboard);
              })];
 
@@ -285,17 +286,17 @@ static id SPKCommentContextMenu(id self, SEL _cmd, id collectionView, id indexPa
         [extraActions addObjectsFromArray:gifTitleElements];
 
         if (offersCopyText) {
-            [extraActions addObject:SPKCommentAction(@"Copy Comment", @"copy", ^{
+            [extraActions addObject:SPKCommentAction(SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_TITLE"), @"copy", ^{
                               UIPasteboard.generalPasteboard.string = text;
-                              SPKNotify(kSPKNotificationCopyComment, @"Comment copied", nil, @"copy_filled", SPKNotificationToneSuccess);
+                              SPKNotify(kSPKNotificationCopyComment, SPKL(@"FEED_COMMENT_ACTIONS_COMMENT_COPIED_TEXT"), nil, @"copy_filled", SPKNotificationToneSuccess);
                           })];
         }
 
         if (offersGIFActions) {
             NSURL *gifURL = [NSURL URLWithString:gifURLString];
             NSString *pageURLString = gifID.length > 0 ? [NSString stringWithFormat:@"https://giphy.com/gifs/%@", gifID] : gifURLString;
-            NSArray<UIMenuElement *> *gifActions = SPKCommentMediaActionItems(comment, gifURL, @"gif", nil, gifID, @"Copy GIF Link", pageURLString, @"GIF link copied");
-            [extraActions addObject:[UIMenu menuWithTitle:@"GIF Actions"
+            NSArray<UIMenuElement *> *gifActions = SPKCommentMediaActionItems(comment, gifURL, @"gif", nil, gifID, SPKL(@"FEED_COMMENT_ACTIONS_COPY_GIF_LINK_TEXT"), pageURLString, SPKL(@"FEED_COMMENT_ACTIONS_GIF_LINK_COPIED_TEXT"));
+            [extraActions addObject:[UIMenu menuWithTitle:SPKL(@"MENU_GIF_ACTIONS")
                                                     image:SPKCommentIcon(@"action")
                                                identifier:nil
                                                   options:0
@@ -303,8 +304,8 @@ static id SPKCommentContextMenu(id self, SEL _cmd, id collectionView, id indexPa
         } else if (offersPhotoActions) {
             NSURL *photoURL = photoURLString.length > 0 ? [NSURL URLWithString:photoURLString] : nil;
             NSString *extension = photoURL.pathExtension.length > 0 ? photoURL.pathExtension : @"jpg";
-            NSArray<UIMenuElement *> *photoActions = SPKCommentMediaActionItems(comment, photoURL, extension, photoLocalImage, nil, @"Copy Download URL", photoURLString, @"Download URL copied");
-            [extraActions addObject:[UIMenu menuWithTitle:@"Photo Actions"
+            NSArray<UIMenuElement *> *photoActions = SPKCommentMediaActionItems(comment, photoURL, extension, photoLocalImage, nil, SPKL(@"FEED_COMMENT_ACTIONS_COPY_DOWNLOAD_URL_TEXT"), photoURLString, SPKL(@"FEED_COMMENT_ACTIONS_DOWNLOAD_URL_COPIED_TEXT"));
+            [extraActions addObject:[UIMenu menuWithTitle:SPKL(@"MENU_PHOTO_ACTIONS")
                                                     image:SPKCommentIcon(@"action")
                                                identifier:nil
                                                   options:0

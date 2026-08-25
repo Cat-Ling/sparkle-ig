@@ -29,9 +29,13 @@ else
     # Kill running process
     pymobiledevice3 developer dvt pkill "LiveContainer" --tunnel $PYMOBILEDEVICE3_UDID
 
-    # Copy only the tweak dylib. The LiveContainer base IPA is expected to already
-    # contain the FFmpeg frameworks.
+    # Copy the tweak and a lightweight sibling resource bundle. The base IPA may
+    # keep the full FFmpeg bundle; translation edits only push the small catalogs.
     pymobiledevice3 apps push $LIVECONTAINER_APPID .theos/obj/debug/Sparkle.dylib Documents/Tweaks/Sparkle
+    DEV_RESOURCE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/sparkle-dev-resources.XXXXXX")"
+    ./tools/stage-sparkle-bundle.sh "$DEV_RESOURCE_DIR/Sparkle.bundle" --localizations-only
+    pymobiledevice3 apps push $LIVECONTAINER_APPID "$DEV_RESOURCE_DIR/Sparkle.bundle" Documents/Tweaks/Sparkle
+    rm -rf "$DEV_RESOURCE_DIR"
 
     # Launch Sparkle on iPhone
     sleep 1

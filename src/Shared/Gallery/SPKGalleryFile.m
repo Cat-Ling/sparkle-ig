@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <AVFoundation/AVFoundation.h>
 #import <ImageIO/ImageIO.h>
 #import <ctype.h>
@@ -675,7 +676,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         if (error) {
             *error = [NSError errorWithDomain:@"SPKGallery"
                                          code:1
-                                     userInfo:@{NSLocalizedDescriptionKey : @"Source file does not exist"}];
+                                     userInfo:@{NSLocalizedDescriptionKey : SPKL(@"GALLERY_GALLERY_FILE_SOURCE_FILE_NOT_EXIST_TEXT")}];
         }
         return nil;
     }
@@ -781,7 +782,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         if (error) {
             *error = [NSError errorWithDomain:@"SPKGallery"
                                          code:2
-                                     userInfo:@{NSLocalizedDescriptionKey : @"Replacement file does not exist"}];
+                                     userInfo:@{NSLocalizedDescriptionKey : SPKL(@"GALLERY_GALLERY_FILE_REPLACEMENT_FILE_NOT_EXIST_TEXT")}];
         }
         return NO;
     }
@@ -1147,66 +1148,66 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
 - (NSString *)openOriginalActionTitle {
     switch ((SPKGallerySource)self.source) {
     case SPKGallerySourceStories:
-        return @"Open Story";
+        return SPKL(@"GALLERY_GALLERY_FILE_OPEN_STORY_TEXT");
     case SPKGallerySourceReels:
-        return @"Open Reel";
+        return SPKL(@"GALLERY_GALLERY_FILE_OPEN_REEL_TEXT");
     case SPKGallerySourceFeed:
     case SPKGallerySourceProfile:
-        return @"Open Post";
+        return SPKL(@"GALLERY_GALLERY_FILE_OPEN_POST_TEXT");
     default:
-        return @"Open Original Post";
+        return SPKL(@"ALERT_ACTION_OPEN_ORIGINAL_POST");
     }
 }
 
 + (NSString *)labelForSource:(SPKGallerySource)source {
     switch (source) {
     case SPKGallerySourceFeed:
-        return @"Feed";
+        return SPKL(@"FEED_TITLE");
     case SPKGallerySourceStories:
-        return @"Stories";
+        return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKGallerySourceReels:
         return @"Reels";
     case SPKGallerySourceProfile:
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     case SPKGallerySourceDMs:
-        return @"DMs";
+        return SPKL(@"GALLERY_GALLERY_FILE_DMS_TEXT");
     case SPKGallerySourceThumbnail:
-        return @"Thumb";
+        return SPKL(@"GALLERY_GALLERY_FILE_THUMB_TEXT");
     case SPKGallerySourceInstants:
-        return @"Instants";
+        return SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE");
     case SPKGallerySourceAudioPage:
-        return @"Audio Page";
+        return SPKL(@"GALLERY_GALLERY_FILE_AUDIO_PAGE_TEXT");
     case SPKGallerySourceComments:
-        return @"Comments";
+        return SPKL(@"GENERAL_COMMENTS_HEADER");
     case SPKGallerySourceOther:
     default:
-        return @"Other";
+        return SPKL(@"STORIES_OTHER_HEADER");
     }
 }
 
 + (NSString *)shortLabelForSource:(SPKGallerySource)source {
     switch (source) {
     case SPKGallerySourceFeed:
-        return @"Feed";
+        return SPKL(@"FEED_TITLE");
     case SPKGallerySourceStories:
         return @"Story";
     case SPKGallerySourceReels:
         return @"Reel";
     case SPKGallerySourceProfile:
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     case SPKGallerySourceDMs:
-        return @"DMs";
+        return SPKL(@"GALLERY_GALLERY_FILE_DMS_TEXT");
     case SPKGallerySourceThumbnail:
-        return @"Thumb";
+        return SPKL(@"GALLERY_GALLERY_FILE_THUMB_TEXT");
     case SPKGallerySourceInstants:
-        return @"Instant";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_INSTANT_TEXT");
     case SPKGallerySourceAudioPage:
-        return @"Audio Page";
+        return SPKL(@"GALLERY_GALLERY_FILE_AUDIO_PAGE_TEXT");
     case SPKGallerySourceComments:
-        return @"Comment";
+        return SPKL(@"GALLERY_GALLERY_FILE_COMMENT_TEXT");
     case SPKGallerySourceOther:
     default:
-        return @"Other";
+        return SPKL(@"STORIES_OTHER_HEADER");
     }
 }
 

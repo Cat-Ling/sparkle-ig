@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKNotificationPillView.h"
 #import "../../AssetUtils.h"
 #import "SPKNotificationCenter.h"
@@ -256,7 +257,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     ]];
 
     _titleLabel = [[UILabel alloc] init];
-    _titleLabel.text = @"Downloading...";
+    _titleLabel.text = SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT");
     _titleLabel.textColor = [UIColor colorWithWhite:1.0 alpha:0.98];
     _titleLabel.font = [UIFont systemFontOfSize:13.5 weight:UIFontWeightSemibold];
     _titleLabel.numberOfLines = 1;
@@ -700,7 +701,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.currentBytesExpected = 0;
     self.subtitleLabel.text = [self spk_progressSubtitleForProgress:self.currentProgress];
     self.subtitleLabel.hidden = (self.subtitleLabel.text.length == 0);
-    self.titleLabel.text = @"Downloading...";
+    self.titleLabel.text = SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT");
     self.progressView.progress = 0.0f;
 
     self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
@@ -739,7 +740,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.onRetry = nil;
     self.onTapWhenCompleted = nil;
 
-    self.titleLabel.text = title.length ? title : @"Done";
+    self.titleLabel.text = title.length ? title : SPKL(@"SETTINGS_WHATS_NEW_DONE_TEXT");
     self.subtitleLabel.text = subtitle;
     self.subtitleLabel.hidden = (subtitle.length == 0);
     [self updateToastWidthForTitle:self.titleLabel.text subtitle:subtitle];
@@ -938,7 +939,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
         self.isErrorState = NO;
         self.isCompleted = NO;
         self.usesAutomaticProgressSubtitle = YES;
-        self.titleLabel.text = @"Downloading...";
+        self.titleLabel.text = SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT");
         self.subtitleLabel.text = [self spk_progressSubtitleForProgress:self.currentProgress];
         self.subtitleLabel.hidden = (self.subtitleLabel.text.length == 0);
         self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
@@ -980,7 +981,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 
     self.isCompleted = NO;
     self.isErrorState = NO;
-    self.titleLabel.text = title.length > 0 ? title : @"Downloading...";
+    self.titleLabel.text = title.length > 0 ? title : SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT");
     self.usesAutomaticProgressSubtitle = (subtitle.length == 0);
     self.subtitleLabel.text = self.usesAutomaticProgressSubtitle
                                   ? [self spk_progressSubtitleForProgress:self.currentProgress]
@@ -1009,7 +1010,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 }
 
 - (void)showSuccess {
-    [self showSuccessWithTitle:@"Download complete" subtitle:nil icon:nil];
+    [self showSuccessWithTitle:SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_COMPLETE_TEXT") subtitle:nil icon:nil];
 }
 
 - (void)showSuccessWithTitle:(NSString *)title subtitle:(NSString *)subtitle icon:(UIImage *)icon {
@@ -1037,7 +1038,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
                     animations:^{
                         self.iconView.image = checkImage;
                         self.iconView.tintColor = [self iconTintForTone:SPKPillVisualToneSuccess];
-                        self.titleLabel.text = title.length ? title : @"Download complete";
+                        self.titleLabel.text = title.length ? title : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_COMPLETE_TEXT");
                         self.subtitleLabel.text = subtitle;
                         self.subtitleLabel.hidden = (subtitle.length == 0);
                         [self updateToastWidthForTitle:self.titleLabel.text subtitle:subtitle];
@@ -1072,7 +1073,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 
     NSString *resolvedSubtitle = subtitle;
     if (self.onRetry && resolvedSubtitle.length == 0) {
-        resolvedSubtitle = @"Tap to retry";
+        resolvedSubtitle = SPKL(@"UI_NOTIFICATION_PILL_VIEW_TAP_RETRY_TEXT");
     }
 
     if (self.onTonePresented) {
@@ -1087,7 +1088,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
                     animations:^{
                         self.iconView.image = errorImage;
                         self.iconView.tintColor = [self iconTintForTone:SPKPillVisualToneError];
-                        self.titleLabel.text = title.length ? title : @"Download failed";
+                        self.titleLabel.text = title.length ? title : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
                         self.subtitleLabel.text = resolvedSubtitle;
                         self.subtitleLabel.hidden = (resolvedSubtitle.length == 0);
                         [self updateToastWidthForTitle:self.titleLabel.text subtitle:resolvedSubtitle];
@@ -1127,7 +1128,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
                     animations:^{
                         self.iconView.image = infoImage;
                         self.iconView.tintColor = [self iconTintForTone:SPKPillVisualToneInfo];
-                        self.titleLabel.text = title.length ? title : @"Info";
+                        self.titleLabel.text = title.length ? title : SPKL(@"GALLERY_GALLERY_FILE_DETAILS_INFO_TEXT");
                         self.subtitleLabel.text = subtitle;
                         self.subtitleLabel.hidden = (subtitle.length == 0);
                         [self updateToastWidthForTitle:self.titleLabel.text subtitle:subtitle];

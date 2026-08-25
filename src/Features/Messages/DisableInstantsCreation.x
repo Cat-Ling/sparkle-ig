@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 // Instants (QuickSnap) creation controls.
 //
 // Three user-facing behaviours:
@@ -111,7 +112,7 @@ static BOOL SPKQuickSnapSkipCameraAfterViewingEnabled(void) {
 
 static void SPKQuickSnapNotifyBlocked(void) {
     SPKNotify(kSPKNotificationInstantsCaptureBlocked,
-              @"Instant capture blocked",
+              SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT"),
               nil,
               @"lock_filled",
               SPKNotificationToneInfo);
@@ -165,8 +166,8 @@ static void SPKQuickSnapHandleCaptureDelegate(id self, SEL _cmd, SPKQuickSnapVoi
                 sSPKQuickSnapSendConfirmVisible = NO;
                 [SPKInstantsFrameInjector clearFrozen];
             }
-            title:@"Send Instant?"
-            message:@"Capture and send this Instant?"];
+            title:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION")
+            message:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION")];
         return;
     }
 

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKCropCanvasView.h"
 
 #import "../../AssetUtils.h"
@@ -29,27 +30,27 @@ SPKCropAspect SPKCropAspectPresetAtIndex(NSInteger index) {
 NSString *SPKCropAspectTitle(SPKCropAspect aspect) {
     switch (aspect) {
     case SPKCropAspectOriginal:
-        return @"Original";
+        return SPKL(@"CROP_CROP_CANVAS_VIEW_ORIGINAL_TEXT");
     case SPKCropAspectFreeform:
-        return @"Free";
+        return SPKL(@"CROP_CROP_CANVAS_VIEW_FREE_TEXT");
     case SPKCropAspectSquare:
-        return @"1:1";
+        return SPKL(@"CROP_ASPECT_RATIO_SQUARE_LABEL");
     case SPKCropAspectPortrait23:
-        return @"2:3";
+        return SPKL(@"CROP_ASPECT_RATIO_PORTRAIT_TWO_THREE_LABEL");
     case SPKCropAspectLandscape32:
-        return @"3:2";
+        return SPKL(@"CROP_ASPECT_RATIO_LANDSCAPE_THREE_TWO_LABEL");
     case SPKCropAspectPortrait34:
-        return @"3:4";
+        return SPKL(@"CROP_ASPECT_RATIO_PORTRAIT_THREE_FOUR_LABEL");
     case SPKCropAspectLandscape43:
-        return @"4:3";
+        return SPKL(@"CROP_ASPECT_RATIO_LANDSCAPE_FOUR_THREE_LABEL");
     case SPKCropAspectPortrait45:
-        return @"4:5";
+        return SPKL(@"CROP_ASPECT_RATIO_PORTRAIT_FOUR_FIVE_LABEL");
     case SPKCropAspectLandscape54:
-        return @"5:4";
+        return SPKL(@"CROP_ASPECT_RATIO_LANDSCAPE_FIVE_FOUR_LABEL");
     case SPKCropAspectPortrait916:
-        return @"9:16";
+        return SPKL(@"CROP_ASPECT_RATIO_STORY_LABEL");
     case SPKCropAspectLandscape169:
-        return @"16:9";
+        return SPKL(@"CROP_CROP_CANVAS_VIEW_VALUE_TEXT");
     }
     return @"";
 }
@@ -137,9 +138,9 @@ UIView *SPKCropMakeToolRow(id target, SEL rotateLeft, SEL flip, SEL rotateRight)
                                               pointSize:24.0
                                           renderingMode:UIImageRenderingModeAlwaysTemplate];
     NSArray<UIButton *> *buttons = @[
-        SPKCropToolButton(rotateLeftIcon, @"Rotate Left", target, rotateLeft),
-        SPKCropToolButton(mirror, @"Flip", target, flip),
-        SPKCropToolButton(rotateRightIcon, @"Rotate Right", target, rotateRight),
+        SPKCropToolButton(rotateLeftIcon, SPKL(@"CROP_CROP_CANVAS_VIEW_ROTATE_LEFT_TEXT"), target, rotateLeft),
+        SPKCropToolButton(mirror, SPKL(@"CROP_CROP_CANVAS_VIEW_FLIP_TEXT"), target, flip),
+        SPKCropToolButton(rotateRightIcon, SPKL(@"CROP_CROP_CANVAS_VIEW_ROTATE_RIGHT_TEXT"), target, rotateRight),
     ];
     UIStackView *stack = [[UIStackView alloc] initWithArrangedSubviews:buttons];
     stack.axis = UILayoutConstraintAxisHorizontal;

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "App/SPKFlexLoader.h"
 #import "InstagramHeaders.h"
 #import "Shared/ActionButton/ActionButtonCore.h"
@@ -713,8 +714,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceFeed);
             }
-            title:@"Confirm Repost"
-            message:@"Are you sure you want to repost this post?"];
+            title:SPKL(@"FEED_CONFIRMATION_CONFIRM_REPOST_TITLE")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_POST_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceFeed);
@@ -756,8 +757,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceReels);
             }
-            title:@"Confirm Reel Repost"
-            message:@"Are you sure you want to repost this reel?"];
+            title:SPKL(@"GENERAL_TWEAK_CONFIRM_REEL_REPOST_TEXT")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_REEL_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceReels);
@@ -777,8 +778,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceReels);
             }
-            title:@"Confirm Reel Repost"
-            message:@"Are you sure you want to repost this reel?"];
+            title:SPKL(@"GENERAL_TWEAK_CONFIRM_REEL_REPOST_TEXT")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_REEL_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceReels);
@@ -798,8 +799,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceReels);
             }
-            title:@"Confirm Reel Repost"
-            message:@"Are you sure you want to repost this reel?"];
+            title:SPKL(@"GENERAL_TWEAK_CONFIRM_REEL_REPOST_TEXT")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_REEL_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceReels);

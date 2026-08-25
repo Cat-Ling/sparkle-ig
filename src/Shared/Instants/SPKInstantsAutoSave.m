@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKInstantsAutoSave.h"
 
 #import "../../Networking/SPKInstagramAPI.h"
@@ -30,7 +31,7 @@ SPKAutoSaveFilterConfig *SPKInstantsAutoSaveFilterConfig(void) {
         config.includedKey = @"instants_auto_save_included";
         config.identityField = @"username";
         config.sortField = @"username";
-        config.subjectPlural = @"Users";
+        config.subjectPlural = SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_USERS_TEXT");
         config.ruleNotificationIdentifier = kSPKNotificationInstantsAutoSaveUserRule;
     });
     return config;
@@ -120,7 +121,7 @@ NSString *SPKInstantsAutoSaveActionTitleForUsername(NSString *username) {
     NSString *normalized = SPKAutoSaveFilterNormalizedUsername(username);
     if (normalized.length == 0)
         return nil;
-    return SPKInstantsAutoSaveAppliesToUsername(normalized) ? @"Stop Auto-Saving Instants" : @"Auto-Save Instants";
+    return SPKInstantsAutoSaveAppliesToUsername(normalized) ? SPKL(@"INSTANTS_ACTION_STOP_AUTO_SAVING_TITLE") : SPKL(@"INSTANTS_ACTION_START_AUTO_SAVING_TITLE");
 }
 
 NSString *SPKInstantsAutoSaveConfirmationTitleForUsername(NSString *username) {
@@ -132,8 +133,8 @@ NSString *SPKInstantsAutoSaveConfirmationMessageForUsername(NSString *username) 
     if (normalized.length == 0)
         return nil;
     return SPKInstantsAutoSaveAppliesToUsername(normalized)
-               ? [NSString stringWithFormat:@"Do you want to stop auto-saving instants from @%@?", normalized]
-               : [NSString stringWithFormat:@"Do you want to auto-save every instant from @%@?", normalized];
+               ? [NSString stringWithFormat:SPKL(@"INSTANTS_ACTION_STOP_CONFIRMATION_MESSAGE_FORMAT"), normalized]
+               : [NSString stringWithFormat:SPKL(@"INSTANTS_ACTION_START_CONFIRMATION_MESSAGE_FORMAT"), normalized];
 }
 
 BOOL SPKInstantsToggleAutoSaveForUsername(NSString *username,
@@ -161,8 +162,8 @@ BOOL SPKInstantsToggleAutoSaveForUsername(NSString *username,
 
     if (notificationTitle) {
         *notificationTitle = appliedBefore
-                                 ? [NSString stringWithFormat:@"Auto-save off for @%@", normalized]
-                                 : [NSString stringWithFormat:@"Auto-save on for @%@", normalized];
+                                 ? [NSString stringWithFormat:SPKL(@"INSTANTS_NOTIFICATION_AUTO_SAVE_OFF_TITLE_FORMAT"), normalized]
+                                 : [NSString stringWithFormat:SPKL(@"INSTANTS_NOTIFICATION_AUTO_SAVE_ON_TITLE_FORMAT"), normalized];
     }
     if (notificationSubtitle)
         *notificationSubtitle = SPKInstantsAutoSaveListTitle();
@@ -260,16 +261,12 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
         BOOL allUsers = SPKInstantsAutoSaveAllUsersMode();
         self.showsAddButton = YES;
         self.infoText = allUsers
-                            ? @"Filter Mode is All Users, so every instant you open is saved except from users in this "
-                              @"list. Instants you already have are skipped."
-                            : @"Filter Mode is Selected Users, so only instants from users in this list are saved. "
-                              @"Instants you already have are skipped.";
-        self.emptyTitle = @"No users yet";
+                            ? SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_FILTER_MODE_USERS_SO_EVERY_INSTANT_OPEN_SAVED_EXCEPT_TEXT")
+                            : SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_FILTER_MODE_SELECTED_USERS_SO_ONLY_INSTANTS_USERS_LIST_TEXT");
+        self.emptyTitle = SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_NO_USERS_YET_TEXT");
         self.emptySubtitle = allUsers
-                                 ? @"Add users whose instants should never be auto-saved, here or from the instant "
-                                   @"action menu."
-                                 : @"Add users whose instants should be saved automatically as you open them, here or "
-                                   @"from the instant action menu.";
+                                 ? SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ADD_USERS_WHOSE_INSTANTS_SHOULD_NEVER_AUTO_SAVED_HERE_TEXT")
+                                 : SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ADD_USERS_WHOSE_INSTANTS_SHOULD_SAVED_AUTOMATICALLY_OPEN_HERE_TEXT");
     }
     return self;
 }
@@ -291,7 +288,7 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
 
         SPKUserListItem *item = [SPKUserListItem new];
         item.pk = pk;
-        item.title = username.length > 0 ? [@"@" stringByAppendingString:username] : @"Unknown user";
+        item.title = username.length > 0 ? [@"@" stringByAppendingString:username] : SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_USER_TEXT");
         item.subtitle = fullName.length > 0 ? fullName : nil;
         item.avatarURLString = profilePicUrl;
         item.representedObject = entry;
@@ -302,21 +299,21 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
 
 - (void)presentError:(NSString *)message {
     [SPKIGAlertPresenter presentAlertFromViewController:self
-                                                  title:@"Unable to Add User"
+                                                  title:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_UNABLE_ADD_USER_TEXT")
                                                 message:message
-                                                actions:@[ [SPKIGAlertAction actionWithTitle:@"OK" style:SPKIGAlertActionStyleCancel handler:nil] ]];
+                                                actions:@[ [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_OK") style:SPKIGAlertActionStyleCancel handler:nil] ]];
 }
 
 - (void)didTapAdd {
     __weak typeof(self) weakSelf = self;
     [SPKIGAlertPresenter presentTextInputAlertFromViewController:self
-                                                           title:@"Add User"
-                                                         message:@"Enter the Instagram username whose instants should be auto-saved."
-                                                     placeholder:@"username"
+                                                           title:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ADD_USER_TEXT")
+                                                         message:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ENTER_INSTAGRAM_USERNAME_WHOSE_INSTANTS_SHOULD_AUTO_SAVED_TEXT")
+                                                     placeholder:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USERNAME_TEXT")
                                                      initialText:nil
                                                  autocapitalized:NO
-                                                    confirmTitle:@"Search"
-                                                     cancelTitle:@"Cancel"
+                                                    confirmTitle:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_SEARCH_TEXT")
+                                                     cancelTitle:SPKL(@"VC_BTN_CANCEL")
                                                     confirmStyle:SPKIGAlertActionStyleDefault
                                                     confirmBlock:^(NSString *text) {
                                                         [weakSelf lookupUsername:text];
@@ -338,7 +335,7 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
                                       if (!strongSelf)
                                           return;
                                       if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          [strongSelf presentError:[NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USER_VALUE_NOT_FOUND_FORMAT"), username]];
                                           return;
                                       }
 
@@ -356,13 +353,13 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
                                           entry[@"profilePicUrl"] = profilePicUrl;
 
                                       [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
-                                                                                    title:@"Auto-Save Instants?"
+                                                                                    title:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_AUTO_SAVE_INSTANTS_QUESTION")
                                                                                   message:message
                                                                                   actions:@[
-                                                                                      [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                                                      [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                                                   style:SPKIGAlertActionStyleCancel
                                                                                                                 handler:nil],
-                                                                                      [SPKIGAlertAction actionWithTitle:@"Add"
+                                                                                      [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_ADD")
                                                                                                                   style:SPKIGAlertActionStyleDefault
                                                                                                                 handler:^{
                                                                                                                     [strongSelf addResolvedEntry:entry.copy username:resolvedUsername];
@@ -376,7 +373,7 @@ void SPKInstantsAutoSaveConsiderSnap(id snap, NSString *username, NSString *snap
         return;
     SPKAutoSaveFilterToggleEntry(self.config, entry);
     SPKNotify(kSPKNotificationInstantsAutoSaveUserRule,
-              [NSString stringWithFormat:@"Added @%@", username],
+              [NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ADDED_VALUE_FORMAT"), username],
               SPKInstantsAutoSaveListTitle(),
               @"circle_check_filled",
               SPKNotificationToneSuccess);

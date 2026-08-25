@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 #import <objc/runtime.h>
 
@@ -65,7 +66,7 @@ static NSString *SPKGetShareTypeFromController(UIViewController *vc) {
             return @"reel";
         }
         if ([media respondsToSelector:@selector(isIGTVMedia)] && [media isIGTVMedia]) {
-            return @"IGTV video";
+            return SPKL(@"MESSAGES_CONFIRM_SEND_IGTV_VIDEO_TEXT");
         }
         if ([media respondsToSelector:@selector(isFeedPost)] && [media isFeedPost]) {
             return @"post";
@@ -93,7 +94,7 @@ static NSString *SPKGetShareTypeFromController(UIViewController *vc) {
     if (!collection && recipientListVC)
         collection = [SPKUtils getIvarForObj:recipientListVC name:"_collection"];
     if (collection) {
-        return @"collection";
+        return SPKL(@"MESSAGES_CONFIRM_SEND_COLLECTION_TEXT");
     }
 
     id audioTrack = nil;
@@ -120,7 +121,7 @@ static NSString *SPKGetShareTypeFromController(UIViewController *vc) {
     if (!broadcastOwner && recipientListVC)
         broadcastOwner = [SPKUtils getIvarForObj:recipientListVC name:"_broadcastOwner"];
     if (broadcastOwner) {
-        return @"broadcast channel";
+        return SPKL(@"MESSAGES_CONFIRM_SEND_BROADCAST_CHANNEL_TEXT");
     }
 
     return nil;
@@ -151,11 +152,11 @@ static NSString *SPKGetShareTypeFromController(UIViewController *vc) {
     NSString *title = nil;
     NSString *message = nil;
     if (contentType) {
-        title = [NSString stringWithFormat:@"Confirm Sending %@", [contentType capitalizedString]];
-        message = [NSString stringWithFormat:@"Are you sure you want to send this %@?", contentType];
+        title = [NSString stringWithFormat:SPKL(@"MESSAGES_CONFIRM_SEND_CONFIRM_SENDING_VALUE_FORMAT"), [contentType capitalizedString]];
+        message = [NSString stringWithFormat:SPKL(@"MESSAGES_CONFIRM_SEND_SEND_VALUE_FORMAT"), contentType];
     } else {
-        title = @"Confirm Send";
-        message = @"Are you sure you want to send this?";
+        title = SPKL(@"MESSAGES_CONFIRM_SEND_CONFIRM_SEND_TEXT");
+        message = SPKL(@"MESSAGES_CONFIRM_SEND_SEND_CONFIRMATION_MESSAGE");
     }
 
     [SPKUtils

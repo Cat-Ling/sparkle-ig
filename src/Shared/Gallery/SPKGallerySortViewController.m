@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGallerySortViewController.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
@@ -105,22 +106,22 @@ static NSString *SPKGallerySortResourceSymbol(SPKGallerySortMode mode) {
 + (NSString *)labelForMode:(SPKGallerySortMode)mode {
     switch (mode) {
     case SPKGallerySortModeDateAddedDesc:
-        return @"Newest first";
+        return SPKL(@"GALLERY_GALLERY_SORT_NEWEST_FIRST_TEXT");
     case SPKGallerySortModeDateAddedAsc:
-        return @"Oldest first";
+        return SPKL(@"GALLERY_GALLERY_SORT_OLDEST_FIRST_TEXT");
     case SPKGallerySortModeNameAsc:
-        return @"Name A-Z";
+        return SPKL(@"GALLERY_GALLERY_SORT_NAME_Z_TEXT");
     case SPKGallerySortModeNameDesc:
-        return @"Name Z-A";
+        return SPKL(@"GALLERY_SORT_NAME_DESCENDING_TITLE");
     case SPKGallerySortModeSizeDesc:
-        return @"Largest first";
+        return SPKL(@"GALLERY_GALLERY_SORT_LARGEST_FIRST_TEXT");
     case SPKGallerySortModeSizeAsc:
-        return @"Smallest first";
+        return SPKL(@"GALLERY_GALLERY_SORT_SMALLEST_FIRST_TEXT");
     case SPKGallerySortModeTypeAsc:
     case SPKGallerySortModeTypeDesc:
-        return @"Newest first";
+        return SPKL(@"GALLERY_GALLERY_SORT_NEWEST_FIRST_TEXT");
     }
-    return @"Newest first";
+    return SPKL(@"GALLERY_GALLERY_SORT_NEWEST_FIRST_TEXT");
 }
 
 - (instancetype)init {
@@ -140,7 +141,7 @@ static NSString *SPKGallerySortResourceSymbol(SPKGallerySortMode mode) {
 }
 
 - (void)setupNavigationBar {
-    self.title = @"Sort";
+    self.title = SPKL(@"MENU_SORT");
 }
 
 // Height the content needs at `width`: the stack's fitting height plus its top
@@ -178,7 +179,7 @@ static NSString *SPKGallerySortResourceSymbol(SPKGallerySortMode mode) {
                                                      constant:-20],
     ]];
 
-    [stack addArrangedSubview:[self sectionTitle:@"Order"]];
+    [stack addArrangedSubview:[self sectionTitle:SPKL(@"GALLERY_GALLERY_SORT_ORDER_TEXT")]];
     NSArray<NSArray<NSNumber *> *> *rows = @[
         @[ @(SPKGallerySortModeDateAddedDesc), @(SPKGallerySortModeDateAddedAsc) ],
         @[ @(SPKGallerySortModeNameAsc), @(SPKGallerySortModeNameDesc) ],
@@ -207,13 +208,13 @@ static NSString *SPKGallerySortResourceSymbol(SPKGallerySortMode mode) {
         [stack addArrangedSubview:row];
     }
 
-    [stack addArrangedSubview:[self sectionTitle:@"Grouping"]];
+    [stack addArrangedSubview:[self sectionTitle:SPKL(@"GALLERY_GALLERY_SORT_GROUPING_TEXT")]];
     UIStackView *groupRow = [[UIStackView alloc] init];
     groupRow.axis = UILayoutConstraintAxisHorizontal;
     groupRow.spacing = 10;
     groupRow.distribution = UIStackViewDistributionFillEqually;
-    [groupRow addArrangedSubview:[self groupChipWithTitle:@"None" icon:@"circle_off" selected:!self.currentGroupByMediaType tag:0]];
-    [groupRow addArrangedSubview:[self groupChipWithTitle:@"Media type" icon:@"photo_gallery" selected:self.currentGroupByMediaType tag:1]];
+    [groupRow addArrangedSubview:[self groupChipWithTitle:SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_NONE_TEXT") icon:@"circle_off" selected:!self.currentGroupByMediaType tag:0]];
+    [groupRow addArrangedSubview:[self groupChipWithTitle:SPKL(@"GALLERY_GALLERY_SORT_MEDIA_TYPE_TEXT") icon:@"photo_gallery" selected:self.currentGroupByMediaType tag:1]];
     [stack addArrangedSubview:groupRow];
 }
 

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKStoryViewersSearchViewController.h"
 
 #import "../../AssetUtils.h"
@@ -91,7 +92,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
     _starButton = [UIButton buttonWithType:UIButtonTypeSystem];
     _starButton.translatesAutoresizingMaskIntoConstraints = NO;
     _starButton.tintColor = [SPKUtils SPKColor_InstagramSecondaryText];
-    _starButton.accessibilityLabel = @"Star viewer";
+    _starButton.accessibilityLabel = SPKL(@"STORIES_VIEWERS_STAR_VIEWER_ACCESSIBILITY_LABEL");
     [_starButton addTarget:self action:@selector(starTapped) forControlEvents:UIControlEventTouchUpInside];
     [self.contentView addSubview:_starButton];
 
@@ -171,7 +172,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
 - (instancetype)initWithMediaID:(NSString *)mediaID title:(NSString *)title {
     if ((self = [super init])) {
         _mediaID = [mediaID copy];
-        self.title = title.length ? title : @"Story Viewers";
+        self.title = title.length ? title : SPKL(@"STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT");
         _filter = SPKViewerFilterAll;
         NSArray *storedStars = SPKPreferenceObjectForKey(kSPKStarredStoryViewersKey);
         _starredViewerIdentifiers = [NSMutableSet setWithArray:[storedStars isKindOfClass:NSArray.class] ? storedStars : @[]];
@@ -217,7 +218,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
     self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
     self.searchController.searchResultsUpdater = self;
     self.searchController.obscuresBackgroundDuringPresentation = NO;
-    self.searchController.searchBar.placeholder = @"Search Viewers";
+    self.searchController.searchBar.placeholder = SPKL(@"STORIES_STORY_VIEWERS_SEARCH_SEARCH_VIEWERS_TEXT");
     [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                              forSearchBarIcon:UISearchBarIconSearch
                                         state:UIControlStateNormal];
@@ -242,7 +243,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
 #pragma mark - Filter
 
 - (NSArray<NSString *> *)filterTitles {
-    return @[ @"All Viewers", @"You Follow", @"You Don't Follow", @"Don't Follow You", @"Starred" ];
+    return @[ SPKL(@"STORIES_VIEWERS_FILTER_ALL_VIEWERS"), SPKL(@"STORIES_VIEWERS_FILTER_YOU_FOLLOW"), SPKL(@"STORIES_VIEWERS_FILTER_YOU_DONT_FOLLOW"), SPKL(@"STORIES_VIEWERS_FILTER_DOESNT_FOLLOW_YOU"), SPKL(@"STORIES_VIEWERS_FILTER_STARRED") ];
 }
 
 - (NSArray<NSString *> *)filterIcons {
@@ -290,7 +291,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
 - (void)updateFilterItem {
     self.filterItem.menu = [self buildFilterMenu];
     NSString *selectedTitle = [self filterTitles][self.filter];
-    self.filterItem.accessibilityLabel = [NSString stringWithFormat:@"Filter viewers, %@", selectedTitle];
+    self.filterItem.accessibilityLabel = [NSString stringWithFormat:SPKL(@"STORIES_VIEWERS_FILTER_ACCESSIBILITY_LABEL_FORMAT"), selectedTitle];
 }
 
 #pragma mark - Header (count)
@@ -347,7 +348,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
             typeof(self) self = weakSelf;
             if (!self)
                 return;
-            self.loadingLabel.text = [NSString stringWithFormat:@"Loading viewers... %ld", (long)fetched];
+            self.loadingLabel.text = [NSString stringWithFormat:SPKL(@"STORIES_STORY_VIEWERS_SEARCH_LOADING_VIEWERS_VALUE_FORMAT"), (long)fetched];
         }
         completion:^(NSArray<SPKStoryViewerModel *> *viewers, NSInteger totalCount, NSError *error) {
             typeof(self) self = weakSelf;
@@ -360,8 +361,8 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
             [self applyFilter];
             [self.view setNeedsLayout];
             if (error && viewers.count == 0) {
-                self.emptyStateTitle.text = @"Couldn't load viewers";
-                self.emptyStateSubtitle.text = error.localizedDescription ?: @"Please try again.";
+                self.emptyStateTitle.text = SPKL(@"STORIES_STORY_VIEWERS_SEARCH_COULDN_T_LOAD_VIEWERS_TEXT");
+                self.emptyStateSubtitle.text = error.localizedDescription ?: SPKL(@"STORIES_STORY_VIEWERS_SEARCH_PLEASE_TRY_AGAIN_TEXT");
             }
         }];
 }
@@ -415,9 +416,9 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
     NSInteger shown = self.shownViewers.count;
     NSInteger total = MAX(self.totalCount, (NSInteger)self.allViewers.count);
     if (self.searchText.length || self.filter != SPKViewerFilterAll) {
-        self.countLabel.text = [NSString stringWithFormat:@"%ld of %ld viewers", (long)shown, (long)total];
+        self.countLabel.text = [NSString stringWithFormat:SPKL(@"STORIES_STORY_VIEWERS_SEARCH_VALUE_VALUE_VIEWERS_FORMAT"), (long)shown, (long)total];
     } else {
-        self.countLabel.text = total == 1 ? @"1 viewer" : [NSString stringWithFormat:@"%ld viewers", (long)total];
+        self.countLabel.text = total == 1 ? SPKL(@"STORIES_STORY_VIEWERS_SEARCH_VIEWER_TEXT") : [NSString stringWithFormat:SPKL(@"STORIES_STORY_VIEWERS_SEARCH_VALUE_VIEWERS_FORMAT"), (long)total];
     }
 }
 
@@ -445,7 +446,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
     self.loadingLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightRegular];
     self.loadingLabel.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
     self.loadingLabel.textAlignment = NSTextAlignmentCenter;
-    self.loadingLabel.text = @"Loading viewers...";
+    self.loadingLabel.text = SPKL(@"STORIES_STORY_VIEWERS_SEARCH_LOADING_VIEWERS_TEXT");
     [self.loadingOverlay addSubview:self.loadingLabel];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -541,11 +542,11 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
         return;
     self.emptyStateIcon.image = [SPKAssetUtils instagramIconNamed:@"users_empty" pointSize:96.0 renderingMode:UIImageRenderingModeAlwaysTemplate];
     if (self.searchText.length || self.filter != SPKViewerFilterAll) {
-        self.emptyStateTitle.text = @"No matches";
-        self.emptyStateSubtitle.text = @"No viewers match your search or filter.";
+        self.emptyStateTitle.text = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_NO_MATCHES_TEXT");
+        self.emptyStateSubtitle.text = SPKL(@"STORIES_STORY_VIEWERS_SEARCH_NO_VIEWERS_MATCH_SEARCH_TEXT");
     } else {
-        self.emptyStateTitle.text = @"No viewers yet";
-        self.emptyStateSubtitle.text = @"No one has viewed this story.";
+        self.emptyStateTitle.text = SPKL(@"STORIES_STORY_VIEWERS_SEARCH_NO_VIEWERS_YET_TEXT");
+        self.emptyStateSubtitle.text = SPKL(@"STORIES_STORY_VIEWERS_SEARCH_NO_ONE_VIEWED_STORY_TEXT");
     }
 }
 
@@ -559,11 +560,11 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
     if (!v.friendshipKnown)
         return nil;
     if (v.following && v.followedBy)
-        return @"Mutual";
+        return SPKL(@"STORIES_STORY_VIEWERS_SEARCH_MUTUAL_TEXT");
     if (v.following)
-        return @"Following";
+        return SPKL(@"MENU_FOLLOWING");
     if (v.followedBy)
-        return @"Follows you";
+        return SPKL(@"STORIES_STORY_VIEWERS_SEARCH_FOLLOWS_TEXT");
     return nil;
 }
 
@@ -598,7 +599,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SPKStoryViewerCell *cell = [tableView dequeueReusableCellWithIdentifier:@"v" forIndexPath:indexPath];
     SPKStoryViewerModel *v = self.shownViewers[indexPath.row];
-    cell.usernameLabel.text = v.username.length ? [@"@" stringByAppendingString:v.username] : @"Unknown user";
+    cell.usernameLabel.text = v.username.length ? [@"@" stringByAppendingString:v.username] : SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_USER_TEXT");
     cell.subtitleLabel.text = v.fullName.length ? v.fullName : @"";
     cell.subtitleLabel.hidden = v.fullName.length == 0;
     cell.verifiedBadge.hidden = !v.isVerified;
@@ -606,7 +607,7 @@ static UIImage *SPKViewerStarImage(BOOL filled, CGFloat pointSize) {
     BOOL starred = [self isViewerStarred:v];
     [cell.starButton setImage:SPKViewerStarImage(starred, 20.0) forState:UIControlStateNormal];
     cell.starButton.tintColor = starred ? UIColor.systemYellowColor : [SPKUtils SPKColor_InstagramSecondaryText];
-    cell.starButton.accessibilityLabel = starred ? @"Unstar viewer" : @"Star viewer";
+    cell.starButton.accessibilityLabel = starred ? SPKL(@"STORIES_VIEWERS_UNSTAR_VIEWER_ACCESSIBILITY_LABEL") : SPKL(@"STORIES_VIEWERS_STAR_VIEWER_ACCESSIBILITY_LABEL");
     __weak typeof(self) weakSelf = self;
     __weak SPKStoryViewerModel *weakViewer = v;
     cell.starToggleHandler = ^{

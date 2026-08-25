@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessagesModels.h"
 
 NSString *SPKDeletedMessageKindToString(SPKDeletedMessageKind kind) {
@@ -61,13 +62,13 @@ SPKDeletedMessageKind SPKDeletedMessageKindFromString(NSString *s) {
 NSString *SPKDeletedMessageKindLocalizedName(SPKDeletedMessageKind kind) {
     switch (kind) {
     case SPKDeletedMessageKindText:
-        return @"Text";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT");
     case SPKDeletedMessageKindPhoto:
         return @"Photo";
     case SPKDeletedMessageKindVideo:
         return @"Video";
     case SPKDeletedMessageKindVoice:
-        return @"Voice";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT");
     case SPKDeletedMessageKindGif:
         return @"GIF";
     case SPKDeletedMessageKindSticker:
@@ -79,12 +80,12 @@ NSString *SPKDeletedMessageKindLocalizedName(SPKDeletedMessageKind kind) {
     case SPKDeletedMessageKindAudioShare:
         return @"Audio";
     case SPKDeletedMessageKindReaction:
-        return @"Reaction";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION");
     case SPKDeletedMessageKindOther:
-        return @"Other";
+        return SPKL(@"STORIES_OTHER_HEADER");
     case SPKDeletedMessageKindUnknown:
     default:
-        return @"Unknown";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_TEXT");
     }
 }
 
@@ -126,18 +127,18 @@ NSString *SPKDeletedMessageShareSubtypeName(NSString *subtype) {
     if ([subtype isEqualToString:@"reel"])
         return @"Reel";
     if ([subtype isEqualToString:@"post"])
-        return @"Post";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_POST_TEXT");
     if ([subtype isEqualToString:@"story"])
         return @"Story";
     if ([subtype isEqualToString:@"profile"])
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     if ([subtype isEqualToString:@"note"])
-        return @"Note";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_NOTE_TEXT");
     if ([subtype isEqualToString:@"location"])
-        return @"Location";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_LOCATION_TEXT");
     if ([subtype isEqualToString:@"audio"])
         return @"Audio";
-    return @"Shared post";
+    return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_SHARED_POST_TEXT");
 }
 
 NSString *SPKDeletedMessageShareSubtypeSymbol(__unused NSString *subtype) {
@@ -297,13 +298,13 @@ static double spkDouble(id v) {
     if (self.isGroup) {
         if (self.threadTitle.length)
             return self.threadTitle;
-        return @"Group chat";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_GROUP_CHAT_TEXT");
     }
     if (self.senderUsername.length)
         return [@"@" stringByAppendingString:self.senderUsername];
     if (self.senderFullName.length)
         return self.senderFullName;
-    return @"Unknown user";
+    return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_USER_TEXT");
 }
 
 - (NSString *)flagKey {

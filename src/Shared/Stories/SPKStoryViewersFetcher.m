@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKStoryViewersFetcher.h"
 
 #import "../../Networking/SPKInstagramAPI.h"
@@ -37,7 +38,7 @@ static const NSInteger kSPKViewersFriendshipBatch = 50;
     if (mediaID.length == 0) {
         dispatch_async(dispatch_get_main_queue(), ^{
             if (completion)
-                completion(@[], 0, [NSError errorWithDomain:@"SPKStoryViewers" code:1 userInfo:@{NSLocalizedDescriptionKey : @"Missing story id"}]);
+                completion(@[], 0, [NSError errorWithDomain:@"SPKStoryViewers" code:1 userInfo:@{NSLocalizedDescriptionKey : SPKL(@"STORIES_STORY_VIEWERS_FETCHER_MISSING_STORY_ID_TEXT")}]);
         });
         return fetcher;
     }
@@ -82,7 +83,7 @@ static const NSInteger kSPKViewersFriendshipBatch = 50;
     if (![response isKindOfClass:[NSDictionary class]]) {
         // Only surface an error if we got nothing at all; a mid-pagination
         // hiccup still returns what we have so far.
-        [self finishWithError:(firstPage ? (error ?: [NSError errorWithDomain:@"SPKStoryViewers" code:2 userInfo:@{NSLocalizedDescriptionKey : @"Could not load viewers"}]) : nil)];
+        [self finishWithError:(firstPage ? (error ?: [NSError errorWithDomain:@"SPKStoryViewers" code:2 userInfo:@{NSLocalizedDescriptionKey : SPKL(@"STORIES_STORY_VIEWERS_FETCHER_COULD_NOT_LOAD_VIEWERS_TEXT")}]) : nil)];
         return;
     }
 

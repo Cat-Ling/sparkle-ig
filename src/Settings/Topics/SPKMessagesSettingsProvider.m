@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKMessagesSettingsProvider.h"
 
 #import "../../Features/Messages/AccurateActiveStatus.h"
@@ -32,7 +33,7 @@ static SPKSetting *SPKAudioGatedSwitch(NSString *title, UIImage *icon, NSString 
 
 @implementation SPKActivityNotificationsSettingsViewController
 - (instancetype)init {
-    return [super initWithTitle:@"Activity Notifications" sections:SPKActivityNotificationsSettingsSections() reduceMargin:NO];
+    return [super initWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFICATIONS_TITLE") sections:SPKActivityNotificationsSettingsSections() reduceMargin:NO];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -65,76 +66,70 @@ static NSArray *SPKActivityNotificationsSettingsSections(void) {
         return SPKPresenceNotificationsEnabled();
     };
 
-    SPKSetting *notifyOnline = [SPKSetting switchCellWithTitle:@"Online" icon:SPKSettingsIcon(@"circle_check_filled") defaultsKey:@"msgs_presence_notify_online"];
-    SPKSetting *notifyOffline = [SPKSetting switchCellWithTitle:@"Offline" icon:SPKSettingsIcon(@"circle_xmark_filled") defaultsKey:@"msgs_presence_notify_offline"];
-    SPKSetting *notifyTyping = [SPKSetting switchCellWithTitle:@"Typing" icon:SPKSettingsIcon(@"keyboard") defaultsKey:@"msgs_presence_notify_typing"];
-    SPKSetting *notifyRead = [SPKSetting switchCellWithTitle:@"Read" icon:SPKSettingsIcon(@"eye") defaultsKey:@"msgs_presence_notify_read"];
-    SPKSetting *mirrorToNotificationCenter = [SPKSetting switchCellWithTitle:@"Notify Outside the App"
+    SPKSetting *notifyOnline = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE") icon:SPKSettingsIcon(@"circle_check_filled") defaultsKey:@"msgs_presence_notify_online"];
+    SPKSetting *notifyOffline = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE") icon:SPKSettingsIcon(@"circle_xmark_filled") defaultsKey:@"msgs_presence_notify_offline"];
+    SPKSetting *notifyTyping = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFY_TYPING_TITLE") icon:SPKSettingsIcon(@"keyboard") defaultsKey:@"msgs_presence_notify_typing"];
+    SPKSetting *notifyRead = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFY_READ_TITLE") icon:SPKSettingsIcon(@"eye") defaultsKey:@"msgs_presence_notify_read"];
+    SPKSetting *mirrorToNotificationCenter = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE")
                                                                        icon:SPKSettingsIcon(@"notifications")
                                                                 defaultsKey:@"msgs_presence_mirror_notification_center"];
     for (SPKSetting *setting in @[ notifyOnline, notifyOffline, notifyTyping, notifyRead, mirrorToNotificationCenter ])
         setting.enabledProvider = masterEnabled;
 
-    SPKSetting *trackedUsers = [SPKSetting navigationCellWithTitle:@"Tracked Users"
+    SPKSetting *trackedUsers = [SPKSetting navigationCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_TRACKED_USERS_TITLE")
                                                           subtitle:@""
                                                               icon:SPKSettingsIcon(@"users")
                                                     viewController:SPKPresenceListViewController()];
     trackedUsers.userInfo = @{ @"accessoryText" : [NSString stringWithFormat:@"%lu", (unsigned long)SPKPresenceUserList().count] };
     trackedUsers.enabledProvider = masterEnabled;
 
-    SPKSetting *accurateStatus = [SPKSetting switchCellWithTitle:@"Accurate Active Status"
+    SPKSetting *accurateStatus = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_ACCURATE_STATUS_TITLE")
                                                             icon:SPKSettingsIcon(@"check")
                                                      defaultsKey:@"msgs_presence_accurate_status"];
-    SPKSetting *refreshInterval = [SPKSetting stepperCellWithTitle:@"Refresh Interval"
-                                                          subtitle:@"Refresh every %@ %@"
+    SPKSetting *refreshInterval = [SPKSetting stepperCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_REFRESH_INTERVAL_TITLE")
+                                                          subtitle:SPKL(@"MESSAGES_ACTIVITY_REFRESH_INTERVAL_SUBTITLE")
                                                               icon:SPKSettingsIcon(@"clock")
                                                        defaultsKey:@"msgs_presence_refresh_interval"
                                                                min:10
                                                                max:300
                                                               step:5
-                                                             label:@"seconds"
-                                                     singularLabel:@"second"];
+                                                             label:SPKL(@"MESSAGES_ACTIVITY_REFRESH_INTERVAL_UNIT_PLURAL")
+                                                     singularLabel:SPKL(@"MESSAGES_ACTIVITY_REFRESH_INTERVAL_UNIT_SINGULAR")];
     refreshInterval.enabledProvider = ^BOOL {
         return [SPKUtils getBoolPref:@"msgs_presence_accurate_status"];
     };
 
     return @[
         SPKTopicSection(@"", @[
-            [SPKSetting switchCellWithTitle:@"Activity Notifications"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFICATIONS_TITLE")
                                        icon:SPKSettingsIcon(@"activity")
                                 defaultsKey:@"msgs_presence_notifications"],
         ],
-                        @"Master switch for tracked-user activity alerts.\n\n"
-                        @"Activity events only arrive while Instagram is running and stop when iOS suspends it."),
-        SPKTopicSection(@"Notifications", @[
+                        SPKL(@"MESSAGES_ACTIVITY_MASTER_SWITCH_FOOTER")),
+        SPKTopicSection(SPKL(@"MESSAGES_ACTIVITY_NOTIFICATIONS_HEADER"), @[
             notifyOnline,
             notifyOffline,
             notifyTyping,
             notifyRead,
         ],
-                        @"1. Notifies you when a tracked user comes online.\n"
-                        @"2. Notifies you when a tracked user goes offline.\n"
-                        @"3. Notifies you when a tracked user starts typing.\n"
-                        @"4. Notifies you when a tracked user reads a message you sent."),
+                        SPKL(@"MESSAGES_ACTIVITY_NOTIFICATIONS_FOOTER")),
         SPKTopicSection(@"", @[
             mirrorToNotificationCenter,
         ],
-                        @"Sends a push notification when Instagram is not in front. In the app, Sparkle uses a pill instead."),
-        SPKTopicSection(@"Tracking", @[
+                        SPKL(@"MESSAGES_ACTIVITY_MIRROR_NOTIFICATION_CENTER_FOOTER")),
+        SPKTopicSection(SPKL(@"MESSAGES_ACTIVITY_TRACKING_HEADER"), @[
             trackedUsers,
-            [SPKSetting navigationCellWithTitle:@"Activity Diagnostics"
+            [SPKSetting navigationCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_DIAGNOSTICS_TITLE")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"info")
                                  viewController:SPKPresenceDiagnosticsViewController()],
         ],
-                        @"1. Manage the users tracked by this Instagram account. Lists are never shared between accounts.\n"
-                        @"2. Inspect Instagram's live activity state and clear Sparkle's transition memory and cooldowns."),
-        SPKTopicSection(@"Accuracy", @[
+                        SPKL(@"MESSAGES_ACTIVITY_TRACKING_FOOTER")),
+        SPKTopicSection(SPKL(@"MESSAGES_ACTIVITY_ACCURACY_HEADER"), @[
             accurateStatus,
             refreshInterval,
         ],
-                        @"1. Removes Instagram's activity grace period and refreshes its native status more often.\n"
-                        @"2. Controls the refresh frequency. Shorter intervals update sooner and use more battery.")
+                        SPKL(@"MESSAGES_ACTIVITY_ACCURACY_FOOTER"))
     ];
 }
 
@@ -143,7 +138,7 @@ static NSArray *SPKActivityNotificationsSettingsSections(void) {
 
 @implementation SPKMessagesSettingsViewController
 - (instancetype)init {
-    return [super initWithTitle:@"Messages" sections:SPKMessagesSettingsSections() reduceMargin:NO];
+    return [super initWithTitle:SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE") sections:SPKMessagesSettingsSections() reduceMargin:NO];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -171,10 +166,10 @@ static NSArray *SPKMessagesSettingsSections(void) {
 
     // Auto-seen triggers only act while manual seen is on. Keep their stored value
     // but lock the cells when manual seen is off.
-    SPKSetting *seenOnSend = [SPKSetting switchCellWithTitle:@"Mark Seen on Message Send" icon:SPKSettingsIcon(@"messages") defaultsKey:@"msgs_seen_on_send"];
-    SPKSetting *seenOnReply = [SPKSetting switchCellWithTitle:@"Mark Seen on Message Reply" icon:SPKSettingsIcon(@"reply") defaultsKey:@"msgs_seen_on_reply"];
-    SPKSetting *seenOnReaction = [SPKSetting switchCellWithTitle:@"Mark Seen on Reaction" icon:SPKSettingsIcon(@"reactions") defaultsKey:@"msgs_seen_on_reaction"];
-    SPKSetting *seenOnTyping = [SPKSetting switchCellWithTitle:@"Mark Seen on Typing" icon:SPKSettingsIcon(@"keyboard") defaultsKey:@"msgs_seen_on_typing"];
+    SPKSetting *seenOnSend = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_GENERAL_MARK_SEEN_MESSAGE_SEND_TITLE") icon:SPKSettingsIcon(@"messages") defaultsKey:@"msgs_seen_on_send"];
+    SPKSetting *seenOnReply = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_GENERAL_MARK_SEEN_MESSAGE_REPLY_TITLE") icon:SPKSettingsIcon(@"reply") defaultsKey:@"msgs_seen_on_reply"];
+    SPKSetting *seenOnReaction = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_GENERAL_MARK_SEEN_REACTION_TITLE") icon:SPKSettingsIcon(@"reactions") defaultsKey:@"msgs_seen_on_reaction"];
+    SPKSetting *seenOnTyping = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_GENERAL_MARK_SEEN_TYPING_TITLE") icon:SPKSettingsIcon(@"keyboard") defaultsKey:@"msgs_seen_on_typing"];
     seenOnSend.enabledProvider = ^BOOL {
         return [SPKUtils getBoolPref:@"msgs_manual_seen"];
     };
@@ -191,7 +186,7 @@ static NSArray *SPKMessagesSettingsSections(void) {
     // Chooses where the manual-seen eye button lives: the top nav bar, or a
     // draggable bubble above the composer. Only meaningful while manual seen is on.
     // Up/Down arrows mirror the placement on both the menu items and the cell.
-    SPKSetting *seenButtonPosition = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:@"Seen Button Position"
+    SPKSetting *seenButtonPosition = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"MESSAGES_GENERAL_SEEN_BUTTON_POSITION_TITLE")
                                                                                               icon:SPKSettingsIcon(@"arrow_up")
                                                                                               menu:SPKSeenButtonPositionMenu()],
                                                                      SPKSettingsIcon(@"arrow_up"));
@@ -200,14 +195,14 @@ static NSArray *SPKMessagesSettingsSections(void) {
     };
 
     // Advancing after a manual seen only applies while visual manual seen is on.
-    SPKSetting *advanceVisual = [SPKSetting switchCellWithTitle:@"Advance After Manual Seen" icon:SPKSettingsIcon(@"autoscroll") defaultsKey:@"msgs_advance_visual_on_seen"];
+    SPKSetting *advanceVisual = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_GENERAL_ADVANCE_AFTER_MANUAL_SEEN_TITLE") icon:SPKSettingsIcon(@"autoscroll") defaultsKey:@"msgs_advance_visual_on_seen"];
     advanceVisual.enabledProvider = ^BOOL {
         return [SPKUtils getBoolPref:@"msgs_manual_visual_seen"];
     };
 
     // Tri-state control for reformatting the chat-header last-active presence
     // label: Off / Smart / Date & Time.
-    SPKSetting *lastActiveFormat = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:@"Last Active"
+    SPKSetting *lastActiveFormat = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"MESSAGES_GENERAL_LAST_ACTIVE_TITLE")
                                                                                             icon:SPKSettingsIcon(@"clock")
                                                                                             menu:SPKLastActiveFormatMenu()],
                                                                    SPKSettingsIcon(@"clock"));
@@ -215,14 +210,14 @@ static NSArray *SPKMessagesSettingsSections(void) {
     // Extends the action button to the full-screen viewer for permanent chat media
     // (camera-roll photos/videos, chat-menu media), replacing IG's native Save.
     // Only meaningful while the master action button toggle is on.
-    SPKSetting *chatMediaActionButton = [SPKSetting switchCellWithTitle:@"Also Show on Chat Media"
+    SPKSetting *chatMediaActionButton = [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_GENERAL_ALSO_SHOW_CHAT_MEDIA_TITLE")
                                                                   icon:SPKSettingsIcon(@"photo")
                                                            defaultsKey:kSPKMessagesActionButtonChatMediaKey];
     chatMediaActionButton.enabledProvider = ^BOOL {
         return [SPKUtils getBoolPref:kSPKMessagesActionButtonEnabledKey];
     };
 
-    SPKSetting *activityNotifications = [SPKSetting navigationCellWithTitle:@"Activity Notifications"
+    SPKSetting *activityNotifications = [SPKSetting navigationCellWithTitle:SPKL(@"MESSAGES_ACTIVITY_NOTIFICATIONS_TITLE")
                                                                    subtitle:@""
                                                                        icon:SPKSettingsIcon(@"activity")
                                                              viewController:[[SPKActivityNotificationsSettingsViewController alloc] init]];
@@ -232,21 +227,20 @@ static NSArray *SPKMessagesSettingsSections(void) {
     };
 
     return @[
-        SPKTopicSection(@"Action Button", @[
-            [SPKSetting switchCellWithTitle:@"Messages Action Button"
+        SPKTopicSection(SPKL(@"FEED_ACTION_BUTTON_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_ACTION_BUTTON_MESSAGES_ACTION_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"action")
                                 defaultsKey:kSPKMessagesActionButtonEnabledKey],
             chatMediaActionButton,
             SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSourceDirect),
-            SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSourceDirect, @"Messages", SPKActionButtonSupportedActionsForSource(SPKActionButtonSourceDirect), SPKActionButtonDefaultSectionsForSource(SPKActionButtonSourceDirect))
+            SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSourceDirect, SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE"), SPKActionButtonSupportedActionsForSource(SPKActionButtonSourceDirect), SPKActionButtonDefaultSectionsForSource(SPKActionButtonSourceDirect))
         ],
-                        @"Choose what tapping the action button does. Long press opens the full menu.\n"
-                        @"\"Also Show on Chat Media\" adds it to camera-roll photos and videos opened in a chat."),
-        SPKTopicSection(@"Messaging", @[
-            [SPKSetting switchCellWithTitle:@"Unlock Message Preview"
+                        SPKL(@"SETTINGS_MESSAGES_CHOOSE_WHAT_TAPPING_ACTION_BUTTON_LONG_PRESS_OPENS_FULL_ACTION")),
+        SPKTopicSection(SPKL(@"MESSAGES_MESSAGING_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_MESSAGING_UNLOCK_MESSAGE_PREVIEW_TITLE")
                                        icon:SPKSettingsIcon(@"story_preview")
                                 defaultsKey:@"msgs_unlock_preview"],
-            [SPKSetting switchCellWithTitle:@"Manually Mark Seen"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_MESSAGING_MANUALLY_MARK_SEEN_TITLE")
                                        icon:SPKSettingsIcon(@"eye")
                                 defaultsKey:@"msgs_manual_seen"],
             seenButtonPosition,
@@ -256,181 +250,147 @@ static NSArray *SPKMessagesSettingsSections(void) {
             seenOnTyping,
             manualSeenList,
         ],
-                        manualSeen ? @"1. Unlock \"Message Preview\": the chat long-press menu shows the actual chat preview without marking the messages as seen.\n"
-                                     @"2. Prevents automatic seen receipts and adds an eye button to mark chats as seen.\n"
-                                     @"3. Places the seen button in the top nav bar, or as a draggable bubble above the composer within thumb reach (scroll to snap it back).\n"
-                                     @"4. Marks a chat as seen when you send a message.\n"
-                                     @"5. Marks a chat as seen when you reply.\n"
-                                     @"6. Marks a chat as seen when you react.\n"
-                                     @"7. Marks a chat as seen when you start typing a reply.\n\n"
-                                     @"Excluded Chats keep Instagram's normal seen behavior. Manage them from the eye button, an inbox long press, or the list above."
-                                   : @"1. Unlock \"Message Preview\": the chat long-press menu shows the actual chat preview without marking the messages as seen.\n"
-                                     @"2. Prevents automatic seen receipts and adds an eye button to mark chats as seen.\n"
-                                     @"3. Places the seen button in the top nav bar, or as a draggable bubble above the composer within thumb reach (scroll to snap it back).\n"
-                                     @"4. Marks a chat as seen when you send a message.\n"
-                                     @"5. Marks a chat as seen when you reply.\n"
-                                     @"6. Marks a chat as seen when you react.\n"
-                                     @"7. Marks a chat as seen when you start typing a reply.\n\n"
-                                     @"Included Chats require the eye button or the auto-seen triggers above. Manage them from the eye button, an inbox long press, or the list above."),
-        SPKTopicSection(@"Activity", @[
+                        manualSeen ? SPKL(@"SETTINGS_MESSAGES_UNLOCK_MESSAGE_PREVIEW_CHAT_LONG_PRESS_MENU_SHOWS_ACTUAL_MESSAGE")
+                                   : SPKL(@"MESSAGES_MANUAL_SEEN_INCLUDED_CHATS_FOOTER")),
+        SPKTopicSection(SPKL(@"MESSAGES_ACTIVITY_HEADER"), @[
             activityNotifications,
         ],
-                        @"Configure tracked users, activity events, background notifications, diagnostics, and active-status accuracy."),
-        SPKTopicSection(@"Deleted Messages", @[
-            [SPKSetting switchCellWithTitle:@"Keep Deleted Messages"
+                        SPKL(@"MESSAGES_ACTIVITY_FOOTER")),
+        SPKTopicSection(SPKL(@"ALERT_ACTION_DELETED_MESSAGES"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_KEEP_DELETED_MESSAGES_TITLE")
                                        icon:SPKSettingsIcon(@"undo_circle")
                                 defaultsKey:@"msgs_keep_deleted"],
-            [SPKSetting switchCellWithTitle:@"Confirm Inbox Refresh"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_CONFIRM_INBOX_REFRESH_TITLE")
                                        icon:SPKSettingsIcon(@"arrow_cw")
                                 defaultsKey:@"msgs_confirm_refresh"],
-            [SPKSetting switchCellWithTitle:@"Log Deleted Messages"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_LOG_DELETED_MESSAGES_TITLE")
                                        icon:SPKSettingsIcon(@"logs")
                                 defaultsKey:@"msgs_deleted_log"],
-            [SPKSetting switchCellWithTitle:@"Log Removed Reactions"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_LOG_REMOVED_REACTIONS_TITLE")
                                        icon:SPKSettingsIcon(@"reactions")
                                 defaultsKey:@"msgs_deleted_log_reactions"],
-            [SPKSetting switchCellWithTitle:@"Respect Seen Chat List"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_RESPECT_SEEN_CHAT_LIST_TITLE")
                                        icon:SPKSettingsIcon(@"eye")
                                 defaultsKey:@"msgs_deleted_log_respect_seen_list"],
-            [SPKSetting navigationCellWithTitle:@"View Deleted Messages"
+            [SPKSetting navigationCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_VIEW_DELETED_MESSAGES_TITLE")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"channels")
                                  viewController:[SPKDeletedMessagesViewController new]],
         ],
-                        @"1. Preserves remotely unsent messages in the chat, marked with an undo-circle indicator.\n"
-                        @"2. Asks before refreshing the inbox, which reloads threads and drops preserved messages.\n"
-                        @"3. Records message content before removal and keeps view-once/view-twice media until cleared.\n"
-                        @"4. Also logs reactions that are removed.\n"
-                        @"5. Skips log capture and unsent notifications for chats in your manual-seen include/exclude list.\n"
-                        @"6. Opens the captured deleted-message logs."),
-        SPKTopicSection(@"Interface", @[
+                        SPKL(@"SETTINGS_MESSAGES_PRESERVES_REMOTELY_UNSENT_MESSAGES_CHAT_MARKED_UNDO_CIRCLE_INDICATOR_MESSAGE")),
+        SPKTopicSection(SPKL(@"INTERFACE_TITLE"), @[
             lastActiveFormat,
-            [SPKSetting switchCellWithTitle:@"Hide Typing Status"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_INTERFACE_HIDE_TYPING_STATUS_TITLE")
                                        icon:SPKSettingsIcon(@"keyboard")
                                 defaultsKey:@"msgs_disable_typing"],
-            [SPKSetting switchCellWithTitle:@"Hide Reels Blend Button"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_INTERFACE_HIDE_REELS_BLEND_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"blend")
                                 defaultsKey:@"msgs_hide_reels_blend"],
-            [SPKSetting switchCellWithTitle:@"Hide Audio Call Button"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_INTERFACE_HIDE_AUDIO_CALL_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"call")
                                 defaultsKey:@"msgs_hide_audio_call_btn"],
-            [SPKSetting switchCellWithTitle:@"Hide Video Call Button"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_INTERFACE_HIDE_VIDEO_CALL_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"video")
                                 defaultsKey:@"msgs_hide_video_call_btn"],
-            [SPKSetting switchCellWithTitle:@"Hide Flag Button"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_INTERFACE_HIDE_FLAG_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"flag")
                                 defaultsKey:@"msgs_hide_flag_btn"],
-            [SPKSetting switchCellWithTitle:@"No Suggested Chats"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_INTERFACE_NO_SUGGESTED_CHATS_TITLE")
                                        icon:SPKSettingsIcon(@"question")
                                 defaultsKey:@"msgs_hide_suggested_chats"],
         ],
-                        @"1. Shows the exact time someone was last active in the chat header (\"Active at 1:15 AM\") instead of a relative label (\"Active 2h ago\"). "
-                        @"\"Smart\" uses the time alone for today and adds the date for older days; \"Date & Time\" always shows both. Only reformats presence Instagram already shows.\n"
-                        @"2. Stops sending your typing indicator to others.\n"
-                        @"3. Removes the Reels Blend button from the inbox.\n"
-                        @"4. Hides the audio call button in the chat header.\n"
-                        @"5. Hides the video call button in the chat header.\n"
-                        @"6. Hides the flag button in the chat header.\n"
-                        @"7. Removes suggested chats from the inbox."),
-        SPKTopicSection(@"Visual Messages", @[
-            [SPKSetting switchCellWithTitle:@"Manually Mark Seen"
+                        SPKL(@"SETTINGS_MESSAGES_SHOWS_EXACT_TIME_SOMEONE_LAST_ACTIVE_CHAT_HEADER_ACTIVE_TEXT")),
+        SPKTopicSection(SPKL(@"MESSAGES_VISUAL_MESSAGES_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_MESSAGING_MANUALLY_MARK_SEEN_TITLE")
                                        icon:SPKSettingsIcon(@"eye")
                                 defaultsKey:@"msgs_manual_visual_seen"],
             advanceVisual,
-            [SPKSetting switchCellWithTitle:@"Stop Auto Advance"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_VISUAL_MESSAGES_STOP_AUTO_ADVANCE_TITLE")
                                        icon:SPKSettingsIcon(@"autoscroll")
                                 defaultsKey:@"msgs_stop_visual_auto_advance"],
-            [SPKSetting switchCellWithTitle:@"Disable View-Once Limitations"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_VISUAL_MESSAGES_DISABLE_VIEW_ONCE_LIMITATIONS_TITLE")
                                        icon:SPKSettingsIcon(@"view_once")
                                 defaultsKey:@"msgs_disable_view_once"],
-            [SPKSetting switchCellWithTitle:@"Disable Screenshot Detection"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_VANISH_MODE_DISABLE_SCREENSHOT_DETECTION_TITLE")
                                        icon:SPKSettingsIcon(@"warning")
                                 defaultsKey:@"msgs_disable_screenshot_detection"]
         ],
-                        @"1. Prevents automatic seen receipts and adds a button to mark the chat as seen.\n"
-                        @"2. Moves to the next visual item when available or dismisses.\n"
-                        @"3. Keeps the current visual message on screen instead of auto-advancing when it ends.\n"
-                        @"4. View-once messages behave like normal visual messages.\n"
-                        @"5. Allows screen capture of visual messages."),
-        SPKTopicSection(@"Vanish Mode", @[
-            [SPKSetting switchCellWithTitle:@"Disable Swipe-Up Gesture"
+                        SPKL(@"SETTINGS_MESSAGES_PREVENTS_AUTOMATIC_SEEN_RECEIPTS_ADDS_BUTTON_MARK_CHAT_SEEN_TEXT")),
+        SPKTopicSection(SPKL(@"MESSAGES_VANISH_MODE_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_VANISH_MODE_DISABLE_SWIPE_UP_GESTURE_TITLE")
                                        icon:SPKSettingsIcon(@"arrow_up")
                                 defaultsKey:@"msgs_disable_vanish_swipe_up"],
-            [SPKSetting switchCellWithTitle:@"Disable Screenshot Detection"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_VANISH_MODE_DISABLE_SCREENSHOT_DETECTION_TITLE")
                                        icon:SPKSettingsIcon(@"warning")
                                 defaultsKey:@"msgs_hide_vanish_screenshot"],
         ],
-                        @"1. Disable the gesture that enables vanish mode.\n"
-                        @"2. Allows screen capture while vanish mode is active."),
-        SPKTopicSection(@"Notes", @[
-            [SPKSetting switchCellWithTitle:@"Hide Notes Tray"
+                        SPKL(@"SETTINGS_MESSAGES_DISABLE_GESTURE_ENABLES_VANISH_MODE_N2_ALLOWS_SCREEN_CAPTURE_TEXT")),
+        SPKTopicSection(SPKL(@"MESSAGES_NOTES_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_NOTES_HIDE_NOTES_TRAY_TITLE")
                                        icon:SPKSettingsIcon(@"notes")
                                 defaultsKey:@"msgs_hide_notes_tray"],
-            [SPKSetting switchCellWithTitle:@"Hide Friends Map"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_NOTES_HIDE_FRIENDS_MAP_TITLE")
                                        icon:SPKSettingsIcon(@"map")
                                 defaultsKey:@"msgs_hide_friends_map"],
-            SPKAudioGatedSwitch(@"Download Notes Audio", SPKSettingsIcon(@"audio"), @"msgs_download_notes_audio"),
-            [SPKSetting switchCellWithTitle:@"Copy Note Text"
+            SPKAudioGatedSwitch(SPKL(@"SETTINGS_MESSAGES_DOWNLOAD_NOTES_AUDIO_TEXT"), SPKSettingsIcon(@"audio"), @"msgs_download_notes_audio"),
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_NOTES_COPY_NOTE_TEXT_TITLE")
                                        icon:SPKSettingsIcon(@"copy")
                                 defaultsKey:@"msgs_copy_note_text"]
         ],
-                        @"Long-press a note in the tray to download its audio or copy its text. Each action only appears when the note has that content."),
-        SPKTopicSection(@"Audio", @[
-            SPKAudioGatedSwitch(@"Download Voice Messages", SPKSettingsIcon(@"audio_download"), @"msgs_download_audio_messages"),
-            [SPKSetting switchCellWithTitle:@"Upload Audio"
+                        SPKL(@"MESSAGES_NOTES_FOOTER")),
+        SPKTopicSection(SPKL(@"MESSAGES_DIRECT_MESSAGE_MENU_AUDIO_TITLE"), @[
+            SPKAudioGatedSwitch(SPKL(@"SETTINGS_MESSAGES_DOWNLOAD_VOICE_MESSAGES_MESSAGE"), SPKSettingsIcon(@"audio_download"), @"msgs_download_audio_messages"),
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_AUDIO_UPLOAD_AUDIO_TITLE")
                                        icon:SPKSettingsIcon(@"audio_upload")
                                 defaultsKey:@"msgs_upload_audio_messages"],
-            [SPKSetting switchCellWithTitle:@"Trim Before Sending"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_AUDIO_TRIM_BEFORE_SENDING_TITLE")
                                        icon:SPKSettingsIcon(@"trim")
                                 defaultsKey:@"msgs_audio_upload_trim"]
         ],
-                        @"1. Adds audio actions to supported voice/audio message views.\n"
-                        @"2. Adds an option to the composer plus (+) menu that sends the selected audio or video as a voice message.\n"
-                        @"3. When uploading, offers to trim the audio before sending it."),
-        SPKTopicSection(@"Media", @[
-            [SPKSetting switchCellWithTitle:@"Upload Photo from Gallery"
+                        SPKL(@"SETTINGS_MESSAGES_ADDS_AUDIO_ACTIONS_SUPPORTED_VOICE_AUDIO_MESSAGE_VIEWS_N2_ACTION")),
+        SPKTopicSection(SPKL(@"FEED_MEDIA_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_UPLOAD_PHOTO_GALLERY_TITLE")
                                        icon:SPKSettingsIcon(@"photo")
                                 defaultsKey:@"msgs_upload_gallery_media"],
-            [SPKSetting switchCellWithTitle:@"Show GIF Title"
+            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_SHOW_GIF_TITLE_TITLE")
                                        icon:SPKSettingsIcon(@"info")
                                 defaultsKey:@"msgs_gif_title"]
         ],
-                        @"1. Adds an option to the composer plus (+) menu that sends a photo from the Sparkle Gallery into the chat.\n"
-                        @"2. Long-press a GIF message for its name and channel, then tap to copy. Direct stores no name for a GIF, so this asks giphy.com about it; the answer is reused for the rest of the session."),
-        SPKTopicSection(@"Confirmation", @[
-            [SPKSetting switchCellWithTitle:@"Confirm Audio Call"
+                        SPKL(@"SETTINGS_MESSAGES_ADDS_OPTION_COMPOSER_PLUS_MENU_SENDS_PHOTO_SPARKLE_GALLERY_TEXT")),
+        SPKTopicSection(SPKL(@"FEED_CONFIRMATION_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_AUDIO_CALL_TITLE")
                                        icon:SPKSettingsIcon(@"call")
                                 defaultsKey:kSPKMessagesAudioCallConfirmKey],
-            [SPKSetting switchCellWithTitle:@"Confirm Video Call"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VIDEO_CALL_TITLE")
                                        icon:SPKSettingsIcon(@"video")
                                 defaultsKey:kSPKMessagesVideoCallConfirmKey],
-            [SPKSetting switchCellWithTitle:@"Confirm Double Tap"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_CONFIRMATION_CONFIRM_DOUBLE_TAP_TITLE")
                                        icon:SPKSettingsIcon(@"heart")
                                 defaultsKey:@"msgs_confirm_double_tap"],
-            [SPKSetting switchCellWithTitle:@"Confirm Reactions"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_REACTIONS_TITLE")
                                        icon:SPKSettingsIcon(@"reactions")
                                 defaultsKey:@"msgs_confirm_reaction"],
-            [SPKSetting switchCellWithTitle:@"Confirm Voice Messages"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VOICE_MESSAGES_TITLE")
                                        icon:SPKSettingsIcon(@"voice")
                                 defaultsKey:@"msgs_confirm_voice_msg"],
-            [SPKSetting switchCellWithTitle:@"Confirm Follow Requests"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_FOLLOW_REQUESTS_TITLE")
                                        icon:SPKSettingsIcon(@"user_request")
                                 defaultsKey:@"msgs_confirm_follow_request"],
-            [SPKSetting switchCellWithTitle:@"Confirm Vanish Mode"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VANISH_MODE_TITLE")
                                        icon:SPKSettingsIcon(@"vanish")
                                 defaultsKey:@"msgs_confirm_vanish_mode"],
-            [SPKSetting switchCellWithTitle:@"Confirm Changing Theme"
+            [SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_CHANGING_THEME_TITLE")
                                        icon:SPKSettingsIcon(@"palette")
                                 defaultsKey:@"msgs_confirm_theme_change"]
         ],
-                        @"Shows confirmation alerts before the selected message actions are sent.")
+                        SPKL(@"MESSAGES_CONFIRMATION_FOOTER"))
     ];
 }
 
 @implementation SPKMessagesSettingsProvider
 
 + (SPKSetting *)rootSetting {
-    SPKSetting *setting = [SPKSetting navigationCellWithTitle:@"Messages"
+    SPKSetting *setting = [SPKSetting navigationCellWithTitle:SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE")
                                                      subtitle:@""
                                                          icon:SPKSettingsIcon(@"messages")
                                                viewController:[[SPKMessagesSettingsViewController alloc] init]];

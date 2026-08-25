@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadService.h"
 
 #import "../../Utils.h"
@@ -72,13 +73,13 @@
         if (!presenter)
             return;
         [SPKIGAlertPresenter presentAlertFromViewController:presenter
-                                                      title:@"Cancel Pending Downloads"
-                                                    message:@"This stops queued work and any active downloads that can still be cancelled."
+                                                      title:SPKL(@"DOWNLOADS_DOWNLOAD_SERVICE_CANCEL_PENDING_DOWNLOADS_TEXT")
+                                                    message:SPKL(@"DOWNLOADS_DOWNLOAD_SERVICE_STOPS_QUEUED_WORK_ANY_ACTIVE_DOWNLOADS_CAN_STILL_CANCELLED_TEXT")
                                                     actions:@[
-                                                        [SPKIGAlertAction actionWithTitle:@"Keep"
+                                                        [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_KEEP")
                                                                                     style:SPKIGAlertActionStyleCancel
                                                                                   handler:nil],
-                                                        [SPKIGAlertAction actionWithTitle:@"Cancel All"
+                                                        [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL_ALL")
                                                                                     style:SPKIGAlertActionStyleDestructive
                                                                                   handler:^{
                                                                                       [[SPKDownloadService shared] cancelAllActive];
@@ -191,24 +192,24 @@
         NSMutableArray<SPKIGAlertAction *> *actions = [NSMutableArray array];
 
         // Keep at the top, blue bold font
-        [actions addObject:[SPKIGAlertAction actionWithTitle:@"Keep" style:SPKIGAlertActionStyleCancel handler:nil]];
+        [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_KEEP") style:SPKIGAlertActionStyleCancel handler:nil]];
 
         if (activeCount > 1) {
             // Cancel current, still blue but not bold
-            [actions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel Current"
+            [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL_CURRENT")
                                                            style:SPKIGAlertActionStyleDefault
                                                          handler:^{
                                                              [self cancelJobID:jobID];
                                                          }]];
             // Cancel all, red, not bold
-            [actions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel All"
+            [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL_ALL")
                                                            style:SPKIGAlertActionStyleDestructive
                                                          handler:^{
                                                              [self cancelAllActive];
                                                          }]];
         } else {
             // Cancel, red not bold
-            [actions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel"
+            [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                            style:SPKIGAlertActionStyleDestructive
                                                          handler:^{
                                                              [self cancelJobID:jobID];
@@ -216,8 +217,8 @@
         }
 
         [SPKIGAlertPresenter presentAlertFromViewController:presenterHost
-                                                      title:@"Cancel Download"
-                                                    message:activeCount > 1 ? @"Do you want to cancel the current download or all active downloads?" : @"Are you sure you want to cancel the download?"
+                                                      title:SPKL(@"DOWNLOADS_DOWNLOAD_SERVICE_CANCEL_DOWNLOAD_TEXT")
+                                                    message:activeCount > 1 ? SPKL(@"DOWNLOADS_DOWNLOAD_SERVICE_CANCEL_CURRENT_DOWNLOAD_ACTIVE_DOWNLOADS_CONFIRMATION_MESSAGE") : SPKL(@"DOWNLOADS_DOWNLOAD_SERVICE_CANCEL_DOWNLOAD_CONFIRMATION_MESSAGE")
                                                     actions:actions];
     });
 }

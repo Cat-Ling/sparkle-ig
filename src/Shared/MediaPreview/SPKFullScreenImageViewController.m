@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKFullScreenImageViewController.h"
 #import "SPKImageFormat.h"
 #import "SPKMediaCacheManager.h"
@@ -160,7 +161,7 @@ static CGFloat const kZoomEpsilon = 0.02;
 
     _retryButton = [UIButton buttonWithType:UIButtonTypeSystem];
     _retryButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [_retryButton setTitle:@"Retry" forState:UIControlStateNormal];
+    [_retryButton setTitle:SPKL(@"ALERT_ACTION_RETRY") forState:UIControlStateNormal];
     [_retryButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     _retryButton.titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
     _retryButton.backgroundColor = [[UIColor whiteColor] colorWithAlphaComponent:0.15];
@@ -211,7 +212,7 @@ static CGFloat const kZoomEpsilon = 0.02;
     NSURL *url = self.mediaItem.fileURL;
     if (!url) {
         if (self.isViewLoaded) {
-            [self showError:@"No image URL"];
+            [self showError:SPKL(@"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT")];
         }
         return;
     }
@@ -248,7 +249,7 @@ static CGFloat const kZoomEpsilon = 0.02;
                                                     }
 
                                                     if (strongSelf.isViewLoaded) {
-                                                        [strongSelf showError:error.localizedDescription.length > 0 ? error.localizedDescription : @"Failed to load image"];
+                                                        [strongSelf showError:error.localizedDescription.length > 0 ? error.localizedDescription : SPKL(@"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT")];
                                                     }
                                                 }];
 }

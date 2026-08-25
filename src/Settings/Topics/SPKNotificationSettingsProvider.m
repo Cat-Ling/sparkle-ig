@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKNotificationSettingsProvider.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
@@ -13,7 +14,7 @@
         NSMutableArray<SPKSetting *> *rows = [NSMutableArray array];
         for (NSDictionary *item in sectionInfo[@"items"] ?: @[]) {
             NSString *identifier = item[@"identifier"];
-            NSString *title = item[@"title"] ?: @"Feature";
+            NSString *title = item[@"title"] ?: SPKL(@"SETTINGS_NOTIFICATION_FEATURE_TEXT");
             NSString *iconName = item[@"iconName"] ?: @"info";
             SPKSetting *setting = [SPKSetting switchCellWithTitle:title
                                                          subtitle:@""
@@ -35,20 +36,20 @@
 
     NSArray<NSDictionary *> *configs = @[
         @{
-            @"title" : @"Saved to Gallery",
-            @"subtitle" : @"Notification preview: success tone.",
+            @"title" : SPKL(@"SETTINGS_NOTIFICATION_SAVED_GALLERY_TEXT"),
+            @"subtitle" : SPKL(@"SETTINGS_NOTIFICATION_NOTIFICATION_PREVIEW_SUCCESS_TONE_TEXT"),
             @"iconResource" : @"circle_check_filled",
             @"tone" : @(SPKNotificationToneSuccess)
         },
         @{
-            @"title" : @"Something Went Wrong",
-            @"subtitle" : @"Notification preview: error tone.",
+            @"title" : SPKL(@"SETTINGS_NOTIFICATION_SOMETHING_WENT_WRONG_TEXT"),
+            @"subtitle" : SPKL(@"SETTINGS_NOTIFICATION_NOTIFICATION_PREVIEW_ERROR_TONE_TEXT"),
             @"iconResource" : @"error_filled",
             @"tone" : @(SPKNotificationToneError)
         },
         @{
-            @"title" : @"Heads Up",
-            @"subtitle" : @"Notification preview: info tone.",
+            @"title" : SPKL(@"SETTINGS_NOTIFICATION_HEADS_UP_TEXT"),
+            @"subtitle" : SPKL(@"SETTINGS_NOTIFICATION_NOTIFICATION_PREVIEW_INFO_TONE_TEXT"),
             @"iconResource" : @"info_filled",
             @"tone" : @(SPKNotificationToneInfo)
         }
@@ -66,33 +67,33 @@
 
 + (NSArray *)sections {
     NSMutableArray *sections = [NSMutableArray arrayWithArray:@[
-        SPKTopicSection(@"Appearance", @[
-            [SPKSetting switchCellWithTitle:@"Glow"
-                                   subtitle:@"Show glow effect around notifications"
+        SPKTopicSection(SPKL(@"NOTIFICATION_APPEARANCE_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"NOTIFICATION_APPEARANCE_GLOW_TITLE")
+                                   subtitle:SPKL(@"NOTIFICATION_APPEARANCE_SHOW_GLOW_EFFECT_AROUND_NOTIFICATIONS_SUBTITLE")
                                 defaultsKey:kSPKNotificationPillGlowEnabledKey],
-            [SPKSetting switchCellWithTitle:@"Liquid Glass"
+            [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_CAPTURE_LIQUID_GLASS_TITLE")
                                    subtitle:(SPKPrefIsAvailable(kSPKNotificationPillLiquidGlassEnabledKey)
-                                                 ? @"Render notifications with iOS 26 Liquid Glass"
-                                                 : @"Requires iOS 26 or later")
+                                                 ? SPKL(@"SETTINGS_NOTIFICATION_RENDER_NOTIFICATIONS_IOS_LIQUID_GLASS_TEXT")
+                                                 : SPKL(@"SETTINGS_NOTIFICATION_REQUIRES_IOS_LATER_TEXT"))
                                    defaultsKey:kSPKNotificationPillLiquidGlassEnabledKey],
-            [SPKSetting menuCellWithTitle:@"Download Progress"
+            [SPKSetting menuCellWithTitle:SPKL(@"NOTIFICATION_APPEARANCE_DOWNLOAD_PROGRESS_TITLE")
                                  subtitle:@""
                                      menu:SPKNotificationProgressSubtitleStyleMenu()],
-            [SPKSetting menuCellWithTitle:@"Position"
+            [SPKSetting menuCellWithTitle:SPKL(@"NOTIFICATION_APPEARANCE_POSITION_TITLE")
                                  subtitle:@""
                                      menu:SPKNotificationPillPositionMenu()],
-            [SPKSetting stepperCellWithTitle:@"Duration"
-                                    subtitle:@"Dismiss after %@%@"
+            [SPKSetting stepperCellWithTitle:SPKL(@"NOTIFICATION_APPEARANCE_DURATION_TITLE")
+                                    subtitle:SPKL(@"NOTIFICATION_APPEARANCE_DISMISS_AFTER_SUBTITLE")
                                  defaultsKey:kSPKNotificationPillDurationKey
                                          min:0.5
                                          max:5.0
                                         step:0.25
-                                       label:@" seconds"
+                                       label:SPKL(@"NOTIFICATION_APPEARANCE_DURATION_UNIT")
                                singularLabel:@" second"]
         ],
                         nil),
-        SPKTopicSection(@"Preview", @[
-            [SPKSetting buttonCellWithTitle:@"Test Notification"
+        SPKTopicSection(SPKL(@"NOTIFICATION_PREVIEW_HEADER"), @[
+            [SPKSetting buttonCellWithTitle:SPKL(@"NOTIFICATION_PREVIEW_TEST_NOTIFICATION_TITLE")
                                    subtitle:@""
                                        icon:nil
                                      action:^{
@@ -101,7 +102,7 @@
         ],
                         nil),
         SPKTopicSection(@"", @[
-            [SPKSetting navigationCellWithTitle:@"Haptics"
+            [SPKSetting navigationCellWithTitle:SPKL(@"NOTIFICATION_PREVIEW_HAPTICS_TITLE")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"haptics")
                                     navSections:[self spk_featureSectionsForHaptics:YES]]

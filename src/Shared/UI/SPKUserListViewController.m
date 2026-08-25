@@ -1,4 +1,5 @@
 #import "SPKUserListViewController.h"
+#import "SPKStrings.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
 #import "../Avatars/SPKAvatarView.h"
@@ -128,8 +129,8 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
         _enablesSearch = YES;
         _enablesSort = YES;
         _allowsDelete = YES;
-        _emptyTitle = @"Nothing here";
-        _emptySubtitle = @"There are no accounts in this list.";
+        _emptyTitle = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_NOTHING_HERE_TEXT");
+        _emptySubtitle = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_THERE_NO_ACCOUNTS_LIST_TEXT");
         _sortMode = SPKUserListSortModeDefault;
     }
     return self;
@@ -157,7 +158,7 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
         self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
         self.searchController.searchResultsUpdater = self;
         self.searchController.obscuresBackgroundDuringPresentation = NO;
-        self.searchController.searchBar.placeholder = @"Search";
+        self.searchController.searchBar.placeholder = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_SEARCH_TEXT");
         [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                                  forSearchBarIcon:UISearchBarIconSearch
                                             state:UIControlStateNormal];
@@ -176,7 +177,7 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
     // and a single "•••" overflow that folds sort + "How It Works" together.
     NSMutableArray<UIBarButtonItem *> *items = [NSMutableArray array];
     if (self.showsAddButton)
-        [items addObject:SPKMediaChromeTopBarButtonItemWithTint(@"plus", self, @selector(spk_addTapped), [SPKUtils SPKColor_InstagramPrimaryText], @"Add")];
+        [items addObject:SPKMediaChromeTopBarButtonItemWithTint(@"plus", self, @selector(spk_addTapped), [SPKUtils SPKColor_InstagramPrimaryText], SPKL(@"ALERT_ACTION_ADD"))];
     // When the overflow folds nothing but sort, say so with the sort glyph: "•••"
     // promises more than the menu delivers. It only earns the dots once something
     // else ("How It Works") shares it.
@@ -184,7 +185,7 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
         BOOL sortOnly = (self.enablesSort && self.infoText.length == 0);
         [items addObject:SPKMediaChromeTopBarMenuButtonItem(sortOnly ? @"sort" : @"more",
                                                             [self moreMenu],
-                                                            sortOnly ? @"Sort" : @"More")];
+                                                            sortOnly ? SPKL(@"MENU_SORT") : SPKL(@"MESSAGES_DELETED_MESSAGES_MORE_TEXT"))];
     }
     if (items.count)
         SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, items);
@@ -197,7 +198,7 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
         if (weakSelf.enablesSort)
             [children addObjectsFromArray:[weakSelf sortMenuElements]];
         if (weakSelf.infoText.length) {
-            UIAction *info = [UIAction actionWithTitle:@"How It Works"
+            UIAction *info = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_HOW_WORKS")
                                                  image:[SPKAssetUtils menuIconNamed:@"info"]
                                             identifier:nil
                                                handler:^(__unused UIAction *action) {
@@ -225,19 +226,19 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
             a.state = UIMenuElementStateOn;
         [actions addObject:a];
     };
-    add(@"Default", SPKUserListSortModeDefault);
+    add(SPKL(@"MENU_DEFAULT"), SPKUserListSortModeDefault);
     add(@"A–Z", SPKUserListSortModeAZ);
     add(@"Z–A", SPKUserListSortModeZA);
-    return @[ [UIMenu menuWithTitle:@"Sort" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:actions] ];
+    return @[ [UIMenu menuWithTitle:SPKL(@"MENU_SORT") image:nil identifier:nil options:UIMenuOptionsDisplayInline children:actions] ];
 }
 
 - (void)spk_showInfo {
     if (!self.infoText.length)
         return;
     [SPKIGAlertPresenter presentAlertFromViewController:self
-                                                  title:@"How It Works"
+                                                  title:SPKL(@"ALERT_ACTION_HOW_WORKS")
                                                 message:self.infoText
-                                                actions:@[ [SPKIGAlertAction actionWithTitle:@"OK" style:SPKIGAlertActionStyleCancel handler:nil] ]];
+                                                actions:@[ [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_OK") style:SPKIGAlertActionStyleCancel handler:nil] ]];
 }
 
 - (void)spk_addTapped {
@@ -303,8 +304,8 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
     if (!isEmpty)
         return;
     if (self.searchText.length) {
-        self.emptyStateTitle.text = @"No matches";
-        self.emptyStateSubtitle.text = self.emptySearchSubtitle.length ? self.emptySearchSubtitle : @"No accounts match your search.";
+        self.emptyStateTitle.text = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_NO_MATCHES_TEXT");
+        self.emptyStateSubtitle.text = self.emptySearchSubtitle.length ? self.emptySearchSubtitle : SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_NO_ACCOUNTS_MATCH_SEARCH_TEXT");
     } else {
         self.emptyStateTitle.text = self.emptyTitle;
         self.emptyStateSubtitle.text = self.emptySubtitle;
@@ -369,7 +370,7 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     SPKUserListCell *cell = [tableView dequeueReusableCellWithIdentifier:@"u" forIndexPath:indexPath];
     SPKUserListItem *item = [self itemAtIndexPath:indexPath];
-    cell.titleLabel.text = item.title.length ? item.title : @"Unknown";
+    cell.titleLabel.text = item.title.length ? item.title : SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_TEXT");
     cell.verifiedBadge.hidden = !item.isVerified;
     cell.subtitleLabel.text = item.subtitle ?: @"";
     [cell setSubtitleShown:item.subtitle.length > 0];
@@ -400,7 +401,7 @@ typedef NS_ENUM(NSInteger, SPKUserListSortMode) {
                                                                     }];
     del.image = [SPKAssetUtils menuIconNamed:@"trash"];
     del.backgroundColor = [SPKUtils SPKColor_InstagramDestructive];
-    del.accessibilityLabel = @"Remove";
+    del.accessibilityLabel = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_REMOVE_TEXT");
     UISwipeActionsConfiguration *config = [UISwipeActionsConfiguration configurationWithActions:@[ del ]];
     config.performsFirstActionWithFullSwipe = YES;
     return config;

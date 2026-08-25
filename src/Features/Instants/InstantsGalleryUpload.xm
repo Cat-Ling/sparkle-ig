@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <AVFoundation/AVFoundation.h>
 #import <Accelerate/Accelerate.h>
 #import <CoreMedia/CoreMedia.h>
@@ -252,8 +253,8 @@ static BOOL SPKInstantsCreationViewIsPostCapture(UIView *creationView) {
         if (!SPKInstantsViewIsVisible(view))
             return;
 
-        // Language-independent first: an "undo" tap action or undo glyph marks the
-        // post-capture edit state. The "Undo" title match is a localized fallback.
+        // Instagram's visible text follows Instagram's language, which may differ
+        // from Sparkle's override. Use stable action and icon signals only.
         if ([view isKindOfClass:UIControl.class] &&
             [SPKUtils control:(UIControl *)view
                 hasTapActionContaining:@"undo"]) {
@@ -268,12 +269,6 @@ static BOOL SPKInstantsCreationViewIsPostCapture(UIView *creationView) {
                 *stop = YES;
                 return;
             }
-        }
-
-        NSString *text = [SPKInstantsControlText(view) stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceAndNewlineCharacterSet];
-        if ([text caseInsensitiveCompare:@"Undo"] == NSOrderedSame) {
-            foundUndo = YES;
-            *stop = YES;
         }
     });
     return foundUndo;
@@ -323,7 +318,7 @@ static NSURL *SPKInstantsImportPickedVideo(NSURL *sourceURL) {
 /// enough that copying it on the main thread would visibly hang. Copy on a work
 /// queue behind a progress pill and hand back the local URL on the main thread.
 static void SPKInstantsImportPickedVideoAsync(NSURL *sourceURL, void (^completion)(NSURL *_Nullable)) {
-    SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationInstantsUpload, @"Importing video", nil);
+    SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationInstantsUpload, SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_IMPORTING_VIDEO_TEXT"), nil);
     [pill setProgressIndeterminate:YES];
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
         NSURL *localURL = SPKInstantsImportPickedVideo(sourceURL);
@@ -331,8 +326,8 @@ static void SPKInstantsImportPickedVideoAsync(NSURL *sourceURL, void (^completio
             if (localURL) {
                 [pill dismiss];
             } else {
-                [pill showErrorWithTitle:@"Could not open video"
-                                subtitle:@"The picked file could not be read."
+                [pill showErrorWithTitle:SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_COULD_NOT_OPEN_VIDEO_TEXT")
+                                subtitle:SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_PICKED_FILE_COULD_NOT_READ_TEXT")
                                     icon:nil];
             }
             completion(localURL);
@@ -828,7 +823,7 @@ static void SPKInstantsPresentVideoForPositioning(NSURL *videoURL) {
     if (!videoURL)
         return;
     SPKTrimConfiguration *configuration = [SPKTrimConfiguration configurationWithVideoURL:videoURL];
-    configuration.title = @"Trim Instant";
+    configuration.title = SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_TRIM_INSTANT_TEXT");
     configuration.allowsFrameOnly = NO;
     configuration.allowsAudioOnly = NO;
     configuration.allowsCrop = YES;
@@ -841,7 +836,7 @@ static void SPKInstantsPresentVideoForPositioning(NSURL *videoURL) {
                                                   if (!result)
                                                       return;
                                                   [SPKTrimSaveCoordinator renderResult:result
-                                                      progressTitle:@"Preparing instant..."
+                                                      progressTitle:SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_PREPARING_INSTANT_TEXT")
                                                        existingPill:nil
                                                               store:^(NSURL *renderedURL, SPKTrimStoreCompletion done) {
                                                                   NSURL *destination = SPKInstantsPendingVideoURL();
@@ -857,7 +852,7 @@ static void SPKInstantsPresentVideoForPositioning(NSURL *videoURL) {
                                                                       SPKLog(@"Instants", @"[Sparkle] instant video copy failed: %@",
                                                                              error.localizedDescription);
                                                                   }
-                                                                  done(ok, ok ? @"Press and hold to record" : @"Could not prepare video");
+                                                                  done(ok, ok ? SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_PRESS_HOLD_RECORD_TEXT") : SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_COULD_NOT_PREPARE_VIDEO_TEXT"));
                                                               }
                                                        onSuccessTap:nil
                                                          completion:nil];
@@ -882,7 +877,7 @@ static NSSet<NSNumber *> *SPKInstantsUploadableMediaTypes(void) {
 
 static void SPKInstantsPickFromGallery(void) {
     [SPKGalleryPickerViewController presentFromViewController:SPKInstantsTopPresenter()
-                                                        title:@"Choose Media"
+                                                        title:SPKL(@"INSTANTS_INSTANTS_GALLERY_UPLOAD_CHOOSE_MEDIA_TEXT")
                                             allowedMediaTypes:SPKInstantsUploadableMediaTypes()
                                       allowsMultipleSelection:NO
                                                    completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {
@@ -911,35 +906,35 @@ static void SPKInstantsPickFromFiles(void) {
 /// then settings -- each its own inline group, so the three concerns read as separate.
 static NSArray<UIMenuElement *> *SPKInstantsCameraButtonMenuGroups(void) {
     NSMutableArray<UIAction *> *sourceActions = [NSMutableArray array];
-    [sourceActions addObject:[UIAction actionWithTitle:@"Select from Photos"
+    [sourceActions addObject:[UIAction actionWithTitle:SPKL(@"ALERT_ACTION_SELECT_PHOTOS")
                                                  image:[SPKAssetUtils menuIconNamed:@"photo_gallery"]
                                             identifier:nil
                                                handler:^(__unused UIAction *action) {
                                                    SPKInstantsPickFromPhotos();
                                                }]];
     if ([SPKGalleryPickerViewController hasSelectableFilesForAllowedMediaTypes:SPKInstantsUploadableMediaTypes()]) {
-        [sourceActions addObject:[UIAction actionWithTitle:@"Select from Gallery"
+        [sourceActions addObject:[UIAction actionWithTitle:SPKL(@"ALERT_ACTION_SELECT_GALLERY")
                                                      image:[SPKAssetUtils menuIconNamed:@"sparkle_gallery"]
                                                 identifier:nil
                                                    handler:^(__unused UIAction *action) {
                                                        SPKInstantsPickFromGallery();
                                                    }]];
     }
-    [sourceActions addObject:[UIAction actionWithTitle:@"Select from Files"
+    [sourceActions addObject:[UIAction actionWithTitle:SPKL(@"ALERT_ACTION_SELECT_FILES")
                                                  image:[SPKAssetUtils menuIconNamed:@"folder"]
                                             identifier:nil
                                                handler:^(__unused UIAction *action) {
                                                    SPKInstantsPickFromFiles();
                                                }]];
 
-    UIAction *browseAction = [UIAction actionWithTitle:@"Browse Saved"
+    UIAction *browseAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_BROWSE_SAVED")
                                                  image:[SPKAssetUtils menuIconNamed:@"instants"]
                                             identifier:nil
                                                handler:^(__unused UIAction *action) {
                                                    [SPKInstantsSavedUsersViewController presentFromViewController:SPKInstantsTopPresenter()];
                                                }];
 
-    UIAction *settingsAction = [UIAction actionWithTitle:@"Instants Settings"
+    UIAction *settingsAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_INSTANTS_SETTINGS")
                                                    image:[SPKAssetUtils menuIconNamed:@"settings"]
                                               identifier:nil
                                                  handler:^(__unused UIAction *action) {
@@ -947,7 +942,7 @@ static NSArray<UIMenuElement *> *SPKInstantsCameraButtonMenuGroups(void) {
                                                  }];
 
     return @[
-        [UIMenu menuWithTitle:@"Upload" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:sourceActions],
+        [UIMenu menuWithTitle:SPKL(@"MENU_UPLOAD") image:nil identifier:nil options:UIMenuOptionsDisplayInline children:sourceActions],
         [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ browseAction ]],
         [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ settingsAction ]],
     ];
@@ -1074,7 +1069,7 @@ static void SPKInstantsInstallGalleryButton(UIView *header) {
         button.menu = SPKInstantsCameraButtonMenu();
         button.adjustsImageWhenHighlighted = YES;
         button.tintColor = [UIColor whiteColor];
-        button.accessibilityLabel = @"Sparkle";
+        button.accessibilityLabel = SPKL(@"ABOUT_INFORMATION_SPARKLE_TITLE");
         [button addTarget:[SPKInstantsGalleryButtonTarget shared]
                       action:@selector(buttonTapped:)
             forControlEvents:UIControlEventTouchUpInside];

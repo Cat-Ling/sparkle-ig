@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKPhotoEditEntry.h"
 #import "../../Utils.h"
 #import "../Gallery/SPKGallerySaveMetadata.h"
@@ -25,7 +26,7 @@
     if (!presenter)
         return;
     if (!photoURL) {
-        SPKNotify(@"spk.photoedit.entry", @"No photo to edit", nil, @"error_filled",
+        SPKNotify(@"spk.photoedit.entry", SPKL(@"PHOTO_EDIT_PHOTO_EDIT_ENTRY_NO_PHOTO_EDIT_TEXT"), nil, @"error_filled",
                   SPKNotificationToneError);
         return;
     }
@@ -39,8 +40,8 @@
     if (photoURL.isFileURL) {
         UIImage *image = [UIImage imageWithContentsOfFile:photoURL.path];
         if (!image) {
-            SPKNotify(@"spk.photoedit.entry", @"Cannot Edit",
-                      @"The image is unavailable.", @"error_filled", SPKNotificationToneError);
+            SPKNotify(@"spk.photoedit.entry", SPKL(@"GALLERY_GALLERY_CANNOT_EDIT_TEXT"),
+                      SPKL(@"PHOTO_EDIT_PHOTO_EDIT_ENTRY_IMAGE_UNAVAILABLE_TEXT"), @"error_filled", SPKNotificationToneError);
             [entry finish];
             return;
         }
@@ -55,7 +56,7 @@
 
 - (void)downloadPhotoURL:(NSURL *)url {
     __weak typeof(self) weakSelf = self;
-    self.prepPill = [[SPKNotificationCenter shared] beginUnmanagedProgressWithTitle:@"Preparing photo..."
+    self.prepPill = [[SPKNotificationCenter shared] beginUnmanagedProgressWithTitle:SPKL(@"PHOTO_EDIT_PHOTO_EDIT_ENTRY_PREPARING_PHOTO_TEXT")
                                                                            onCancel:^{
                                                                                [SPKTrimSaveCoordinator confirmCancelThen:^{
                                                                                    __strong typeof(weakSelf) self = weakSelf;
@@ -106,7 +107,7 @@
             return;
         UIImage *image = self.tempPath ? [UIImage imageWithContentsOfFile:self.tempPath] : nil;
         if (error || !image) {
-            [self.prepPill showError:error.localizedDescription ?: @"Could not download the photo."];
+            [self.prepPill showError:error.localizedDescription ?: SPKL(@"PHOTO_EDIT_PHOTO_EDIT_ENTRY_COULD_NOT_DOWNLOAD_PHOTO_TEXT")];
             self.prepPill = nil;
             [self cleanupAndFinish];
             return;
@@ -127,16 +128,16 @@
     }
     SPKPhotoEditorConfiguration *config = [SPKPhotoEditorConfiguration freeformConfiguration];
     config.doneOptions = @[
-        [SPKPhotoEditorDoneOption optionWithTitle:@"Save to Photos"
+        [SPKPhotoEditorDoneOption optionWithTitle:SPKL(@"FEED_COMMENT_ACTIONS_SAVE_PHOTOS_TEXT")
                                        identifier:@"photos"
                                          iconName:@"download"],
-        [SPKPhotoEditorDoneOption optionWithTitle:@"Share"
+        [SPKPhotoEditorDoneOption optionWithTitle:SPKL(@"ALERT_ACTION_SHARE")
                                        identifier:@"share"
                                          iconName:@"share"],
-        [SPKPhotoEditorDoneOption optionWithTitle:@"Copy"
+        [SPKPhotoEditorDoneOption optionWithTitle:SPKL(@"FEED_COMMENT_ACTIONS_COPY_TEXT")
                                        identifier:@"clipboard"
                                          iconName:@"copy"],
-        [SPKPhotoEditorDoneOption optionWithTitle:@"Save to Gallery"
+        [SPKPhotoEditorDoneOption optionWithTitle:SPKL(@"FEED_COMMENT_ACTIONS_SAVE_GALLERY_TEXT")
                                        identifier:@"gallery"
                                          iconName:@"sparkle_gallery"],
     ];

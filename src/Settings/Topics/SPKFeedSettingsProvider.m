@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKFeedSettingsProvider.h"
 
 #import "../../Features/Feed/HeaderActionButton.h"
@@ -9,131 +10,123 @@ static NSString *const kSPKFeedActionButtonEnabledKey = @"feed_action_btn";
 @implementation SPKFeedSettingsProvider
 
 + (SPKSetting *)rootSetting {
-    return SPKTopicNavigationSetting(@"Feed", @"feed", 24.0, @[
-        SPKTopicSection(@"Action Button", @[
-            [SPKSetting switchCellWithTitle:@"Feed Action Button"
+    return SPKTopicNavigationSetting(SPKL(@"FEED_TITLE"), @"feed", 24.0, @[
+        SPKTopicSection(SPKL(@"FEED_ACTION_BUTTON_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_ACTION_BUTTON_FEED_ACTION_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"action")
                                 defaultsKey:kSPKFeedActionButtonEnabledKey],
             SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSourceFeed),
             SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSourceFeed, @"Feed", SPKActionButtonSupportedActionsForSource(SPKActionButtonSourceFeed), SPKActionButtonDefaultSectionsForSource(SPKActionButtonSourceFeed))
         ],
-                        @"Choose what tapping the action button does. Long press opens the full menu."),
-        SPKTopicSection(@"Header Shortcut", @[
-            [SPKSetting switchCellWithTitle:@"Feed Header Button"
+                        SPKL(@"FEED_ACTION_BUTTON_FOOTER")),
+        SPKTopicSection(SPKL(@"FEED_HEADER_SHORTCUT_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_HEADER_SHORTCUT_FEED_HEADER_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"action")
                                 defaultsKey:kSPKHeaderButtonEnabledKey],
             SPKFeedHeaderButtonDefaultActionNavigationSetting(),
-            [SPKSetting navigationCellWithTitle:@"Configure Destinations"
+            [SPKSetting navigationCellWithTitle:SPKL(@"FEED_HEADER_SHORTCUT_CONFIGURE_DESTINATIONS_TITLE")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"sliders")
                                     navSections:@[
-                                        SPKTopicSection(@"Destinations", @[
-                                            [SPKSetting switchCellWithTitle:@"Gallery"
+                                        SPKTopicSection(SPKL(@"FEED_DESTINATIONS_HEADER"), @[
+                                            [SPKSetting switchCellWithTitle:SPKL(@"DATA_GENERAL_GALLERY_TITLE")
                                                                        icon:SPKSettingsIcon(@"sparkle_gallery")
                                                                 defaultsKey:@"feed_header_button_dest_gallery"],
-                                            [SPKSetting switchCellWithTitle:@"Profile Analyzer"
+                                            [SPKSetting switchCellWithTitle:SPKL(@"DATA_GENERAL_PROFILE_ANALYZER_TITLE")
                                                                        icon:SPKSettingsIcon(@"profile_analyzer")
                                                                 defaultsKey:@"feed_header_button_dest_analyzer"],
-                                            [SPKSetting switchCellWithTitle:@"Deleted Messages"
+                                            [SPKSetting switchCellWithTitle:SPKL(@"ALERT_ACTION_DELETED_MESSAGES")
                                                                        icon:SPKSettingsIcon(@"channels")
                                                                 defaultsKey:@"feed_header_button_dest_deleted"],
-                                            [SPKSetting switchCellWithTitle:@"Downloads"
+                                            [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_GENERAL_DOWNLOADS_TITLE")
                                                                        icon:SPKSettingsIcon(@"download")
                                                                 defaultsKey:@"feed_header_button_dest_downloads"],
-                                            [SPKSetting switchCellWithTitle:@"Sparkle Settings"
+                                            [SPKSetting switchCellWithTitle:SPKL(@"FEED_DESTINATIONS_SPARKLE_SETTINGS_TITLE")
                                                                        icon:SPKSettingsIcon(@"settings")
                                                                 defaultsKey:@"feed_header_button_dest_settings"],
                                         ],
-                                                        @"Choose which sheets the header button can open. Enable one for a direct tap, or several to pick from the long-press menu.")
+                                                        SPKL(@"FEED_HEADER_SHORTCUT_FOOTER"))
                                     ]],
         ],
-                        @"Adds a Sparkle button to the home feed header. "
-                        @"Tap opens the selected destination. Long press opens the menu of enabled destinations."),
-        SPKTopicSection(@"Layout", @[
-            SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:@"Main Feed" icon:SPKSettingsIcon(@"feed") menu:SPKMainFeedModeMenu()], SPKSettingsIcon(@"feed")),
-            [SPKSetting switchCellWithTitle:@"Disable App Icon Gesture"
+                        SPKL(@"SETTINGS_FEED_ADDS_SPARKLE_BUTTON_HOME_FEED_HEADER_TAP_OPENS_SELECTED_TEXT")),
+        SPKTopicSection(SPKL(@"FEED_LAYOUT_HEADER"), @[
+            SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"FEED_LAYOUT_MAIN_FEED_TITLE") icon:SPKSettingsIcon(@"feed") menu:SPKMainFeedModeMenu()], SPKSettingsIcon(@"feed")),
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_LAYOUT_DISABLE_APP_ICON_GESTURE_TITLE")
                                        icon:SPKSettingsIcon(@"app")
                                 defaultsKey:@"feed_disable_appicon_gesture"],
-            [SPKSetting switchCellWithTitle:@"Hide Stories Tray"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_LAYOUT_HIDE_STORIES_TRAY_TITLE")
                                        icon:SPKSettingsIcon(@"story")
                                 defaultsKey:@"feed_hide_stories_tray"],
-            [SPKSetting switchCellWithTitle:@"Hide Entire Feed"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_LAYOUT_HIDE_ENTIRE_FEED_TITLE")
                                        icon:SPKSettingsIcon(@"feed")
                                 defaultsKey:@"feed_hide_entire_feed"],
-            [SPKSetting switchCellWithTitle:@"Hide Suggested Posts"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_LAYOUT_HIDE_SUGGESTED_POSTS_TITLE")
                                        icon:SPKSettingsIcon(@"carousel")
                                 defaultsKey:@"feed_hide_suggested_posts"],
-            [SPKSetting switchCellWithTitle:@"Hide Suggested Reels"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_LAYOUT_HIDE_SUGGESTED_REELS_TITLE")
                                        icon:SPKSettingsIcon(@"reels_gallery")
                                 defaultsKey:@"feed_hide_suggested_reels"],
-            [SPKSetting switchCellWithTitle:@"Hide Suggested Threads"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_LAYOUT_HIDE_SUGGESTED_THREADS_TITLE")
                                        icon:SPKSettingsIcon(@"threads")
                                 defaultsKey:@"feed_hide_suggested_threads"],
-            [SPKSetting switchCellWithTitle:@"Hide Repost Button"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_LAYOUT_HIDE_REPOST_BUTTON_TITLE")
                                        icon:SPKSettingsIcon(@"repost")
                                 defaultsKey:@"feed_hide_repost_btn"
                             requiresRestart:YES]
         ],
-                        @"1. Force Instagram's chronological Following feed instead of the algorithmic For You feed. Title stays \"For you\".\n"
-                        @"2. Stop the feed header logo long-press from opening Instagram's app icon picker. Sparkle has its own in Settings.\n"
-                        @"3. Hide the horizontal stories tray at the top of the feed.\n"
-                        @"4. Hide the entire home feed, leaving only the header.\n"
-                        @"5. Remove algorithmically suggested posts from the feed.\n"
-                        @"6. Remove suggested reels from the feed.\n"
-                        @"7. Remove suggested Threads posts from the feed.\n"
-                        @"8. Hide the repost button on feed posts."),
-        SPKTopicSection(@"Metrics", @[
-            [SPKSetting switchCellWithTitle:@"Hide Like Count"
+                        SPKL(@"SETTINGS_FEED_FORCE_INSTAGRAM_S_CHRONOLOGICAL_FOLLOWING_FEED_INSTEAD_ALGORITHMIC_FEED_TEXT")),
+        SPKTopicSection(SPKL(@"FEED_METRICS_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_METRICS_HIDE_LIKE_COUNT_TITLE")
                                        icon:SPKSettingsIcon(@"heart")
                                 defaultsKey:@"feed_hide_like_count"],
-            [SPKSetting switchCellWithTitle:@"Hide Comment Count"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_METRICS_HIDE_COMMENT_COUNT_TITLE")
                                        icon:SPKSettingsIcon(@"comment")
                                 defaultsKey:@"feed_hide_comment_count"],
-            [SPKSetting switchCellWithTitle:@"Hide Repost Count"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_METRICS_HIDE_REPOST_COUNT_TITLE")
                                        icon:SPKSettingsIcon(@"repost")
                                 defaultsKey:@"feed_hide_repost_count"],
-            [SPKSetting switchCellWithTitle:@"Hide Reshare Count"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_METRICS_HIDE_RESHARE_COUNT_TITLE")
                                        icon:SPKSettingsIcon(@"messages")
                                 defaultsKey:@"feed_hide_reshare_count"]
         ],
                         nil),
-        SPKTopicSection(@"Media", @[
-            [SPKSetting switchCellWithTitle:@"Long Press to Expand"
+        SPKTopicSection(SPKL(@"FEED_MEDIA_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_MEDIA_LONG_PRESS_EXPAND_TITLE")
                                        icon:SPKSettingsIcon(@"expand")
                                 defaultsKey:@"feed_long_press_expand"],
-            [SPKSetting switchCellWithTitle:@"Disable Video Autoplay"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_MEDIA_DISABLE_VIDEO_AUTOPLAY_TITLE")
                                        icon:SPKSettingsIcon(@"autoplay_off")
                                 defaultsKey:@"feed_disable_autoplay"
                             requiresRestart:YES],
-            [SPKSetting switchCellWithTitle:@"Start Expanded Videos Muted"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_MEDIA_START_EXPANDED_VIDEOS_MUTED_TITLE")
                                        icon:SPKSettingsIcon(@"volume_off")
                                 defaultsKey:@"feed_expanded_vid_start_muted"],
         ],
-                        @"Long press media in the feed to open it expanded. Autoplay controls prevent feed videos from playing automatically."),
-        SPKTopicSection(@"Refresh", @[
-            [SPKSetting switchCellWithTitle:@"Disable Home Tab Refresh"
+                        SPKL(@"FEED_METRICS_FOOTER")),
+        SPKTopicSection(SPKL(@"FEED_REFRESH_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_REFRESH_DISABLE_HOME_TAB_REFRESH_TITLE")
                                        icon:SPKSettingsIcon(@"home")
                                 defaultsKey:@"feed_disable_home_refresh"],
-            [SPKSetting switchCellWithTitle:@"Disable Background Refresh"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_REFRESH_DISABLE_BACKGROUND_REFRESH_TITLE")
                                        icon:SPKSettingsIcon(@"arrow_cw")
                                 defaultsKey:@"feed_disable_bg_refresh"]
         ],
-                        @"Prevents refreshes from re-tapping the Home tab or from background app activity."),
-        SPKTopicSection(@"Confirmation", @[
-            [SPKSetting switchCellWithTitle:@"Confirm Like"
+                        SPKL(@"FEED_REFRESH_FOOTER")),
+        SPKTopicSection(SPKL(@"FEED_CONFIRMATION_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_CONFIRMATION_CONFIRM_LIKE_TITLE")
                                        icon:SPKSettingsIcon(@"heart")
                                 defaultsKey:@"feed_confirm_post_like"],
-            [SPKSetting switchCellWithTitle:@"Confirm Double Tap"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_CONFIRMATION_CONFIRM_DOUBLE_TAP_TITLE")
                                        icon:SPKSettingsIcon(@"heart")
                                 defaultsKey:@"feed_confirm_double_tap_like"],
-            [SPKSetting switchCellWithTitle:@"Confirm Repost"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_CONFIRMATION_CONFIRM_REPOST_TITLE")
                                        icon:SPKSettingsIcon(@"repost")
                                 defaultsKey:@"feed_confirm_repost"],
-            [SPKSetting switchCellWithTitle:@"Confirm Posting Comment"
+            [SPKSetting switchCellWithTitle:SPKL(@"FEED_CONFIRMATION_CONFIRM_POSTING_COMMENT_TITLE")
                                        icon:SPKSettingsIcon(@"comment")
                                 defaultsKey:@"feed_confirm_post_comment"]
         ],
-                        @"Shows confirmation alerts before the enabled feed actions are performed.")
+                        SPKL(@"FEED_CONFIRMATION_FOOTER"))
     ]);
 }
 

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKActionButtonConfiguration.h"
 #import "../../Settings/SPKPreferences.h"
 #import "../../Utils.h"
@@ -37,17 +38,17 @@ NSString *SPKActionButtonTopicKeyForSource(SPKActionButtonSource source) {
 NSString *SPKActionButtonTopicTitleForSource(SPKActionButtonSource source) {
     switch (source) {
     case SPKActionButtonSourceFeed:
-        return @"Feed";
+        return SPKL(@"FEED_TITLE");
     case SPKActionButtonSourceReels:
         return @"Reels";
     case SPKActionButtonSourceStories:
-        return @"Stories";
+        return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKActionButtonSourceDirect:
-        return @"Messages";
+        return SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE");
     case SPKActionButtonSourceProfile:
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     case SPKActionButtonSourceInstants:
-        return @"Instants";
+        return SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE");
     }
 }
 
@@ -274,32 +275,32 @@ NSArray<SPKActionMenuSection *> *SPKActionButtonDefaultSectionsForSource(SPKActi
 
     if (moreActions.count > 0) {
         [sections addObject:[SPKActionMenuSection sectionWithIdentifier:@"more"
-                                                                  title:@"More"
+                                                                  title:SPKL(@"MESSAGES_DELETED_MESSAGES_MORE_TEXT")
                                                                iconName:@"more"
                                                             collapsible:YES
                                                                 actions:moreActions]];
     }
     if (audioActions.count > 0) {
         [sections addObject:[SPKActionMenuSection sectionWithIdentifier:@"audio"
-                                                                  title:@"Audio"
+                                                                  title:SPKL(@"MESSAGES_DIRECT_MESSAGE_MENU_AUDIO_TITLE")
                                                                iconName:@"audio_upload"
                                                             collapsible:YES
                                                                 actions:audioActions]];
     }
     if (zoomActions.count > 0) {
         [sections addObject:[SPKActionMenuSection sectionWithIdentifier:@"zoom"
-                                                                  title:@"Zoom"
+                                                                  title:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_ZOOM_TEXT")
                                                                iconName:@"zoom"
                                                             collapsible:YES
                                                                 actions:zoomActions]];
     }
     [sections addObject:[SPKActionMenuSection sectionWithIdentifier:@"copy"
-                                                              title:@"Copy"
+                                                              title:SPKL(@"FEED_COMMENT_ACTIONS_COPY_TEXT")
                                                            iconName:@"copy"
                                                         collapsible:YES
                                                             actions:copyActions]];
     [sections addObject:[SPKActionMenuSection sectionWithIdentifier:@"download"
-                                                              title:@"Download"
+                                                              title:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT")
                                                            iconName:@"download"
                                                         collapsible:YES
                                                             actions:downloadActions]];
@@ -355,7 +356,7 @@ NSArray<SPKActionMenuSection *> *SPKActionButtonDefaultSectionsForSource(SPKActi
         }
         if (!hasBulkSection) {
             SPKActionMenuSection *bulkSection = [SPKActionMenuSection sectionWithIdentifier:@"bulk"
-                                                                                      title:@"Bulk"
+                                                                                      title:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_BULK_TEXT")
                                                                                    iconName:@"carousel"
                                                                                 collapsible:YES
                                                                                     actions:@[]];
@@ -439,7 +440,7 @@ NSArray<SPKActionMenuSection *> *SPKActionButtonDefaultSectionsForSource(SPKActi
         if (section.identifier.length == 0)
             section.identifier = NSUUID.UUID.UUIDString;
         if (section.title.length == 0)
-            section.title = @"Section";
+            section.title = SPKL(@"SETTINGS_ACTION_SECTION_EDIT_SECTION_TEXT");
         if (section.iconName.length == 0)
             section.iconName = @"more";
 

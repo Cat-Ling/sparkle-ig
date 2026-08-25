@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKAboutSettingsProvider.h"
 
 #import "../../AssetUtils.h"
@@ -9,7 +10,7 @@
 
 + (SPKSetting *)rootSetting {
     // Larger, bolder title so it reads in balance with the 45pt Ko-fi icon.
-    SPKSetting *donate = [SPKSetting linkCellWithTitle:@"Donate to waffle"
+    SPKSetting *donate = [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_GENERAL_DONATE_WAFFLE_TITLE")
                                               subtitle:@""
                                               imageUrl:@"https://cdn.prod.website-files.com/5c14e387dab576fe667689cf/670f5a01229bf8a18f97a3c1_favion.png"
                                                    url:@"https://ko-fi.com/sparkle_ig"];
@@ -18,56 +19,63 @@
         @"remoteImageCircular" : @NO
     };
 
-    return SPKTopicNavigationSetting(@"About", @"info", 24.0, @[
-        SPKTopicSection(@"Support", @[
+    return SPKTopicNavigationSetting(SPKL(@"ABOUT_TITLE"), @"info", 24.0, @[
+        SPKTopicSection(SPKL(@"ABOUT_SUPPORT_HEADER"), @[
             donate
         ],
-                        @"Consider donating to support the tweak's development."),
-        SPKTopicSection(@"Information", @[
-            [SPKSetting staticCellWithTitle:@"Sparkle"
+                        SPKL(@"ABOUT_SUPPORT_FOOTER")),
+        SPKTopicSection(SPKL(@"ABOUT_INFORMATION_HEADER"), @[
+            [SPKSetting staticCellWithTitle:SPKL(@"ABOUT_INFORMATION_SPARKLE_TITLE")
                                    subtitle:SPKVersionString
                                        icon:SPKSettingsIcon(@"action")],
-            [SPKSetting staticCellWithTitle:@"Instagram"
+            [SPKSetting staticCellWithTitle:SPKL(@"ABOUT_INFORMATION_INSTAGRAM_TITLE")
                                    subtitle:[SPKUtils IGVersionString]
                                        icon:SPKSettingsIcon(@"app")],
-            [SPKSetting staticCellWithTitle:@"Bundle ID"
+            [SPKSetting staticCellWithTitle:SPKL(@"ABOUT_INFORMATION_BUNDLE_ID_TITLE")
                                    subtitle:[[NSBundle mainBundle] bundleIdentifier]
                                        icon:SPKSettingsIcon(@"key")]
         ],
                         nil),
         SPKTopicSection(@"", @[
-            [SPKSetting linkCellWithTitle:@"waffle"
-                                 subtitle:@"Sparkle developer"
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_INFORMATION_WAFFLE_TITLE")
+                                 subtitle:SPKL(@"ABOUT_INFORMATION_SPARKLE_DEVELOPER_SUBTITLE")
                                  imageUrl:@"https://avatars.githubusercontent.com/u/117626247?v=4"
                                       url:@"https://github.com/efibalogh"],
-            [SPKSetting linkCellWithTitle:@"View Source Code"
-                                 subtitle:@"Tap to open on GitHub"
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_INFORMATION_VIEW_SOURCE_CODE_TITLE")
+                                 subtitle:SPKL(@"ABOUT_INFORMATION_TAP_OPEN_GITHUB_SUBTITLE")
                                  imageUrl:@"https://i.imgur.com/BBUNzeP.png"
                                       url:@"https://github.com/efibalogh/sparkle-ig"]
         ],
                         nil),
-        SPKTopicSection(@"Community", @[
-            [SPKSetting linkCellWithTitle:@"Telegram Channel"
-                                 subtitle:@"Join the community for updates and support"
+        SPKTopicSection(SPKL(@"ABOUT_COMMUNITY_HEADER"), @[
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_COMMUNITY_TELEGRAM_CHANNEL_TITLE")
+                                 subtitle:SPKL(@"ABOUT_COMMUNITY_JOIN_COMMUNITY_UPDATES_SUPPORT_SUBTITLE")
                                  imageUrl:@"https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/960px-Telegram_logo.svg.png"
-                                      url:@"https://t.me/sparkle_ig"]
+                                      url:@"https://t.me/sparkle_ig"],
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_HELP_TRANSLATE_TITLE")
+                                 subtitle:SPKL(@"ABOUT_HELP_TRANSLATE_SUBTITLE")
+                                     icon:SPKSettingsIcon(@"web")
+                                      url:@"https://github.com/efibalogh/sparkle-ig/issues/new?title=Translation%3A%20"]
         ],
                         nil),
-        SPKTopicSection(@"Credits", @[
-            [SPKSetting linkCellWithTitle:@"SoCuul • SCInsta"
-                                 subtitle:@"Base project Sparkle is built on"
+        SPKTopicSection(SPKL(@"ABOUT_CREDITS_HEADER"), @[
+            [SPKSetting staticCellWithTitle:@"USER"
+                                   subtitle:SPKL(@"ABOUT_CREDITS_LOCALIZATION_SUBTITLE")
+                                       icon:SPKSettingsIcon(@"web")],
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_CREDITS_SOCUUL_SCINSTA_TITLE")
+                                 subtitle:SPKL(@"ABOUT_CREDITS_BASE_PROJECT_SPARKLE_BUILT_SUBTITLE")
                                  imageUrl:@"https://i.imgur.com/c9CbytZ.png"
                                       url:@"https://github.com/SoCuul/SCInsta"],
-            [SPKSetting linkCellWithTitle:@"Ryuk • RyukGram"
-                                 subtitle:@"Code, inspiration, help"
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_CREDITS_RYUK_RYUKGRAM_TITLE")
+                                 subtitle:SPKL(@"ABOUT_CREDITS_CODE_INSPIRATION_HELP_SUBTITLE")
                                  imageUrl:@"https://avatars.githubusercontent.com/u/51106560?v=4"
                                       url:@"https://github.com/faroukbmiled/"],
-            [SPKSetting linkCellWithTitle:@"@n3d1117 • InstaSane"
-                                 subtitle:@"Following feed mode"
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_CREDITS_N3D1117_INSTASANE_TITLE")
+                                 subtitle:SPKL(@"ABOUT_CREDITS_FOLLOWING_FEED_MODE_SUBTITLE")
                                  imageUrl:@"https://avatars.githubusercontent.com/u/11541888?v=4"
                                       url:@"https://github.com/n3d1117/InstaSane"],
-            [SPKSetting linkCellWithTitle:@"@asdfzxcvbn • zxPluginsInject"
-                                 subtitle:@"Fixes for sideloaded installs"
+            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_CREDITS_ASDFZXCVBN_ZXPLUGINSINJECT_TITLE")
+                                 subtitle:SPKL(@"ABOUT_CREDITS_FIXES_SIDELOADED_INSTALLS_SUBTITLE")
                                  imageUrl:@"https://avatars.githubusercontent.com/u/109937991?v=4"
                                       url:@"https://github.com/asdfzxcvbn/zxPluginsInject"]
         ],

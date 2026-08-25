@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKTabEditorViewController.h"
 
 #import "../AssetUtils.h"
@@ -83,7 +84,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
     [card addSubview:_barStack];
 
     _emptyLabel = [[UILabel alloc] init];
-    _emptyLabel.text = @"No visible tabs";
+    _emptyLabel.text = SPKL(@"SETTINGS_TAB_EDITOR_NO_VISIBLE_TABS_TEXT");
     _emptyLabel.textAlignment = NSTextAlignmentCenter;
     _emptyLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
     _emptyLabel.textColor = [SPKUtils SPKColor_InstagramTertiaryText];
@@ -309,7 +310,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 - (instancetype)init {
     self = [super init];
     if (self)
-        self.title = @"Tab Editor";
+        self.title = SPKL(@"INTERFACE_TABS_TAB_EDITOR_TITLE");
     return self;
 }
 
@@ -338,7 +339,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
     self.layoutChipBar = [[SPKChipBar alloc] init];
     self.layoutChipBar.delegate = self;
     self.layoutChipBar.distributesToFit = YES;
-    [self.layoutChipBar setItems:@[ @"Default", @"Custom", @"Classic" ] symbols:nil];
+    [self.layoutChipBar setItems:@[ SPKL(@"MENU_DEFAULT"), SPKL(@"TAB_LAYOUT_CUSTOM"), SPKL(@"SETTINGS_TAB_EDITOR_CLASSIC_TEXT") ] symbols:nil];
     self.layoutChipBar.selectedIndex = [self usesCustomLayout] ? 1 : ([self usesClassicLayout] ? 2 : 0);
     [self.headerContainer addSubview:self.layoutChipBar];
 
@@ -415,11 +416,10 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 
 - (NSString *)layoutCaptionText {
     if ([self usesCustomLayout])
-        return @"Arrange the tab bar yourself. This is the only layout that can hold the Saved tab.";
+        return SPKL(@"SETTINGS_TAB_EDITOR_ARRANGE_TAB_BAR_YOURSELF_ONLY_LAYOUT_CAN_HOLD_SAVED_TEXT");
     if ([self usesClassicLayout])
-        return @"Instagram's legacy layout. Messages moves to the feed header, Create becomes a tab, and the "
-               @"order is fixed.";
-    return @"Instagram decides the order. You can still hide tabs and choose where the app opens.";
+        return SPKL(@"SETTINGS_TAB_EDITOR_INSTAGRAM_S_LEGACY_LAYOUT_MESSAGES_MOVES_FEED_HEADER_CREATE_MESSAGE");
+    return SPKL(@"SETTINGS_TAB_EDITOR_INSTAGRAM_DECIDES_ORDER_CAN_STILL_HIDE_TABS_CHOOSE_APP_TEXT");
 }
 
 #pragma mark State
@@ -606,7 +606,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
     UIBarButtonItem *apply = SPKMediaChromeTopBarButtonItemWithStyle(@"check", self, @selector(applyTapped),
                                                                     UIBarButtonItemStyleDone,
                                                                     [SPKUtils SPKColor_InstagramBlue],
-                                                                    @"Apply and restart");
+                                                                    SPKL(@"SETTINGS_TAB_EDITOR_APPLY_RESTART_TEXT"));
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, dirty ? @[ apply ] : @[]);
 }
 
@@ -682,26 +682,23 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    if (section == SPKTabEditorSectionTabs) return @"Tabs";
-    if (section == SPKTabEditorSectionBehavior) return @"Behavior";
-    if (section == SPKTabEditorSectionSingleTab) return @"Single Tab Mode";
+    if (section == SPKTabEditorSectionTabs) return SPKL(@"INTERFACE_TABS_HEADER");
+    if (section == SPKTabEditorSectionBehavior) return SPKL(@"REELS_BEHAVIOR_HEADER");
+    if (section == SPKTabEditorSectionSingleTab) return SPKL(@"SETTINGS_TAB_EDITOR_SINGLE_TAB_MODE_TEXT");
     return nil;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == SPKTabEditorSectionTabs) {
-        NSMutableString *text = [NSMutableString stringWithString:@"Tap a tab to show or hide it. "];
+        NSMutableString *text = [NSMutableString stringWithString:SPKL(@"TAB_EDITOR_HELP_TAP")];
         if ([self usesCustomLayout])
-            [text appendString:@"Drag the handles to reorder. "];
-        [text appendString:@"The last visible tab cannot be hidden.\n"];
+            [text appendString:SPKL(@"TAB_EDITOR_HELP_DRAG")];
+        [text appendString:SPKL(@"TAB_EDITOR_HELP_LAST_VISIBLE")];
         if ([self usesClassicLayout]) {
-            [text appendString:@"Messages is not listed here: this layout keeps it in the feed header, where it "
-                               @"stays reachable by tapping it or by swiping.\n"];
+            [text appendString:SPKL(@"TAB_EDITOR_HELP_MESSAGES_CLASSIC")];
         }
         if ([self usesCustomLayout]) {
-            [text appendString:@"Saved borrows the slot of a hidden tab, so one of the five Instagram tabs has to be "
-                               @"off before it can be turned on. The whole tab bar setup is shared by every account "
-                               @"on this device."];
+            [text appendString:SPKL(@"TAB_EDITOR_HELP_SAVED_BORROWS")];
         }
         return text;
     }
@@ -709,28 +706,24 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
         NSString *single = [self singleVisibleTab];
         NSMutableString *text = [NSMutableString string];
         if (!single) {
-            [text appendString:@"These apply once the bar is down to a single tab. Hide the others above to use them.\n"];
+            [text appendString:SPKL(@"TAB_EDITOR_SINGLE_TAB_EXPLANATION")];
         } else if (SPKSingleTabAllowsHidingTabBar(single)) {
-            [text appendFormat:@"Only %@ is left, so the bar can be taken away entirely. ", SPKTabTitle(single)];
+            [text appendFormat:SPKL(@"TAB_EDITOR_HELP_ONLY_LEFT"), SPKTabTitle(single)];
             [text appendString:[single isEqualToString:SPKTabIdentifierDirect]
-                                   ? @"Sparkle Settings stays reachable by long-pressing the new message button.\n"
-                                   : @"The feed header button stays as your way into Sparkle Settings.\n"];
+                                   ? SPKL(@"TAB_EDITOR_DIRECT_TAB_ACCESS")
+                                   : SPKL(@"TAB_EDITOR_FEED_TAB_ACCESS")];
         } else if ([single isEqualToString:SPKTabIdentifierFeed]) {
-            [text appendString:@"Turn on the Feed Header Button to be able to hide the tab bar here. Without it, the "
-                               @"long-press on the tab bar is the only way into Sparkle Settings.\n"];
+            [text appendString:SPKL(@"TAB_EDITOR_FEED_HEADER_REQUIRED")];
         } else {
-            [text appendFormat:@"The tab bar cannot be hidden with %@ as the only tab: its long-press would be the "
-                               @"only way into Sparkle Settings.\n", SPKTabTitle(single)];
+            [text appendFormat:SPKL(@"TAB_EDITOR_CANNOT_HIDE_FORMAT"), SPKTabTitle(single)];
         }
-        [text appendString:@"The header button adds the Sparkle shortcut to the left of the Messages navigation "
-                           @"bar, when only the Messages tab is enabled."];
+        [text appendString:SPKL(@"TAB_EDITOR_HEADER_BUTTON_DESC")];
         return text;
     }
     if (section == SPKTabEditorSectionDiscard)
-        return @"Leaving this screen keeps your changes staged, so you can come back and apply them. "
-               @"Discard puts everything back to the configuration in use.";
+        return SPKL(@"SETTINGS_TAB_EDITOR_LEAVING_SCREEN_KEEPS_CHANGES_STAGED_SO_CAN_COME_BACK_TEXT");
     if (section == SPKTabEditorSectionReset)
-        return @"Stages Instagram's stock layout. Nothing is written until you apply.";
+        return SPKL(@"SETTINGS_TAB_EDITOR_STAGES_INSTAGRAM_S_STOCK_LAYOUT_NOTHING_WRITTEN_UNTIL_APPLY_TEXT");
     return nil;
 }
 
@@ -789,7 +782,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
     [cell.visibilityButton setImage:symbol forState:UIControlStateNormal];
     cell.visibilityButton.tintColor = (isHidden || locked) ? [SPKUtils SPKColor_InstagramTertiaryText]
                                                            : [SPKUtils SPKColor_InstagramBlue];
-    cell.visibilityButton.accessibilityLabel = isHidden ? @"Show tab" : @"Hide tab";
+    cell.visibilityButton.accessibilityLabel = isHidden ? SPKL(@"SETTINGS_TAB_EDITOR_SHOW_TAB_TEXT") : SPKL(@"SETTINGS_TAB_EDITOR_HIDE_TAB_TEXT");
 
     cell.gripView.hidden = ![self canReorderIdentifier:identifier];
     cell.glyphView.image = SPKTabEditorGlyph([self displayIconForIdentifier:identifier]);
@@ -806,18 +799,18 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 - (NSString *)statusTextForIdentifier:(NSString *)identifier {
     if ([identifier isEqualToString:SPKTabIdentifierSaved]) {
         if (![self savedEnabled])
-            return [self availableSavedCarrier] ? nil : @"Hide a tab first";
-        return [NSString stringWithFormat:@"Replaces %@ tab", SPKTabTitle(self.savedCarrier)];
+            return [self availableSavedCarrier] ? nil : SPKL(@"SETTINGS_TAB_EDITOR_HIDE_TAB_FIRST_TEXT");
+        return [NSString stringWithFormat:SPKL(@"SETTINGS_TAB_EDITOR_REPLACES_VALUE_TAB_FORMAT"), SPKTabTitle(self.savedCarrier)];
     }
     if ([self.hidden containsObject:identifier])
         return nil;
     if ([self usesClassicLayout] && [identifier isEqualToString:SPKTabIdentifierDirect])
-        return @"Feed header link";
+        return SPKL(@"SETTINGS_TAB_EDITOR_FEED_HEADER_LINK_HEADER");
     if ([identifier isEqualToString:SPKTabIdentifierCreate])
-        return @"Opens the camera";
+        return SPKL(@"SETTINGS_TAB_EDITOR_OPENS_CAMERA_TEXT");
     NSString *launchIdentifier = SPKTabIdentifierForLaunchPreference(self.launchTab);
     if (launchIdentifier && [launchIdentifier isEqualToString:identifier])
-        return @"Opens at launch";
+        return SPKL(@"SETTINGS_TAB_EDITOR_OPENS_LAUNCH_TEXT");
     return nil;
 }
 
@@ -852,13 +845,13 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 
     if ([key isEqualToString:@"launch"]) {
         NSString *identifier = SPKTabIdentifierForLaunchPreference(self.launchTab);
-        cell.textLabel.text = @"Launch Tab";
+        cell.textLabel.text = SPKL(@"SETTINGS_TAB_EDITOR_LAUNCH_TAB_TEXT");
         cell.imageView.image = SPKTabEditorGlyph(identifier ? [self displayIconForIdentifier:identifier] : @"home");
         cell.imageView.tintColor = [SPKUtils SPKColor_InstagramPrimaryText];
-        cell.accessoryView = [self menuButtonWithTitle:(identifier ? [self displayTitleForIdentifier:identifier] : @"Default")
+        cell.accessoryView = [self menuButtonWithTitle:(identifier ? [self displayTitleForIdentifier:identifier] : SPKL(@"MENU_DEFAULT"))
                                                   menu:[self launchMenu]];
     } else if ([key isEqualToString:@"swipe"]) {
-        cell.textLabel.text = @"Swipe Between Tabs";
+        cell.textLabel.text = SPKL(@"SETTINGS_TAB_EDITOR_SWIPE_BETWEEN_TABS_TEXT");
         cell.imageView.image = SPKTabEditorGlyph(@"left_right");
         cell.imageView.tintColor = [SPKUtils SPKColor_InstagramPrimaryText];
         NSString *title = [self.swipeMode isEqualToString:@"enabled"] ? @"On"
@@ -878,7 +871,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 
     BOOL enabled = [self isSingleTabRowEnabled:key];
     BOOL hidesBar = [key isEqualToString:@"hideBar"];
-    cell.textLabel.text = hidesBar ? @"Hide Tab Bar" : @"Messages Header Shortcut";
+    cell.textLabel.text = hidesBar ? SPKL(@"SETTINGS_TAB_EDITOR_HIDE_TAB_BAR_TEXT") : SPKL(@"SETTINGS_TAB_EDITOR_MESSAGES_HEADER_SHORTCUT_HEADER");
     cell.textLabel.textColor = enabled ? [SPKUtils SPKColor_InstagramPrimaryText]
                                        : [SPKUtils SPKColor_InstagramSecondaryText];
     cell.accessoryView = [self switchWithValue:(hidesBar ? self.hidesTabBarWhenSingle : self.showsInboxShortcut)
@@ -922,7 +915,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
         UITableViewCell *cell = [self baseCellWithStyle:UITableViewCellStyleDefault];
         BOOL discard = indexPath.section == SPKTabEditorSectionDiscard;
         BOOL dirty = [self isDirty];
-        cell.textLabel.text = discard ? @"Discard Changes" : @"Reset to Instagram Default";
+        cell.textLabel.text = discard ? SPKL(@"SETTINGS_TAB_EDITOR_DISCARD_CHANGES_TEXT") : SPKL(@"SETTINGS_TAB_EDITOR_RESET_INSTAGRAM_DEFAULT_TEXT");
         cell.textLabel.textColor = (discard && !dirty) ? [SPKUtils SPKColor_InstagramTertiaryText]
                                                        : [SPKUtils SPKColor_InstagramDestructive];
         cell.textLabel.textAlignment = NSTextAlignmentCenter;
@@ -1110,7 +1103,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 - (UIMenu *)launchMenu {
     NSMutableArray<UIMenuElement *> *actions = [NSMutableArray array];
     __weak typeof(self) weakSelf = self;
-    UIAction *defaultAction = [UIAction actionWithTitle:@"Default"
+    UIAction *defaultAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_DEFAULT")
                                                   image:nil
                                              identifier:nil
                                                 handler:^(__unused UIAction *action) {
@@ -1142,7 +1135,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 
 - (UIMenu *)swipeMenu {
     __weak typeof(self) weakSelf = self;
-    NSArray<NSArray<NSString *> *> *choices = @[ @[ @"Default", @"default" ], @[ @"On", @"enabled" ], @[ @"Off", @"disabled" ] ];
+    NSArray<NSArray<NSString *> *> *choices = @[ @[ SPKL(@"MENU_DEFAULT"), @"default" ], @[ @"On", @"enabled" ], @[ @"Off", @"disabled" ] ];
     NSMutableArray<UIMenuElement *> *actions = [NSMutableArray array];
     NSMutableArray<UIMenuElement *> *fallback = [NSMutableArray array];
     for (NSArray<NSString *> *choice in choices) {
@@ -1208,10 +1201,10 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
         return;
     __weak typeof(self) weakSelf = self;
     [SPKIGAlertPresenter presentAlertFromViewController:self
-                                                  title:@"Discard Changes?"
-                                                message:@"Your tab layout has not been applied yet."
+                                                  title:SPKL(@"SETTINGS_TAB_EDITOR_DISCARD_CHANGES_QUESTION")
+                                                message:SPKL(@"SETTINGS_TAB_EDITOR_TAB_LAYOUT_NOT_APPLIED_YET_TEXT")
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Discard"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_DISCARD")
                                                                                 style:SPKIGAlertActionStyleDestructive
                                                                               handler:^{
                                                                                   [weakSelf loadPersistedValues];
@@ -1219,7 +1212,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
                                                                                   [weakSelf.tableView reloadData];
                                                                                   [weakSelf refreshStagedUI];
                                                                               }],
-                                                    [SPKIGAlertAction actionWithTitle:@"Keep Editing"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_KEEP_EDITING")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:nil],
                                                 ]];

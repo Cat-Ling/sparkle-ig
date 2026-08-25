@@ -32,11 +32,11 @@ ensure_ffmpeg_frameworks() {
     done
 }
 
-inject_ffmpeg_frameworks() {
+inject_sparkle_resource_bundle() {
     local input_ipa="$1"
     local output_ipa="$2"
     local temp_dir
-    temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sparkle-ffmpeg-ipa.XXXXXX")"
+    temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sparkle-resources-ipa.XXXXXX")"
 
     unzip -q "$input_ipa" -d "$temp_dir"
 
@@ -48,12 +48,7 @@ inject_ffmpeg_frameworks() {
         exit 1
     fi
 
-    mkdir -p "$app_dir/Frameworks"
-    for framework in "${FFMPEG_FRAMEWORKS[@]}"; do
-        local destination="$app_dir/Frameworks/$(basename "$framework")"
-        rm -rf "$destination"
-        ditto "$framework" "$destination"
-    done
+    "$ROOT_DIR/tools/stage-sparkle-bundle.sh" "$app_dir/Sparkle.bundle"
 
     rm -f "$output_ipa"
     (
@@ -61,6 +56,13 @@ inject_ffmpeg_frameworks() {
         zip -qry "$output_ipa" Payload
     )
     rm -rf "$temp_dir"
+}
+
+find_built_sparkle_deb() {
+    local newest
+    newest="$(ls -t "$ROOT_DIR/packages/"com.sparkle.sparkle_*.deb 2>/dev/null | head -n 1)"
+    [ -n "$newest" ] || return 1
+    echo "$newest"
 }
 
 
@@ -444,10 +446,10 @@ then
         exit 1
     fi
 
-    MAKEARGS='SIDELOAD=1 DEBUG=0 FINALPACKAGE=1'
+    MAKEARGS='DEBUG=0 FINALPACKAGE=1'
     COMPRESSION=9
     if [ "$OPT_DEV" -eq 1 ]; then
-        MAKEARGS='SIDELOAD=1 DEV=1'
+        MAKEARGS='DEV=1'
         COMPRESSION=0
     fi
 
@@ -488,7 +490,8 @@ then
 
     echo -e '\033[1m\033[32mSideload build...\033[0m'
     if [ "$OPT_INJECT" -eq 1 ]; then
-        make $MAKEARGS
+        ensure_ffmpeg_frameworks
+        make package THEOS_PACKAGE_SCHEME=rootless $MAKEARGS
     fi
     if [ "$OPT_FLEX" -eq 1 ]; then
         build_flex_library
@@ -502,12 +505,12 @@ then
         exit 0
     fi
 
-    SPARKLEPATH=""
+    SPARKLE_DEB=""
     LIBFLEXPATH=""
     SIDELOADFIXPATH=""
     if [ "$OPT_INJECT" -eq 1 ]; then
-        SPARKLEPATH="$(theos_dylib_path Sparkle)" || {
-            echo -e '\033[1m\033[0;31mCould not find built Sparkle.dylib.\033[0m'
+        SPARKLE_DEB="$(find_built_sparkle_deb)" || {
+            echo -e '\033[1m\033[0;31mCould not find the built Sparkle .deb.\033[0m'
             exit 1
         }
     fi
@@ -537,9 +540,9 @@ then
     ipa_icons_tmp="$ROOT_DIR/packages/.sparkle-build-tmp-icons.ipa"
     rm -f "$ipa_out" "$ipa_ffmpeg_tmp" "$ipa_stage_input" "$ipa_flex_tmp" "$ipa_strip_tmp" "$ipa_icons_tmp"
 
-    if [ "$OPT_FFMPEG" -eq 1 ]; then
-        echo -e '\033[1m\033[32mInjecting FFmpeg frameworks...\033[0m'
-        inject_ffmpeg_frameworks "packages/${ipaFile}" "$ipa_ffmpeg_tmp"
+    if [ "$OPT_FFMPEG" -eq 1 ] && [ "$OPT_INJECT" -eq 0 ]; then
+        echo -e '\033[1m\033[32mEmbedding the opaque Sparkle resource bundle...\033[0m'
+        inject_sparkle_resource_bundle "packages/${ipaFile}" "$ipa_ffmpeg_tmp"
         mv -f "$ipa_ffmpeg_tmp" "$ipa_stage_input"
     else
         cp "packages/${ipaFile}" "$ipa_stage_input"
@@ -569,7 +572,7 @@ then
     echo -e '\033[1m\033[32mCreating the IPA file...\033[0m'
     CYAN_FILES=()
     if [ "$OPT_INJECT" -eq 1 ]; then
-        CYAN_FILES+=("$SPARKLEPATH")
+        CYAN_FILES+=("$SPARKLE_DEB")
     fi
     if [ "$OPT_PATCH" -eq 1 ] && [ "$OPT_STRIP_EXTENSIONS" -eq 1 ]; then
         CYAN_FILES+=("$SIDELOADFIXPATH")
@@ -608,9 +611,8 @@ then
     # Passed on the command line, not exported: ~/.config/theos/rc.mk assigns
     # THEOS_PACKAGE_SCHEME as a makefile variable, which overrides the
     # environment. Only a command-line assignment beats it.
-    make package THEOS_PACKAGE_SCHEME=rootless
-
     ensure_ffmpeg_frameworks
+    make package THEOS_PACKAGE_SCHEME=rootless
 
     DEB_OUT="$(rename_sparkle_deb rootless)"
 
@@ -628,9 +630,8 @@ then
     # Empty scheme = rootful. Must be a command-line assignment: `unset` here is
     # useless because ~/.config/theos/rc.mk sets the scheme as a makefile
     # variable, and those win over the environment.
-    make package THEOS_PACKAGE_SCHEME=
-
     ensure_ffmpeg_frameworks
+    make package THEOS_PACKAGE_SCHEME=
 
     DEB_OUT="$(rename_sparkle_deb rootful)"
 
@@ -649,8 +650,8 @@ else
     echo
     echo 'When building an IPA, use at least one of the following flags:'
     echo '  --release         equivalent to --inject --ffmpeg --patch'
-    echo '  --inject          include Sparkle.dylib'
-    echo '  --ffmpeg          include FFmpegKit frameworks'
+    echo '  --inject          build and inject the standard Sparkle .deb (resources included)'
+    echo '  --ffmpeg          add only the opaque Sparkle.bundle to a base IPA'
     echo '  --flex            include libFLEX.dylib'
     echo '  --patch           run ipapatch'
     echo '  --no-ext          remove all .appex bundles before final injection'
@@ -663,7 +664,7 @@ else
     echo '    ./build.sh ipa --release'
     echo '    ./build.sh ipa --release --flex'
     echo '    ./build.sh ipa --sidestore'
-    echo '    ./build.sh ipa --ffmpeg    (FFmpeg in IPA only)'
+    echo '    ./build.sh ipa --ffmpeg    (resource-only base IPA, no load commands)'
     echo
     echo 'Output names:'
     echo '    IPA  Sparkle[_<flags>]_v<version>_IG_v<ig version>.ipa'

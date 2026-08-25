@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessagesSenderCell.h"
 #import "../../../AssetUtils.h"
 #import "../../../Utils.h"
@@ -171,7 +172,7 @@ static NSString *SPKDeletedMessagesSenderPreview(SPKDeletedMessageGroup *group) 
     }
 
     if (group.count > 1) {
-        return [NSString stringWithFormat:@"%@  •  %lu unsent", body, (unsigned long)group.count];
+        return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_SENDER_CELL_VALUE_VALUE_UNSENT_FORMAT"), body, (unsigned long)group.count];
     }
     return body;
 }

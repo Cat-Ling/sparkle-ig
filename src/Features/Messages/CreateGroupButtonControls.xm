@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 #import <objc/runtime.h>
 #import "../../App/SPKPerfMeter.h"
@@ -211,8 +212,8 @@ static void SPKApplyBottomButtonsCollapse(UIView *view) {
             objc_setAssociatedObject(strongSelf, kSPKGroupButtonPendingActionAssocKey, nil, OBJC_ASSOCIATION_COPY_NONATOMIC);
             objc_setAssociatedObject(strongSelf, kSPKGroupButtonPendingTargetAssocKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         }
-        title:@"Confirm Group Creation"
-        message:@"Are you sure you want to create or send to a group with the selected recipients?"];
+        title:SPKL(@"MESSAGES_CREATE_GROUP_BUTTON_CONTROLS_CONFIRM_GROUP_CREATION_TEXT")
+        message:SPKL(@"MESSAGES_CREATE_GROUP_BUTTON_CONTROLS_CREATE_SEND_GROUP_SELECTED_RECIPIENTS_CONFIRMATION_MESSAGE")];
 }
 
 %end

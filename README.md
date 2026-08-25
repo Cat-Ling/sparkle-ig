@@ -4,7 +4,7 @@
 
 # Sparkle for Instagram
 
-`v1.2.0` · Tested on versions **441.0.0** and **410.1.0**
+`v1.2.0` · Tested on versions **444.0.0** and **410.1.0**
 
 [📣 IPA Releases](https://t.me/sparkle_ig) · [💬 Chat & Support](https://t.me/+f-Xo21HnfCY3NmE0) · [📦 Jailbreak Repo](https://efibalogh.github.io/sparkle-ig/) · [📥 DEB Releases](https://github.com/efibalogh/sparkle-ig/releases/latest) · [🐛 Issues](https://github.com/efibalogh/sparkle-ig/issues/new/choose) · [❤️ Support](https://ko-fi.com/sparkle_ig)
 
@@ -67,6 +67,8 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
   - Build a custom tab bar with a live preview: reorder or hide destinations, choose launch and swipe behavior, trade a hidden tab for one-tap access to Saved collections in the custom layout, and drop the bar entirely when a single tab is left.
 - **Custom app font**:
   - Import your own `.otf`/`.ttf` font and use it across Instagram and Sparkle, matched per weight and previewed face by face before you pick it.
+- **17 languages**:
+  - Sparkle follows Instagram's language by default, with a device-wide override in Sparkle Settings. Unsupported languages fall back to English.
 - **Confirmations**:
   - Optional "are you sure?" guards for accidental likes, follows, reposts, calls, comments, and more.
 - **Liquid Glass (iOS 26+)**:
@@ -120,6 +122,8 @@ You can build from source locally, or fork the repo and run the **Build and Pack
 
 By default, **long-press the Home tab** or the **Profile settings button** to open Sparkle Settings. You can also enable *Show Settings on App Launch*. If you hide the Home tab, the long-press automatically moves to another visible tab so Settings is always reachable.
 
+Tap the **Translate** button in the top-right of Sparkle Settings to follow Instagram or choose Arabic, Chinese (Simplified), English, French, German, Greek, Hindi, Italian, Japanese, Korean, Portuguese (Brazil), Romanian, Russian, Spanish, Turkish, Ukrainian, or Vietnamese. System Default is selected initially. A restart applies the choice across every Instagram account. Missing translations always fall back to English.
+
 ## Screenshots
 
 | Settings | How to Access |
@@ -168,8 +172,8 @@ The `ipa` command takes composable flags:
 | Flag | Effect |
 |------|--------|
 | `--release` | Shorthand for `--inject --ffmpeg --patch` |
-| `--inject` | Inject `Sparkle.dylib` |
-| `--ffmpeg` | Bundle the FFmpegKit frameworks |
+| `--inject` | Build the standard rootless `.deb` and inject it with Cyan. The tweak, translations, and FFmpeg runtime are all included. |
+| `--ffmpeg` | Add only the opaque `Sparkle.bundle` to a base IPA without adding FFmpeg load commands. |
 | `--flex` | Bundle `libFLEX.dylib` (in-app debugging) |
 | `--patch` | Run `ipapatch` |
 | `--no-ext` | Strip all `.appex` bundles before injection |
@@ -184,6 +188,20 @@ Outputs are named with the Sparkle version (and, for IPAs, the bundled Instagram
 - **deb**: `Sparkle_v<version>_<rootless|rootful>.deb`
 
 Run `./build.sh` with no arguments for the full usage reference.
+
+The public jailbreak `.deb` can also be injected directly into an IPA with stock Cyan. FFmpeg is stored as lazy-loaded flat binaries inside `Sparkle.bundle`, so Cyan does not add FFmpeg frameworks to Instagram's launch dependencies:
+
+```sh
+cyan -i packages/com.burbn.instagram.444.0.0.ipa -duq \
+  -b "com.burbn.sparkle" \
+  -f packages/Sparkle_v1.2.0_rootless.deb \
+  -o packages/test-deb.ipa
+
+ipapatch --input packages/test-deb.ipa --inplace \
+  --dylib modules/SPKSideloadFix/.theos/obj/debug/SPKSideloadFix.dylib
+```
+
+Icons, the Safari extension, extension stripping, FLEX, bundle-ID changes, and `SPKSideloadFix` remain separate IPA stages. The direct `.deb` layout is build-verified, but launch and FFmpeg operations still need on-device testing for each release.
 
 ### Recompiling the Liquid Glass app icons
 
@@ -208,6 +226,12 @@ Contributions are greatly appreciated! Feel free to open a pull request.
 - New hooked IG classes/methods go in `src/InstagramHeaders.h`
 - Prefix all custom symbols with `spk_` / `SPK`.
 - Break new features into `src/Features/<Surface>/` rather than bloating `Tweak.x`.
+- Put every user-facing string behind `SPKL`, `SPKLC`, or `SPKLP`, use semantic keys, and update all 17 locale catalogs.
+- Run `tools/lint-i18n.py` before submitting any UI copy or translation change.
+
+### Help translate or correct a translation
+
+Open **Sparkle Settings → About → Help Translate Sparkle**, or [start a translation issue](https://github.com/efibalogh/sparkle-ig/issues/new?title=Translation%3A%20). Include the language, the current text, the corrected text, and where it appears. New languages and corrections are both welcome. Keep format placeholders intact and run `tools/lint-i18n.py` when changing catalog files.
 
 Not a coder? Documentation improvements are always appreciated too.
 
@@ -227,6 +251,7 @@ Sparkle takes a lot of time to develop and maintain as Instagram changes constan
 - [**@n3d1117** • InstaSane](https://github.com/n3d1117/InstaSane): the Following-feed mode.
 - [**@asdfzxcvbn** • zxPluginsInject / ipapatch / cyan](https://github.com/asdfzxcvbn): tooling and fixes for sideloaded installs.
 - [**@BillyCurtis** • OpenInstagramSafariExtension](https://github.com/BillyCurtis/OpenInstagramSafariExtension): open Instagram links in Safari in the sideloaded IPA.
+- **USER**: Sparkle internationalization and the initial 17-language catalog.
 
 ## Official builds
 

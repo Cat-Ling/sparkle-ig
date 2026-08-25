@@ -1,4 +1,5 @@
 #import "HeaderActionButton.h"
+#import "SPKStrings.h"
 
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -88,31 +89,31 @@ NSArray<SPKHeaderDestination *> *SPKHeaderButtonAllDestinations(void) {
     dispatch_once(&onceToken, ^{
         destinations = @[
             [SPKHeaderDestination destinationWithIdentifier:kSPKHeaderDestGallery
-                                                      title:@"Gallery"
+                                                      title:SPKL(@"DATA_GENERAL_GALLERY_TITLE")
                                                    iconName:@"sparkle_gallery"
                                                     present:^(UIWindow *window) {
                                                         [SPKGalleryViewController presentGallery];
                                                     }],
             [SPKHeaderDestination destinationWithIdentifier:kSPKHeaderDestAnalyzer
-                                                      title:@"Profile Analyzer"
+                                                      title:SPKL(@"DATA_GENERAL_PROFILE_ANALYZER_TITLE")
                                                    iconName:@"profile_analyzer"
                                                     present:^(UIWindow *window) {
                                                         [SPKProfileAnalyzerViewController presentFromTop];
                                                     }],
             [SPKHeaderDestination destinationWithIdentifier:kSPKHeaderDestDeleted
-                                                      title:@"Deleted Messages"
+                                                      title:SPKL(@"ALERT_ACTION_DELETED_MESSAGES")
                                                    iconName:@"channels"
                                                     present:^(UIWindow *window) {
                                                         [SPKDeletedMessagesViewController presentFromViewController:nil];
                                                     }],
             [SPKHeaderDestination destinationWithIdentifier:kSPKHeaderDestDownloads
-                                                      title:@"Downloads"
+                                                      title:SPKL(@"DOWNLOADS_GENERAL_DOWNLOADS_TITLE")
                                                    iconName:@"download"
                                                     present:^(UIWindow *window) {
                                                         [SPKDownloadService presentDownloadsHistorySheet];
                                                     }],
             [SPKHeaderDestination destinationWithIdentifier:kSPKHeaderDestSettings
-                                                      title:@"Sparkle Settings"
+                                                      title:SPKL(@"FEED_DESTINATIONS_SPARKLE_SETTINGS_TITLE")
                                                    iconName:@"settings"
                                                     present:^(UIWindow *window) {
                                                         [SPKUtils showSettingsVC:window];
@@ -150,7 +151,7 @@ NSString *SPKHeaderButtonResolvedDefaultActionIdentifier(void) {
 NSString *SPKHeaderButtonDefaultActionTitle(void) {
     NSString *identifier = SPKHeaderButtonResolvedDefaultActionIdentifier();
     SPKHeaderDestination *destination = SPKHeaderDestinationForIdentifier(identifier);
-    return destination ? destination.title : @"Open Menu";
+    return destination ? destination.title : SPKL(@"FEED_HEADER_ACTION_BUTTON_OPEN_MENU_TEXT");
 }
 
 NSString *SPKHeaderButtonDefaultActionIconName(void) {
@@ -224,7 +225,7 @@ static UIView *SPKHeaderSubview(id header, NSArray<NSString *> *keys) {
                                                                                 pointSize:kSPKHeaderButtonGlyph
                                                                                  diameter:kSPKHeaderButtonSide];
     button.accessibilityIdentifier = @"spk-header-action-button";
-    button.accessibilityLabel = @"Sparkle";
+    button.accessibilityLabel = SPKL(@"ABOUT_INFORMATION_SPARKLE_TITLE");
     button.translatesAutoresizingMaskIntoConstraints = YES;
     button.bubbleColor = UIColor.clearColor;
 
@@ -475,7 +476,7 @@ static NSString *SPKHeaderButtonConfigSignature(NSArray<SPKHeaderDestination *> 
                                                                                 pointSize:kSPKHeaderButtonGlyph
                                                                                  diameter:kSPKHeaderButtonSide];
     button.accessibilityIdentifier = @"spk-inbox-header-action-button";
-    button.accessibilityLabel = @"Sparkle";
+    button.accessibilityLabel = SPKL(@"ABOUT_INFORMATION_SPARKLE_TITLE");
     button.translatesAutoresizingMaskIntoConstraints = YES;
     button.bubbleColor = UIColor.clearColor;
 

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKInstantsSavedUsersViewController.h"
 
 #import "../../Utils.h"
@@ -131,11 +132,11 @@ static NSArray<SPKInstantsSavedUser *> *SPKInstantsSavedUsers(void) {
 
 - (instancetype)init {
     if ((self = [super init])) {
-        self.title = @"Saved Instants";
+        self.title = SPKL(@"INSTANTS_INSTANTS_SAVED_USERS_SAVED_INSTANTS_TEXT");
         self.allowsDelete = NO;
-        self.emptyTitle = @"No saved instants";
-        self.emptySubtitle = @"Instants you save or auto-save show up here, grouped by who sent them.";
-        self.emptySearchSubtitle = @"No accounts match your search.";
+        self.emptyTitle = SPKL(@"INSTANTS_INSTANTS_SAVED_USERS_NO_SAVED_INSTANTS_TEXT");
+        self.emptySubtitle = SPKL(@"INSTANTS_INSTANTS_SAVED_USERS_INSTANTS_SAVE_AUTO_SAVE_SHOW_UP_HERE_GROUPED_WHO_TEXT");
+        self.emptySearchSubtitle = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_NO_ACCOUNTS_MATCH_SEARCH_TEXT");
     }
     return self;
 }
@@ -173,8 +174,8 @@ static NSArray<SPKInstantsSavedUser *> *SPKInstantsSavedUsers(void) {
         SPKUserListItem *item = [SPKUserListItem new];
         item.pk = user.pk;
         item.title = [@"@" stringByAppendingString:user.username];
-        item.subtitle = user.count == 1 ? @"1 instant"
-                                        : [NSString stringWithFormat:@"%lu instants", (unsigned long)user.count];
+        item.subtitle = user.count == 1 ? SPKL(@"INSTANTS_INSTANTS_SAVED_USERS_INSTANT_TEXT")
+                                        : [NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_SAVED_USERS_VALUE_INSTANTS_FORMAT"), (unsigned long)user.count];
         if (user.pk.length > 0)
             item.avatarURLString = spkDirectUserResolverProfilePicURLStringForPK(user.pk);
         item.representedObject = user;

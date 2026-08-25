@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKActionSectionIconPickerViewController.h"
 
 #import "../AssetUtils.h"
@@ -20,7 +21,7 @@
         _selectedIconName = [selectedIconName copy] ?: @"more";
         _selectedCanonicalName = [[self class] canonicalNameForIconName:_selectedIconName];
         _onSelect = [onSelect copy];
-        self.title = @"Section Icon";
+        self.title = SPKL(@"SETTINGS_ACTION_SECTION_ICON_PICKER_SECTION_ICON_TEXT");
     }
     return self;
 }
@@ -42,7 +43,7 @@
     return SPKIconPickerCellStyleGlyph;
 }
 - (NSString *)searchPlaceholder {
-    return @"Search Icons";
+    return SPKL(@"SETTINGS_ACTION_SECTION_ICON_PICKER_SEARCH_ICONS_TEXT");
 }
 
 - (NSArray<SPKIconPickerSection *> *)buildSections {

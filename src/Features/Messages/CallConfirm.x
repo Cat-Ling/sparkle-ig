@@ -1,4 +1,5 @@
 #import "../../Utils.h"
+#import "SPKStrings.h"
 
 static NSString *const kSPKAudioCallConfirmKey = @"msgs_confirm_audio_call";
 static NSString *const kSPKVideoCallConfirmKey = @"msgs_confirm_video_call";
@@ -19,8 +20,8 @@ static BOOL SPKShouldConfirmCall(NSString *key) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Audio Call"
-                     message:@"Are you sure you want to start an audio call?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_AUDIO_CALL_TITLE")
+                     message:SPKL(@"MESSAGES_CALL_CONFIRM_START_AUDIO_CALL_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -34,8 +35,8 @@ static BOOL SPKShouldConfirmCall(NSString *key) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Audio Call"
-                     message:@"Are you sure you want to start an audio call?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_AUDIO_CALL_TITLE")
+                     message:SPKL(@"MESSAGES_CALL_CONFIRM_START_AUDIO_CALL_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -50,8 +51,8 @@ static BOOL SPKShouldConfirmCall(NSString *key) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Video Call"
-                     message:@"Are you sure you want to start a video call?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VIDEO_CALL_TITLE")
+                     message:SPKL(@"MESSAGES_CALL_CONFIRM_START_VIDEO_CALL_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -65,8 +66,8 @@ static BOOL SPKShouldConfirmCall(NSString *key) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Video Call"
-                     message:@"Are you sure you want to start a video call?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VIDEO_CALL_TITLE")
+                     message:SPKL(@"MESSAGES_CALL_CONFIRM_START_VIDEO_CALL_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }

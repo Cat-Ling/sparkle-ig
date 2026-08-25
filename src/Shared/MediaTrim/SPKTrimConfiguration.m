@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKTrimConfiguration.h"
 
 @implementation SPKTrimDoneOption
@@ -24,7 +25,7 @@
         _allowsAudioOnly = YES;
         _allowsCrop = YES;
         _minimumDuration = 0.3;
-        _title = @"Trim";
+        _title = SPKL(@"ALERT_ACTION_TRIM");
     }
     return self;
 }
@@ -42,7 +43,7 @@
     config.mediaKind = SPKTrimMediaKindAudio;
     config.allowsFrameOnly = NO;
     config.allowsCrop = NO;
-    config.title = @"Trim Audio";
+    config.title = SPKL(@"MEDIA_TRIM_TRIM_CONFIGURATION_TRIM_AUDIO_TEXT");
     return config;
 }
 

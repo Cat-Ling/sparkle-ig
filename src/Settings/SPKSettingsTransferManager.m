@@ -1,4 +1,5 @@
 #import "SPKSettingsTransferManager.h"
+#import "SPKStrings.h"
 
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <compression.h>
@@ -949,10 +950,10 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
                                  : @"Per-account settings are on. Back up every account's settings, or only the active account's.";
     __weak typeof(self) weakSelf = self;
     [SPKIGAlertPresenter presentActionSheetFromViewController:controller
-                                                        title:@"Which accounts?"
+                                                        title:SPKL(@"SETTINGS_TRANSFER_ACCOUNT_SCOPE_QUESTION")
                                                       message:scopeMessage
                                                       actions:@[
-                                                          [SPKIGAlertAction actionWithTitle:@"All Accounts"
+                                                          [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_ALL_ACCOUNTS")
                                                                                       style:SPKIGAlertActionStyleDefault
                                                                                     handler:^{
                                                                                         [weakSelf exportFromController:controller includeSettings:includeSettings includeGallery:includeGallery includeDeletedMessages:includeDeletedMessages includeProfileAnalyzer:includeProfileAnalyzer settingsScope:SPKTransferAccountScopeAllAccounts];
@@ -962,7 +963,7 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
                                                                                     handler:^{
                                                                                         [weakSelf exportFromController:controller includeSettings:includeSettings includeGallery:includeGallery includeDeletedMessages:includeDeletedMessages includeProfileAnalyzer:includeProfileAnalyzer settingsScope:SPKTransferAccountScopeCurrentAccount];
                                                                                     }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                          [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                       style:SPKIGAlertActionStyleCancel
                                                                                     handler:nil],
                                                       ]];
@@ -998,7 +999,7 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
     };
     void (^failExport)(NSString *) = ^(NSString *message) {
         dispatch_async(dispatch_get_main_queue(), ^{
-            [pill showErrorWithTitle:@"Export failed" subtitle:message icon:nil];
+            [pill showErrorWithTitle:SPKL(@"EXPORT_NOTIFICATION_FAILED") subtitle:message icon:nil];
         });
     };
 
@@ -1172,10 +1173,10 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
             // so show it in an alert the user can actually read instead of a pill subtitle.
             [pill dismiss];
             [SPKIGAlertPresenter presentAlertFromViewController:topMostController()
-                                                          title:@"Import Failed"
+                                                          title:SPKL(@"IMPORT_NOTIFICATION_FAILED")
                                                         message:message
                                                         actions:@[
-                                                            [SPKIGAlertAction actionWithTitle:@"OK"
+                                                            [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_OK")
                                                                                         style:SPKIGAlertActionStyleCancel
                                                                                       handler:nil]
                                                         ]];
@@ -1373,19 +1374,19 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
             return;
         }
 
-        NSString *message = [NSString stringWithFormat:@"%ld imported file%@ already exist%@ on this device under a different account. What should happen to %@?",
-                                                       (long)conflicts, conflicts == 1 ? @"" : @"s", conflicts == 1 ? @"s" : @"", conflicts == 1 ? @"it" : @"them"];
+        NSString *message = [NSString stringWithFormat:SPKL(@"SETTINGS_TRANSFER_ACCOUNT_CONFLICTS_FORMAT"),
+                                                       SPKLP(@"COMMON_FILE_COUNT", conflicts)];
         dispatch_async(dispatch_get_main_queue(), ^{
             [SPKIGAlertPresenter presentAlertFromViewController:topMostController()
-                                                          title:@"Files from Another Account"
+                                                          title:SPKL(@"SETTINGS_SETTINGS_TRANSFER_MANAGER_FILES_ANOTHER_ACCOUNT_TEXT")
                                                         message:message
                                                         actions:@[
-                                                            [SPKIGAlertAction actionWithTitle:@"Claim for This Account"
+                                                            [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CLAIM_ACCOUNT")
                                                                                         style:SPKIGAlertActionStyleDefault
                                                                                       handler:^{
                                                                                           mergeGalleryThenFinish(SPKGalleryImportConflictStrategyClaim);
                                                                                       }],
-                                                            [SPKIGAlertAction actionWithTitle:@"Keep a Separate Copy"
+                                                            [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_KEEP_SEPARATE_COPY")
                                                                                         style:SPKIGAlertActionStyleDefault
                                                                                       handler:^{
                                                                                           mergeGalleryThenFinish(SPKGalleryImportConflictStrategyDuplicate);
@@ -1416,10 +1417,10 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
     NSString *thisTitle = username.length ? [NSString stringWithFormat:@"This Account Only (%@)", username] : @"This Account Only";
     __weak typeof(self) weakSelf = self;
     [SPKIGAlertPresenter presentActionSheetFromViewController:controller
-                                                        title:@"Which Accounts?"
-                                                      message:@"Per-account settings are on. Reset every account's settings, or only the active account's."
+                                                        title:SPKL(@"SETTINGS_SETTINGS_TRANSFER_MANAGER_ACCOUNTS_QUESTION")
+                                                      message:SPKL(@"SETTINGS_SETTINGS_TRANSFER_MANAGER_PER_ACCOUNT_SETTINGS_RESET_EVERY_ACCOUNT_S_SETTINGS_ONLY_TEXT")
                                                       actions:@[
-                                                          [SPKIGAlertAction actionWithTitle:@"All Accounts"
+                                                          [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_ALL_ACCOUNTS")
                                                                                       style:SPKIGAlertActionStyleDefault
                                                                                     handler:^{
                                                                                         [weakSelf confirmResetFromController:controller scope:SPKTransferAccountScopeAllAccounts];
@@ -1429,7 +1430,7 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
                                                                                     handler:^{
                                                                                         [weakSelf confirmResetFromController:controller scope:SPKTransferAccountScopeCurrentAccount];
                                                                                     }],
-                                                          [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                          [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                       style:SPKIGAlertActionStyleCancel
                                                                                     handler:nil],
                                                       ]];
@@ -1443,13 +1444,13 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
                             : @"This restores every Sparkle preference to its default value. Gallery media is left untouched. This cannot be undone.";
     NSString *currentPK = [SPKAccountManager currentAccountPK];
     [SPKIGAlertPresenter presentAlertFromViewController:controller
-                                                  title:@"Reset All Settings"
+                                                  title:SPKL(@"DATA_GENERAL_RESET_ALL_SETTINGS_TITLE")
                                                 message:message
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:nil],
-                                                    [SPKIGAlertAction actionWithTitle:@"Reset"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_RESET")
                                                                                 style:SPKIGAlertActionStyleDestructive
                                                                               handler:^{
                                                                                   NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -1487,7 +1488,7 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
                                                   title:title
                                                 message:message
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:nil],
                                                     [SPKIGAlertAction actionWithTitle:(confirmTitle.length ? confirmTitle : @"Reset")

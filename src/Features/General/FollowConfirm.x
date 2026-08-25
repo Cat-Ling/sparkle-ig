@@ -1,4 +1,5 @@
 #import "../../InstagramHeaders.h"
+#import "SPKStrings.h"
 #import "../../Utils.h"
 
 #import <objc/message.h>
@@ -13,8 +14,8 @@
             showConfirmation:^(void) {                                          \
                 orig;                                                           \
             }                                                                   \
-                       title:@"Confirm Follow"                                  \
-                     message:@"Are you sure you want to follow this account?"]; \
+                       title:SPKL(@"PROFILE_CONFIRMATION_CONFIRM_FOLLOW_TITLE")                                  \
+                     message:SPKL(@"GENERAL_FOLLOW_CONFIRM_FOLLOW_ACCOUNT_CONFIRMATION_MESSAGE")]; \
     } else {                                                                    \
         return orig;                                                            \
     }
@@ -56,8 +57,8 @@ static void SPKConfirmUnfollowElseRestore(void (^perform)(void), void (^restore)
             spk_unfollowConfirmed = NO;
         }
            cancelHandler:restore
-                   title:@"Confirm Unfollow"
-                 message:@"Are you sure you want to unfollow this account?"];
+                   title:SPKL(@"PROFILE_CONFIRMATION_CONFIRM_UNFOLLOW_TITLE")
+                 message:SPKL(@"GENERAL_FOLLOW_CONFIRM_UNFOLLOW_ACCOUNT_CONFIRMATION_MESSAGE")];
 }
 
 static void SPKConfirmUnfollow(void (^perform)(void)) {
@@ -80,8 +81,8 @@ static void SPKConfirmFollowToggle(BOOL isFollowing, void (^perform)(void)) {
 
     SPKLog(@"General", @"[Sparkle] Confirm follow triggered");
     [SPKUtils showConfirmation:perform
-                         title:@"Confirm Follow"
-                       message:@"Are you sure you want to follow this account?"];
+                         title:SPKL(@"PROFILE_CONFIRMATION_CONFIRM_FOLLOW_TITLE")
+                       message:SPKL(@"GENERAL_FOLLOW_CONFIRM_FOLLOW_ACCOUNT_CONFIRMATION_MESSAGE")];
 }
 
 // Status 2 is the only state in which a tap begins a follow; anything else undoes one. An account
@@ -238,8 +239,8 @@ static void hooked_listSectionController(id self, SEL _cmd, id arg1, id arg2) {
             showConfirmation:^{
                 orig_listSectionController(self, _cmd, arg1, arg2);
             }
-                       title:@"Confirm Follow All"
-                     message:@"Are you sure you want to follow everyone in this list?"];
+                       title:SPKL(@"GENERAL_FOLLOW_CONFIRM_CONFIRM_FOLLOW_TEXT")
+                     message:SPKL(@"GENERAL_FOLLOW_CONFIRM_FOLLOW_EVERYONE_LIST_CONFIRMATION_MESSAGE")];
 
         return;
     }

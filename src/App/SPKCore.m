@@ -33,6 +33,8 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         // Family name of the imported app-wide font; empty means the default face.
         // Bootstrap rather than feature defaults: the font hooks install in %ctor.
         @"interface_custom_font" : @"",
+        // Device-global Sparkle language. "auto" follows Instagram, then iOS.
+        @"interface_language" : @"auto",
         @"tools_settings_shortcut" : @(YES),
         @"tools_shortcut_haptics" : @(YES),
         @"gallery_quick_access_tab" : @"direct-inbox-tab",

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 
 %group SPKFollowRequestConfirmHooks
@@ -11,8 +12,8 @@
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Accept Request"
-                     message:@"Are you sure you want to accept this follow request?"];
+                       title:SPKL(@"MESSAGES_FOLLOW_REQUEST_CONFIRM_CONFIRM_ACCEPT_REQUEST_TEXT")
+                     message:SPKL(@"MESSAGES_FOLLOW_REQUEST_CONFIRM_ACCEPT_FOLLOW_REQUEST_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -25,8 +26,8 @@
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Decline Request"
-                     message:@"Are you sure you want to decline this follow request?"];
+                       title:SPKL(@"MESSAGES_FOLLOW_REQUEST_CONFIRM_CONFIRM_DECLINE_REQUEST_TEXT")
+                     message:SPKL(@"MESSAGES_FOLLOW_REQUEST_CONFIRM_DECLINE_FOLLOW_REQUEST_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }

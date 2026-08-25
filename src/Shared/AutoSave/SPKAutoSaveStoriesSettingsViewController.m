@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKAutoSaveStoriesSettingsViewController.h"
 
 #import "../Instants/SPKInstantsAutoSave.h"
@@ -13,21 +14,15 @@
     dispatch_once(&onceToken, ^{
         descriptor = [SPKAutoSaveSurfaceDescriptor new];
         descriptor.filter = SPKStoryAutoSaveFilterConfig();
-        descriptor.title = @"Stories";
+        descriptor.title = SPKL(@"STORIES_OTHER_STORIES_TITLE");
         descriptor.masterTitle = @"Auto-Save Stories";
         descriptor.listIcon = @"users";
         descriptor.listProvider = ^UIViewController * {
             return SPKStoryAutoSaveListViewController();
         };
         descriptor.footerProvider = ^NSString *(BOOL allMode) {
-            return allMode ? @"1. Save stories as you watch them. Stories you already have are skipped, so re-watching "
-                             @"never saves twice.\n"
-                             @"2. All Users saves every story except the users you exclude.\n"
-                             @"3. Users whose stories are never auto-saved. Add them here or from the story action menu."
-                           : @"1. Save stories as you watch them. Stories you already have are skipped, so re-watching "
-                             @"never saves twice.\n"
-                             @"2. Selected Users saves only the users you pick.\n"
-                             @"3. Users whose stories are auto-saved. Add them here or from the story action menu.";
+            return allMode ? SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_SAVE_STORIES_WATCH_STORIES_ALREADY_SKIPPED_SO_RE_WATCHING_TEXT")
+                           : SPKL(@"AUTO_SAVE_STORIES_SELECTED_USERS_FOOTER");
         };
     });
     return descriptor;
@@ -43,23 +38,15 @@
     dispatch_once(&onceToken, ^{
         descriptor = [SPKAutoSaveSurfaceDescriptor new];
         descriptor.filter = SPKDirectAutoSaveFilterConfig();
-        descriptor.title = @"Messages";
-        descriptor.masterTitle = @"Auto-Save View-Once Media";
+        descriptor.title = SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE");
+        descriptor.masterTitle = SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_AUTO_SAVE_VIEW_ONCE_MEDIA_TEXT");
         descriptor.listIcon = @"messages";
         descriptor.listProvider = ^UIViewController * {
             return SPKDirectAutoSaveListViewController();
         };
         descriptor.footerProvider = ^NSString *(BOOL allMode) {
-            return allMode ? @"1. Save view-once and replayable photos and videos as you open them. Media you already "
-                             @"have is skipped, so replaying never saves twice.\n"
-                             @"2. All Chats saves every one except in the chats you exclude.\n"
-                             @"3. Chats whose view-once media is never auto-saved. Add them here, or from the viewer's "
-                             @"action menu and eye button menu."
-                           : @"1. Save view-once and replayable photos and videos as you open them. Media you already "
-                             @"have is skipped, so replaying never saves twice.\n"
-                             @"2. Selected Chats saves only the chats you pick.\n"
-                             @"3. Chats whose view-once media is auto-saved. Add them here, or from the viewer's action "
-                             @"menu and eye button menu.";
+            return allMode ? SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_SAVE_VIEW_ONCE_REPLAYABLE_PHOTOS_VIDEOS_OPEN_MEDIA_ALREADY_TEXT")
+                           : SPKL(@"AUTO_SAVE_VISUAL_MESSAGES_SELECTED_CHATS_FOOTER");
         };
     });
     return descriptor;
@@ -75,23 +62,15 @@
     dispatch_once(&onceToken, ^{
         descriptor = [SPKAutoSaveSurfaceDescriptor new];
         descriptor.filter = SPKInstantsAutoSaveFilterConfig();
-        descriptor.title = @"Instants";
-        descriptor.masterTitle = @"Auto-Save Instants";
+        descriptor.title = SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE");
+        descriptor.masterTitle = SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_AUTO_SAVE_INSTANTS_TEXT");
         descriptor.listIcon = @"users";
         descriptor.listProvider = ^UIViewController * {
             return SPKInstantsAutoSaveListViewController();
         };
         descriptor.footerProvider = ^NSString *(BOOL allMode) {
-            return allMode ? @"1. Save instants as you open them, including each one you tap through. Instants you "
-                             @"already have are skipped.\n"
-                             @"2. All Users saves every instant except from the users you exclude.\n"
-                             @"3. Users whose instants are never auto-saved. Add them here by username, or from the "
-                             @"instant action menu."
-                           : @"1. Save instants as you open them, including each one you tap through. Instants you "
-                             @"already have are skipped.\n"
-                             @"2. Selected Users saves only the users you pick.\n"
-                             @"3. Users whose instants are auto-saved. Add them here by username, or from the instant "
-                             @"action menu.";
+            return allMode ? SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_SAVE_INSTANTS_OPEN_INCLUDING_EACH_ONE_TAP_THROUGH_INSTANTS_TEXT")
+                           : SPKL(@"AUTO_SAVE_INSTANTS_SELECTED_USERS_FOOTER");
         };
     });
     return descriptor;

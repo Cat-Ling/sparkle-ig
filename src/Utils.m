@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "Utils.h"
 #import "App/SPKCore.h"
 #import "App/SPKStabilityGuard.h"
@@ -1035,6 +1036,7 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
             // hooks installed in %ctor -- long before any account session exists. A
             // per-account key would read the global default on every cold launch.
             @"interface_custom_font",
+            @"interface_language",
             @"interface_liquid_glass",
             @"interface_liquid_glass_tabbar_mode",
             @"interface_progressive_blur",
@@ -2209,7 +2211,7 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
     // Nothing changes on screen until this lands, so say that something is
     // happening. Transient, like the 4K candidate fetch: preparatory work before
     // the real flow, cleared on both outcomes.
-    [[SPKNotificationCenter shared] beginTransientProgressWithTitle:@"Opening profile..." onCancel:nil];
+    [[SPKNotificationCenter shared] beginTransientProgressWithTitle:SPKL(@"GENERAL_UTILS_OPENING_PROFILE_TEXT") onCancel:nil];
     [SPKInstagramAPI resolveUserForUsername:clean
                                  completion:^(NSDictionary *userDict, NSError *error) {
                                      NSString *resolvedPK = [userDict[@"pk"] description];
@@ -2632,16 +2634,16 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
 };
 + (BOOL)showConfirmation:(void (^)(void))okHandler cancelHandler:(void (^)(void))cancelHandler title:(NSString *)title message:(NSString *)message {
     [SPKIGAlertPresenter presentAlertFromViewController:topMostController()
-                                                  title:title ?: @"Confirm Action"
-                                                message:message ?: @"Are you sure you want to continue?"
+                                                  title:title ?: SPKL(@"GENERAL_UTILS_CONFIRM_ACTION")
+                                                message:message ?: SPKL(@"GENERAL_UTILS_CONTINUE_CONFIRMATION_MESSAGE")
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:^{
                                                                                   if (cancelHandler)
                                                                                       cancelHandler();
                                                                               }],
-                                                    [SPKIGAlertAction actionWithTitle:@"Confirm"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CONFIRM")
                                                                                 style:SPKIGAlertActionStyleDefault
                                                                               handler:^{
                                                                                   if (okHandler)
@@ -2658,13 +2660,13 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
 }
 + (void)showRestartConfirmation {
     [SPKIGAlertPresenter presentAlertFromViewController:topMostController()
-                                                  title:@"Restart Required"
-                                                message:@"You must restart the app to apply this change"
+                                                  title:SPKL(@"GENERAL_UTILS_RESTART_REQUIRED_TEXT")
+                                                message:SPKL(@"GENERAL_UTILS_MUST_RESTART_APP_APPLY_CHANGE_TEXT")
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Later"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_LATER")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:nil],
-                                                    [SPKIGAlertAction actionWithTitle:@"Restart"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_RESTART")
                                                                                 style:SPKIGAlertActionStyleDefault
                                                                               handler:^{
                                                                                   exit(0);

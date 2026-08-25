@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKTabConfiguration.h"
 
 #import "../../Utils.h"
@@ -178,11 +179,11 @@ NSString *SPKTabTitle(NSString *identifier) {
     if ([identifier isEqualToString:SPKTabIdentifierFeed]) return @"Feed";
     if ([identifier isEqualToString:SPKTabIdentifierClips]) return @"Reels";
     if ([identifier isEqualToString:SPKTabIdentifierDirect]) return @"Messages";
-    if ([identifier isEqualToString:SPKTabIdentifierSearch]) return @"Explore";
+    if ([identifier isEqualToString:SPKTabIdentifierSearch]) return SPKL(@"TAB_EXPLORE");
     if ([identifier isEqualToString:SPKTabIdentifierProfile]) return @"Profile";
     if ([identifier isEqualToString:SPKTabIdentifierCreate]) return @"Create";
     if ([identifier isEqualToString:SPKTabIdentifierSaved]) return @"Saved";
-    return identifier ?: @"Tab";
+    return identifier ?: SPKL(@"NAVIGATION_TAB_CONFIGURATION_TAB_TEXT");
 }
 
 NSString *SPKTabIconName(NSString *identifier) {

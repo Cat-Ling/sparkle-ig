@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 
 %group SPKStickerInteractConfirmHooks
@@ -11,8 +12,8 @@
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Sticker Interaction"
-                     message:@"Are you sure you want to interact with this story sticker?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_STICKER_INTERACTION_TITLE")
+                     message:SPKL(@"STORIES_STICKER_INTERACT_CONFIRM_INTERACT_STORY_STICKER_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }

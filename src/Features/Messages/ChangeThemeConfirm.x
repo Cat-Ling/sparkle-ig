@@ -1,4 +1,5 @@
 #import "../../InstagramHeaders.h"
+#import "SPKStrings.h"
 #import "../../Utils.h"
 
 %group SPKChangeThemeConfirmHooks
@@ -12,8 +13,8 @@
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Change Chat Theme"
-                     message:@"Are you sure you want to apply this theme to the chat?"];
+                       title:SPKL(@"MESSAGES_CHANGE_THEME_CONFIRM_CONFIRM_CHANGE_CHAT_THEME_TEXT")
+                     message:SPKL(@"MESSAGES_CHANGE_THEME_CONFIRM_APPLY_THEME_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -26,8 +27,8 @@
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Change Chat Theme"
-                     message:@"Are you sure you want to apply this theme to the chat?"];
+                       title:SPKL(@"MESSAGES_CHANGE_THEME_CONFIRM_CONFIRM_CHANGE_CHAT_THEME_TEXT")
+                     message:SPKL(@"MESSAGES_CHANGE_THEME_CONFIRM_APPLY_THEME_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -43,8 +44,8 @@
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Change Chat Theme"
-                     message:@"Are you sure you want to apply this theme to the chat?"];
+                       title:SPKL(@"MESSAGES_CHANGE_THEME_CONFIRM_CONFIRM_CHANGE_CHAT_THEME_TEXT")
+                     message:SPKL(@"MESSAGES_CHANGE_THEME_CONFIRM_APPLY_THEME_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }

@@ -1,4 +1,5 @@
 #import "../../Utils.h"
+#import "SPKStrings.h"
 #import "../../App/SPKStabilityGuard.h"
 #import "../../AssetUtils.h"
 #import "../../Shared/Account/SPKAccountManager.h"
@@ -295,7 +296,7 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
         [button setImage:filled forState:UIControlStateSelected | UIControlStateHighlighted];
     }
     if (![button.accessibilityLabel isEqualToString:@"Saved"]) {
-        button.accessibilityLabel = @"Saved";
+        button.accessibilityLabel = SPKL(@"TAB_SAVED");
     }
 }
 

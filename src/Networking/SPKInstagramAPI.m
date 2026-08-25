@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 // Reusable IG private API helper. Uses active session auth header.
 
 #import "SPKInstagramAPI.h"
@@ -256,7 +257,7 @@ static NSString *spkNormalizePK(NSString *pk) {
                     completion:(nullable SPKAPICompletion)completion {
     if (mediaPK.length == 0) {
         if (completion) {
-            completion(nil, [NSError errorWithDomain:@"SPKInstagramAPI" code:1 userInfo:@{NSLocalizedDescriptionKey: @"Empty PK"}]);
+            completion(nil, [NSError errorWithDomain:@"SPKInstagramAPI" code:1 userInfo:@{NSLocalizedDescriptionKey: SPKL(@"NETWORK_INSTAGRAM_API_EMPTY_PK_TEXT")}]);
         }
         return;
     }
@@ -451,7 +452,7 @@ static NSString *spkNormalizePK(NSString *pk) {
     NSString *cleanUsername = [SPKUtils sanitizedInstagramUsername:username];
     if (cleanUsername.length == 0) {
         if (completion) {
-            completion(nil, [NSError errorWithDomain:@"SPKInstagramAPI" code:400 userInfo:@{NSLocalizedDescriptionKey: @"Invalid username"}]);
+            completion(nil, [NSError errorWithDomain:@"SPKInstagramAPI" code:400 userInfo:@{NSLocalizedDescriptionKey: SPKL(@"NETWORK_INSTAGRAM_API_INVALID_USERNAME_TEXT")}]);
         }
         return;
     }

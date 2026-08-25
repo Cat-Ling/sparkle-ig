@@ -1,4 +1,5 @@
 #import "SPKAppIconCatalog.h"
+#import "SPKStrings.h"
 
 static NSString *const kSPKAppIconPrimaryIdentifier = @"";
 static NSString *const kSPKAppIconSelectionDefaultsKey = @"general_app_icon_identifier";
@@ -8,7 +9,7 @@ static NSString *const kSPKAppIconSelectionDefaultsKey = @"general_app_icon_iden
 
 static NSString *SPKAppIconDisplayNameFromIdentifier(NSString *identifier, BOOL primary) {
     if (primary || identifier.length == 0) {
-        return @"Default";
+        return SPKL(@"MENU_DEFAULT");
     }
 
     NSMutableString *displayName = [[identifier stringByReplacingOccurrencesOfString:@"_" withString:@" "] mutableCopy];
@@ -105,7 +106,7 @@ static UIImage *SPKAppIconImageNamed(NSString *name) {
     } else {
         SPKAppIconItem *fallback = [[SPKAppIconItem alloc] init];
         fallback.identifier = kSPKAppIconPrimaryIdentifier;
-        fallback.displayName = @"Default";
+        fallback.displayName = SPKL(@"MENU_DEFAULT");
         fallback.iconFiles = @[ @"Prod60x60", @"Icon-60-Prod", @"Prod" ];
         fallback.isPrimary = YES;
         [items addObject:fallback];

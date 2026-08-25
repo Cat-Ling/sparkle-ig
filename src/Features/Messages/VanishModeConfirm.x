@@ -1,4 +1,5 @@
 #import "../../Utils.h"
+#import "SPKStrings.h"
 
 static inline BOOL SPKBlockDisappearingSwipeUpEnabled(void) {
     return [SPKUtils getBoolPref:@"msgs_disable_vanish_swipe_up"];
@@ -51,8 +52,8 @@ static inline BOOL SPKHideVanishScreenshotEnabled(void) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Vanish Mode"
-                     message:@"Are you sure you want to change disappearing messages for this chat?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VANISH_MODE_TITLE")
+                     message:SPKL(@"MESSAGES_VANISH_MODE_CONFIRM_CHANGE_DISAPPEARING_MESSAGES_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -73,8 +74,8 @@ static inline BOOL SPKHideVanishScreenshotEnabled(void) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Vanish Mode"
-                     message:@"Are you sure you want to change disappearing messages for this chat?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VANISH_MODE_TITLE")
+                     message:SPKL(@"MESSAGES_VANISH_MODE_CONFIRM_CHANGE_DISAPPEARING_MESSAGES_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -97,8 +98,8 @@ static inline BOOL SPKHideVanishScreenshotEnabled(void) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Vanish Mode"
-                     message:@"Are you sure you want to change disappearing messages for this chat?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VANISH_MODE_TITLE")
+                     message:SPKL(@"MESSAGES_VANISH_MODE_CONFIRM_CHANGE_DISAPPEARING_MESSAGES_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -112,8 +113,8 @@ static inline BOOL SPKHideVanishScreenshotEnabled(void) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Vanish Mode"
-                     message:@"Are you sure you want to change disappearing messages for this chat?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VANISH_MODE_TITLE")
+                     message:SPKL(@"MESSAGES_VANISH_MODE_CONFIRM_CHANGE_DISAPPEARING_MESSAGES_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }
@@ -138,8 +139,8 @@ static inline BOOL SPKHideVanishScreenshotEnabled(void) {
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Vanish Mode"
-                     message:@"Are you sure you want to change disappearing messages for this chat?"];
+                       title:SPKL(@"MESSAGES_CONFIRMATION_CONFIRM_VANISH_MODE_TITLE")
+                     message:SPKL(@"MESSAGES_VANISH_MODE_CONFIRM_CHANGE_DISAPPEARING_MESSAGES_CHAT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKTrimSaveCoordinator.h"
 #import "../../Utils.h"
 #import "../Downloads/SPKDownloadDestinationWriter.h"
@@ -23,7 +24,7 @@
 @implementation SPKTrimFilesExporter
 - (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
     if (self.done)
-        self.done(YES, @"Saved to Files");
+        self.done(YES, SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_SAVED_FILES_TEXT"));
     self.selfRef = nil;
 }
 - (void)documentPickerWasCancelled:(UIDocumentPickerViewController *)controller {
@@ -73,10 +74,10 @@
             // filename/attribution), but should sort as the newest item — the
             // edit happened just now.
             [saved markAddedNow];
-            done(YES, (mediaType == SPKGalleryMediaTypeImage) ? @"Frame saved to Gallery" : (mediaType == SPKGalleryMediaTypeAudio) ? @"Audio saved to Gallery"
-                                                                                                                                    : @"Trimmed clip saved to Gallery");
+            done(YES, (mediaType == SPKGalleryMediaTypeImage) ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_FRAME_SAVED_GALLERY_TEXT") : (mediaType == SPKGalleryMediaTypeAudio) ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_AUDIO_SAVED_GALLERY_TEXT")
+                                                                                                                                    : SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_TRIMMED_CLIP_SAVED_GALLERY_TEXT"));
         } else {
-            done(NO, error.localizedDescription ?: @"Could not save the trimmed file.");
+            done(NO, error.localizedDescription ?: SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULD_NOT_SAVE_TRIMMED_FILE_TEXT"));
         }
     };
 
@@ -96,12 +97,12 @@
     SPKTrimStoreBlock replaceStore = ^(NSURL *rendered, void (^done)(BOOL, NSString *)) {
         NSError *error = nil;
         BOOL ok = [originFile replaceMediaWithFileURL:rendered mediaType:mediaType error:&error];
-        done(ok, ok ? @"Original replaced" : (error.localizedDescription ?: @"Could not replace the original."));
+        done(ok, ok ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_ORIGINAL_REPLACED_TEXT") : (error.localizedDescription ?: SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULD_NOT_REPLACE_ORIGINAL_TEXT")));
     };
 
-    NSString *title = (result.mode == SPKTrimResultModeFrameOnly) ? @"Save Photo" : (result.mode == SPKTrimResultModeTrimmedAudio) ? @"Save Audio"
-                                                                                                                                   : @"Save Trimmed Clip";
-    SPKIGAlertAction *copy = [SPKIGAlertAction actionWithTitle:@"Save as Copy"
+    NSString *title = (result.mode == SPKTrimResultModeFrameOnly) ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_SAVE_PHOTO_TEXT") : (result.mode == SPKTrimResultModeTrimmedAudio) ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_SAVE_AUDIO_TEXT")
+                                                                                                                                   : SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_SAVE_TRIMMED_CLIP_TEXT");
+    SPKIGAlertAction *copy = [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_SAVE_COPY")
                                                          style:SPKIGAlertActionStyleDefault
                                                        handler:^{
                                                            [self renderResult:result
@@ -113,7 +114,7 @@
                                                                  }
                                                                    completion:completion];
                                                        }];
-    SPKIGAlertAction *replace = [SPKIGAlertAction actionWithTitle:@"Replace Original"
+    SPKIGAlertAction *replace = [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_REPLACE_ORIGINAL")
                                                             style:SPKIGAlertActionStyleDestructive
                                                           handler:^{
                                                               [self renderResult:result
@@ -125,7 +126,7 @@
                                                                     }
                                                                       completion:completion];
                                                           }];
-    SPKIGAlertAction *cancel = [SPKIGAlertAction actionWithTitle:@"Cancel"
+    SPKIGAlertAction *cancel = [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                            style:SPKIGAlertActionStyleCancel
                                                          handler:^{
                                                              if (completion)
@@ -134,7 +135,7 @@
 
     BOOL presented = [SPKIGAlertPresenter presentActionSheetFromViewController:presenter
                                                                          title:title
-                                                                       message:@"Do you want to replace the original file or save a copy?"
+                                                                       message:SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_REPLACE_ORIGINAL_FILE_SAVE_COPY_CONFIRMATION_MESSAGE")
                                                                        actions:@[ replace, copy, cancel ]];
     if (!presented) {
         [self renderResult:result
@@ -158,8 +159,8 @@
              completion:(void (^)(BOOL))completion {
     NSURL *tempURL = [self writeEditedImageToTemp:image];
     if (!tempURL) {
-        SPKNotify(@"spk.photoedit.save", @"Couldn't Save",
-                  @"The edited image could not be encoded.", @"error_filled",
+        SPKNotify(@"spk.photoedit.save", SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULDN_T_SAVE_TEXT"),
+                  SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_EDITED_IMAGE_COULD_NOT_ENCODED_TEXT"), @"error_filled",
                   SPKNotificationToneError);
         if (completion)
             completion(NO);
@@ -189,8 +190,8 @@
               completion:(void (^)(BOOL))completion {
     NSURL *tempURL = [self writeEditedImageToTemp:image];
     if (!tempURL) {
-        SPKNotify(@"spk.photoedit.save", @"Couldn't Save",
-                  @"The edited image could not be encoded.", @"error_filled",
+        SPKNotify(@"spk.photoedit.save", SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULDN_T_SAVE_TEXT"),
+                  SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_EDITED_IMAGE_COULD_NOT_ENCODED_TEXT"), @"error_filled",
                   SPKNotificationToneError);
         if (completion)
             completion(NO);
@@ -246,7 +247,7 @@
                                                      metadata:metadata
                                                    completion:^(BOOL ok, NSError *error) {
                                                        dispatch_async(dispatch_get_main_queue(), ^{
-                                                           done(ok, ok ? @"Saved to Photos" : (error.localizedDescription ?: @"Could not save to Photos."));
+                                                           done(ok, ok ? SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SAVED_PHOTOS_TEXT") : (error.localizedDescription ?: SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULD_NOT_SAVE_PHOTOS_TEXT")));
                                                        });
                                                    }];
         };
@@ -259,25 +260,25 @@
                 NSData *data = [NSData dataWithContentsOfURL:rendered options:NSDataReadingMappedIfSafe error:nil];
                 if (data) {
                     [UIPasteboard generalPasteboard].items = @[ @{UTTypeMovie.identifier : data} ];
-                    done(YES, @"Copied clip to clipboard");
+                    done(YES, SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COPIED_CLIP_CLIPBOARD_TEXT"));
                 } else {
-                    done(NO, @"Could not copy the clip.");
+                    done(NO, SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULD_NOT_COPY_CLIP_TEXT"));
                 }
             } else if (isAudio) {
                 NSData *data = [NSData dataWithContentsOfURL:rendered options:NSDataReadingMappedIfSafe error:nil];
                 if (data) {
                     [UIPasteboard generalPasteboard].items = @[ @{UTTypeAudio.identifier : data} ];
-                    done(YES, @"Copied audio to clipboard");
+                    done(YES, SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_COPIED_AUDIO_CLIPBOARD_TEXT"));
                 } else {
-                    done(NO, @"Could not copy the audio.");
+                    done(NO, SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULD_NOT_COPY_AUDIO_TEXT"));
                 }
             } else {
                 UIImage *image = [UIImage imageWithContentsOfFile:rendered.path];
                 if (image) {
                     [[UIPasteboard generalPasteboard] setImage:image];
-                    done(YES, @"Copied frame to clipboard");
+                    done(YES, SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COPIED_FRAME_CLIPBOARD_TEXT"));
                 } else {
-                    done(NO, @"Could not copy the frame.");
+                    done(NO, SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULD_NOT_COPY_FRAME_TEXT"));
                 }
             }
         };
@@ -285,7 +286,7 @@
         store = ^(NSURL *rendered, SPKTrimStoreCompletion done) {
             UIViewController *host = presenter ?: topMostController();
             if (!host) {
-                done(NO, @"Could not present the Files picker.");
+                done(NO, SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_COULD_NOT_PRESENT_FILES_PICKER_TEXT"));
                 return;
             }
             SPKTrimFilesExporter *exporter = [SPKTrimFilesExporter new];
@@ -310,14 +311,14 @@
         store = ^(NSURL *rendered, SPKTrimStoreCompletion done) {
             UIViewController *host = presenter ?: topMostController();
             if (!host) {
-                done(NO, @"Could not present share sheet.");
+                done(NO, SPKL(@"DOWNLOADS_DOWNLOAD_DESTINATION_WRITER_COULD_NOT_PRESENT_SHARE_SHEET_TEXT"));
                 return;
             }
             UIActivityViewController *vc = [[UIActivityViewController alloc] initWithActivityItems:@[ rendered ]
                                                                              applicationActivities:nil];
             vc.completionWithItemsHandler = ^(UIActivityType _Nullable type, BOOL completed,
                                               NSArray *_Nullable items, NSError *_Nullable err) {
-                done(YES, completed ? @"Shared" : nil);
+                done(YES, completed ? SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SHARED_TEXT") : nil);
             };
             if (vc.popoverPresentationController) {
                 vc.popoverPresentationController.sourceView = host.view;
@@ -338,10 +339,10 @@
                                                              metadata:metadata
                                                                 error:&error];
             if (saved)
-                done(YES, (mediaType == SPKGalleryMediaTypeImage) ? @"Frame saved to Gallery" : (mediaType == SPKGalleryMediaTypeAudio) ? @"Audio saved to Gallery"
-                                                                                                                                        : @"Trimmed clip saved to Gallery");
+                done(YES, (mediaType == SPKGalleryMediaTypeImage) ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_FRAME_SAVED_GALLERY_TEXT") : (mediaType == SPKGalleryMediaTypeAudio) ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_AUDIO_SAVED_GALLERY_TEXT")
+                                                                                                                                        : SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_TRIMMED_CLIP_SAVED_GALLERY_TEXT"));
             else
-                done(NO, error.localizedDescription ?: @"Could not save to Gallery.");
+                done(NO, error.localizedDescription ?: SPKL(@"DOWNLOADS_DOWNLOAD_DESTINATION_WRITER_COULD_NOT_SAVE_GALLERY_TEXT"));
         };
     }
 
@@ -388,7 +389,7 @@
                              ? result.preferredBasename
                              : [NSString stringWithFormat:@"SPKTrim-%@", NSUUID.UUID.UUIDString];
     NSString *title = progressTitle.length > 0 ? progressTitle
-                                               : (isFrameOnly ? @"Extracting frame..." : (isAudio ? @"Trimming audio..." : @"Trimming..."));
+                                               : (isFrameOnly ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_EXTRACTING_FRAME_TEXT") : (isAudio ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_TRIMMING_AUDIO_TEXT") : SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_TRIMMING_TEXT")));
 
     // Continue an in-flight pill (e.g. from a preceding download) instead of
     // stacking a second notification.
@@ -425,7 +426,7 @@
         if (!renderedURL) {
             // The reason goes in the subtitle so the pill always leads with what
             // failed; an encoder message is too long to read as a title.
-            [pill showErrorWithTitle:@"Trim failed" subtitle:error.localizedDescription icon:nil];
+            [pill showErrorWithTitle:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_TRIM_FAILED_TEXT") subtitle:error.localizedDescription icon:nil];
             if (completion)
                 completion(NO);
             return;
@@ -433,11 +434,11 @@
         store(renderedURL, ^(BOOL ok, NSString *message) {
             [[NSFileManager defaultManager] removeItemAtURL:renderedURL error:nil];
             if (ok) {
-                [pill showSuccessWithTitle:message subtitle:(onSuccessTap ? @"Tap to view" : nil)icon:nil];
+                [pill showSuccessWithTitle:message subtitle:(onSuccessTap ? SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_TAP_VIEW_TEXT") : nil)icon:nil];
                 if (onSuccessTap)
                     pill.onTapWhenCompleted = onSuccessTap;
             } else {
-                [pill showError:message ?: @"Save failed"];
+                [pill showError:message ?: SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_SAVE_FAILED_TEXT")];
             }
             if (completion)
                 completion(ok);
@@ -526,7 +527,7 @@
         if (completion) {
             completion(nil, [NSError errorWithDomain:@"Sparkle.TrimSave"
                                                 code:1
-                                            userInfo:@{NSLocalizedDescriptionKey : @"Could not extract the selected frame."}]);
+                                            userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_TRIM_TRIM_RENDERER_COULD_NOT_EXTRACT_SELECTED_FRAME_TEXT")}]);
         }
         return;
     }
@@ -562,18 +563,18 @@
             onConfirm();
         return;
     }
-    SPKIGAlertAction *keep = [SPKIGAlertAction actionWithTitle:@"Continue"
+    SPKIGAlertAction *keep = [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CONTINUE")
                                                          style:SPKIGAlertActionStyleCancel
                                                        handler:nil];
-    SPKIGAlertAction *stop = [SPKIGAlertAction actionWithTitle:@"Stop"
+    SPKIGAlertAction *stop = [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_STOP")
                                                          style:SPKIGAlertActionStyleDestructive
                                                        handler:^{
                                                            if (onConfirm)
                                                                onConfirm();
                                                        }];
     [SPKIGAlertPresenter presentAlertFromViewController:host
-                                                  title:@"Cancel Trim"
-                                                message:@"Stop trimming and discard progress?"
+                                                  title:SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_CANCEL_TRIM_TEXT")
+                                                message:SPKL(@"MEDIA_TRIM_TRIM_SAVE_COORDINATOR_STOP_TRIMMING_DISCARD_PROGRESS_QUESTION")
                                                 actions:@[ keep, stop ]];
 }
 

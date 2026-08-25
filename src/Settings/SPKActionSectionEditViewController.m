@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKActionSectionEditViewController.h"
 #import "../Shared/UI/SPKSwitch.h"
 #import "SPKActionSectionIconPickerViewController.h"
@@ -66,7 +67,7 @@ static char kSPKSectionEditSwitchAssocKey;
         _configuration = configuration;
         _sectionIdentifier = [sectionIdentifier copy];
         _onChange = [onChange copy];
-        self.title = @"Edit Section";
+        self.title = SPKL(@"SETTINGS_ACTION_SECTION_EDIT_EDIT_SECTION_TEXT");
     }
     return self;
 }
@@ -113,20 +114,20 @@ static char kSPKSectionEditSwitchAssocKey;
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     if (section == 0)
-        return @"Section";
+        return SPKL(@"SETTINGS_ACTION_SECTION_EDIT_SECTION_TEXT");
     if (section == 1)
-        return @"Actions in This Section";
-    return @"Available Actions";
+        return SPKL(@"SETTINGS_ACTION_SECTION_EDIT_ACTIONS_SECTION_ACTION");
+    return SPKL(@"SETTINGS_ACTION_SECTION_EDIT_AVAILABLE_ACTIONS_ACTION");
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if ([self isBulkSection]) {
-        return section == 0 ? @"Bulk shows Download All / Copy All / Select Media on carousels. Its actions and order are derived from your single-item Download and Copy actions.\nReorder or rename this section to control where Bulk appears in the menu." : nil;
+        return section == 0 ? SPKL(@"SETTINGS_ACTION_SECTION_EDIT_BULK_SHOWS_DOWNLOAD_COPY_SELECT_MEDIA_CAROUSELS_ACTIONS_ORDER_TEXT") : nil;
     }
     if (section == 1)
-        return @"Drag to reorder actions in this section. Remove an action to send it to the unassigned bucket.";
+        return SPKL(@"SETTINGS_ACTION_SECTION_EDIT_DRAG_REORDER_ACTIONS_SECTION_REMOVE_ACTION_SEND_UNASSIGNED_BUCKET_ACTION");
     if (section == 2)
-        return @"Tap an action to assign it here. If it is already in another section, it will move.";
+        return SPKL(@"SETTINGS_ACTION_SECTION_EDIT_TAP_ACTION_ASSIGN_HERE_IF_ALREADY_ANOTHER_SECTION_MOVE_ACTION");
     return nil;
 }
 
@@ -143,10 +144,10 @@ static char kSPKSectionEditSwitchAssocKey;
 
     if (indexPath.section == 0) {
         if (indexPath.row == 0) {
-            config.text = @"Title";
+            config.text = SPKL(@"SETTINGS_ACTION_SECTION_EDIT_TITLE");
             UITextField *field = [[UITextField alloc] initWithFrame:CGRectMake(0, 0, 180, 30)];
             field.textAlignment = NSTextAlignmentRight;
-            field.placeholder = @"Section";
+            field.placeholder = SPKL(@"SETTINGS_ACTION_SECTION_EDIT_SECTION_TEXT");
             field.text = section.title;
             field.returnKeyType = UIReturnKeyDone;
             field.delegate = self;
@@ -155,7 +156,7 @@ static char kSPKSectionEditSwitchAssocKey;
             cell.accessoryView = field;
             cell.selectionStyle = UITableViewCellSelectionStyleNone;
         } else if (indexPath.row == 1) {
-            config.text = @"Choose Icon";
+            config.text = SPKL(@"SETTINGS_ACTION_SECTION_EDIT_CHOOSE_ICON_TEXT");
             config.secondaryText = nil;
             config.image = nil;
             cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
@@ -167,7 +168,7 @@ static char kSPKSectionEditSwitchAssocKey;
 
             cell.selectionStyle = UITableViewCellSelectionStyleDefault;
         } else if (indexPath.row == 2) {
-            config.text = @"Collapsible";
+            config.text = SPKL(@"SETTINGS_ACTION_SECTION_EDIT_COLLAPSIBLE_TEXT");
             SPKSwitch *toggle = [[SPKSwitch alloc] init];
             toggle.on = section.collapsible;
             objc_setAssociatedObject(toggle, &kSPKSectionEditSwitchAssocKey, self, OBJC_ASSOCIATION_ASSIGN);
@@ -307,7 +308,7 @@ static char kSPKSectionEditSwitchAssocKey;
 
 - (void)titleFieldChanged:(UITextField *)sender {
     SPKActionMenuSection *section = [self currentSection];
-    section.title = sender.text.length > 0 ? sender.text : @"Section";
+    section.title = sender.text.length > 0 ? sender.text : SPKL(@"SETTINGS_ACTION_SECTION_EDIT_SECTION_TEXT");
     [self.configuration save];
     if (self.onChange)
         self.onChange();

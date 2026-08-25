@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryOriginController.h"
 
 #import <objc/message.h>
@@ -476,8 +477,8 @@ static BOOL SPKGalleryURLIsPostOrReel(NSURL *url) {
                                                         ? [NSString stringWithFormat:@"@%@ (%@)", cleanUsername, currentName]
                                                         : [NSString stringWithFormat:@"@%@", cleanUsername];
                                     SPKNotify(kSPKNotificationGalleryOpenProfile,
-                                              @"Account linked",
-                                              [NSString stringWithFormat:@"%@ saved to this item, so it opens instantly from now on.", who],
+                                              SPKL(@"GALLERY_GALLERY_ORIGIN_ACCOUNT_LINKED_TEXT"),
+                                              [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_ORIGIN_VALUE_SAVED_ITEM_SO_OPENS_INSTANTLY_NOW_FORMAT"), who],
                                               @"info_filled",
                                               SPKNotificationToneInfo);
                                 }

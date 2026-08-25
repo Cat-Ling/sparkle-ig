@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKProfileAnalyzerListViewController.h"
 #import "../../../AssetUtils.h"
 #import "../../../Networking/SPKInstagramAPI.h"
@@ -263,13 +264,13 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
     NSMutableArray<SPKPAListSection *> *out = [NSMutableArray array];
     if (latest.count) {
         SPKPAListSection *s = [SPKPAListSection new];
-        s.title = @"Latest";
+        s.title = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_LATEST_TEXT");
         s.items = latest;
         [out addObject:s];
     }
     if (previous.count) {
         SPKPAListSection *s = [SPKPAListSection new];
-        s.title = @"Previous";
+        s.title = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_PREVIOUS_TEXT");
         s.items = previous;
         [out addObject:s];
     }
@@ -337,7 +338,7 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
         self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
         self.searchController.searchResultsUpdater = self;
         self.searchController.obscuresBackgroundDuringPresentation = NO;
-        self.searchController.searchBar.placeholder = @"Search";
+        self.searchController.searchBar.placeholder = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_SEARCH_TEXT");
         [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                                  forSearchBarIcon:UISearchBarIconSearch
                                             state:UIControlStateNormal];
@@ -407,14 +408,14 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
 #pragma mark - Sort
 
 - (void)installSortItem {
-    UIBarButtonItem *sortItem = SPKMediaChromeTopBarMenuButtonItem(@"sort", [self sortMenu], @"Sort");
-    UIBarButtonItem *moreItem = SPKMediaChromeTopBarMenuButtonItem(@"more", [self moreMenu], @"More");
+    UIBarButtonItem *sortItem = SPKMediaChromeTopBarMenuButtonItem(@"sort", [self sortMenu], SPKL(@"MENU_SORT"));
+    UIBarButtonItem *moreItem = SPKMediaChromeTopBarMenuButtonItem(@"more", [self moreMenu], SPKL(@"MESSAGES_DELETED_MESSAGES_MORE_TEXT"));
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, @[ sortItem, moreItem ]);
 }
 
 - (UIMenu *)moreMenu {
     __weak typeof(self) weakSelf = self;
-    UIAction *refreshAvatars = [UIAction actionWithTitle:@"Refresh Profile Pictures"
+    UIAction *refreshAvatars = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_REFRESH_PROFILE_PICTURES")
                                                    image:[SPKAssetUtils menuIconNamed:@"user_circle"]
                                               identifier:nil
                                                  handler:^(__unused UIAction *action) {
@@ -426,7 +427,7 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
 
     // Visited history is the only mutable-in-bulk list; offer a destructive clear.
     if (self.kind == SPKPAListKindVisited) {
-        UIAction *clearHistory = [UIAction actionWithTitle:@"Clear History"
+        UIAction *clearHistory = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_CLEAR_HISTORY")
                                                      image:[SPKAssetUtils menuIconNamed:@"trash"]
                                                 identifier:nil
                                                    handler:^(__unused UIAction *action) {
@@ -442,13 +443,13 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
 - (void)confirmClearHistory {
     __weak typeof(self) weakSelf = self;
     [SPKIGAlertPresenter presentAlertFromViewController:self
-                                                  title:@"Clear Visited History"
-                                                message:@"This removes every profile from your visited history. This cannot be undone."
+                                                  title:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_CLEAR_VISITED_HISTORY_TEXT")
+                                                message:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_REMOVES_EVERY_PROFILE_VISITED_HISTORY_CANNOT_UNDONE_TEXT")
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:nil],
-                                                    [SPKIGAlertAction actionWithTitle:@"Clear History"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CLEAR_HISTORY")
                                                                                 style:SPKIGAlertActionStyleDestructive
                                                                               handler:^{
                                                                                   typeof(self) strongSelf = weakSelf;
@@ -486,16 +487,16 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
         [actions addObject:a];
     };
     if (self.kind == SPKPAListKindVisited) {
-        add(@"Most Recent", SPKPASortModeRecent);
-        add(@"Most Visited", SPKPASortModeMostVisited);
+        add(SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_MOST_RECENT_TEXT"), SPKPASortModeRecent);
+        add(SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_MOST_VISITED_TEXT"), SPKPASortModeMostVisited);
         add(@"A–Z", SPKPASortModeAZ);
         add(@"Z–A", SPKPASortModeZA);
     } else {
-        add(@"Default", SPKPASortModeDefault);
+        add(SPKL(@"MENU_DEFAULT"), SPKPASortModeDefault);
         add(@"A–Z", SPKPASortModeAZ);
         add(@"Z–A", SPKPASortModeZA);
     }
-    return @[ [UIMenu menuWithTitle:@"Sort" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:actions] ];
+    return @[ [UIMenu menuWithTitle:SPKL(@"MENU_SORT") image:nil identifier:nil options:UIMenuOptionsDisplayInline children:actions] ];
 }
 
 #pragma mark - Filter + sort
@@ -617,12 +618,12 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
         return;
     if (self.searchText.length) {
         self.emptyStateIcon.image = [SPKAssetUtils instagramIconNamed:@"promote_empty" pointSize:96.0 renderingMode:UIImageRenderingModeAlwaysTemplate];
-        self.emptyStateTitle.text = @"No matches";
-        self.emptyStateSubtitle.text = @"No accounts match your search.";
+        self.emptyStateTitle.text = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_NO_MATCHES_TEXT");
+        self.emptyStateSubtitle.text = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_NO_ACCOUNTS_MATCH_SEARCH_TEXT");
     } else {
         self.emptyStateIcon.image = [SPKAssetUtils instagramIconNamed:@"promote_empty" pointSize:96.0 renderingMode:UIImageRenderingModeAlwaysTemplate];
-        self.emptyStateTitle.text = @"Nothing here";
-        self.emptyStateSubtitle.text = @"There are no accounts in this list.";
+        self.emptyStateTitle.text = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_NOTHING_HERE_TEXT");
+        self.emptyStateSubtitle.text = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_THERE_NO_ACCOUNTS_LIST_TEXT");
     }
 }
 
@@ -736,12 +737,12 @@ static NSString *SPKPARelativeDate(NSDate *date) {
 
     SPKProfileAnalyzerUser *user = [self userAtIndexPath:indexPath];
     cell.boundPK = user.pk;
-    cell.usernameLabel.text = user.username.length ? [@"@" stringByAppendingString:user.username] : @"Unknown user";
+    cell.usernameLabel.text = user.username.length ? [@"@" stringByAppendingString:user.username] : SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_USER_TEXT");
     cell.verifiedBadge.hidden = !user.isVerified;
 
     if (self.kind == SPKPAListKindVisited && indexPath.row < (NSInteger)self.shownVisits.count) {
         SPKProfileAnalyzerVisit *v = self.shownVisits[indexPath.row];
-        NSString *count = v.visitCount > 1 ? [NSString stringWithFormat:@"  •  %ld visits", (long)v.visitCount] : @"";
+        NSString *count = v.visitCount > 1 ? [NSString stringWithFormat:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_VALUE_VISITS_FORMAT"), (long)v.visitCount] : @"";
         cell.subtitleLabel.text = [NSString stringWithFormat:@"%@%@", SPKPARelativeDate(v.lastSeen), count];
     } else if (self.kind == SPKPAListKindProfileUpdate) {
         SPKProfileAnalyzerProfileChange *ch = [self updateAtIndexPath:indexPath];
@@ -774,9 +775,9 @@ static NSString *SPKPARelativeDate(NSDate *date) {
     if (ch.usernameChanged)
         [parts addObject:[NSString stringWithFormat:@"@%@ → @%@", ch.previous.username ?: @"", ch.current.username ?: @""]];
     if (ch.fullNameChanged)
-        [parts addObject:[NSString stringWithFormat:@"name: %@ → %@", ch.previous.fullName ?: @"—", ch.current.fullName ?: @"—"]];
+        [parts addObject:[NSString stringWithFormat:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_NAME_VALUE_VALUE_FORMAT"), ch.previous.fullName ?: @"—", ch.current.fullName ?: @"—"]];
     if (ch.profilePicChanged)
-        [parts addObject:@"changed profile picture"];
+        [parts addObject:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_CHANGED_PROFILE_PICTURE_TEXT")];
     return [parts componentsJoinedByString:@"  •  "];
 }
 
@@ -884,7 +885,7 @@ static NSString *SPKPARelativeDate(NSDate *date) {
                                                                     }];
     del.image = [SPKAssetUtils menuIconNamed:@"trash"];
     del.backgroundColor = [SPKUtils SPKColor_InstagramDestructive];
-    del.accessibilityLabel = @"Remove";
+    del.accessibilityLabel = SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_REMOVE_TEXT");
     return [UISwipeActionsConfiguration configurationWithActions:@[ del ]];
 }
 
@@ -955,12 +956,12 @@ static NSString *SPKPARelativeDate(NSDate *date) {
 
 - (void)styleButton:(UIButton *)button following:(BOOL)following {
     if (following) {
-        [button setTitle:@"Following" forState:UIControlStateNormal];
+        [button setTitle:SPKL(@"MENU_FOLLOWING") forState:UIControlStateNormal];
         [button setTitleColor:[SPKUtils SPKColor_InstagramPrimaryText] forState:UIControlStateNormal];
         button.backgroundColor = [SPKUtils SPKColor_InstagramSecondaryBackground];
         button.layer.borderWidth = 0.0;
     } else {
-        [button setTitle:@"Follow" forState:UIControlStateNormal];
+        [button setTitle:SPKL(@"VC_BTN_FOLLOW") forState:UIControlStateNormal];
         [button setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         button.backgroundColor = [SPKUtils SPKColor_InstagramBlue] ?: [UIColor systemBlueColor];
         button.layer.borderWidth = 0.0;

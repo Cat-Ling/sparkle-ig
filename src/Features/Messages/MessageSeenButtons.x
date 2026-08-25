@@ -1,4 +1,5 @@
 #import <objc/message.h>
+#import "SPKStrings.h"
 #import <objc/runtime.h>
 #import <substrate.h>
 
@@ -445,7 +446,7 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
     // Pass threadId for groups too — presentForThreadId: resolves a group entry
     // via groupForThreadId:, so a group thread opens scoped to its own log.
     NSString *threadId = context.threadId;
-    UIAction *logAction = [UIAction actionWithTitle:@"Deleted Messages"
+    UIAction *logAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_DELETED_MESSAGES")
                                               image:logImage
                                          identifier:nil
                                             handler:^(__unused UIAction *action) {
@@ -459,7 +460,7 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
     [children addObject:logAction];
 
     UIImage *settingsImage = [SPKAssetUtils menuIconNamed:@"settings"];
-    UIAction *settingsAction = [UIAction actionWithTitle:@"Messages Settings"
+    UIAction *settingsAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_MESSAGES_SETTINGS")
                                                    image:settingsImage
                                               identifier:nil
                                                  handler:^(__unused UIAction *action) {

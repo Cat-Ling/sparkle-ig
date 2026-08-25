@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGallerySettingsProvider.h"
 #import "../SPKSetting.h"
 #import "../SPKTopicSettingsSupport.h"
@@ -9,7 +10,7 @@
 @implementation SPKGallerySettingsProvider
 
 + (SPKSetting *)rootSetting {
-    SPKSetting *gallerySettings = [SPKSetting navigationCellWithTitle:@"Gallery Settings"
+    SPKSetting *gallerySettings = [SPKSetting navigationCellWithTitle:SPKL(@"GALLERY_GENERAL_GALLERY_SETTINGS_TITLE")
                                                              subtitle:nil
                                                                  icon:SPKSettingsIcon(@"settings")
                                                        viewController:[[SPKGallerySettingsViewController alloc] init]];
@@ -17,21 +18,21 @@
         return [SPKGallerySettingsViewController searchSections];
     };
 
-    return SPKTopicNavigationSetting(@"Gallery", @"sparkle_gallery", 24.0, @[
-        SPKTopicSection(@"Access", @[
-            [SPKSetting buttonCellWithTitle:@"Open Gallery"
+    return SPKTopicNavigationSetting(SPKL(@"GALLERY_TITLE"), @"sparkle_gallery", 24.0, @[
+        SPKTopicSection(SPKL(@"GALLERY_ACCESS_HEADER"), @[
+            [SPKSetting buttonCellWithTitle:SPKL(@"ALERT_ACTION_OPEN_GALLERY")
                                    subtitle:@""
                                        icon:SPKSettingsIcon(@"sparkle_gallery")
                                      action:^(void) {
                                          [SPKGalleryViewController presentGallery];
                                      }],
-            SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:@"Quick Gallery Access" icon:SPKSettingsIcon(@"circle_off") menu:SPKGalleryShortcutTargetMenu()], SPKSettingsIcon(@"circle_off"))
+            SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"GALLERY_ACCESS_QUICK_GALLERY_ACCESS_TITLE") icon:SPKSettingsIcon(@"circle_off") menu:SPKGalleryShortcutTargetMenu()], SPKSettingsIcon(@"circle_off"))
         ],
-                        @"Choose the tab that opens Gallery on long press. None disables the action."),
-        SPKTopicSection(@"Settings", @[
+                        SPKL(@"GALLERY_ACCESS_FOOTER")),
+        SPKTopicSection(SPKL(@"DATA_GENERAL_SETTINGS_TITLE"), @[
             gallerySettings
         ],
-                        @"The same screen you reach from inside Gallery.")
+                        SPKL(@"GALLERY_SETTINGS_FOOTER"))
     ]);
 }
 

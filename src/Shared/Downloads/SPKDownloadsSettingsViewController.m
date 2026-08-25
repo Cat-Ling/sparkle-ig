@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadsSettingsViewController.h"
 
 #import "../../App/SPKStartupHooks.h"
@@ -14,12 +15,12 @@
 
 + (UIMenu *)audioPageDefaultActionMenu {
     NSArray<NSDictionary *> *items = @[
-        @{@"title" : @"Save Audio to Files", @"value" : @"files", @"icon" : @"audio_download"},
-        @{@"title" : @"Share Audio", @"value" : @"share", @"icon" : @"share"},
-        @{@"title" : @"Save Audio to Gallery", @"value" : @"gallery", @"icon" : @"sparkle_gallery"},
-        @{@"title" : @"Play Audio", @"value" : @"play", @"icon" : @"play"},
-        @{@"title" : @"Copy Audio Download URL", @"value" : @"copy_url", @"icon" : @"link"},
-        @{@"title" : @"Open Menu", @"value" : @"none", @"icon" : @"action"}
+        @{@"title" : SPKL(@"ALERT_ACTION_SAVE_AUDIO_FILES"), @"value" : @"files", @"icon" : @"audio_download"},
+        @{@"title" : SPKL(@"ALERT_ACTION_SHARE_AUDIO"), @"value" : @"share", @"icon" : @"share"},
+        @{@"title" : SPKL(@"ALERT_ACTION_SAVE_AUDIO_GALLERY"), @"value" : @"gallery", @"icon" : @"sparkle_gallery"},
+        @{@"title" : SPKL(@"ALERT_ACTION_PLAY_AUDIO"), @"value" : @"play", @"icon" : @"play"},
+        @{@"title" : SPKL(@"ALERT_ACTION_COPY_AUDIO_DOWNLOAD_URL"), @"value" : @"copy_url", @"icon" : @"link"},
+        @{@"title" : SPKL(@"FEED_HEADER_ACTION_BUTTON_OPEN_MENU_TEXT"), @"value" : @"none", @"icon" : @"action"}
     ];
     NSMutableArray<UICommand *> *commands = [NSMutableArray array];
     for (NSDictionary *item in items) {
@@ -39,14 +40,14 @@
         [[NSUserDefaults standardUserDefaults] setObject:@"high_ignore_dash" forKey:@"downloads_video_quality"];
     }
 
-    SPKSetting *videoQualitySetting = [SPKSetting menuCellWithTitle:@"Default Video Quality"
-                                                           subtitle:(ffmpegAvailable ? @"" : @"Requires FFmpegKit")
+    SPKSetting *videoQualitySetting = [SPKSetting menuCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DEFAULT_VIDEO_QUALITY_TITLE")
+                                                           subtitle:(ffmpegAvailable ? @"" : SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_REQUIRES_FFMPEGKIT_TEXT"))
                                                            icon:SPKSettingsIcon(@"video")
                                                                menu:SPKMediaVideoQualityMenu()];
     videoQualitySetting.userInfo = @{@"enabled" : @(ffmpegAvailable)};
 
-    SPKSetting *encodingSettings = [SPKSetting navigationCellWithTitle:@"Encoding Settings"
-                                                              subtitle:(ffmpegAvailable ? @"" : @"Requires FFmpegKit")
+    SPKSetting *encodingSettings = [SPKSetting navigationCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENCODING_SETTINGS_TITLE")
+                                                              subtitle:(ffmpegAvailable ? @"" : SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_REQUIRES_FFMPEGKIT_TEXT"))
                                                               icon:SPKSettingsIcon(@"settings")
                                                         viewController:[SPKMediaQualityManager encodingSettingsViewController]];
     encodingSettings.userInfo = @{@"enabled" : @(ffmpegAvailable)};
@@ -54,24 +55,17 @@
         return [SPKMediaQualityManager encodingSettingsSearchSections];
     };
 
-    SPKSetting *encodingLogs = [SPKSetting navigationCellWithTitle:@"View Encoding Logs"
+    SPKSetting *encodingLogs = [SPKSetting navigationCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_VIEW_ENCODING_LOGS_TITLE")
                                                           subtitle:@""
                                                               icon:SPKSettingsIcon(@"logs")
                                                     viewController:[SPKMediaFFmpeg logsViewController]];
     encodingLogs.userInfo = @{@"enabled" : @YES};
 
     NSString *qualityFooter = ffmpegAvailable
-        ? @"1. Request 4K image candidates by mimicking a web browser (extra call to the web API).\n"
-          @"2. Fetch the highest-resolution variant Instagram exposes for photos and videos.\n"
-          @"3. Preferred quality for downloaded photos.\n"
-          @"4. \"High\" merges DASH files for best quality, \"Default\" uses ready-to-play files, \"Always Ask\" prompts for selection each time.\n"
-          @"5. Configure how merged videos are re-encoded (codec, container, bitrate).\n"
-          @"6. Review the FFmpeg output from recent encoding jobs."
-        : @"1. Request 4K image candidates by mimicking a web browser (extra call to the web API).\n"
-          @"2. Fetch the highest-resolution variant Instagram exposes for photos and videos.\n"
-          @"FFmpegKit is required for video quality options and encoding features.";
+        ? SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_REQUEST_4K_IMAGE_CANDIDATES_MIMICKING_WEB_BROWSER_EXTRA_CALL_TEXT")
+        : SPKL(@"DOWNLOADS_QUALITY_OPTIONS_FOOTER");
 
-    SPKSetting *autoSave = [SPKSetting navigationCellWithTitle:@"Auto-Save"
+    SPKSetting *autoSave = [SPKSetting navigationCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_AUTO_SAVE_HEADER")
                                                       subtitle:@""
                                                           icon:SPKSettingsIcon(@"download")
                                                 viewController:[SPKAutoSaveSettingsViewController new]];
@@ -80,40 +74,40 @@
     };
 
     return @[
-        SPKTopicSection(@"Auto-Save", @[ autoSave ],
-                        @"Automatically download media as you view it."),
-        SPKTopicSection(@"Behavior", @[
-            [SPKSetting switchCellWithTitle:@"Detect Duplicate Downloads"
+        SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_AUTO_SAVE_HEADER"), @[ autoSave ],
+                        SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUTOMATICALLY_DOWNLOAD_MEDIA_VIEW_FOOTER")),
+        SPKTopicSection(SPKL(@"GENERAL_BEHAVIOR_HEADER"), @[
+            [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DETECT_DUPLICATE_DOWNLOADS_TITLE")
                                        icon:SPKSettingsIcon(@"duplicate")
                                 defaultsKey:kSPKDownloadDetectDuplicatesKey],
-            [SPKSetting stepperCellWithTitle:@"Parallel Downloads"
-                                    subtitle:@"%@ concurrent %@"
+            [SPKSetting stepperCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_PARALLEL_DOWNLOADS_TITLE")
+                                    subtitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_VALUE_CONCURRENT_VALUE_SUBTITLE")
                                         icon:SPKSettingsIcon(@"parallel")
                                  defaultsKey:kSPKDownloadMaxConcurrentKey
                                          min:1
                                          max:4
                                         step:1
-                                       label:@"downloads"
+                                       label:SPKL(@"SETTINGS_STORAGE_USAGE_DOWNLOADS_TEXT")
                                singularLabel:@"download"],
-            [SPKSetting stepperCellWithTitle:@"History Limit"
-                                    subtitle:@"%@ saved %@"
+            [SPKSetting stepperCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_HISTORY_LIMIT_TITLE")
+                                    subtitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_VALUE_SAVED_VALUE_SUBTITLE")
                                         icon:SPKSettingsIcon(@"history")
                                  defaultsKey:kSPKDownloadHistoryLimitKey
                                          min:50
                                          max:1000
                                         step:50
-                                       label:@"entries"
+                                       label:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENTRIES_TEXT")
                                singularLabel:@"entry"],
             ({
-                SPKSetting *toggle = [SPKSetting switchCellWithTitle:@"Save to Custom Album"
+                SPKSetting *toggle = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_SAVE_CUSTOM_ALBUM_TITLE")
                                                                 icon:SPKSettingsIcon(@"photo_gallery")
                                                          defaultsKey:@"downloads_photos_album_enabled"];
                 toggle.reloadsTableOnSwitchChange = YES;
                 toggle;
             }),
             ({
-                SPKSetting *album = [SPKSetting textFieldCellWithTitle:@"Album Name"
-                                                           placeholder:@"Sparkle"
+                SPKSetting *album = [SPKSetting textFieldCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ALBUM_NAME_TITLE")
+                                                           placeholder:SPKL(@"ABOUT_INFORMATION_SPARKLE_TITLE")
                                                           keyboardType:UIKeyboardTypeDefault
                                                            defaultsKey:@"downloads_photos_album"];
                 album.icon = SPKSettingsIcon(@"folder");
@@ -123,13 +117,10 @@
                 album;
             }),
         ],
-                        @"1. Check before downloading and skip media already saved. Gallery checks are exact; Photos checks cover media Sparkle saved while tracking is enabled.\n"
-                        @"2. How many downloads may run at the same time.\n"
-                        @"3. How many finished entries the download history keeps before trimming the oldest.\n"
-                        @"4. Group saved Photos media under a specific custom album."),
-        SPKTopicSection(@"Quality", @[
+                        SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_CHECK_BEFORE_DOWNLOADING_SKIP_MEDIA_ALREADY_SAVED_GALLERY_CHECKS_TEXT")),
+        SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"), @[
             ({
-                SPKSetting *toggle = [SPKSetting switchCellWithTitle:@"Fetch 4K Images"
+                SPKSetting *toggle = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_FETCH_4K_IMAGES_TITLE")
                                                                 icon:SPKSettingsIcon(@"web")
                                                          defaultsKey:@"downloads_fetch_4k_images"];
                 toggle.switchChangeHandler = ^(BOOL isOn) {
@@ -145,10 +136,10 @@
                 toggle.reloadsTableOnSwitchChange = YES;
                 toggle;
             }),
-            [SPKSetting switchCellWithTitle:@"Enhanced Media Resolution"
+            [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENHANCED_MEDIA_RESOLUTION_TITLE")
                                        icon:SPKSettingsIcon(@"hd")
                                 defaultsKey:@"downloads_enhanced_media_resolution"],
-            [SPKSetting menuCellWithTitle:@"Default Photo Quality"
+            [SPKSetting menuCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DEFAULT_PHOTO_QUALITY_TITLE")
                                      icon:SPKSettingsIcon(@"photo")
                                      menu:SPKMediaPhotoQualityMenu()],
             videoQualitySetting,
@@ -168,7 +159,7 @@
         return [SPKUtils getBoolPref:@"downloads_audio_enabled"];
     };
 
-    SPKSetting *master = [SPKSetting switchCellWithTitle:@"Audio Downloads" icon:SPKSettingsIcon(@"audio_download") defaultsKey:@"downloads_audio_enabled"];
+    SPKSetting *master = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUDIO_DOWNLOADS_TITLE") icon:SPKSettingsIcon(@"audio_download") defaultsKey:@"downloads_audio_enabled"];
     master.switchChangeHandler = ^(BOOL isOn) {
         [[NSUserDefaults standardUserDefaults] setBool:isOn forKey:SPKEffectivePreferenceKey(@"downloads_audio_enabled")];
         if (isOn)
@@ -176,14 +167,14 @@
     };
     master.reloadsTableOnSwitchChange = YES; // grey out / re-enable the dependents live
 
-    SPKSetting *pageButton = [SPKSetting switchCellWithTitle:@"Audio Page Button" icon:SPKSettingsIcon(@"audio_page") defaultsKey:@"downloads_audio_page_button"];
+    SPKSetting *pageButton = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUDIO_PAGE_BUTTON_TITLE") icon:SPKSettingsIcon(@"audio_page") defaultsKey:@"downloads_audio_page_button"];
     pageButton.enabledProvider = audioEnabled;
 
-    SPKSetting *pageDefault = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:@"Audio Page Default Action" icon:SPKSettingsIcon(@"action") menu:[self audioPageDefaultActionMenu]], SPKSettingsIcon(@"action"));
+    SPKSetting *pageDefault = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUDIO_PAGE_DEFAULT_ACTION_TITLE") icon:SPKSettingsIcon(@"action") menu:[self audioPageDefaultActionMenu]], SPKSettingsIcon(@"action"));
     pageDefault.enabledProvider = audioEnabled;
 
-    return SPKTopicSection(@"Audio", @[ master, pageButton, pageDefault ],
-                           @"Adds audio actions for audio pages and media action buttons.");
+    return SPKTopicSection(SPKL(@"MESSAGES_DIRECT_MESSAGE_MENU_AUDIO_TITLE"), @[ master, pageButton, pageDefault ],
+                           SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ADDS_AUDIO_ACTIONS_AUDIO_PAGES_MEDIA_ACTION_BUTTONS_FOOTER"));
 }
 
 + (NSArray *)searchSections {
@@ -191,7 +182,7 @@
 }
 
 - (instancetype)init {
-    return [super initWithTitle:@"Downloads Settings" sections:[[self class] contentSections] reduceMargin:NO];
+    return [super initWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DOWNLOADS_SETTINGS_TEXT") sections:[[self class] contentSections] reduceMargin:NO];
 }
 
 @end

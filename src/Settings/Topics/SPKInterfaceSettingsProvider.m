@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKInterfaceSettingsProvider.h"
 #import "../../Shared/Fonts/SPKFontManager.h"
 #import "../../Shared/UI/SPKChrome.h"
@@ -14,36 +15,36 @@
 
 + (SPKSetting *)rootSetting {
     NSMutableArray *sections = [NSMutableArray arrayWithArray:@[
-        SPKTopicSection(@"Notifications", @[
-            [SPKSetting navigationCellWithTitle:@"Notifications"
+        SPKTopicSection(SPKL(@"INTERFACE_NOTIFICATIONS_HEADER"), @[
+            [SPKSetting navigationCellWithTitle:SPKL(@"INTERFACE_NOTIFICATIONS_HEADER")
                                        subtitle:nil
                                            icon:SPKSettingsIcon(@"notification")
                                     navSections:[SPKNotificationSettingsProvider sections]]
         ],
                         nil),
-        SPKTopicSection(@"Tabs", @[
-            [SPKSetting navigationCellWithTitle:@"Tab Editor"
+        SPKTopicSection(SPKL(@"INTERFACE_TABS_HEADER"), @[
+            [SPKSetting navigationCellWithTitle:SPKL(@"INTERFACE_TABS_TAB_EDITOR_TITLE")
                                        subtitle:nil
                                            icon:SPKSettingsIcon(@"edit")
                                  viewController:[[SPKTabEditorViewController alloc] init]],
         ],
-                        @"Arrange the tab bar with a live preview. Changes are staged and applied together, then Instagram restarts."),
-        SPKTopicSection(@"Appearance", @[
+                        SPKL(@"INTERFACE_NOTIFICATIONS_FOOTER")),
+        SPKTopicSection(SPKL(@"INTERFACE_APPEARANCE_HEADER"), @[
             ({
-                SPKSetting *appFont = [SPKSetting navigationCellWithTitle:@"App Font"
+                SPKSetting *appFont = [SPKSetting navigationCellWithTitle:SPKL(@"FONT_APP_FONT_TITLE")
                                                                  subtitle:nil
                                                                      icon:SPKSettingsIcon(@"text")
                                                            viewController:[[SPKFontPickerViewController alloc] init]];
                 appFont.accessoryTextProvider = ^NSString * {
-                    return [SPKFontManager selectedFamilyName] ?: @"Default";
+                    return [SPKFontManager selectedFamilyName] ?: SPKL(@"FONT_DEFAULT_ROW_TITLE");
                 };
                 appFont;
             }),
         ],
-                        @"Replace the default font app-wide. You can import .otf, .ttf, or .ttc files."),
-        SPKTopicSection(@"Explore & Search", @[
+                        SPKL(@"INTERFACE_APPEARANCE_FOOTER")),
+        SPKTopicSection(SPKL(@"INTERFACE_EXPLORE_SEARCH_HEADER"), @[
             ({
-                SPKSetting *s = [SPKSetting switchCellWithTitle:@"Hide Explore Posts Grid"
+                SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_HIDE_EXPLORE_POSTS_GRID_TITLE")
                                                            icon:SPKSettingsIcon(@"explore_grid")
                                                     defaultsKey:@"interface_hide_explore_grid"];
                 s.switchChangeHandler = ^(BOOL isOn) {
@@ -52,20 +53,18 @@
                 };
                 s;
             }),
-            [SPKSetting switchCellWithTitle:@"Hide Trending Searches"
+            [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_HIDE_TRENDING_SEARCHES_TITLE")
                                        icon:SPKSettingsIcon(@"trending")
                                 defaultsKey:@"interface_hide_trending_searches"
                             requiresRestart:YES],
-            [SPKSetting switchCellWithTitle:@"Open Clipboard Link"
+            [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_OPEN_CLIPBOARD_LINK_TITLE")
                                        icon:SPKSettingsIcon(@"link")
                                 defaultsKey:@"interface_open_clipboard_link"]
         ],
-                        @"1. Hide the grid of suggested posts on the explore tab.\n"
-                        @"2. Hide the trending searches under the explore search bar.\n"
-                        @"3. Long press the Explore tab to open the Instagram URL in your clipboard."),
-        SPKTopicSection(@"Capture", @[
+                        SPKL(@"SETTINGS_INTERFACE_HIDE_GRID_SUGGESTED_POSTS_EXPLORE_TAB_N2_HIDE_TRENDING_TEXT")),
+        SPKTopicSection(SPKL(@"INTERFACE_CAPTURE_HEADER"), @[
             ({
-                SPKSetting *s = [SPKSetting switchCellWithTitle:@"Hide UI on Capture"
+                SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_CAPTURE_HIDE_UI_CAPTURE_TITLE")
                                                            icon:nil
                                                     defaultsKey:@"interface_hide_ui_on_capture"];
                 s.switchChangeHandler = ^(BOOL isOn) {
@@ -75,7 +74,7 @@
                 s;
             })
         ],
-                        @"Redacts Sparkle UI elements from screenshots, screen recordings, and mirroring.")
+                        SPKL(@"INTERFACE_CAPTURE_FOOTER"))
     ]];
 
     {
@@ -83,7 +82,7 @@
         // scroll behavior of the (pill/glass) tab bar and is enabled whenever
         // the Liquid Glass pref is on.
         SPKSetting *(^tabBarBehaviorCell)(void) = ^SPKSetting * {
-            SPKSetting *tabBarBehavior = [SPKSetting menuCellWithTitle:@"Tab Bar Behavior"
+            SPKSetting *tabBarBehavior = [SPKSetting menuCellWithTitle:SPKL(@"INTERFACE_CAPTURE_TAB_BAR_BEHAVIOR_TITLE")
                                                                   icon:nil
                                                                   menu:SPKLiquidGlassTabBarStateMenu()];
             tabBarBehavior.defaultsKey = kSPKPrefInterfaceLiquidGlassTabBarMode;
@@ -95,7 +94,7 @@
 
         if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"26.0")) {
             // Full Liquid Glass: real glass material, progressive blur, tab bar.
-            SPKSetting *liquidGlass = [SPKSetting switchCellWithTitle:@"Liquid Glass"
+            SPKSetting *liquidGlass = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_CAPTURE_LIQUID_GLASS_TITLE")
                                                           defaultsKey:kSPKPrefInterfaceLiquidGlass
                                                       requiresRestart:YES];
             liquidGlass.switchValueProvider = ^BOOL {
@@ -105,23 +104,21 @@
                 [[NSUserDefaults standardUserDefaults] setBool:isOn forKey:kSPKPrefInterfaceLiquidGlass];
                 [SPKUtils showRestartConfirmation];
             };
-            SPKSetting *progressiveBlur = [SPKSetting switchCellWithTitle:@"Progressive Blur"
+            SPKSetting *progressiveBlur = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_CAPTURE_PROGRESSIVE_BLUR_TITLE")
                                                              defaultsKey:kSPKPrefInterfaceProgressiveBlur
                                                           requiresRestart:YES];
 
-            [sections addObject:SPKTopicSection(@"Liquid Glass & Blur", @[
+            [sections addObject:SPKTopicSection(SPKL(@"INTERFACE_LIQUID_GLASS_BLUR_HEADER"), @[
                           liquidGlass,
                           progressiveBlur,
                           tabBarBehaviorCell(),
                       ],
-                                                @"1. Force-enable Instagram's native Liquid Glass UI.\n"
-                                                @"2. Restore the native progressive navigation bar blur on scroll.\n"
-                                                @"3. Configure how the tab bar behaves while scrolling.")];
+                                                SPKL(@"SETTINGS_INTERFACE_FORCE_ENABLE_INSTAGRAM_S_NATIVE_LIQUID_GLASS_UI_N2_TEXT"))];
         } else {
             // Pre-iOS 26 can't render the glass material, but the same tab bar
             // experiment gates still reshape the bar into the floating pill.
             // Expose that as a focused toggle sharing the Liquid Glass pref.
-            SPKSetting *pillTabBar = [SPKSetting switchCellWithTitle:@"Pill-Shaped Tab Bar"
+            SPKSetting *pillTabBar = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_LIQUID_GLASS_BLUR_PILL_SHAPED_TAB_BAR_TITLE")
                                                         defaultsKey:kSPKPrefInterfaceLiquidGlass
                                                     requiresRestart:YES];
             pillTabBar.switchValueProvider = ^BOOL {
@@ -132,17 +129,15 @@
                 [SPKUtils showRestartConfirmation];
             };
 
-            [sections addObject:SPKTopicSection(@"Tab Bar", @[
+            [sections addObject:SPKTopicSection(SPKL(@"INTERFACE_TAB_BAR_HEADER"), @[
                           pillTabBar,
                           tabBarBehaviorCell(),
                       ],
-                                                @"Reshape the tab bar into the iOS 26-style floating pill. "
-                                                @"The Liquid Glass material itself requires iOS 26, so on this "
-                                                @"device only the pill shape is applied.")];
+                                                SPKL(@"INTERFACE_TAB_BAR_FOOTER"))];
         }
     }
 
-    return SPKTopicNavigationSetting(@"Interface", @"interface", 24.0, sections);
+    return SPKTopicNavigationSetting(SPKL(@"INTERFACE_TITLE"), @"interface", 24.0, sections);
 }
 
 @end

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "TweakSettings.h"
 
 #import "Topics/SPKAboutSettingsProvider.h"
@@ -57,7 +58,7 @@
 }
 
 + (NSString *)title {
-    return @"Sparkle";
+    return SPKL(@"ABOUT_INFORMATION_SPARKLE_TITLE");
 }
 
 @end

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <objc/runtime.h>
 #import <substrate.h>
 
@@ -49,8 +50,8 @@ void SPKDMConfirmVoiceMessageIfNeeded(void (^confirmBlock)(void), void (^cancelB
             if (cancelBlock)
                 cancelBlock();
         }
-        title:@"Confirm Sending Voice Message"
-        message:@"Are you sure you want to send this voice message?"];
+        title:SPKL(@"MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE")
+        message:SPKL(@"MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE")];
 }
 
 static void SPKDMConfirmVoiceMessage(void (^confirmBlock)(void)) {

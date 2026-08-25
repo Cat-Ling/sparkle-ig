@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadJob.h"
 #import "../Account/SPKAccountManager.h"
 
@@ -40,7 +41,7 @@
     for (SPKDownloadItem *item in self.mutableItems) {
         if (item.state == SPKDownloadStateQueued || item.state == SPKDownloadStateRunning || item.state == SPKDownloadStateFinalizing || item.state == SPKDownloadStateWaitingForPreflight) {
             item.state = SPKDownloadStateInterrupted;
-            item.error = SPKDownloadError(SPKDownloadErrorInterrupted, @"Interrupted when Instagram exited", @"Retry from download history.");
+            item.error = SPKDownloadError(SPKDownloadErrorInterrupted, SPKL(@"DOWNLOADS_DOWNLOAD_JOB_INTERRUPTED_INSTAGRAM_EXITED_TEXT"), SPKL(@"DOWNLOADS_DOWNLOAD_JOB_RETRY_DOWNLOAD_HISTORY_TEXT"));
             item.progress = 1.0;
         }
     }

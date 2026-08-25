@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <AVFoundation/AVFoundation.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -413,18 +414,18 @@ static NSString *SPKDownloadURLNounForActionSource(SPKActionButtonSource source)
         return @"Reel";
     case SPKActionButtonSourceFeed:
     case SPKActionButtonSourceProfile:
-        return @"Post";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_POST_TEXT");
     case SPKActionButtonSourceInstants:
-        return @"Instant";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_INSTANT_TEXT");
     case SPKActionButtonSourceDirect:
     default:
-        return @"Media";
+        return SPKL(@"FEED_MEDIA_HEADER");
     }
 }
 
 static NSString *SPKCopiedDownloadURLTitleForSource(SPKActionButtonSource source, BOOL plural) {
     NSString *noun = SPKDownloadURLNounForActionSource(source);
-    NSString *urlWord = plural ? @"URLs" : @"URL";
+    NSString *urlWord = plural ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_URLS_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_URL_TEXT");
     if ([noun isEqualToString:@"Media"]) {
         return [NSString stringWithFormat:@"Download %@ copied", urlWord];
     }
@@ -607,9 +608,9 @@ static NSString *SPKProfilePrivacyText(id user) {
     NSNumber *privacyStatus = SPKProfileNumberValue(SPKKVCObject(user, @"privacyStatus"));
     if (privacyStatus) {
         if (privacyStatus.integerValue == 2)
-            return @"Private Profile";
+            return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_PRIVATE_PROFILE_TEXT");
         if (privacyStatus.integerValue == 1)
-            return @"Public Profile";
+            return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_PUBLIC_PROFILE_TEXT");
     }
 
     id privateValue = SPKKVCObject(user, @"isPrivate");
@@ -649,12 +650,12 @@ static NSArray<UIMenuElement *> *SPKProfileInfoMenuElements(id user) {
 
     NSString *followers = SPKProfileInfoString(SPKProfileFollowerCount(user));
     if (followers.length > 0) {
-        [infoItems addObject:SPKProfileDisabledInfoAction([NSString stringWithFormat:@"Followers: %@", followers], @"users")];
+        [infoItems addObject:SPKProfileDisabledInfoAction([NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_FOLLOWERS_VALUE_FORMAT"), followers], @"users")];
     }
 
     NSString *following = SPKProfileInfoString(SPKProfileFollowingCount(user));
     if (following.length > 0) {
-        [infoItems addObject:SPKProfileDisabledInfoAction([NSString stringWithFormat:@"Following: %@", following], @"users")];
+        [infoItems addObject:SPKProfileDisabledInfoAction([NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_FOLLOWING_VALUE_FORMAT"), following], @"users")];
     }
 
     return infoItems;
@@ -783,10 +784,10 @@ static NSString *SPKProfileInfoSignature(id user) {
         [parts addObject:privacy];
     NSString *followers = SPKProfileInfoString(SPKProfileFollowerCount(user));
     if (followers.length > 0)
-        [parts addObject:[NSString stringWithFormat:@"followers:%@", followers]];
+        [parts addObject:[NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MEDIA_STATS_FOLLOWERS_FORMAT"), followers]];
     NSString *following = SPKProfileInfoString(SPKProfileFollowingCount(user));
     if (following.length > 0)
-        [parts addObject:[NSString stringWithFormat:@"following:%@", following]];
+        [parts addObject:[NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MEDIA_STATS_FOLLOWING_FORMAT"), following]];
     return [parts componentsJoinedByString:@"|"];
 }
 
@@ -824,14 +825,14 @@ static NSString *SPKProfileCopyValueForIdentifier(id user, NSString *identifier)
 
 static NSString *SPKProfileCopySuccessTitleForIdentifier(NSString *identifier) {
     if ([identifier isEqualToString:kSPKActionProfileCopyID])
-        return @"ID copied";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_ID_COPIED_TEXT");
     if ([identifier isEqualToString:kSPKActionProfileCopyName])
-        return @"Name copied";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NAME_COPIED_TEXT");
     if ([identifier isEqualToString:kSPKActionProfileCopyBio])
-        return @"Bio copied";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_BIO_COPIED_TEXT");
     if ([identifier isEqualToString:kSPKActionProfileCopyLink])
-        return @"Profile link copied";
-    return @"Username copied";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_PROFILE_LINK_COPIED_TEXT");
+    return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_USERNAME_COPIED_TEXT");
 }
 
 static BOOL SPKIsProfileCopyActionIdentifier(NSString *identifier) {
@@ -848,13 +849,13 @@ static BOOL SPKIsProfileCopyActionIdentifier(NSString *identifier) {
 static BOOL SPKExecuteProfileCopyAction(NSString *identifier, SPKActionButtonContext *context) {
     id user = SPKResolveMediaForContext(context);
     if (!user) {
-        SPKNotify(kSPKActionProfileCopyInfo, @"Profile unavailable", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKActionProfileCopyInfo, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_PROFILE_UNAVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
     NSString *copyIdentifier = [identifier isEqualToString:kSPKActionProfileCopyInfo] ? SPKProfileDefaultCopyInfoIdentifier() : identifier;
     NSString *value = SPKProfileCopyValueForIdentifier(user, copyIdentifier);
     if (value.length == 0) {
-        SPKNotify(kSPKActionProfileCopyInfo, @"Nothing to copy", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKActionProfileCopyInfo, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NOTHING_COPY_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
     UIPasteboard.generalPasteboard.string = value;
@@ -1057,9 +1058,9 @@ static NSString *SPKActionButtonDisplayTitleForContext(NSString *identifier,
             BOOL manualSeenEnabled = [SPKUtils getBoolPref:@"stories_manual_seen"];
             BOOL listed = SPKStoryManualSeenListContainsUser(pk, manualSeenEnabled);
             BOOL applies = manualSeenEnabled ? !listed : listed;
-            return applies ? @"Start Marking Stories as Seen" : @"Stop Marking Stories as Seen";
+            return applies ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_STORIES_SEEN_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_STORIES_SEEN_TEXT");
         }
-        return @"Toggle Story Seen";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_TOGGLE_STORY_SEEN_TEXT");
     }
     if ([identifier isEqualToString:kSPKActionToggleProfileMessagesSeenUserRule]) {
         id user = SPKResolveMediaForContext(context);
@@ -1069,16 +1070,16 @@ static NSString *SPKActionButtonDisplayTitleForContext(NSString *identifier,
             NSDictionary *existingEntry = SPKDirectManualSeenThreadEntryForUserPK(pk, manualSeenEnabled);
             BOOL listed = (existingEntry != nil);
             BOOL applies = manualSeenEnabled ? !listed : listed;
-            return applies ? @"Start Marking Messages as Seen" : @"Stop Marking Messages as Seen";
+            return applies ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_MESSAGES_SEEN_MESSAGE") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_MESSAGES_SEEN_MESSAGE");
         }
-        return @"Toggle Messages Seen";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_TOGGLE_MESSAGES_SEEN_MESSAGE");
     }
     if ([identifier isEqualToString:kSPKActionCopyMedia]) {
         BOOL isVideo = (currentEntry.videoURL != nil);
         if (isVideo) {
-            return (context.source == SPKActionButtonSourceReels) ? @"Copy Reel" : @"Copy Video";
+            return (context.source == SPKActionButtonSourceReels) ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPY_REEL_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPY_VIDEO_TEXT");
         }
-        return @"Copy Photo";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPY_PHOTO_TEXT");
     }
     return SPKActionDescriptorDisplayTitle(identifier, context.settingsTitle);
 }
@@ -1109,7 +1110,7 @@ static UIImage *SPKIconForActionIdentifier(NSString *identifier, SPKActionButton
                              : SPKActionDescriptorIconName(identifier);
 
     if (source == SPKActionButtonSourceReels) {
-        NSString *reelsIconName = [NSString stringWithFormat:@"%@_reels", iconName];
+        NSString *reelsIconName = [iconName stringByAppendingString:@"_reels"];
         UIImage *reelsImage = [SPKAssetUtils resolvedImageNamed:reelsIconName
                                              fallbackSystemName:nil
                                                       pointSize:size
@@ -1341,7 +1342,7 @@ static NSURL *SPKURLFromAssetLikeObject(id object, BOOL videoHint) {
                 return url;
         }
     } else {
-        SEL imageURLForWidth = NSSelectorFromString(@"imageURLForWidth:");
+        SEL imageURLForWidth = NSSelectorFromString(SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_IMAGEURLFORWIDTH_TEXT"));
         if ([object respondsToSelector:imageURLForWidth]) {
             NSURL *url = ((id (*)(id, SEL, CGFloat))objc_msgSend)(object, imageURLForWidth, 100000.0);
             if ([url isKindOfClass:[NSURL class]])
@@ -2246,7 +2247,7 @@ static void SPKPresentBulkActionChooser(SPKActionButtonContext *context,
                                         id media) {
     UIMenu *menu = SPKBulkActionMenuForContext(context, entries, username, media, SPKConfiguredBulkActionIdentifiersForSource(context.source));
     if (!menu) {
-        SPKNotify(kSPKActionDownloadAllLibrary, @"No bulk media available", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKActionDownloadAllLibrary, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_BULK_MEDIA_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
     }
 }
 
@@ -2651,7 +2652,7 @@ static void SPKPerformBatchDownloadWithQualityPrompt(NSArray<SPKResolvedMediaEnt
             NSString *topPK = SPKMediaPKForMediaObject(media);
             if (topPK.length > 0 && ![SPKMediaQualityManager hasWebPhotoCandidatesFetchedForPK:topPK]) {
                 if (SPKNotificationIsEnabled(identifier)) {
-                    [[SPKNotificationCenter shared] beginTransientProgressWithTitle:@"Fetching 4K candidates..." onCancel:nil];
+                    [[SPKNotificationCenter shared] beginTransientProgressWithTitle:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_FETCHING_4K_CANDIDATES_TEXT") onCancel:nil];
                 }
                 [SPKInstagramAPI fetchWebMediaInfoForPK:topPK completion:^(NSDictionary *response, NSError *error) {
                     [SPKMediaQualityManager markWebPhotoCandidatesFetchedForPK:topPK];
@@ -2674,24 +2675,24 @@ static void SPKPerformBatchDownloadWithQualityPrompt(NSArray<SPKResolvedMediaEnt
         BOOL can4K = [SPKUtils getBoolPref:@"downloads_fetch_4k_images"];
         NSMutableArray<SPKIGAlertAction *> *actions = [NSMutableArray array];
         if (can4K) {
-            [actions addObject:[SPKIGAlertAction actionWithTitle:@"Max" style:SPKIGAlertActionStyleDefault handler:^{
+            [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_MAX") style:SPKIGAlertActionStyleDefault handler:^{
                 performBatchDownloadWithQuality(@"max");
             }]];
         }
-        [actions addObject:[SPKIGAlertAction actionWithTitle:@"High" style:SPKIGAlertActionStyleDefault handler:^{
+        [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_HIGH") style:SPKIGAlertActionStyleDefault handler:^{
             performBatchDownloadWithQuality(@"high");
         }]];
-        [actions addObject:[SPKIGAlertAction actionWithTitle:@"Medium" style:SPKIGAlertActionStyleDefault handler:^{
+        [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_MEDIUM") style:SPKIGAlertActionStyleDefault handler:^{
             performBatchDownloadWithQuality(@"medium");
         }]];
-        [actions addObject:[SPKIGAlertAction actionWithTitle:@"Low" style:SPKIGAlertActionStyleDefault handler:^{
+        [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_LOW") style:SPKIGAlertActionStyleDefault handler:^{
             performBatchDownloadWithQuality(@"low");
         }]];
-        [actions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel" style:SPKIGAlertActionStyleCancel handler:nil]];
+        [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL") style:SPKIGAlertActionStyleCancel handler:nil]];
 
         [SPKIGAlertPresenter presentActionSheetFromViewController:presenter
-                                                             title:@"Batch Download Quality"
-                                                           message:[NSString stringWithFormat:@"Select quality for all %lu items:", (unsigned long)selectedEntries.count]
+                                                             title:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_BATCH_DOWNLOAD_QUALITY_TEXT")
+                                                           message:[NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_SELECT_QUALITY_VALUE_ITEMS_FORMAT"), (unsigned long)selectedEntries.count]
                                                            actions:actions];
         return;
     }
@@ -2706,18 +2707,18 @@ static BOOL SPKExecuteBulkChildAction(NSString *identifier,
                                       id media) {
     NSArray<SPKResolvedMediaEntry *> *downloadableEntries = SPKDownloadableEntries(entries);
     if (downloadableEntries.count < 2) {
-        SPKNotify(identifier, @"No bulk media available", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_BULK_MEDIA_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
     if ([identifier isEqualToString:kSPKActionDownloadAllLinks]) {
         NSArray<NSString *> *bulkLinks = SPKBulkDownloadLinksFromEntries(downloadableEntries, media);
         if (bulkLinks.count == 0) {
-            SPKNotify(identifier, @"No links available", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_LINKS_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
         [UIPasteboard generalPasteboard].string = [bulkLinks componentsJoinedByString:@"\n"];
-        SPKNotify(identifier, SPKCopiedDownloadURLTitleForSource(context.source, YES), [NSString stringWithFormat:@"%lu item%@", (unsigned long)bulkLinks.count, bulkLinks.count == 1 ? @"" : @"s"], @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
+        SPKNotify(identifier, SPKCopiedDownloadURLTitleForSource(context.source, YES), SPKLP(@"COMMON_ITEM_COUNT", (NSInteger)bulkLinks.count), @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
         return YES;
     }
 
@@ -2774,7 +2775,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
                                                            allowVideoFallback:YES];
         }
         if (!audioItem) {
-            SPKNotify(identifier, @"No audio available", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_AUDIO_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
         if (audioItem.artist.length == 0)
@@ -2811,7 +2812,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
                                                                        source:SPKAudioSourceForActionSource(context.source)];
         }
         if (!audioItem) {
-            SPKNotify(identifier, @"No audio available", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_AUDIO_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
         if (audioItem.artist.length == 0)
@@ -2857,7 +2858,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
         [identifier isEqualToString:kSPKActionDownloadShare] ||
         [identifier isEqualToString:kSPKActionDownloadGallery]) {
         if (!currentURL) {
-            SPKNotify(identifier, @"No downloadable media", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_DOWNLOADABLE_MEDIA_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
 
@@ -2903,7 +2904,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
             bestURL = SPKBestDownloadURLForMediaObject(mediaForCopy);
         }
         if (!bestURL) {
-            SPKNotify(identifier, @"No link available", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_LINK_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
 
@@ -2929,7 +2930,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
         }
 
         if (!currentURL && !currentEntry.photoURL) {
-            SPKNotify(identifier, @"Nothing to copy", nil, @"error_filled", SPKNotificationToneForIconResource(@"error_filled"));
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NOTHING_COPY_TEXT"), nil, @"error_filled", SPKNotificationToneForIconResource(@"error_filled"));
             return YES;
         }
 
@@ -2938,7 +2939,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
             UIImage *image = imageData ? [UIImage imageWithData:imageData] : nil;
             if (image) {
                 [[UIPasteboard generalPasteboard] setImage:image];
-                SPKNotify(identifier, @"Copied photo to clipboard", nil, @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
+                SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPIED_PHOTO_CLIPBOARD_TEXT"), nil, @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
             }
             return YES;
         }
@@ -2946,9 +2947,9 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
         NSData *data = [NSData dataWithContentsOfURL:currentURL];
         if (data) {
             [[UIPasteboard generalPasteboard] setData:data forPasteboardType:@"public.mpeg-4"];
-            SPKNotify(identifier, @"Copied video to clipboard", nil, @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPIED_VIDEO_CLIPBOARD_TEXT"), nil, @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
         } else {
-            SPKNotify(identifier, @"Nothing to copy", nil, @"error_filled", SPKNotificationToneForIconResource(@"error_filled"));
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NOTHING_COPY_TEXT"), nil, @"error_filled", SPKNotificationToneForIconResource(@"error_filled"));
         }
         return YES;
     }
@@ -2963,14 +2964,14 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
         }
         NSArray<SPKMediaItem *> *playerItems = SPKPlayerItemsFromEntries(previewEntries, context.source, username, media);
         if (playerItems.count == 0) {
-            SPKNotify(identifier, @"No media to expand", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_MEDIA_EXPAND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
 
         NSInteger previewIndex = SPKPreviewIndexForEntry(currentEntry, previewEntries,
                                                          SPKResolveCurrentIndexForContext(context));
         NSInteger clampedIndex = SPKClampedIndex(previewIndex, (NSInteger)playerItems.count);
-        SPKNotify(identifier, @"Expanded media", nil, @"expand", SPKNotificationToneForIconResource(@"expand"));
+        SPKNotify(identifier, SPKL(@"FEED_FEED_ACTION_BUTTON_EXPANDED_MEDIA_TEXT"), nil, @"expand", SPKNotificationToneForIconResource(@"expand"));
         [SPKFullScreenMediaPlayer showMediaItems:playerItems
                                  startingAtIndex:clampedIndex
                                         metadata:meta
@@ -2988,7 +2989,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
             isVideo = ![currentEntry.videoURL isEqual:currentEntry.photoURL];
         }
         if (!isVideo) {
-            SPKNotify(identifier, @"Thumbnail is only available for videos", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_THUMBNAIL_ONLY_AVAILABLE_VIDEOS_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
 
@@ -3017,26 +3018,26 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
         } else {
             SPKShowExtractedVideoCover(currentEntry.videoURL, thumbnailMeta, context);
         }
-        SPKNotify(identifier, @"Opened thumbnail", nil, @"photo_gallery", SPKNotificationToneForIconResource(@"photo_gallery"));
+        SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_OPENED_THUMBNAIL_TEXT"), nil, @"photo_gallery", SPKNotificationToneForIconResource(@"photo_gallery"));
         return YES;
     }
 
     if ([identifier isEqualToString:kSPKActionCopyCaption]) {
         NSString *caption = context.captionResolver ? context.captionResolver(context, media, entries, resolvedIndex) : nil;
         if (caption.length == 0) {
-            SPKNotify(identifier, @"No caption available", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_CAPTION_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
 
         [UIPasteboard generalPasteboard].string = caption;
-        SPKNotify(identifier, @"Caption copied", nil, @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
+        SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_CAPTION_COPIED_TEXT"), nil, @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
         return YES;
     }
 
     if ([identifier isEqualToString:kSPKActionOpenTopicSettings]) {
         NSString *settingsTitle = SPKResolvedSettingsTitleForContext(context);
         if (settingsTitle.length == 0) {
-            SPKNotify(identifier, @"Settings unavailable", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_SETTINGS_UNAVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
 
@@ -3054,7 +3055,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
             SPKConsumePendingRepostFeedback(context.source);
         }
         if (!handled) {
-            SPKNotify(identifier, @"Repost unavailable", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_REPOST_UNAVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         }
         return YES;
     }
@@ -3097,7 +3098,7 @@ static BOOL SPKExecuteToggleInstantsAutoSaveUserRuleAction(SPKActionButtonContex
     NSString *title = SPKInstantsAutoSaveConfirmationTitleForUsername(username);
     NSString *message = SPKInstantsAutoSaveConfirmationMessageForUsername(username);
     if (title.length == 0 || message.length == 0) {
-        SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, @"Instant author not found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, SPKL(@"INSTANTS_AUTO_SAVE_AUTHOR_NOT_FOUND_TOAST"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
@@ -3107,7 +3108,7 @@ static BOOL SPKExecuteToggleInstantsAutoSaveUserRuleAction(SPKActionButtonContex
             NSString *notificationTitle = nil;
             NSString *notificationSubtitle = nil;
             if (!SPKInstantsToggleAutoSaveForUsername(username, &notificationTitle, &notificationSubtitle)) {
-                SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, @"Instant author not found", nil, @"error_filled", SPKNotificationToneError);
+                SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, SPKL(@"INSTANTS_AUTO_SAVE_AUTHOR_NOT_FOUND_TOAST"), nil, @"error_filled", SPKNotificationToneError);
                 return;
             }
             SPKNotify(kSPKNotificationInstantsAutoSaveUserRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -3173,10 +3174,10 @@ static BOOL SPKExecuteToggleProfileStorySeenUserRuleAction(SPKActionButtonContex
     BOOL listed = SPKStoryManualSeenListContainsUser(pk, manualSeenEnabled);
     BOOL applies = manualSeenEnabled ? !listed : listed;
 
-    NSString *title = applies ? @"Start Marking Stories as Seen" : @"Stop Marking Stories as Seen";
+    NSString *title = applies ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_STORIES_SEEN_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_STORIES_SEEN_TEXT");
     NSString *message = applies
-                            ? [NSString stringWithFormat:@"Do you want to start marking stories from @%@ as seen?", username]
-                            : [NSString stringWithFormat:@"Do you want to stop marking stories from @%@ as seen?", username];
+                            ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_STORIES_VALUE_SEEN_FORMAT"), username]
+                            : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_STORIES_VALUE_SEEN_FORMAT"), username];
 
     [SPKUtils
         showConfirmation:^{
@@ -3208,10 +3209,10 @@ static BOOL SPKExecuteToggleProfileMessagesSeenUserRuleAction(SPKActionButtonCon
     BOOL listed = (existingEntry != nil);
     BOOL applies = manualSeenEnabled ? !listed : listed;
 
-    NSString *title = applies ? @"Start Marking Messages as Seen" : @"Stop Marking Messages as Seen";
+    NSString *title = applies ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_MESSAGES_SEEN_MESSAGE") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_MESSAGES_SEEN_MESSAGE");
     NSString *message = applies
-                            ? [NSString stringWithFormat:@"Do you want to start marking messages from %@ as seen?", (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])]
-                            : [NSString stringWithFormat:@"Do you want to stop marking messages from %@ as seen?", (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])];
+                            ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_MESSAGES_VALUE_SEEN_MESSAGE"), (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])]
+                            : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_MESSAGES_VALUE_SEEN_MESSAGE"), (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])];
     [SPKUtils
         showConfirmation:^{
             if (listed) {
@@ -3231,7 +3232,7 @@ static BOOL SPKExecuteToggleProfileMessagesSeenUserRuleAction(SPKActionButtonCon
                                                 NSString *threadId = SPKStringFromValue(thread[@"thread_id"] ?: thread[@"threadId"]);
                                                 if (threadId.length == 0 || threadError) {
                                                     dispatch_async(dispatch_get_main_queue(), ^{
-                                                        SPKNotify(kSPKNotificationProfileMessagesSeenUserRule, @"No 1:1 chat thread found", @"Make sure you have an active chat with this user.", @"error_filled", SPKNotificationToneError);
+                                                        SPKNotify(kSPKNotificationProfileMessagesSeenUserRule, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_CHAT_THREAD_FOUND_TEXT"), SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_MAKE_ACTIVE_CHAT_USER_TEXT"), @"error_filled", SPKNotificationToneError);
                                                     });
                                                     return;
                                                 }
@@ -3266,13 +3267,13 @@ static BOOL SPKExecuteToggleProfileMessagesSeenUserRuleAction(SPKActionButtonCon
 
 static BOOL SPKExecuteStoryMentionsSheetAction(SPKActionButtonContext *context) {
     if (context.source != SPKActionButtonSourceStories || !context.view) {
-        SPKNotify(kSPKNotificationStoryMentionsSheet, @"Story mentions unavailable", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationStoryMentionsSheet, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STORY_MENTIONS_UNAVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
     id media = SPKResolveMediaForContext(context);
     if (!SPKStoryMediaHasMentions(media)) {
-        SPKNotify(kSPKNotificationStoryMentionsSheet, @"No mentions found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationStoryMentionsSheet, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_MENTIONS_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
@@ -3351,7 +3352,7 @@ BOOL SPKExecuteActionIdentifier(NSString *identifier, SPKActionButtonContext *co
                 SPKPausePlaybackForPreviewContext(context);
             }
             if (SPKNotificationIsEnabled(identifier)) {
-                [[SPKNotificationCenter shared] beginTransientProgressWithTitle:@"Fetching 4K candidates..." onCancel:nil];
+                [[SPKNotificationCenter shared] beginTransientProgressWithTitle:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_FETCHING_4K_CANDIDATES_TEXT") onCancel:nil];
             }
             [SPKInstagramAPI fetchWebMediaInfoForPK:topPK completion:^(NSDictionary *response, NSError *error) {
                 [SPKMediaQualityManager markWebPhotoCandidatesFetchedForPK:topPK];
@@ -3376,7 +3377,7 @@ BOOL SPKExecuteActionIdentifier(NSString *identifier, SPKActionButtonContext *co
         }
     }
     if (entries.count == 0) {
-        SPKNotify(identifier, @"Media not found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_MEDIA_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return NO;
     }
 
@@ -3555,10 +3556,10 @@ static NSArray<UIMenuElement *> *SPKBuildBulkMenuChildren(SPKActionButtonConfigu
     // Each bulk entry sits in its own inline group so they read as separate rows
     // divided by separator lines. Download All / Copy All carry the download / copy
     // icons (not the generic "more" icon).
-    UIMenuElement *downloadAll = SPKBulkActionMenuElementForContext(context, bulkEntries, bulkUsername, bulkMedia, configuredBulkDownloadIdentifiers, @"Download All", kSPKActionDownloadAllLibrary);
+    UIMenuElement *downloadAll = SPKBulkActionMenuElementForContext(context, bulkEntries, bulkUsername, bulkMedia, configuredBulkDownloadIdentifiers, SPKActionButtonTitleForIdentifier(kSPKActionDownloadAll), kSPKActionDownloadAllLibrary);
     if (downloadAll)
         [children addObject:[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ downloadAll ]]];
-    UIMenuElement *copyAll = SPKBulkActionMenuElementForContext(context, bulkEntries, bulkUsername, bulkMedia, configuredBulkCopyIdentifiers, @"Copy All", kSPKActionDownloadAllClipboard);
+    UIMenuElement *copyAll = SPKBulkActionMenuElementForContext(context, bulkEntries, bulkUsername, bulkMedia, configuredBulkCopyIdentifiers, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPY_TEXT"), kSPKActionDownloadAllClipboard);
     if (copyAll)
         [children addObject:[UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ copyAll ]]];
 
@@ -3586,7 +3587,7 @@ static NSArray<UIMenuElement *> *SPKBuildBulkMenuChildren(SPKActionButtonConfigu
         }
     }
     if (destinations.count > 0) {
-        UIAction *selectMediaAction = [UIAction actionWithTitle:@"Select Media"
+        UIAction *selectMediaAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_SELECT_MEDIA")
                                                           image:[SPKAssetUtils menuIconNamed:@"circle_check"]
                                                      identifier:nil
                                                         handler:^(__unused UIAction *action) {
@@ -3615,7 +3616,7 @@ static NSArray<UIMenuElement *> *SPKBuildBulkMenuChildren(SPKActionButtonConfigu
                                                                                                                             return;
                                                                                                                         }
                                                                                                                         [UIPasteboard generalPasteboard].string = [links componentsJoinedByString:@"\n"];
-                                                                                                                        SPKNotify(destinationIdentifier, SPKCopiedDownloadURLTitleForSource(context.source, YES), [NSString stringWithFormat:@"%lu item%@", (unsigned long)links.count, links.count == 1 ? @"" : @"s"], @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
+                                                                                                                        SPKNotify(destinationIdentifier, SPKCopiedDownloadURLTitleForSource(context.source, YES), SPKLP(@"COMMON_ITEM_COUNT", (NSInteger)links.count), @"copy_filled", SPKNotificationToneForIconResource(@"copy_filled"));
                                                                                                                         return;
                                                                                                                     }
                                                                                                                     SPKDownloadDestination dest = [destinationIdentifier isEqualToString:kSPKActionDownloadAllGallery] ? SPKDownloadDestinationGallery : SPKDownloadDestinationPhotos;

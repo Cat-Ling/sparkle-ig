@@ -1,4 +1,5 @@
 #import "SPKGalleryListCollectionCell.h"
+#import "SPKStrings.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
 #import "SPKGalleryFile.h"
@@ -143,7 +144,7 @@
     self.moreButton.translatesAutoresizingMaskIntoConstraints = NO;
     [self.moreButton setImage:moreImg forState:UIControlStateNormal];
     self.moreButton.tintColor = [SPKUtils SPKColor_InstagramSecondaryText];
-    self.moreButton.accessibilityLabel = @"More";
+    self.moreButton.accessibilityLabel = SPKL(@"MESSAGES_DELETED_MESSAGES_MORE_TEXT");
     self.moreButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
     self.moreButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
     [self.contentView addSubview:self.moreButton];

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessagesCapture.h"
 #import "../../../Shared/MediaDownload/SPKDashParser.h"
 #import "../../../Shared/MediaDownload/SPKMediaFFmpeg.h"
@@ -2431,11 +2432,11 @@ NSDictionary *spkDMCaptureNoteReactionUnsend(id reaction,
         m.reactionTargetPreview = targetPreview;
         // Human-readable body used by previews / search.
         if (emoji.length && targetPreview.length) {
-            m.text = [NSString stringWithFormat:@"Removed %@ from \"%@\"", emoji, targetPreview];
+            m.text = [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_VALUE_VALUE_FORMAT"), emoji, targetPreview];
         } else if (emoji.length) {
-            m.text = [NSString stringWithFormat:@"Removed reaction %@", emoji];
+            m.text = [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_REACTION_VALUE_ACTION"), emoji];
         } else {
-            m.text = @"Removed a reaction";
+            m.text = SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_REACTION_ACTION");
         }
         m.previewText = m.text;
         m.replyToMessageId = targetMessageId;

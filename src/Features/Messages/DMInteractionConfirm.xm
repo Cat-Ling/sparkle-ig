@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 
 #ifdef __cplusplus
@@ -28,8 +29,8 @@ void SPKMarkDirectThreadSeenAfterReaction(id source);
             %orig;
             SPKMarkDirectThreadSeenAfterReaction(self);
         }
-                   title:@"Confirm Message Double Tap"
-                 message:@"Are you sure you want to double tap this message?"];
+                   title:SPKL(@"MESSAGES_DMINTERACTION_CONFIRM_CONFIRM_MESSAGE_DOUBLE_TAP_MESSAGE")
+                 message:SPKL(@"MESSAGES_DMINTERACTION_CONFIRM_DOUBLE_TAP_MESSAGE_CONFIRMATION_MESSAGE")];
 }
 
 %end
@@ -61,8 +62,8 @@ void SPKMarkDirectThreadSeenAfterReaction(id source);
             %orig;
             SPKMarkDirectThreadSeenAfterReaction(self);
         }
-                   title:@"Confirm Message Reaction"
-                 message:@"Are you sure you want to react to this message?"];
+                   title:SPKL(@"MESSAGES_DMINTERACTION_CONFIRM_CONFIRM_MESSAGE_REACTION_MESSAGE")
+                 message:SPKL(@"MESSAGES_DMINTERACTION_CONFIRM_REACT_MESSAGE_CONFIRMATION_MESSAGE")];
 }
 
 %end

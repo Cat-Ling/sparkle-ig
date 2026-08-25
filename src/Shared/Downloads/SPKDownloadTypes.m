@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadTypes.h"
 
 NSErrorDomain const SPKDownloadErrorDomain = @"com.sparkle.download";
@@ -115,13 +116,13 @@ SPKDownloadState SPKDownloadDerivedJobState(NSArray<NSNumber *> *itemStates) {
 NSString *SPKDownloadDestinationDisplayName(SPKDownloadDestination destination) {
     switch (destination) {
     case SPKDownloadDestinationPhotos:
-        return @"Photos";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_PHOTOS_TEXT");
     case SPKDownloadDestinationGallery:
-        return @"Gallery";
+        return SPKL(@"GALLERY_TITLE");
     case SPKDownloadDestinationShare:
         return @"Share";
     case SPKDownloadDestinationClipboard:
-        return @"Clipboard";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_TYPES_CLIPBOARD_TEXT");
     case SPKDownloadDestinationCacheOnly:
         return @"Download";
     }
@@ -131,26 +132,26 @@ NSString *SPKDownloadDestinationDisplayName(SPKDownloadDestination destination) 
 NSString *SPKDownloadSourceSurfaceDisplayName(SPKDownloadSourceSurface surface) {
     switch (surface) {
     case SPKDownloadSourceSurfaceFeed:
-        return @"Feed";
+        return SPKL(@"FEED_TITLE");
     case SPKDownloadSourceSurfaceReels:
         return @"Reels";
     case SPKDownloadSourceSurfaceStories:
-        return @"Stories";
+        return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKDownloadSourceSurfaceDirect:
-        return @"Direct";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_TYPES_DIRECT_TEXT");
     case SPKDownloadSourceSurfaceAudioPage:
         return @"Audio";
     case SPKDownloadSourceSurfaceMediaPreview:
-        return @"Preview";
+        return SPKL(@"NOTIFICATION_PREVIEW_HEADER");
     case SPKDownloadSourceSurfaceGallery:
-        return @"Gallery";
+        return SPKL(@"GALLERY_TITLE");
     case SPKDownloadSourceSurfaceProfile:
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     case SPKDownloadSourceSurfaceInstants:
-        return @"Instants";
+        return SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE");
     case SPKDownloadSourceSurfaceComments:
-        return @"Comments";
+        return SPKL(@"GENERAL_COMMENTS_HEADER");
     default:
-        return @"Other";
+        return SPKL(@"STORIES_OTHER_HEADER");
     }
 }

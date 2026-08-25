@@ -2,6 +2,7 @@
 // Triggered by the @ button in story overlays (SeenButtons.x).
 
 #import "../../AssetUtils.h"
+#import "SPKStrings.h"
 #import "../../InstagramHeaders.h"
 #import "../../Networking/SPKInstagramAPI.h"
 #import "../../Shared/UI/SPKMediaChrome.h"
@@ -88,7 +89,7 @@ static NSString *SPKMentionUserPK(id userObj) {
 }
 
 static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
-    [btn setTitle:following ? @"Following" : @"Follow" forState:UIControlStateNormal];
+    [btn setTitle:following ? SPKL(@"MENU_FOLLOWING") : SPKL(@"VC_BTN_FOLLOW") forState:UIControlStateNormal];
     if (following) {
         btn.backgroundColor = [SPKUtils SPKColor_InstagramSecondaryBackground];
         [btn setTitleColor:[SPKUtils SPKColor_InstagramPrimaryText] forState:UIControlStateNormal];
@@ -317,7 +318,7 @@ static NSArray<NSDictionary *> *SPKStoryMentionsEnriched(UIView *overlayView) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [SPKUtils SPKColor_InstagramBackground];
-    self.title = @"Mentions";
+    self.title = SPKL(@"STORIES_STORY_MENTIONS_MENTIONS_TEXT");
 
     // Resolve current user to hide the Follow button for yourself
     @try {
@@ -415,7 +416,7 @@ static NSArray<NSDictionary *> *SPKStoryMentionsEnriched(UIView *overlayView) {
     }
 
     NSDictionary *info = self.userInfos[indexPath.row];
-    NSString *username = info[@"username"] ?: @"Unknown";
+    NSString *username = info[@"username"] ?: SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_TEXT");
     NSString *fullName = info[@"fullName"];
     NSURL *picURL = info[@"picURL"];
 
@@ -545,12 +546,12 @@ static NSArray<NSDictionary *> *SPKStoryMentionsEnriched(UIView *overlayView) {
     };
     if (!currentlyFollowing && [SPKUtils getBoolPref:@"profile_confirm_follow"]) {
         [SPKUtils showConfirmation:doIt
-                             title:@"Confirm Follow"
-                           message:@"Are you sure you want to follow this account?"];
+                             title:SPKL(@"PROFILE_CONFIRMATION_CONFIRM_FOLLOW_TITLE")
+                           message:SPKL(@"GENERAL_FOLLOW_CONFIRM_FOLLOW_ACCOUNT_CONFIRMATION_MESSAGE")];
     } else if (currentlyFollowing && [SPKUtils getBoolPref:@"profile_confirm_unfollow"]) {
         [SPKUtils showConfirmation:doIt
-                             title:@"Confirm Unfollow"
-                           message:@"Are you sure you want to unfollow this account?"];
+                             title:SPKL(@"PROFILE_CONFIRMATION_CONFIRM_UNFOLLOW_TITLE")
+                           message:SPKL(@"GENERAL_FOLLOW_CONFIRM_UNFOLLOW_ACCOUNT_CONFIRMATION_MESSAGE")];
     } else {
         doIt();
     }

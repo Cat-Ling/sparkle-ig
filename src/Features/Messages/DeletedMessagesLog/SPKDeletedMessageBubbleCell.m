@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessageBubbleCell.h"
 #import "../../../AssetUtils.h"
 #import "../../../Utils.h"
@@ -617,7 +618,7 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     self.voicePill.hidden = NO;
     self.voiceLabel.text = message.durationSeconds > 0
                                ? SPKDeletedFormatDuration(message.durationSeconds)
-                               : @"Tap to play";
+                               : SPKL(@"MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_TAP_PLAY_TEXT");
 }
 
 - (void)configureCardWithMessage:(SPKDeletedMessage *)message thumbnail:(UIImage *)thumbnail {

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "DMGifTitle.h"
 
 #import <UIKit/UIKit.h>
@@ -105,7 +106,7 @@ static UIImage *SPKDMGifTitleIcon(void) {
 
 static void SPKDMGifTitleCopy(NSString *title) {
     UIPasteboard.generalPasteboard.string = title;
-    SPKNotify(kSPKNotificationCopyGIFTitle, @"GIF title copied", nil, @"copy_filled", SPKNotificationToneSuccess);
+    SPKNotify(kSPKNotificationCopyGIFTitle, SPKL(@"FEED_COMMENT_ACTIONS_GIF_TITLE_COPIED_TITLE"), nil, @"copy_filled", SPKNotificationToneSuccess);
 }
 
 /// Row that displays a known title; tapping copies it.
@@ -171,7 +172,7 @@ static id SPKDMGifTitleLookupRow(id templateElement, NSString *identifier) {
         [SPKGiphyMetadataResolver resolveMetadataForGifMediaId:identifier
                                                     completion:^(SPKGiphyMetadata *metadata) {
                                                         if (!metadata) {
-                                                            SPKNotify(kSPKNotificationCopyGIFTitle, @"GIF title unavailable", nil, @"info", SPKNotificationToneError);
+                                                            SPKNotify(kSPKNotificationCopyGIFTitle, SPKL(@"MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE"), nil, @"info", SPKNotificationToneError);
                                                             return;
                                                         }
                                                         SPKDMGifTitleCopy(metadata.title);
@@ -221,7 +222,7 @@ NSArray *SPKDMGifTitleElementsForMenu(NSArray *elements) {
     // rewrite the placeholder in place when it lands.
     sSPKDMGifTitlePatchPending = YES;
     [SPKGiphyMetadataResolver resolveMetadataForGifMediaId:identifier completion:^(SPKGiphyMetadata *metadata) {
-        NSString *filledTitle = metadata.title ?: @"Title unavailable";
+        NSString *filledTitle = metadata.title ?: SPKL(@"FEED_COMMENT_ACTIONS_TITLE_UNAVAILABLE_TITLE");
         NSString *filledSubtitle = metadata.author.length > 0
                                        ? [NSString stringWithFormat:@"by %@", metadata.author]
                                        : nil;
