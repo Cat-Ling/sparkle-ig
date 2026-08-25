@@ -158,7 +158,7 @@ static NSArray *SPKStoriesSettingsSections(void) {
                                        icon:SPKSettingsIcon(@"poll")
                                 defaultsKey:@"stories_poll_vote_counts"],
         ],
-                        @"1. Add a search button to your story's viewer list to search and filter anyone who viewed it.\n"
+                        @"1. Add a search button to your story's viewer list to search by name, filter by either side of the follow relationship, and star viewers for quick filtering.\n"
                         @"2. Hide the the \"Join a trending\" / \"Add Yours\" promo cards from stories.\n"
                         @"3. Remove stories that people recently added to their highlights, both from the story tray and from playing when you tap past the last story. Opening a highlight yourself still works.\n"
                         @"4. Enabling this will add a button above the bottom story bar, where you can see all mentioned users.\n"
