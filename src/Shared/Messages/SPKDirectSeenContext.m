@@ -268,6 +268,12 @@ static SPKDirectThreadContext *SPKDirectThreadContextFromSourceInternal(id sourc
 static id SPKDirectFindThreadMetadata(id object, NSUInteger depth, NSMutableSet<NSValue *> *visited) {
     if (!object || depth == 0)
         return nil;
+    // A Class is also an Objective-C object, but it is not an instance of the
+    // class returned by +class. Reading that class's instance ivars from the
+    // Class object makes object_getIvar walk an incompatible layout and can
+    // segfault before Objective-C exception handling has a chance to run.
+    if (object_isClass(object))
+        return nil;
     Class metadataClass = NSClassFromString(@"IGDirectThreadMetadata");
     if (metadataClass && [object isKindOfClass:metadataClass])
         return object;
@@ -362,9 +368,16 @@ static SPKDirectThreadContext *SPKDirectContextDirectlyFromObject(id object) {
     // Published IGDirectDjangoUIThread values expose only their paging id in
     // dumped headers. Their IGDirectThreadMetadata still lives in the inherited
     // devirtualized field cache, so locate that typed value when direct accessors
-    // are unavailable.
-    if (!metadata)
-        metadata = SPKDirectFindThreadMetadata(object, 6, [NSMutableSet set]);
+    // are unavailable. Keep raw ivar traversal scoped to that model family;
+    // walking an arbitrary view controller graph is both unnecessary and unsafe.
+    Class djangoThreadClass = NSClassFromString(@"IGDirectDjangoUIThread");
+    id hiddenMetadataRoot = nil;
+    if (djangoThreadClass && [target isKindOfClass:djangoThreadClass])
+        hiddenMetadataRoot = target;
+    else if (djangoThreadClass && target != object && [object isKindOfClass:djangoThreadClass])
+        hiddenMetadataRoot = object;
+    if (!metadata && hiddenMetadataRoot)
+        metadata = SPKDirectFindThreadMetadata(hiddenMetadataRoot, 6, [NSMutableSet set]);
     if (metadata)
         target = metadata;
 
