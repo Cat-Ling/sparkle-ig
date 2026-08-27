@@ -110,7 +110,18 @@ NSString *SPKNormalizedSavedCarrier(id value) {
     return SPKTabSavedCarrierNone;
 }
 
-NSString *SPKEffectiveSavedCarrier(void) {
+// Resolved once and reused until a preference changes. This runs from the tab
+// bar's -layoutSubviews, where three NSUserDefaults reads per button per pass is
+// enough to hold up the main thread on its own.
+static NSString *spk_cachedSavedCarrier = nil;
+
+static void SPKInvalidateSavedCarrierCache(void) {
+    @synchronized (SPKTabSavedCarrierNone) {
+        spk_cachedSavedCarrier = nil;
+    }
+}
+
+static NSString *SPKResolveSavedCarrier(void) {
     NSString *carrier = SPKNormalizedSavedCarrier(SPKPreferenceObjectForKey(SPKPrefSavedTabCarrier));
     if ([carrier isEqualToString:SPKTabSavedCarrierNone])
         return carrier;
@@ -123,6 +134,28 @@ NSString *SPKEffectiveSavedCarrier(void) {
     if (hideKey.length == 0 || ![SPKUtils getBoolPref:hideKey])
         return SPKTabSavedCarrierNone;
     return carrier;
+}
+
+NSString *SPKEffectiveSavedCarrier(void) {
+    static dispatch_once_t observerOnce;
+    dispatch_once(&observerOnce, ^{
+        [NSNotificationCenter.defaultCenter addObserverForName:NSUserDefaultsDidChangeNotification
+                                                        object:nil
+                                                         queue:nil
+                                                    usingBlock:^(NSNotification *note) {
+                                                        SPKInvalidateSavedCarrierCache();
+                                                    }];
+    });
+
+    @synchronized (SPKTabSavedCarrierNone) {
+        if (spk_cachedSavedCarrier)
+            return spk_cachedSavedCarrier;
+    }
+    NSString *resolved = SPKResolveSavedCarrier();
+    @synchronized (SPKTabSavedCarrierNone) {
+        spk_cachedSavedCarrier = resolved;
+    }
+    return resolved;
 }
 
 NSString *SPKSingleVisibleTabIdentifier(NSString *layout, NSSet<NSString *> *hidden, NSString *savedCarrier) {

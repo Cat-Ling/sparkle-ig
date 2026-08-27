@@ -188,6 +188,16 @@ static void SPKRememberOriginalTabImage(UIButton *button, UIControlState state, 
     originalImages[@(state)] = image;
 }
 
+// The label Sparkle writes is localized, so it can never be compared against the
+// English word. Resolved once because the language preference is restart-only,
+// which also keeps the bundle lookup off the layout path.
+static NSString *SPKSavedTabAccessibilityLabel(void) {
+    static NSString *label = nil;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{ label = SPKL(@"TAB_SAVED"); });
+    return label;
+}
+
 static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
     if (![button isKindOfClass:[UIButton class]])
         return;
@@ -260,7 +270,7 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
             }
         }
         NSString *originalLabel = objc_getAssociatedObject(button, kSPKSavedTabOriginalLabelKey);
-        if (originalLabel && [button.accessibilityLabel isEqualToString:@"Saved"]) {
+        if (originalLabel && [button.accessibilityLabel isEqualToString:SPKSavedTabAccessibilityLabel()]) {
             button.accessibilityLabel = originalLabel;
         }
         return;
@@ -271,7 +281,7 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
 
     if (!objc_getAssociatedObject(button, kSPKSavedTabOriginalLabelKey) &&
         button.accessibilityLabel.length > 0 &&
-        ![button.accessibilityLabel isEqualToString:@"Saved"]) {
+        ![button.accessibilityLabel isEqualToString:SPKSavedTabAccessibilityLabel()]) {
         objc_setAssociatedObject(button, kSPKSavedTabOriginalLabelKey, button.accessibilityLabel, OBJC_ASSOCIATION_COPY_NONATOMIC);
     }
 
@@ -295,8 +305,11 @@ static void SPKConfigureSavedTabButtonInstance(UIButton *button) {
     if (filled && [button imageForState:UIControlStateSelected | UIControlStateHighlighted] != filled) {
         [button setImage:filled forState:UIControlStateSelected | UIControlStateHighlighted];
     }
-    if (![button.accessibilityLabel isEqualToString:@"Saved"]) {
-        button.accessibilityLabel = SPKL(@"TAB_SAVED");
+    // Writing this unconditionally would loop: the settings-shortcut hook calls
+    // -setNeedsLayout from -setAccessibilityLabel:, so every write schedules the
+    // pass that writes again.
+    if (![button.accessibilityLabel isEqualToString:SPKSavedTabAccessibilityLabel()]) {
+        button.accessibilityLabel = SPKSavedTabAccessibilityLabel();
     }
 }
 
