@@ -2,6 +2,8 @@ CompileFlags:
   Add: [
     "-isysroot",
     "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk",
+    "-target",
+    "arm64-apple-ios15.0",
     "-fmodules",
     "-fcxx-modules",
     "-fobjc-arc",

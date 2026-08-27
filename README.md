@@ -164,16 +164,17 @@ Tap the **Translate** button in the top-right of Sparkle Settings to follow Inst
 ```sh
 ./build.sh rootless          # rootless .deb (jailbroken)
 ./build.sh rootful           # rootful .deb (jailbroken)
-./build.sh ipa --release     # sideload IPA (= --inject --ffmpeg --patch)
+./build.sh ipa --release     # sideload IPA (= --inject --patch)
 ```
 
 The `ipa` command takes composable flags:
 
 | Flag | Effect |
 |------|--------|
-| `--release` | Shorthand for `--inject --ffmpeg --patch` |
-| `--inject` | Build the standard rootless `.deb` and inject it with Cyan. The tweak, translations, and FFmpeg runtime are all included. |
-| `--ffmpeg` | Add only the opaque `Sparkle.bundle` to a base IPA without adding FFmpeg load commands. |
+| `--release` | Shorthand for `--inject --patch` |
+| `--inject` | Build Sparkle, then pass `Sparkle.dylib` and the complete `Sparkle.bundle` to Cyan as separate inputs. The bundle always travels with the tweak, so `--bundle` is not needed alongside this. A standard rootless `.deb` is also produced for jailbreak use. |
+| `--bundle` | Pass only the complete `Sparkle.bundle` to Cyan, without injecting the tweak. `--ffmpeg` is kept as an alias. |
+| `--no-ffmpeg` | Stage `Sparkle.bundle` with the localization catalogs but without the FFmpeg frameworks. Media encoding is unavailable in the result. |
 | `--flex` | Bundle `libFLEX.dylib` (in-app debugging) |
 | `--patch` | Run `ipapatch` |
 | `--no-ext` | Strip all `.appex` bundles before injection |
@@ -189,19 +190,15 @@ Outputs are named with the Sparkle version (and, for IPAs, the bundled Instagram
 
 Run `./build.sh` with no arguments for the full usage reference.
 
-The public jailbreak `.deb` can also be injected directly into an IPA with stock Cyan. FFmpeg is stored as lazy-loaded flat binaries inside `Sparkle.bundle`, so Cyan does not add FFmpeg frameworks to Instagram's launch dependencies:
+The jailbreak `.deb` contains `Sparkle.dylib` plus the same `Sparkle.bundle` used by sideload builds. Its FFmpeg frameworks retain their original names, resolve sibling frameworks through bundle-relative `@loader_path` dependencies, and are ad-hoc signed for jailbroken devices.
+
+For sideload builds, do not give the `.deb` to Cyan. `./build.sh ipa --release --flex` passes `Sparkle.dylib`, FLEX, and the complete resource bundle as separate inputs. Cyan copies `Sparkle.bundle` to the app root without injecting its FFmpeg frameworks as launch dependencies; the final IPA signer can then sign the frameworks normally.
 
 ```sh
-cyan -i packages/com.burbn.instagram.444.0.0.ipa -duq \
-  -b "com.burbn.sparkle" \
-  -f packages/Sparkle_v1.2.0_rootless.deb \
-  -o packages/test-deb.ipa
-
-ipapatch --input packages/test-deb.ipa --inplace \
-  --dylib modules/SPKSideloadFix/.theos/obj/debug/SPKSideloadFix.dylib
+./build.sh ipa --release --flex
 ```
 
-Icons, the Safari extension, extension stripping, FLEX, bundle-ID changes, and `SPKSideloadFix` remain separate IPA stages. The direct `.deb` layout is build-verified, but launch and FFmpeg operations still need on-device testing for each release.
+Icons, the Safari extension, extension stripping, FLEX, bundle-ID changes, and `SPKSideloadFix` remain explicit IPA stages. Launch and FFmpeg operations still need on-device testing for each release.
 
 ### Recompiling the Liquid Glass app icons
 

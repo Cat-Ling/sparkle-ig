@@ -31,7 +31,20 @@ endif
 
 $(TWEAK_NAME)_CXXFLAGS += -std=c++11
 
+# Attach Sparkle's resource bundle to the tweak package. Theos relocates this
+# path automatically for rootless packages. FFmpeg frameworks are added after
+# staging because their install names must be rewritten and signed first.
+$(TWEAK_NAME)_BUNDLE_NAME = Sparkle
+$(TWEAK_NAME)_BUNDLE_INSTALL_PATH = /Library/Application Support
+$(TWEAK_NAME)_BUNDLE_RESOURCE_DIRS = Sparkle.bundle
+
 include $(THEOS_MAKE_PATH)/tweak.mk
 
+# SPARKLE_NO_FFMPEG=1 stages the localization catalogs without the FFmpeg
+# frameworks, for builds that deliberately ship no media encoding support.
 after-stage::
-	@tools/stage-sparkle-bundle.sh "$(THEOS_STAGING_DIR)/Library/Application Support/Sparkle.bundle"
+ifeq ($(SPARKLE_NO_FFMPEG),1)
+	@echo "SPARKLE_NO_FFMPEG=1: skipping FFmpeg framework staging"
+else
+	@tools/stage-sparkle-bundle.sh "$(THEOS_STAGING_DIR)/Library/Application Support/Sparkle.bundle" --augment-ffmpeg
+endif
