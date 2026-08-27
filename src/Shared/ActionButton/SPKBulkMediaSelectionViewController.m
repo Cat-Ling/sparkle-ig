@@ -248,7 +248,7 @@ static NSCache<NSURL *, UIImage *> *SPKBulkSelectionThumbnailCache(void) {
 
     self.navigationItem.title = count == 0
                                     ? SPKL(@"ALERT_ACTION_SELECT_MEDIA")
-                                    : [NSString stringWithFormat:@"%lu of %lu", (unsigned long)count, (unsigned long)total];
+                                    : [NSString stringWithFormat:SPKL(@"COMMON_PROGRESS_FORMAT"), (unsigned long)count, (unsigned long)total];
 
     BOOL enabled = (count > 0);
     for (UIBarButtonItem *item in self.destinationBarItems) {

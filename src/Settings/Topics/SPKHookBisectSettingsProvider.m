@@ -141,7 +141,7 @@ static NSArray<SPKSetting *> *SPKPerfMeterRows(void) {
                                                       SPKHookBisectReloadVisibleSettings();
                                                   }];
     status.accessoryTextProvider = ^NSString * {
-        return [NSString stringWithFormat:@"%lu of %lu",
+        return [NSString stringWithFormat:SPKL(@"COMMON_PROGRESS_FORMAT"),
                                           (unsigned long)SPKHookBisectSkippedCount(),
                                           (unsigned long)SPKHookBisectRegisteredInstallerCount()];
     };

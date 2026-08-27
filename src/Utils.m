@@ -1439,25 +1439,55 @@ static id SPKPrefValueWithMasterOverlay(NSString *key) {
                                           countStyle:NSByteCountFormatterCountStyleFile];
 }
 
-+ (NSString *)spk_localizedTimeComponent {
-    // `j` resolves to whichever hour cycle the locale/device prefers; if the
-    // resolved template keeps the AM/PM designator ("a") we're on a 12-hour
-    // clock, otherwise the device is set to 24-hour time.
-    NSString *resolved = [NSDateFormatter dateFormatFromTemplate:@"jmm"
-                                                         options:0
-                                                          locale:[NSLocale currentLocale]];
-    BOOL is24Hour = !resolved || [resolved rangeOfString:@"a"].location == NSNotFound;
-    return is24Hour ? @"HH:mm" : @"h:mm a";
++ (NSLocale *)spk_activeFormattingLocale {
+    NSString *override = [SPKStrings languageOverride];
+    if (override.length > 0) {
+        return [NSLocale localeWithLocaleIdentifier:[SPKStrings activeLanguage]];
+    }
+
+    NSString *active = [SPKStrings activeLanguage];
+    NSMutableOrderedSet<NSString *> *preferences = [NSMutableOrderedSet orderedSet];
+    [preferences addObjectsFromArray:NSBundle.mainBundle.preferredLocalizations ?: @[]];
+    [preferences addObjectsFromArray:NSLocale.preferredLanguages ?: @[]];
+    for (NSString *identifier in preferences) {
+        NSString *match = [SPKStrings matchAvailable:identifier];
+        if ([match isEqualToString:active]) {
+            return [NSLocale localeWithLocaleIdentifier:identifier];
+        }
+    }
+    return [NSLocale localeWithLocaleIdentifier:active.length > 0 ? active : @"en"];
 }
 
-+ (NSString *)spk_localizedDateComponentIncludingYear:(BOOL)includeYear {
-    NSString *template = includeYear ? @"yMMMd" : @"MMMd";
-    NSString *resolved = [NSDateFormatter dateFormatFromTemplate:template
-                                                         options:0
-                                                          locale:[NSLocale currentLocale]];
-    if (resolved.length)
-        return resolved;
-    return includeYear ? @"MMM d, yyyy" : @"MMM d";  // safe fallback
++ (nullable NSString *)spk_stringFromDate:(nullable NSDate *)date template:(NSString *)template {
+    if (!date || template.length == 0)
+        return nil;
+    NSLocale *locale = [self spk_activeFormattingLocale];
+    NSDateFormatter *formatter = [NSDateFormatter new];
+    formatter.locale = locale;
+    formatter.dateFormat = [NSDateFormatter dateFormatFromTemplate:template options:0 locale:locale];
+    return [formatter stringFromDate:date];
+}
+
++ (NSString *)spk_timeSkeleton {
+    NSString *devicePattern = [NSDateFormatter dateFormatFromTemplate:@"jmm"
+                                                              options:0
+                                                               locale:NSLocale.currentLocale];
+    BOOL uses24HourClock = devicePattern.length == 0 || [devicePattern rangeOfString:@"a"].location == NSNotFound;
+    return uses24HourClock ? @"HHmm" : @"hmm";
+}
+
++ (nullable NSString *)spk_formattedTime:(nullable NSDate *)date {
+    return [self spk_stringFromDate:date template:[self spk_timeSkeleton]];
+}
+
++ (nullable NSString *)spk_formattedDate:(nullable NSDate *)date includingYear:(BOOL)includeYear {
+    return [self spk_stringFromDate:date template:(includeYear ? @"yMMMd" : @"MMMd")];
+}
+
++ (nullable NSString *)spk_formattedDateTime:(nullable NSDate *)date includingYear:(BOOL)includeYear {
+    NSString *dateSkeleton = includeYear ? @"yMMMd" : @"MMMd";
+    return [self spk_stringFromDate:date
+                           template:[dateSkeleton stringByAppendingString:[self spk_timeSkeleton]]];
 }
 
 static double SPKTimestampFromValue(id value) {
@@ -1644,17 +1674,7 @@ static NSDate *SPKScanObjectForPostedDate(id target, NSInteger depth) {
 }
 
 + (nullable NSString *)spk_formattedDateHeader:(nullable NSDate *)date {
-    if (!date)
-        return nil;
-    static NSDateFormatter *fmt;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        fmt = [[NSDateFormatter alloc] init];
-    });
-    fmt.dateFormat = [NSString stringWithFormat:@"%@ 'at' %@",
-                      [SPKUtils spk_localizedDateComponentIncludingYear:YES],
-                      [SPKUtils spk_localizedTimeComponent]];
-    return [fmt stringFromDate:date];
+    return [self spk_formattedDateTime:date includingYear:YES];
 }
 
 

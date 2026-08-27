@@ -18,7 +18,7 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
             SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSourceReels),
             SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSourceReels, @"Reels", SPKActionButtonSupportedActionsForSource(SPKActionButtonSourceReels), SPKActionButtonDefaultSectionsForSource(SPKActionButtonSourceReels))
         ],
-                        @"Choose what tapping the action button does. Long press opens the full menu."),
+                        SPKL(@"FEED_ACTION_BUTTON_FOOTER")),
         SPKTopicSection(SPKL(@"GENERAL_BEHAVIOR_HEADER"), @[
             [SPKSetting menuCellWithTitle:SPKL(@"REELS_BEHAVIOR_TAP_CONTROLS_TITLE")
                                      icon:SPKSettingsIcon(@"play")
@@ -34,7 +34,7 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
                                        icon:SPKSettingsIcon(@"arrow_cw")
                                 defaultsKey:@"reels_disable_tab_refresh"]
         ],
-                        @"Tap Controls changes what happens when you tap on a reel. Auto-unmuting controls prevent reels from unmuting when volume or silent mode changes."),
+                        SPKL(@"REELS_BEHAVIOR_FOOTER")),
         SPKTopicSection(SPKL(@"REELS_LIMITS_HEADER"), @[
             [SPKSetting switchCellWithTitle:SPKL(@"REELS_LIMITS_DISABLE_SCROLLING_REELS_TITLE")
                                        icon:SPKSettingsIcon(@"autoscroll")
@@ -52,9 +52,7 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
                                        label:@"reels"
                                singularLabel:@"reel"]
         ],
-                        @"1. Stop vertical swiping between reels so the current reel stays put.\n"
-                        @"2. Stop loading more reels once the limit below is reached.\n"
-                        @"3. How many reels load before Prevent Doom Scrolling kicks in."),
+                        SPKL(@"REELS_LIMITS_FOOTER")),
         SPKTopicSection(SPKL(@"FEED_LAYOUT_HEADER"), @[
             ({
                 // The reels viewer keeps one navigation bar per session, so turning this off has
@@ -68,7 +66,7 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
                 };
                 hideHeader;
             }),
-            [SPKSetting switchCellWithTitle:@"Hide Viewer Comment Bar"
+            [SPKSetting switchCellWithTitle:SPKL(@"REELS_LAYOUT_HIDE_VIEWER_COMMENT_BAR_TITLE")
                                        icon:SPKSettingsIcon(@"comment")
                                 defaultsKey:@"reels_hide_viewer_comment_bar"
                             requiresRestart:YES],
@@ -77,7 +75,7 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
                                 defaultsKey:@"reels_hide_repost_btn"
                             requiresRestart:YES]
         ],
-                        @"Hides the bottom comment field in the Reels viewer to leave more room for captions on shorter displays."),
+                        SPKL(@"REELS_LAYOUT_FOOTER")),
         SPKTopicSection(SPKL(@"FEED_METRICS_HEADER"), @[
             [SPKSetting switchCellWithTitle:SPKL(@"FEED_METRICS_HIDE_LIKE_COUNT_TITLE")
                                        icon:SPKSettingsIcon(@"heart")
@@ -110,7 +108,7 @@ static NSString *const kSPKReelsActionButtonEnabledKey = @"reels_action_btn";
                                        icon:SPKSettingsIcon(@"repost")
                                 defaultsKey:@"reels_confirm_repost"]
         ],
-                        @"Shows confirmation alerts before the enabled reels actions are performed.")
+                        SPKL(@"REELS_CONFIRMATION_FOOTER"))
     ]);
 }
 

@@ -320,7 +320,7 @@ static NSString *SPKRenameStagedPath(NSString *stagedPath, SPKDownloadItem *item
                                               if (cancelled)
                                                   [strongSelf notifyJob:cancelled itemID:nil];
                                               if (completion)
-                                                  completion(nil, SPKDownloadError(SPKDownloadErrorCancelled, @"Download cancelled.", nil));
+                                                  completion(nil, SPKDownloadError(SPKDownloadErrorCancelled, SPKL(@"DOWNLOADS_SCHEDULER_DOWNLOAD_CANCELLED_ERROR"), nil));
                                               return;
                                           }
                                           if (result == SPKDownloadPreflightSkipSucceeded) {
@@ -458,7 +458,7 @@ static NSString *SPKRenameStagedPath(NSString *stagedPath, SPKDownloadItem *item
                       from:SPKDownloadStateQueued
                         to:SPKDownloadStateRunning
                     update:^(SPKDownloadMutableItemSnapshot *snap) {
-                        snap.detail = @"Downloading";
+                        snap.detail = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_TEXT");
                         snap.progress = 0.05;
                     }];
     NSString *staging = [SPKDownloadStore stagingDirectoryForJobID:job.jobID];
@@ -484,7 +484,7 @@ static NSString *SPKRenameStagedPath(NSString *stagedPath, SPKDownloadItem *item
                                                  snap.bytesWritten = written;
                                                  snap.totalBytesExpected = expected;
                                                  snap.progress = progress;
-                                                 snap.detail = @"Downloading";
+                                                 snap.detail = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_TEXT");
                                              }];
         }
         completion:^(NSString *stagedPath, NSError *error) {
@@ -846,12 +846,12 @@ static NSString *SPKRenameStagedPath(NSString *stagedPath, SPKDownloadItem *item
                            from:from
                              to:SPKDownloadStateCancelled
                          update:^(SPKDownloadMutableItemSnapshot *snap) {
-                             snap.error = SPKDownloadError(SPKDownloadErrorCancelled, @"Download cancelled.", nil);
+                             snap.error = SPKDownloadError(SPKDownloadErrorCancelled, SPKL(@"DOWNLOADS_SCHEDULER_DOWNLOAD_CANCELLED_ERROR"), nil);
                              snap.progress = 1.0;
-                             snap.detail = @"Cancelled";
+                             snap.detail = SPKL(@"DOWNLOADS_SCHEDULER_CANCELLED_LABEL");
                          }]) {
         item.state = SPKDownloadStateCancelled;
-        item.error = SPKDownloadError(SPKDownloadErrorCancelled, @"Download cancelled.", nil);
+        item.error = SPKDownloadError(SPKDownloadErrorCancelled, SPKL(@"DOWNLOADS_SCHEDULER_DOWNLOAD_CANCELLED_ERROR"), nil);
         item.progress = 1.0;
         item.detail = @"Cancelled";
         [job recomputeDerivedState];

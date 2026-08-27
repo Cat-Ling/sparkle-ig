@@ -397,9 +397,11 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
 
     NSMutableArray<UIBarButtonItem *> *trailingItems = [NSMutableArray array];
     if (self.showsLanguageSelector) {
-        [trailingItems addObject:SPKMediaChromeTopBarMenuButtonItem(@"translate",
-                                                                    SPKLanguageMenu(),
-                                                                    SPKL(@"LANGUAGE_TITLE"))];
+        [trailingItems addObject:SPKMediaChromeTopBarButtonItemWithTint(@"translate",
+                                                                        self,
+                                                                        @selector(showLanguagePicker),
+                                                                        [SPKUtils SPKColor_InstagramPrimaryText],
+                                                                        SPKL(@"LANGUAGE_TITLE"))];
     }
     if (self.defersRestartPrompt) {
         UIBarButtonItem *applyItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check",
@@ -415,6 +417,10 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
         self.applyRestartItem = nil;
     }
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, trailingItems);
+}
+
+- (void)showLanguagePicker {
+    SPKPresentLanguagePicker(self);
 }
 
 - (void)setupSearchController {

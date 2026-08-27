@@ -68,7 +68,7 @@ static NSString *SPKDMCurrentUserPK(void) {
 // there's no dedicated "All" chip. Index maps to an explicit kind so chip order
 // is decoupled from the enum's numeric values.
 static NSArray<NSString *> *SPKDMChipTitles(void) {
-    return @[ SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT"), @"Photo", @"Video", SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT"), @"GIF", @"Sticker", SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SHARES_TEXT"), @"Link", SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION") ];
+    return @[ SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT"), SPKL(@"COMMON_MEDIA_TYPE_PHOTO"), SPKL(@"COMMON_MEDIA_TYPE_VIDEO"), SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT"), SPKL(@"COMMON_MEDIA_TYPE_GIF"), SPKL(@"COMMON_MEDIA_TYPE_STICKER"), SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SHARES_TEXT"), SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_LINK_TEXT"), SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION") ];
 }
 static NSArray<NSString *> *SPKDMChipSymbols(void) {
     return @[ @"message", @"photo", @"video", @"voice", @"gif", @"sticker", @"shares", @"link", @"reactions" ];

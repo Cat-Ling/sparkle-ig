@@ -15,7 +15,7 @@
         descriptor = [SPKAutoSaveSurfaceDescriptor new];
         descriptor.filter = SPKStoryAutoSaveFilterConfig();
         descriptor.title = SPKL(@"STORIES_OTHER_STORIES_TITLE");
-        descriptor.masterTitle = @"Auto-Save Stories";
+        descriptor.masterTitle = SPKL(@"STORIES_STORY_AUTO_SAVE_AUTO_SAVE_STORIES_TEXT");
         descriptor.listIcon = @"users";
         descriptor.listProvider = ^UIViewController * {
             return SPKStoryAutoSaveListViewController();

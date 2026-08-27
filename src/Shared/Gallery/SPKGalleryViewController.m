@@ -780,7 +780,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
         subtitle = SPKL(@"GALLERY_GALLERY_PICKER_TRY_ADJUSTING_FILTERS_TEXT");
     } else if (folderName.length > 0) {
         title = SPKL(@"GALLERY_GALLERY_PICKER_FOLDER_EMPTY_TEXT");
-        subtitle = [NSString stringWithFormat:@"Media you save to “%@” will appear here.", folderName];
+        subtitle = [NSString stringWithFormat:SPKL(@"GALLERY_FOLDER_EMPTY_SUBTITLE_FORMAT"), folderName];
     } else {
         title = SPKL(@"GALLERY_GALLERY_NO_FILES_GALLERY_TEXT");
         subtitle = SPKL(@"GALLERY_GALLERY_MEDIA_SAVE_SPARKLE_APPEAR_HERE_TEXT");
@@ -1311,7 +1311,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 }
 
 - (void)showGalleryOpenFailureMessage:(NSString *)title actionIdentifier:(NSString *)actionIdentifier {
-    SPKNotify(actionIdentifier, title, @"The original content may no longer exist.", @"error_filled", SPKNotificationToneError);
+    SPKNotify(actionIdentifier, title, SPKL(@"COMMON_ORIGINAL_CONTENT_UNAVAILABLE_TOAST"), @"error_filled", SPKNotificationToneError);
 }
 
 - (void)dismissGalleryForOriginOpenWithCompletion:(void (^)(void))completion {
@@ -1328,10 +1328,22 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 }
 
 - (void)openOriginalPostForFile:(SPKGalleryFile *)file {
-    NSString *noun = [[file openOriginalActionTitle] hasPrefix:@"Open "]
-                         ? [[file openOriginalActionTitle] substringFromIndex:5]
-                         : SPKL(@"GALLERY_GALLERY_ORIGINAL_POST_TEXT");
-    NSString *lowerNoun = noun.lowercaseString;
+    NSString *openedTitle = nil;
+    NSString *failureTitle = nil;
+    switch ((SPKGallerySource)file.source) {
+    case SPKGallerySourceStories:
+        openedTitle = SPKL(@"GALLERY_OPENED_ORIGINAL_STORY_TOAST");
+        failureTitle = SPKL(@"GALLERY_UNABLE_OPEN_ORIGINAL_STORY_TOAST");
+        break;
+    case SPKGallerySourceReels:
+        openedTitle = SPKL(@"GALLERY_OPENED_ORIGINAL_REEL_TOAST");
+        failureTitle = SPKL(@"GALLERY_UNABLE_OPEN_ORIGINAL_REEL_TOAST");
+        break;
+    default:
+        openedTitle = SPKL(@"MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_OPENED_ORIGINAL_POST_TEXT");
+        failureTitle = SPKL(@"GALLERY_UNABLE_OPEN_ORIGINAL_POST_TOAST");
+        break;
+    }
     __weak __typeof(self) weakSelf = self;
     // The Gallery stays up: the post is pushed over it, so it is still here when
     // the post is closed. Dismissing is only the fallback for a build where the
@@ -1340,13 +1352,13 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                                                fromViewController:self
                                                    legacyFallback:^{
                                                        [weakSelf dismissGalleryForOriginOpenWithCompletion:^{
-                                                           SPKNotify(kSPKNotificationGalleryOpenOriginal, [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_OPENED_VALUE_FORMAT"), lowerNoun], nil, @"external_link", SPKNotificationToneInfo);
+                                                           SPKNotify(kSPKNotificationGalleryOpenOriginal, openedTitle, nil, @"external_link", SPKNotificationToneInfo);
                                                        }];
                                                    }
                                                         onDismiss:nil]) {
         // Nothing to announce: the post is on screen.
     } else {
-        [self showGalleryOpenFailureMessage:[NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_UNABLE_OPEN_VALUE_FORMAT"), lowerNoun] actionIdentifier:kSPKNotificationGalleryOpenOriginal];
+        [self showGalleryOpenFailureMessage:failureTitle actionIdentifier:kSPKNotificationGalleryOpenOriginal];
     }
 }
 
@@ -1361,9 +1373,9 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                                                   if (success) {
                                                       // Quiet when a link was just made: that toast already said it.
                                                       if (!didLink)
-                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil, @"user_circle", SPKNotificationToneForIconResource(@"user_circle"));
+                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, SPKL(@"COMMON_OPENED_PROFILE_TOAST"), nil, @"user_circle", SPKNotificationToneForIconResource(@"user_circle"));
                                                   } else {
-                                                      [weakSelf showGalleryOpenFailureMessage:@"Unable to open profile" actionIdentifier:kSPKNotificationGalleryOpenProfile];
+                                                      [weakSelf showGalleryOpenFailureMessage:SPKL(@"COMMON_UNABLE_OPEN_PROFILE_TOAST") actionIdentifier:kSPKNotificationGalleryOpenProfile];
                                                   }
                                               }];
 }
@@ -1620,7 +1632,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                                                                                       }
                                                                                   }
                                                                                   if (firstError) {
-                                                                                      SPKNotify(kSPKNotificationGalleryDeleteSelected, @"Failed to delete", firstError.localizedDescription, @"error_filled", SPKNotificationToneError);
+                                                                                      SPKNotify(kSPKNotificationGalleryDeleteSelected, SPKL(@"COMMON_DELETE_FAILED_TOAST"), firstError.localizedDescription, @"error_filled", SPKNotificationToneError);
                                                                                       return;
                                                                                   }
                                                                                   SPKNotify(kSPKNotificationGalleryDeleteSelected, SPKL(@"GALLERY_GALLERY_DELETED_SELECTED_FILES_TEXT"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -1751,9 +1763,9 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                                                                                                                                  NSError *err;
                                                                                                                                  [file removeWithError:&err];
                                                                                                                                  if (err) {
-                                                                                                                                     SPKNotify(kSPKNotificationGalleryDeleteFile, @"Failed to delete", err.localizedDescription, @"error_filled", SPKNotificationToneError);
+                                                                                                                                     SPKNotify(kSPKNotificationGalleryDeleteFile, SPKL(@"COMMON_DELETE_FAILED_TOAST"), err.localizedDescription, @"error_filled", SPKNotificationToneError);
                                                                                                                                  } else {
-                                                                                                                                     SPKNotify(kSPKNotificationGalleryDeleteFile, @"Deleted from Gallery", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+                                                                                                                                     SPKNotify(kSPKNotificationGalleryDeleteFile, SPKL(@"GALLERY_DELETED_FROM_GALLERY_TOAST"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
                                                                                                                                  }
                                                                                                                              }],
                                                                                                ]];
@@ -2048,7 +2060,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 - (void)trimFile:(SPKGalleryFile *)file {
     NSURL *url = [file fileURL];
     if (!url || ![[NSFileManager defaultManager] fileExistsAtPath:url.path]) {
-        SPKNotify(@"spk.trim.gallery", @"Cannot trim", @"The original file is missing.", @"error_filled", SPKNotificationToneError);
+        SPKNotify(@"spk.trim.gallery", SPKL(@"MEDIA_TRIM_CANNOT_TRIM_TOAST"), SPKL(@"MEDIA_TRIM_ORIGINAL_FILE_MISSING_TOAST"), @"error_filled", SPKNotificationToneError);
         return;
     }
     SPKTrimConfiguration *config = (file.mediaType == SPKGalleryMediaTypeAudio)
@@ -2070,7 +2082,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
                           ? [UIImage imageWithContentsOfFile:url.path]
                           : nil;
     if (!source) {
-        SPKNotify(@"spk.photoedit.gallery", SPKL(@"GALLERY_GALLERY_CANNOT_EDIT_TEXT"), @"The original file is missing.", @"error_filled", SPKNotificationToneError);
+        SPKNotify(@"spk.photoedit.gallery", SPKL(@"GALLERY_GALLERY_CANNOT_EDIT_TEXT"), SPKL(@"MEDIA_TRIM_ORIGINAL_FILE_MISSING_TOAST"), @"error_filled", SPKNotificationToneError);
         return;
     }
     __weak typeof(self) weakSelf = self;

@@ -104,20 +104,21 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 + (unsigned long long)cacheSizeBytes;
 + (NSString *)formattedCacheSize;
 
-/// Time-only date-format component ("HH:mm" or "h:mm a") matching the device's
-/// 12/24-hour clock setting. Use it to compose "<date> at <time>" strings so
-/// they follow the user's preference automatically (no in-app setting).
-+ (NSString *)spk_localizedTimeComponent;
+/// Locale used for Sparkle-owned display formatting. Explicit overrides use the
+/// selected Sparkle language; System Default preserves Instagram/system region.
++ (NSLocale *)spk_activeFormattingLocale;
 
-/// Month/day date-format component ordered for the current locale (e.g. "MMM d"
-/// in en_US, "d MMM" in most others), optionally including the year. Pair with
-/// spk_localizedTimeComponent so dates follow the user's regional format.
-+ (NSString *)spk_localizedDateComponentIncludingYear:(BOOL)includeYear;
+/// Locale-aware absolute display strings. Combined date/time formatting uses a
+/// single ICU skeleton so each language supplies its own order, punctuation and
+/// joiner instead of source code inserting an English word such as "at".
++ (nullable NSString *)spk_formattedTime:(nullable NSDate *)date;
++ (nullable NSString *)spk_formattedDate:(nullable NSDate *)date includingYear:(BOOL)includeYear;
++ (nullable NSString *)spk_formattedDateTime:(nullable NSDate *)date includingYear:(BOOL)includeYear;
 
 /// Recursively extracts the posted date (taken_at, created_at, upload_time, etc.) from an Instagram media object.
 + (nullable NSDate *)postedDateFromMediaObject:(nullable id)media;
 
-/// Formats a date into a localized date-and-time header string (e.g. "Jul 18, 2026 at 5:30 PM").
+/// Backward-compatible full date/time header using the shared formatter.
 + (nullable NSString *)spk_formattedDateHeader:(nullable NSDate *)date;
 
 

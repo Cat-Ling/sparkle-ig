@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryCoreDataStack.h"
 #import <objc/runtime.h>
 #import "../../Utils.h"
@@ -521,7 +522,7 @@ static void SPKGalleryRunOnMain(void (^block)(void)) {
             *error = [NSError errorWithDomain:@"com.sparkle.gallery"
                                          code:1
                                      userInfo:@{
-                                         NSLocalizedDescriptionKey : @"This backup's gallery database was created by a Sparkle version whose format cannot be read by this build.",
+                                         NSLocalizedDescriptionKey : SPKL(@"GALLERY_BACKUP_UNREADABLE_FORMAT_ERROR"),
                                          NSUnderlyingErrorKey : migratingError ?: readOnlyError
                                      }];
         }

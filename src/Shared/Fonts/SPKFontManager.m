@@ -103,29 +103,33 @@ static BOOL SPKFontPathHasFontExtension(NSString *path) {
 /// A readable style name for a face whose file declares none, so the picker never
 /// shows a blank label. Deliberately coarse: it only has the weight to go on.
 static NSString *SPKFontDerivedStyleName(CGFloat weight, BOOL italic) {
-    NSString *name = @"Regular";
+    // Regular is tracked separately because its italic form is just "Italic", not
+    // "Regular Italic". Comparing the resolved (localized) name would break that.
+    BOOL isRegular = NO;
+    NSString *name;
     if (weight <= -0.6)
-        name = @"Ultra Light";
+        name = SPKL(@"FONT_STYLE_ULTRA_LIGHT");
     else if (weight <= -0.35)
-        name = @"Thin";
+        name = SPKL(@"FONT_STYLE_THIN");
     else if (weight <= -0.15)
-        name = @"Light";
-    else if (weight <= 0.1)
-        name = @"Regular";
-    else if (weight <= 0.25)
-        name = @"Medium";
+        name = SPKL(@"FONT_STYLE_LIGHT");
+    else if (weight <= 0.1) {
+        name = SPKL(@"FONT_STYLE_REGULAR");
+        isRegular = YES;
+    } else if (weight <= 0.25)
+        name = SPKL(@"FONT_STYLE_MEDIUM");
     else if (weight <= 0.35)
-        name = @"Semibold";
+        name = SPKL(@"FONT_STYLE_SEMIBOLD");
     else if (weight <= 0.5)
-        name = @"Bold";
+        name = SPKL(@"FONT_STYLE_BOLD");
     else if (weight <= 0.6)
-        name = @"Heavy";
+        name = SPKL(@"FONT_STYLE_HEAVY");
     else
-        name = @"Black";
+        name = SPKL(@"FONT_STYLE_BLACK");
 
     if (!italic)
         return name;
-    return [name isEqualToString:@"Regular"] ? @"Italic" : [name stringByAppendingString:@" Italic"];
+    return isRegular ? SPKL(@"FONT_STYLE_ITALIC") : [NSString stringWithFormat:SPKL(@"FONT_STYLE_ITALIC_VARIANT_FORMAT"), name];
 }
 
 /// Normalized weight (-1…1), slant, and declared style name of a registered face,
@@ -181,7 +185,7 @@ static NSArray<NSDictionary *> *SPKFontFacesForFamily(NSString *family) {
             @"name" : name,
             @"weight" : @(faceWeight),
             @"italic" : @(faceItalic),
-            @"style" : faceStyle ?: @"Regular",
+            @"style" : faceStyle ?: SPKL(@"FONT_STYLE_REGULAR"),
         }];
     }
 

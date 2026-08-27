@@ -683,7 +683,7 @@ static NSString *SPKMediaMegapixelString(NSInteger width, NSInteger height) {
         return nil;
     if (mp < 0.1)
         return SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MEGAPIXELS_TEXT");
-    return [NSString stringWithFormat:@"%.1f Megapixels", mp];
+    return [NSString stringWithFormat:SPKL(@"MEDIA_DOWNLOAD_QUALITY_MEGAPIXELS_FORMAT"), mp];
 }
 
 static NSString *SPKMediaAspectRatioString(NSInteger width, NSInteger height) {
@@ -759,11 +759,11 @@ static NSString *SPKMediaQualityInfoForOption(SPKMediaOption *option) {
         [lines addObject:option.subtitle];
     if (option.primaryURL.absoluteString.length > 0)
         [lines
-            addObject:[NSString stringWithFormat:@"URL: %@",
+            addObject:[NSString stringWithFormat:SPKL(@"MEDIA_DOWNLOAD_QUALITY_URL_FORMAT"),
                                                  option.primaryURL.absoluteString]];
     if (option.secondaryURL.absoluteString.length > 0)
         [lines addObject:[NSString
-                             stringWithFormat:@"Audio URL: %@",
+                             stringWithFormat:SPKL(@"MEDIA_DOWNLOAD_QUALITY_AUDIO_URL_FORMAT"),
                                               option.secondaryURL.absoluteString]];
     return [lines componentsJoinedByString:@"\n"];
 }
@@ -868,30 +868,30 @@ SPKMediaBuildPhotoOptions(id mediaObject, NSURL *fallbackURL,
         NSString *resolution =
             (width > 0 && height > 0)
                 ? [NSString stringWithFormat:@"%ld×%ld", (long)width, (long)height]
-                : (SPKMediaResolutionLabel(width, height) ?: @"Image");
+                : (SPKMediaResolutionLabel(width, height) ?: SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_IMAGE_TEXT"));
 
         NSString *tier = nil;
         if (isWeb) {
             NSInteger itemLongEdge = MAX(width, height);
             if (maxWebLongEdge > 0 && itemLongEdge >= (NSInteger)(maxWebLongEdge * 0.9)) {
-                tier = @"Max";
+                tier = SPKL(@"MENU_MAX");
             } else if (itemLongEdge >= 1080) {
-                tier = @"High";
+                tier = SPKL(@"MENU_HIGH");
             } else if (itemLongEdge >= 720) {
-                tier = @"Medium";
+                tier = SPKL(@"MENU_MEDIUM");
             } else if (itemLongEdge > 0) {
-                tier = @"Low";
+                tier = SPKL(@"MENU_LOW");
             } else {
-                tier = @"Max";
+                tier = SPKL(@"MENU_MAX");
             }
         } else if (maxMobileLongEdge > 0) {
             double fraction = (double)MAX(width, height) / (double)maxMobileLongEdge;
             if (fraction >= 0.9) {
-                tier = @"High";
+                tier = SPKL(@"MENU_HIGH");
             } else if (fraction >= 0.5) {
-                tier = @"Medium";
+                tier = SPKL(@"MENU_MEDIUM");
             } else {
-                tier = @"Low";
+                tier = SPKL(@"MENU_LOW");
             }
         }
 
@@ -940,10 +940,10 @@ SPKMediaBuildProgressiveVideoOptions(id mediaObject, NSURL *fallbackURL,
         option.bandwidth = [variant[@"bandwidth"] integerValue];
         option.duration = duration;
         option.title =
-            SPKMediaResolutionLabel(option.width, option.height) ?: @"Video";
+            SPKMediaResolutionLabel(option.width, option.height) ?: SPKL(@"COMMON_MEDIA_TYPE_VIDEO");
         option.subtitle =
             SPKMediaSubtitle(option.width, option.height, option.bandwidth,
-                             duration, nil, @"progressive");
+                             duration, nil, SPKL(@"MEDIA_DOWNLOAD_QUALITY_PROGRESSIVE_LABEL"));
         option.selectable = YES;
         option.qualityInfo = SPKMediaQualityInfoForOption(option);
         [options addObject:option];
@@ -1002,7 +1002,7 @@ SPKMediaBuildMergedDashOptions(NSArray<SPKDashRepresentation *> *videoReps,
         option.subtitle =
             SPKMediaSubtitle(videoRep.width, videoRep.height,
                              videoRep.bandwidth + bestAudio.bandwidth, duration,
-                             nil, bestAudio.url ? @"video + audio" : @"video");
+                             nil, bestAudio.url ? SPKL(@"MEDIA_DOWNLOAD_QUALITY_VIDEO_AUDIO_SECTION") : SPKL(@"COMMON_MEDIA_TYPE_VIDEO"));
         option.selectable = ffmpegAvailable;
         option.qualityInfo = SPKMediaQualityInfoForOption(option);
         [options addObject:option];
@@ -1170,7 +1170,7 @@ static SPKMediaAnalysis *SPKMediaAnalyze(id mediaObject, NSURL *photoURL,
         [photoSections addObject:SPKMediaSection(SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MOBILE_API_TEXT"), mobilePhotoOptions)];
     }
     if (photoSections.count == 0 && photoOptions.count > 0) {
-        [photoSections addObject:SPKMediaSection(@"Photos", photoOptions)];
+        [photoSections addObject:SPKMediaSection(SPKL(@"MEDIA_DOWNLOAD_QUALITY_PHOTOS_SECTION"), photoOptions)];
     }
     analysis.photoSections = photoSections;
 
@@ -1190,11 +1190,11 @@ static SPKMediaAnalysis *SPKMediaAnalyze(id mediaObject, NSURL *photoURL,
     if (progressiveVideoOptions.count > 0)
         [sections addObject:SPKMediaSection(SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_READY_PLAY_TEXT"), progressiveVideoOptions)];
     if (mergedOptions.count > 0)
-        [sections addObject:SPKMediaSection(@"Video + Audio", mergedOptions)];
+        [sections addObject:SPKMediaSection(SPKL(@"MEDIA_DOWNLOAD_QUALITY_VIDEO_AUDIO_SECTION"), mergedOptions)];
     if (videoOnlyOptions.count > 0)
         [sections addObject:SPKMediaSection(SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_ONLY_TEXT"), videoOnlyOptions)];
     if (audioOptions.count > 0 && includeAudioOptions)
-        [sections addObject:SPKMediaSection(@"Audio Only", audioOptions)];
+        [sections addObject:SPKMediaSection(SPKL(@"MEDIA_DOWNLOAD_QUALITY_AUDIO_ONLY_SECTION"), audioOptions)];
     analysis.videoSections = sections;
 
     return analysis;
@@ -1785,7 +1785,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 
     if ([SPKUtils getBoolPref:@"downloads_adv_encoding"]) {
         [sections addObject:SPKTopicSection(
-                                @"Video",
+                                SPKL(@"COMMON_MEDIA_TYPE_VIDEO"),
                                 @[
                                     [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_CODEC_TEXT")
                                                          subtitle:nil
@@ -1804,7 +1804,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 
         [sections
             addObject:SPKTopicSection(
-                          @"Quality",
+                          SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"),
                           @[
                               [SPKSetting
                                   textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CRF_TEXT")
@@ -1825,7 +1825,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 
         [sections
             addObject:SPKTopicSection(
-                          @"Audio",
+                          SPKL(@"COMMON_MEDIA_TYPE_AUDIO"),
                           @[
                               [SPKSetting
                                   textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_BITRATE_TEXT")
@@ -1842,7 +1842,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
         [sections
             addObject:
                 SPKTopicSection(
-                    @"Advanced",
+                    SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_ADVANCED_TEXT"),
                     @[
                         [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PIXEL_FORMAT")
                                              subtitle:nil
@@ -1897,7 +1897,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
         [sections
             addObject:
                 SPKTopicSection(
-                    @"Video", @[ [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ENCODING_SPEED_TEXT")
+                    SPKL(@"COMMON_MEDIA_TYPE_VIDEO"), @[ [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ENCODING_SPEED_TEXT")
                                                       subtitle:nil
                                                           menu:[self speedMenu]] ],
                     SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CONTROLS_LIBX264_ENCODING_EFFORT_SLOWER_PRESETS_TAKE_LONGER_BUT_TEXT"))];
@@ -1920,7 +1920,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                                         defaultsKey:@"downloads_adv_encoding"] ],
             SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_EXPOSES_CODEC_PRESET_BITRATE_CRF_RESOLUTION_AUDIO_TEXT")),
         SPKTopicSection(
-            @"Video",
+            SPKL(@"COMMON_MEDIA_TYPE_VIDEO"),
             @[
                 [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ENCODING_SPEED_TEXT")
                                      subtitle:nil
@@ -1940,7 +1940,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
             ],
             SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CONTROLS_LIBX264_ENCODING_EFFORT_SLOWER_PRESETS_TAKE_LONGER_BUT_TEXT")),
         SPKTopicSection(
-            @"Quality",
+            SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"),
             @[
                 [SPKSetting textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CRF_TEXT")
                                        placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
@@ -1957,7 +1957,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
             ],
             nil),
         SPKTopicSection(
-            @"Audio",
+            SPKL(@"COMMON_MEDIA_TYPE_AUDIO"),
             @[
                 [SPKSetting
                     textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_BITRATE_TEXT")
@@ -1970,7 +1970,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
             ],
             nil),
         SPKTopicSection(
-            @"Advanced",
+            SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_ADVANCED_TEXT"),
             @[
                 [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PIXEL_FORMAT")
                                      subtitle:nil
@@ -1986,10 +1986,10 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 - (UIMenu *)speedMenu {
     return [self buildMenuForPref:@"downloads_encoding_speed"
                             items:@[
-                                @{@"value" : @"ultrafast", @"label" : @"Ultrafast"},
-                                @{@"value" : @"faster", @"label" : @"Faster"},
-                                @{@"value" : @"medium", @"label" : @"Medium"},
-                                @{@"value" : @"slower", @"label" : @"Slower"}
+                                @{@"value" : @"ultrafast", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_ULTRAFAST_LABEL")},
+                                @{@"value" : @"faster", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_FASTER_LABEL")},
+                                @{@"value" : @"medium", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_MEDIUM_LABEL")},
+                                @{@"value" : @"slower", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_SLOWER_LABEL")}
                             ]];
 }
 
@@ -1998,21 +1998,21 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
         buildMenuForPref:@"downloads_encoding_vid_codec"
                    items:@[
                        @{@"value" : @"videotoolbox", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEOTOOLBOX_TEXT")},
-                       @{@"value" : @"libx264", @"label" : @"libx264"}
+                       @{@"value" : @"libx264", @"label" : @"libx264"} // SPK_I18N_IGNORE: codec identifier
                    ]];
 }
 
 - (UIMenu *)presetMenu {
     return [self buildMenuForPref:@"downloads_encoding_preset"
                             items:@[
-                                @{@"value" : @"ultrafast", @"label" : @"Ultrafast"},
+                                @{@"value" : @"ultrafast", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_ULTRAFAST_LABEL")},
                                 @{@"value" : @"superfast", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_SUPERFAST_TEXT")},
                                 @{@"value" : @"veryfast", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VERY_FAST_TEXT")},
-                                @{@"value" : @"faster", @"label" : @"Faster"},
+                                @{@"value" : @"faster", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_FASTER_LABEL")},
                                 @{@"value" : @"fast", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_TEXT")},
-                                @{@"value" : @"medium", @"label" : @"Medium"},
+                                @{@"value" : @"medium", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_MEDIUM_LABEL")},
                                 @{@"value" : @"slow", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_SLOW_TEXT")},
-                                @{@"value" : @"slower", @"label" : @"Slower"},
+                                @{@"value" : @"slower", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PRESET_SLOWER_LABEL")},
                                 @{@"value" : @"veryslow", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VERY_SLOW_TEXT")}
                             ]];
 }
@@ -2022,14 +2022,14 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                             items:@[
                                 @{@"value" : @"baseline", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_BASELINE_TEXT")},
                                 @{@"value" : @"main", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MAIN_TEXT")},
-                                @{@"value" : @"high", @"label" : @"High"}
+                                @{@"value" : @"high", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PROFILE_HIGH_LABEL")}
                             ]];
 }
 
 - (UIMenu *)levelMenu {
     return [self buildMenuForPref:@"downloads_encoding_h264_level"
                             items:@[
-                                @{@"value" : @"auto", @"label" : @"Auto"},
+                                @{@"value" : @"auto", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_LEVEL_AUTO_LABEL")},
                                 @{@"value" : @"3.1", @"label" : @"3.1"},
                                 @{@"value" : @"4.0", @"label" : @"4.0"},
                                 @{@"value" : @"4.1", @"label" : @"4.1"},
@@ -2040,17 +2040,17 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 - (UIMenu *)maxResMenu {
     return [self buildMenuForPref:@"downloads_encoding_max_resolution"
                             items:@[
-                                @{@"value" : @"original", @"label" : @"Original"},
-                                @{@"value" : @"480", @"label" : @"480p"},
-                                @{@"value" : @"720", @"label" : @"720p"},
-                                @{@"value" : @"1080", @"label" : @"1080p"}
+                                @{@"value" : @"original", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_MAX_RESOLUTION_ORIGINAL_LABEL")},
+                                @{@"value" : @"480", @"label" : @"480p"}, // SPK_I18N_IGNORE: resolution label
+                                @{@"value" : @"720", @"label" : @"720p"}, // SPK_I18N_IGNORE: resolution label
+                                @{@"value" : @"1080", @"label" : @"1080p"} // SPK_I18N_IGNORE: resolution label
                             ]];
 }
 
 - (UIMenu *)audioChannelsMenu {
     return [self buildMenuForPref:@"downloads_encoding_audio_channels"
                             items:@[
-                                @{@"value" : @"original", @"label" : @"Original"},
+                                @{@"value" : @"original", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_AUDIO_CHANNELS_ORIGINAL_LABEL")},
                                 @{@"value" : @"stereo", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_STEREO_TEXT")},
                                 @{@"value" : @"mono", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MONO_TEXT")}
                             ]];
@@ -2059,9 +2059,9 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 - (UIMenu *)pixelFormatMenu {
     return [self buildMenuForPref:@"downloads_encoding_pixel_format"
                             items:@[
-                                @{@"value" : @"default", @"label" : @"Default"},
-                                @{@"value" : @"yuv420p", @"label" : @"yuv420p"},
-                                @{@"value" : @"nv12", @"label" : @"nv12"}
+                                @{@"value" : @"default", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PIXEL_FORMAT_DEFAULT_LABEL")},
+                                @{@"value" : @"yuv420p", @"label" : @"yuv420p"}, // SPK_I18N_IGNORE: pixel-format identifier
+                                @{@"value" : @"nv12", @"label" : @"nv12"} // SPK_I18N_IGNORE: pixel-format identifier
                             ]];
 }
 
@@ -2176,7 +2176,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
     titleForFooterInSection:(NSInteger)section {
     (void)tableView;
     SPKMediaOptionSection *infoSection = self.sections[section];
-    if ([infoSection.title isEqualToString:@"Video + Audio"] &&
+    if (infoSection.options.firstObject.kind == SPKMediaOptionKindVideoDashMerged &&
         !self.analysis.ffmpegAvailable) {
         return SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FFMPEGKIT_NOT_AVAILABLE_ACTIVE_BUILD_SO_MERGED_DASH_ROWS_TEXT");
     }
@@ -2426,10 +2426,10 @@ SPKMediaCopyLocalFileToPasteboard(NSURL *fileURL, NSError **errorOut,
         notificationIdentifier.length > 0 ? notificationIdentifier : nil;
     if (!fileURL) {
         if (errorOut) {
-            *errorOut = [SPKUtils errorWithDescription:@"Nothing to copy"];
+            *errorOut = [SPKUtils errorWithDescription:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NOTHING_COPY_TEXT")];
         }
         if (showToast && identifier.length > 0) {
-            SPKNotify(identifier, @"Nothing to copy", nil, @"error_filled",
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NOTHING_COPY_TEXT"), nil, @"error_filled",
                       SPKNotificationToneError);
         }
         return nil;
@@ -2713,22 +2713,22 @@ static void SPKMediaPerformOptionDownload(
             return;
         }
         audioJob = [[SPKMediaSingleDownloadJob alloc] init];
-        report(0.46f, @"Downloading audio", 0, 0);
+        report(0.46f, SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_DOWNLOADING_AUDIO_TEXT"), 0, 0);
         [audioJob startWithURL:secondary
             defaultExtension:@"m4a"
             progress:^(double jobProgress, int64_t bytesWritten,
                        int64_t totalBytesExpected) {
-                report((float)(0.46 + (jobProgress * 0.22)), @"Downloading audio",
+                report((float)(0.46 + (jobProgress * 0.22)), SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_DOWNLOADING_AUDIO_TEXT"),
                        bytesWritten, totalBytesExpected);
             }
             completion:^(NSURL *audioFileURL, NSError *error) {
                 if (error || !audioFileURL) {
-                    fail(@"Audio download failed",
+                    fail(SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_AUDIO_DOWNLOAD_FAILED_TEXT"),
                          error.localizedDescription
                              ?: SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_UNABLE_DOWNLOAD_DASH_AUDIO_TEXT"));
                     return;
                 }
-                report(0.72f, @"Merging video and audio", 0, 0);
+                report(0.72f, SPKL(@"DOWNLOAD_PROGRESS_MERGING"), 0, 0);
                 [SPKMediaFFmpeg mergeVideoFileURL:videoFileURL
                     audioFileURL:audioFileURL
                     preferredBasename:basename
@@ -2738,8 +2738,8 @@ static void SPKMediaPerformOptionDownload(
                     sourceBitrate:bandwidth
                     progress:^(double mergeProgress, NSString *stage) {
                         NSString *title = [stage isEqualToString:@"re-encoding"]
-                                              ? @"Re-encoding"
-                                              : @"Merging video and audio";
+                                              ? SPKL(@"MEDIA_DOWNLOAD_QUALITY_REENCODING_PROGRESS")
+                                              : SPKL(@"DOWNLOAD_PROGRESS_MERGING");
                         report((float)(0.72 + (mergeProgress * 0.2)), title, 0, 0);
                     }
                     completion:^(NSURL *outputURL, NSError *error) {
@@ -2759,28 +2759,28 @@ static void SPKMediaPerformOptionDownload(
 
     if (optionKind == SPKMediaOptionKindAudioDash) {
         audioJob = [[SPKMediaSingleDownloadJob alloc] init];
-        report(0.1f, @"Downloading audio", 0, 0);
+        report(0.1f, SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_DOWNLOADING_AUDIO_TEXT"), 0, 0);
         [audioJob startWithURL:primaryURL
             defaultExtension:@"m4a"
             progress:^(double jobProgress, int64_t bytesWritten,
                        int64_t totalBytesExpected) {
-                report((float)(0.1 + (jobProgress * 0.65)), @"Downloading audio",
+                report((float)(0.1 + (jobProgress * 0.65)), SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_DOWNLOADING_AUDIO_TEXT"),
                        bytesWritten, totalBytesExpected);
             }
             completion:^(NSURL *audioFileURL, NSError *error) {
                 if (error || !audioFileURL) {
-                    fail(@"Audio download failed",
+                    fail(SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_AUDIO_DOWNLOAD_FAILED_TEXT"),
                          error.localizedDescription
                              ?: SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_UNABLE_DOWNLOAD_DASH_AUDIO_TEXT"));
                     return;
                 }
-                report(0.8f, @"Finalizing file", 0, 0);
+                report(0.8f, SPKL(@"MEDIA_DOWNLOAD_QUALITY_FINALIZING_FILE_PROGRESS"), 0, 0);
                 [SPKMediaFFmpeg extractAudioFileURL:audioFileURL
                     preferredBasename:basename
                     progress:^(double extractProgress, NSString *stage) {
                         NSString *title = [stage isEqualToString:@"re-encoding"]
-                                              ? @"Re-encoding"
-                                              : @"Finalizing file";
+                                              ? SPKL(@"MEDIA_DOWNLOAD_QUALITY_REENCODING_PROGRESS")
+                                              : SPKL(@"MEDIA_DOWNLOAD_QUALITY_FINALIZING_FILE_PROGRESS");
                         report((float)(0.8 + (extractProgress * 0.15)), title, 0, 0);
                     }
                     completion:^(NSURL *outputURL, NSError *error) {
@@ -2807,13 +2807,13 @@ static void SPKMediaPerformOptionDownload(
     double videoDownloadSpan =
         secondary ? 0.28 : (transcodeVideoOnly ? 0.33 : 0.7);
     videoJob = [[SPKMediaSingleDownloadJob alloc] init];
-    report(0.12f, @"Downloading video", 0, 0);
+    report(0.12f, SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_VIDEO_TEXT"), 0, 0);
     [videoJob startWithURL:primaryURL
         defaultExtension:@"mp4"
         progress:^(double jobProgress, int64_t bytesWritten,
                    int64_t totalBytesExpected) {
             report((float)(0.12 + (jobProgress * videoDownloadSpan)),
-                   @"Downloading video", bytesWritten, totalBytesExpected);
+                   SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_VIDEO_TEXT"), bytesWritten, totalBytesExpected);
         }
         completion:^(NSURL *videoFileURL, NSError *error) {
             if (error || !videoFileURL) {
@@ -2826,7 +2826,7 @@ static void SPKMediaPerformOptionDownload(
                     finishFile(videoFileURL);
                     return;
                 }
-                report(0.46f, @"Re-encoding video", 0, 0);
+                report(0.46f, SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_RE_ENCODING_VIDEO_TEXT"), 0, 0);
                 [SPKMediaFFmpeg mergeVideoFileURL:videoFileURL
                     audioFileURL:nil
                     preferredBasename:basename
@@ -2838,12 +2838,12 @@ static void SPKMediaPerformOptionDownload(
                         // Surface the true FFmpeg stage (Re-encoding / Normalizing /
                         // Finalizing) rather than a generic label.
                         report((float)(0.46 + (mergeProgress * 0.49)),
-                               stage.length > 0 ? stage : @"Re-encoding video", 0, 0);
+                               stage.length > 0 ? stage : SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_RE_ENCODING_VIDEO_TEXT"), 0, 0);
                     }
                     completion:^(NSURL *outputURL, NSError *mergeError) {
                         if (mergeError || !outputURL) {
                             fail(SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PROCESSING_FAILED_TEXT"), mergeError.localizedDescription
-                                                           ?: @"Unable to process video");
+                                                           ?: SPKL(@"MEDIA_DOWNLOAD_QUALITY_UNABLE_PROCESS_VIDEO_ERROR"));
                             return;
                         }
                         finishFile(outputURL);

@@ -779,7 +779,7 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
         UINotificationFeedbackGenerator *h = [[UINotificationFeedbackGenerator alloc] init];
         [h notificationOccurred:UINotificationFeedbackTypeSuccess];
     } else {
-        SPKNotify(kSPKNotificationGalleryImport, @"Couldn’t read that link",
+        SPKNotify(kSPKNotificationGalleryImport, SPKL(@"GALLERY_IMPORT_LINK_UNREADABLE_TOAST"),
                   SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_PASTE_POST_REEL_STORY_PROFILE_LINK_TEXT"), @"error_filled", SPKNotificationToneError);
     }
 }

@@ -18,6 +18,33 @@ static NSArray<NSString *> *SPKFilteredUniqueActionArray(NSArray *values, NSArra
     return SPKFilteredActionArray(values, supported);
 }
 
+static NSString *SPKDefaultSectionTitleKey(NSString *identifier) {
+    return @{
+        @"more" : @"MESSAGES_DELETED_MESSAGES_MORE_TEXT",
+        @"audio" : @"MESSAGES_DIRECT_MESSAGE_MENU_AUDIO_TITLE",
+        @"zoom" : @"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_ZOOM_TEXT",
+        @"copy" : @"FEED_COMMENT_ACTIONS_COPY_TEXT",
+        @"download" : @"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT",
+        @"bulk" : @"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_BULK_TEXT",
+    }[identifier];
+}
+
+// Before i18n, and during its first implementation, default section titles
+// were persisted as display text. Recognize a default in any shipped language
+// and resolve it again for the active language. Anything else is a real user
+// override and must remain exactly as entered.
+static void SPKRelocalizePersistedDefaultSectionTitle(SPKActionMenuSection *section) {
+    NSString *key = SPKDefaultSectionTitleKey(section.identifier);
+    if (key.length == 0 || section.title.length == 0)
+        return;
+    for (NSString *language in [SPKStrings supportedLanguages]) {
+        if ([section.title isEqualToString:[SPKStrings localized:key forLanguage:language]]) {
+            section.title = SPKL(key);
+            return;
+        }
+    }
+}
+
 NSString *SPKActionButtonTopicKeyForSource(SPKActionButtonSource source) {
     switch (source) {
     case SPKActionButtonSourceFeed:
@@ -40,7 +67,7 @@ NSString *SPKActionButtonTopicTitleForSource(SPKActionButtonSource source) {
     case SPKActionButtonSourceFeed:
         return SPKL(@"FEED_TITLE");
     case SPKActionButtonSourceReels:
-        return @"Reels";
+        return SPKL(@"REELS_TITLE");
     case SPKActionButtonSourceStories:
         return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKActionButtonSourceDirect:
@@ -327,8 +354,10 @@ NSArray<SPKActionMenuSection *> *SPKActionButtonDefaultSectionsForSource(SPKActi
         NSArray *storedSections = [stored[@"sections"] isKindOfClass:[NSArray class]] ? stored[@"sections"] : @[];
         for (NSDictionary *dictionary in storedSections) {
             SPKActionMenuSection *section = [SPKActionMenuSection sectionFromDictionary:dictionary];
-            if (section)
+            if (section) {
+                SPKRelocalizePersistedDefaultSectionTitle(section);
                 [configuration.sections addObject:section];
+            }
         }
         [configuration.disabledActions addObjectsFromArray:SPKFilteredActionArray(stored[@"disabled_actions"], configuration.supportedActions)];
         [configuration.unassignedActions addObjectsFromArray:SPKFilteredActionArray(stored[@"unassigned_actions"], configuration.supportedActions)];

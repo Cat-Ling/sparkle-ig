@@ -232,7 +232,7 @@ static void SPKDMPresentDownloadAudioActionsForViewModel(id viewModel) {
     UIViewController *presenter = topMostController();
     if (![SPKAudioDownloadCoordinator bestAudioURLFromMediaObject:viewModel]) {
         SPKNotify(kSPKNotificationDownloadShare,
-                  @"Could not find audio URL",
+                  SPKL(@"GENERAL_AUDIO_PAGE_DOWNLOAD_COULD_NOT_FIND_AUDIO_URL_TEXT"),
                   SPKL(@"MESSAGES_DIRECT_MESSAGE_MENU_REFRESH_THREAD_TRY_AGAIN_IF_URL_EXPIRED_TEXT"),
                   @"error_filled",
                   SPKNotificationToneError);

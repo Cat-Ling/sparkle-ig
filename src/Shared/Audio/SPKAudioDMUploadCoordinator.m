@@ -317,7 +317,7 @@ static void SPKAudioDMNotify(NSString *title, NSString *message, BOOL success) {
             self.progressView = nil;
         });
     } else {
-        SPKAudioDMNotify(@"Audio sent", SPKL(@"AUDIO_AUDIO_DMUPLOAD_COORDINATOR_UPLOADED_SELECTED_FILE_VOICE_NOTE_TEXT"), YES);
+        SPKAudioDMNotify(SPKL(@"AUDIO_AUDIO_DMUPLOAD_COORDINATOR_AUDIO_SENT_TEXT"), SPKL(@"AUDIO_AUDIO_DMUPLOAD_COORDINATOR_UPLOADED_SELECTED_FILE_VOICE_NOTE_TEXT"), YES);
     }
 }
 

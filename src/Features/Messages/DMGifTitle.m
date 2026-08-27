@@ -16,11 +16,15 @@
 /// comments toggle.
 static NSString *const kSPKDMGifTitlePref = @"msgs_gif_title";
 
-static NSString *const kSPKDMGifTitlePlaceholder = @"Looking up GIF title...";
+static NSString *SPKDMGifTitlePlaceholder(void) {
+    return SPKL(@"MESSAGES_GIF_TITLE_LOOKUP_PLACEHOLDER");
+}
 /// The placeholder row carries a subtitle purely so the label exists to be
 /// filled with the channel later — a row built without one has no second line
 /// to patch, which would force the author inline where it just truncates.
-static NSString *const kSPKDMGifTitleSubtitlePlaceholder = @"Tap to copy";
+static NSString *SPKDMGifTitleSubtitlePlaceholder(void) {
+    return SPKL(@"MESSAGES_GIF_TITLE_TAP_TO_COPY_SUBTITLE");
+}
 
 static id sSPKDMGifTitleMenuViewModel = nil;
 /// Menus opened for the current long-press, held weakly so a dismissed menu
@@ -152,9 +156,9 @@ static void SPKDMGifTitlePatchLabels(UIView *view, NSString *from, NSString *to)
 
 static void SPKDMGifTitleFillPlaceholder(NSString *title, NSString *subtitle) {
     for (UIView *view in sSPKDMGifTitleMenuViews) {
-        SPKDMGifTitlePatchLabels(view, kSPKDMGifTitlePlaceholder, title);
+        SPKDMGifTitlePatchLabels(view, SPKDMGifTitlePlaceholder(), title);
         if (subtitle.length > 0)
-            SPKDMGifTitlePatchLabels(view, kSPKDMGifTitleSubtitlePlaceholder, subtitle);
+            SPKDMGifTitlePatchLabels(view, SPKDMGifTitleSubtitlePlaceholder(), subtitle);
     }
 }
 
@@ -168,7 +172,7 @@ void SPKDMGifTitleRegisterMenuView(id menuView) {
 /// title as soon as the answer arrives, so the first long-press ends up showing
 /// the name too; tapping copies whatever has resolved by then.
 static id SPKDMGifTitleLookupRow(id templateElement, NSString *identifier) {
-    return SPKDirectPrismMenuElementWithSubtitle(templateElement, kSPKDMGifTitlePlaceholder, kSPKDMGifTitleSubtitlePlaceholder, SPKDMGifTitleIcon(), ^{
+    return SPKDirectPrismMenuElementWithSubtitle(templateElement, SPKDMGifTitlePlaceholder(), SPKDMGifTitleSubtitlePlaceholder(), SPKDMGifTitleIcon(), ^{
         [SPKGiphyMetadataResolver resolveMetadataForGifMediaId:identifier
                                                     completion:^(SPKGiphyMetadata *metadata) {
                                                         if (!metadata) {

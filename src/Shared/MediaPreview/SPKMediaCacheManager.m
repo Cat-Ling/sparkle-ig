@@ -176,7 +176,7 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
         if (completion) {
             completion(nil, [NSError errorWithDomain:@"SPKMediaCacheManager"
                                                 code:-1
-                                            userInfo:@{NSLocalizedDescriptionKey : @"Missing media item"}]);
+                                            userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_PREVIEW_MISSING_MEDIA_ITEM_ERROR")}]);
         }
         return;
     }
@@ -278,7 +278,7 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
         if (completion)
             completion(nil, [NSError errorWithDomain:@"SPKMediaCacheManager"
                                                 code:-4
-                                            userInfo:@{NSLocalizedDescriptionKey : @"Missing media item"}]);
+                                            userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_PREVIEW_MISSING_MEDIA_ITEM_ERROR")}]);
         return;
     }
 

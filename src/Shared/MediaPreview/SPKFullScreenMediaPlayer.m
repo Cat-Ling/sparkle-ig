@@ -45,16 +45,7 @@ static NSTimeInterval const kDismissFadeDuration = 0.18;
 
 // Absolute medium-style date ("8 Jul 2026") for the preview metadata overlay.
 static NSString *SPKPreviewMediumDateString(NSDate *date) {
-    if (!date)
-        return nil;
-    static NSDateFormatter *fmt;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        fmt = [[NSDateFormatter alloc] init];
-        fmt.dateStyle = NSDateFormatterMediumStyle;
-        fmt.timeStyle = NSDateFormatterNoStyle;
-    });
-    return [fmt stringFromDate:date];
+    return [SPKUtils spk_formattedDate:date includingYear:YES];
 }
 // The bottom toolbar is a real UIToolbar now, so the navigation controller
 // folds it into the safe area that AVPlayerViewController already respects. No
@@ -122,10 +113,10 @@ static NSString *SPKCopiedDownloadURLTitleForPlaybackSource(
     NSString *noun = nil;
     switch (playbackSource) {
     case SPKFullScreenPlaybackSourceStories:
-        noun = @"Story";
+        noun = SPKL(@"COMMON_MEDIA_TYPE_STORY");
         break;
     case SPKFullScreenPlaybackSourceReels:
-        noun = @"Reel";
+        noun = SPKL(@"COMMON_MEDIA_TYPE_REEL");
         break;
     case SPKFullScreenPlaybackSourceFeed:
     case SPKFullScreenPlaybackSourceProfile:
@@ -141,9 +132,8 @@ static NSString *SPKCopiedDownloadURLTitleForPlaybackSource(
 
     NSString *urlWord = plural ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_URLS_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_URL_TEXT");
     return noun.length > 0
-               ? [NSString
-                     stringWithFormat:@"%@ download %@ copied", noun, urlWord]
-               : [NSString stringWithFormat:@"Download %@ copied", urlWord];
+               ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_SOURCE_DOWNLOAD_URL_COPIED_FORMAT"), noun, urlWord]
+               : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_DOWNLOAD_URL_COPIED_FORMAT"), urlWord];
 }
 
 static UIViewController *
@@ -1339,7 +1329,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 - (void)showGalleryOpenFailureMessage:(NSString *)title
                      actionIdentifier:(NSString *)actionIdentifier {
     SPKNotify(actionIdentifier, title,
-              @"The original content may no longer exist.", @"error_filled",
+              SPKL(@"COMMON_ORIGINAL_CONTENT_UNAVAILABLE_TOAST"), @"error_filled",
               SPKNotificationToneError);
 }
 
@@ -1434,11 +1424,11 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                                                   if (success) {
                                                       // Quiet when a link was just made: that toast already said it.
                                                       if (!didLink)
-                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, @"Opened profile", nil,
+                                                          SPKNotify(kSPKNotificationGalleryOpenProfile, SPKL(@"COMMON_OPENED_PROFILE_TOAST"), nil,
                                                                     @"user_circle",
                                                                     SPKNotificationToneForIconResource(@"user_circle"));
                                                   } else {
-                                                      [weakSelf showGalleryOpenFailureMessage:@"Unable to open profile"
+                                                      [weakSelf showGalleryOpenFailureMessage:SPKL(@"COMMON_UNABLE_OPEN_PROFILE_TOAST")
                                                                              actionIdentifier:kSPKNotificationGalleryOpenProfile];
                                                   }
                                               }];
@@ -1506,7 +1496,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
     NSURL *url = item.resolvedFileURL ?: item.fileURL;
     if (!url || ![[NSFileManager defaultManager] fileExistsAtPath:url.path]) {
-        SPKNotify(@"spk.trim.preview", @"Cannot trim",
+        SPKNotify(@"spk.trim.preview", SPKL(@"MEDIA_TRIM_CANNOT_TRIM_TOAST"),
                   SPKL(@"MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_MEDIA_FILE_UNAVAILABLE_TEXT"), @"error_filled",
                   SPKNotificationToneError);
         return;
@@ -1758,7 +1748,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
     if (actionCount == 1) {
         NSString *resourceName = hasProfile ? @"user_circle" : @"external_link";
-        NSString *label = hasProfile ? @"Open Profile" : @"Open Original Post";
+        NSString *label = hasProfile ? SPKL(@"ALERT_ACTION_OPEN_PROFILE") : SPKL(@"ALERT_ACTION_OPEN_ORIGINAL_POST");
         _galleryOriginItem.image = SPKMediaChromeBottomBarIcon(resourceName);
         _galleryOriginItem.accessibilityLabel = label;
         _galleryOriginItem.menu = nil;
@@ -2670,7 +2660,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     NSError *err;
     [item.galleryFile removeWithError:&err];
     if (err) {
-        SPKNotify(kSPKNotificationMediaPreviewDeleteGallery, @"Failed to delete",
+        SPKNotify(kSPKNotificationMediaPreviewDeleteGallery, SPKL(@"COMMON_DELETE_FAILED_TOAST"),
                   err.localizedDescription, @"error_filled",
                   SPKNotificationToneError);
         return;
@@ -2693,7 +2683,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
     if ([self itemCount] == 0) {
         SPKNotify(kSPKNotificationMediaPreviewDeleteGallery,
-                  @"Deleted from Gallery", nil, @"circle_check_filled",
+                  SPKL(@"GALLERY_DELETED_FROM_GALLERY_TOAST"), nil, @"circle_check_filled",
                   SPKNotificationToneSuccess);
         [self closeTapped];
         return;
@@ -2721,7 +2711,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [self prepareViewControllerForDisplay:newVC];
     [self prepareAdjacentViewControllersAroundIndex:_currentIndex];
     [self updateUI];
-    SPKNotify(kSPKNotificationMediaPreviewDeleteGallery, @"Deleted from Gallery",
+    SPKNotify(kSPKNotificationMediaPreviewDeleteGallery, SPKL(@"GALLERY_DELETED_FROM_GALLERY_TOAST"),
               nil, @"circle_check_filled", SPKNotificationToneSuccess);
 }
 

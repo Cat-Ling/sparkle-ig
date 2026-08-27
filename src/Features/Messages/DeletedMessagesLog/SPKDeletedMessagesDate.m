@@ -9,6 +9,7 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateStyle = NSDateFormatterShortStyle;
         f.timeStyle = NSDateFormatterShortStyle;
     });
@@ -20,6 +21,7 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateStyle = NSDateFormatterMediumStyle;
         f.timeStyle = NSDateFormatterShortStyle;
     });
@@ -31,9 +33,10 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateFormat = [NSDateFormatter dateFormatFromTemplate:@"MMMd"
                                                        options:0
-                                                        locale:[NSLocale currentLocale]];
+                                                        locale:f.locale];
     });
     return f;
 }
@@ -43,6 +46,7 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateStyle = NSDateFormatterNoStyle;
         f.timeStyle = NSDateFormatterShortStyle;
     });

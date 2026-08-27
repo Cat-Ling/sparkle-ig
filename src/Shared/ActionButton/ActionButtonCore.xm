@@ -409,9 +409,9 @@ static SPKAudioSource SPKAudioSourceForActionSource(SPKActionButtonSource source
 static NSString *SPKDownloadURLNounForActionSource(SPKActionButtonSource source) {
     switch (source) {
     case SPKActionButtonSourceStories:
-        return @"Story";
+        return SPKL(@"COMMON_MEDIA_TYPE_STORY");
     case SPKActionButtonSourceReels:
-        return @"Reel";
+        return SPKL(@"COMMON_MEDIA_TYPE_REEL");
     case SPKActionButtonSourceFeed:
     case SPKActionButtonSourceProfile:
         return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_POST_TEXT");
@@ -424,12 +424,20 @@ static NSString *SPKDownloadURLNounForActionSource(SPKActionButtonSource source)
 }
 
 static NSString *SPKCopiedDownloadURLTitleForSource(SPKActionButtonSource source, BOOL plural) {
-    NSString *noun = SPKDownloadURLNounForActionSource(source);
     NSString *urlWord = plural ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_URLS_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_URL_TEXT");
-    if ([noun isEqualToString:@"Media"]) {
-        return [NSString stringWithFormat:@"Download %@ copied", urlWord];
+    // Sources whose noun is the generic "Media" read as a redundant "Media download
+    // URL copied", so they use the short form. Decided on the source, never by
+    // comparing the resolved noun, which is localized.
+    switch (source) {
+    case SPKActionButtonSourceStories:
+    case SPKActionButtonSourceReels:
+    case SPKActionButtonSourceFeed:
+    case SPKActionButtonSourceProfile:
+    case SPKActionButtonSourceInstants:
+        return [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_SOURCE_DOWNLOAD_URL_COPIED_FORMAT"), SPKDownloadURLNounForActionSource(source), urlWord];
+    default:
+        return [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_DOWNLOAD_URL_COPIED_FORMAT"), urlWord];
     }
-    return [NSString stringWithFormat:@"%@ download %@ copied", noun, urlWord];
 }
 
 static NSString *SPKProfileStringValue(id value) {
@@ -619,7 +627,7 @@ static NSString *SPKProfilePrivacyText(id user) {
     if (!privateValue)
         privateValue = SPKKVCObject(user, @"isPrivateAccount");
     if ([privateValue respondsToSelector:@selector(boolValue)]) {
-        return [privateValue boolValue] ? @"Private Profile" : @"Public Profile";
+        return [privateValue boolValue] ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_PRIVATE_PROFILE_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_PUBLIC_PROFILE_TEXT");
     }
 
     return nil;
@@ -2552,7 +2560,7 @@ void SPKArmPendingRepostFeedback(SPKActionButtonContext *context) {
 
     NSString *sourceValue = [NSString stringWithFormat:@"%ld", (long)context.source];
     SPKPendingRepostFeedback = @{
-        @"title" : @"Tapped repost button",
+        @"title" : SPKL(@"GENERAL_REPOST_TAPPED_TOAST"),
         @"iconResource" : @"ig_icon_reshare_outline_24",
         @"source" : sourceValue
     };
@@ -2591,7 +2599,7 @@ static SPKGallerySaveMetadata *SPKThumbnailMetadataFromEntryMetadata(SPKGalleryS
 
 static void SPKShowExtractedVideoCover(NSURL *videoURL, SPKGallerySaveMetadata *metadata, SPKActionButtonContext *context) {
     if (!videoURL) {
-        SPKNotify(kSPKNotificationViewThumbnail, @"Cover unavailable", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationViewThumbnail, SPKL(@"ACTION_BUTTON_COVER_UNAVAILABLE_TOAST"), nil, @"error_filled", SPKNotificationToneError);
         return;
     }
 
@@ -2605,7 +2613,7 @@ static void SPKShowExtractedVideoCover(NSURL *videoURL, SPKGallerySaveMetadata *
         CGImageRef imageRef = [generator copyCGImageAtTime:CMTimeMakeWithSeconds(0.0, 600) actualTime:NULL error:&error];
         if (!imageRef) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                SPKNotify(kSPKNotificationViewThumbnail, @"Cover unavailable", error.localizedDescription ?: @"", @"error_filled", SPKNotificationToneError);
+                SPKNotify(kSPKNotificationViewThumbnail, SPKL(@"ACTION_BUTTON_COVER_UNAVAILABLE_TOAST"), error.localizedDescription ?: @"", @"error_filled", SPKNotificationToneError);
             });
             return;
         }
@@ -3041,7 +3049,7 @@ static BOOL SPKExecuteCommonAction(NSString *identifier,
             return YES;
         }
 
-        SPKNotify(identifier, @"Opened settings", nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
+        SPKNotify(identifier, SPKL(@"COMMON_OPENED_SETTINGS_TOAST"), nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
         [SPKUtils showSettingsForTopicTitle:settingsTitle];
         return YES;
     }
@@ -3068,7 +3076,7 @@ static BOOL SPKExecuteToggleStoryAutoSaveUserRuleAction(SPKActionButtonContext *
     NSString *title = SPKStoryAutoSaveCurrentUserConfirmationTitle(storyContext);
     NSString *message = SPKStoryAutoSaveCurrentUserConfirmationMessage(storyContext);
     if (title.length == 0 || message.length == 0) {
-        SPKNotify(kSPKNotificationStoryAutoSaveUserRule, @"Story user not found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationStoryAutoSaveUserRule, SPKL(@"STORIES_STORY_SEEN_BUTTONS_STORY_USER_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
@@ -3077,7 +3085,7 @@ static BOOL SPKExecuteToggleStoryAutoSaveUserRuleAction(SPKActionButtonContext *
             NSString *notificationTitle = nil;
             NSString *notificationSubtitle = nil;
             if (!SPKStoryToggleAutoSaveCurrentUser(storyContext, &notificationTitle, &notificationSubtitle)) {
-                SPKNotify(kSPKNotificationStoryAutoSaveUserRule, @"Story user not found", nil, @"error_filled", SPKNotificationToneError);
+                SPKNotify(kSPKNotificationStoryAutoSaveUserRule, SPKL(@"STORIES_STORY_SEEN_BUTTONS_STORY_USER_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
                 return;
             }
             SPKNotify(kSPKNotificationStoryAutoSaveUserRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -3139,7 +3147,7 @@ static BOOL SPKExecuteToggleStorySeenUserRuleAction(SPKActionButtonContext *cont
     NSString *title = SPKStoryCurrentUserRuleConfirmationTitle(storyContext);
     NSString *message = SPKStoryCurrentUserRuleConfirmationMessage(storyContext);
     if (title.length == 0 || message.length == 0) {
-        SPKNotify(kSPKNotificationStorySeenUserRule, @"Story user not found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationStorySeenUserRule, SPKL(@"STORIES_STORY_SEEN_BUTTONS_STORY_USER_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
@@ -3148,7 +3156,7 @@ static BOOL SPKExecuteToggleStorySeenUserRuleAction(SPKActionButtonContext *cont
             NSString *notificationTitle = nil;
             NSString *notificationSubtitle = nil;
             if (!SPKStoryToggleCurrentUserRule(storyContext, &notificationTitle, &notificationSubtitle)) {
-                SPKNotify(kSPKNotificationStorySeenUserRule, @"Story user not found", nil, @"error_filled", SPKNotificationToneError);
+                SPKNotify(kSPKNotificationStorySeenUserRule, SPKL(@"STORIES_STORY_SEEN_BUTTONS_STORY_USER_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
                 return;
             }
             SPKNotify(kSPKNotificationStorySeenUserRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -3166,7 +3174,7 @@ static BOOL SPKExecuteToggleProfileStorySeenUserRuleAction(SPKActionButtonContex
     NSString *fullName = user ? SPKProfileFullName(user) : nil;
     NSString *profilePicUrl = user ? spkDirectUserResolverProfilePicURLStringFromUser(user) : nil;
     if (pk.length == 0 || username.length == 0) {
-        SPKNotify(kSPKNotificationProfileStorySeenUserRule, @"User not found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationProfileStorySeenUserRule, SPKL(@"MESSAGES_ACTIVITY_USER_NOT_FOUND_TOAST"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
@@ -3183,8 +3191,8 @@ static BOOL SPKExecuteToggleProfileStorySeenUserRuleAction(SPKActionButtonContex
         showConfirmation:^{
             SPKStoryToggleUserRuleForPK(pk, username, fullName, profilePicUrl);
             NSString *notificationTitle = applies
-                                              ? [NSString stringWithFormat:@"Stories seen on for @%@", username]
-                                              : [NSString stringWithFormat:@"Stories seen off for @%@", username];
+                                              ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_STORIES_SEEN_ON_FORMAT"), username]
+                                              : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_STORIES_SEEN_OFF_FORMAT"), username];
             SPKNotify(kSPKNotificationProfileStorySeenUserRule, notificationTitle, nil, @"circle_check_filled", SPKNotificationToneSuccess);
             [[NSNotificationCenter defaultCenter] postNotificationName:SPKActionButtonConfigurationDidChangeNotification object:nil];
         }
@@ -3200,7 +3208,7 @@ static BOOL SPKExecuteToggleProfileMessagesSeenUserRuleAction(SPKActionButtonCon
     NSString *fullName = user ? SPKProfileFullName(user) : nil;
     NSString *profilePicUrl = user ? spkDirectUserResolverProfilePicURLStringFromUser(user) : nil;
     if (pk.length == 0 || username.length == 0) {
-        SPKNotify(kSPKNotificationProfileMessagesSeenUserRule, @"User not found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationProfileMessagesSeenUserRule, SPKL(@"MESSAGES_ACTIVITY_USER_NOT_FOUND_TOAST"), nil, @"error_filled", SPKNotificationToneError);
         return YES;
     }
 
@@ -3218,7 +3226,7 @@ static BOOL SPKExecuteToggleProfileMessagesSeenUserRuleAction(SPKActionButtonCon
             if (listed) {
                 NSString *threadId = existingEntry[@"threadId"];
                 SPKDirectRemoveManualSeenThreadId(threadId, manualSeenEnabled);
-                NSString *notificationTitle = [NSString stringWithFormat:@"Messages seen off for %@", (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])];
+                NSString *notificationTitle = [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MESSAGES_SEEN_OFF_FORMAT"), (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])];
                 NSString *notificationSubtitle = SPKDirectManualSeenListTitle(manualSeenEnabled);
                 SPKNotify(kSPKNotificationProfileMessagesSeenUserRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
                 [[NSNotificationCenter defaultCenter] postNotificationName:SPKActionButtonConfigurationDidChangeNotification object:nil];
@@ -3252,7 +3260,7 @@ static BOOL SPKExecuteToggleProfileMessagesSeenUserRuleAction(SPKActionButtonCon
                                                     },
                                                                                               manualSeenEnabled);
 
-                                                    NSString *notificationTitle = [NSString stringWithFormat:@"Messages seen on for %@", (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])];
+                                                    NSString *notificationTitle = [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MESSAGES_SEEN_ON_FORMAT"), (fullName.length > 0 ? fullName : [@"@" stringByAppendingString:username])];
                                                     NSString *notificationSubtitle = SPKDirectManualSeenListTitle(manualSeenEnabled);
                                                     SPKNotify(kSPKNotificationProfileMessagesSeenUserRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
                                                     [[NSNotificationCenter defaultCenter] postNotificationName:SPKActionButtonConfigurationDidChangeNotification object:nil];
@@ -3324,10 +3332,10 @@ BOOL SPKExecuteActionIdentifier(NSString *identifier, SPKActionButtonContext *co
     if ([identifier isEqualToString:kSPKActionOpenTopicSettings]) {
         NSString *settingsTitle = SPKResolvedSettingsTitleForContext(context);
         if (settingsTitle.length == 0) {
-            SPKNotify(identifier, @"Settings unavailable", nil, @"error_filled", SPKNotificationToneError);
+            SPKNotify(identifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_SETTINGS_UNAVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
             return YES;
         }
-        SPKNotify(identifier, @"Opened settings", nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
+        SPKNotify(identifier, SPKL(@"COMMON_OPENED_SETTINGS_TOAST"), nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
         [SPKUtils showSettingsForTopicTitle:settingsTitle];
         return YES;
     }
@@ -3612,7 +3620,7 @@ static NSArray<UIMenuElement *> *SPKBuildBulkMenuChildren(SPKActionButtonConfigu
                                                                                                                     if ([destinationIdentifier isEqualToString:kSPKActionDownloadAllLinks]) {
                                                                                                                         NSArray<NSString *> *links = SPKBulkDownloadLinksFromEntries(selectedEntries, tapBulkMedia);
                                                                                                                         if (links.count == 0) {
-                                                                                                                            SPKNotify(destinationIdentifier, @"No links available", nil, @"error_filled", SPKNotificationToneError);
+                                                                                                                            SPKNotify(destinationIdentifier, SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_NO_LINKS_AVAILABLE_TEXT"), nil, @"error_filled", SPKNotificationToneError);
                                                                                                                             return;
                                                                                                                         }
                                                                                                                         [UIPasteboard generalPasteboard].string = [links componentsJoinedByString:@"\n"];
@@ -3633,7 +3641,7 @@ static NSArray<UIMenuElement *> *SPKBuildBulkMenuChildren(SPKActionButtonConfigu
         return @[];
     // Present the bulk actions as their own section, styled like the other
     // collapsible sections. Title carries the carousel item count.
-    NSString *baseTitle = sectionTitle.length > 0 ? sectionTitle : @"Bulk";
+    NSString *baseTitle = sectionTitle.length > 0 ? sectionTitle : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_BULK_TEXT");
     NSString *title = [NSString stringWithFormat:@"%@ • %lu", baseTitle, (unsigned long)bulkEntries.count];
     UIImage *bulkIcon = [[[SPKAssetUtils menuIconNamed:(sectionIconName.length > 0 ? sectionIconName : @"carousel")] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate] imageWithTintColor:[UIColor labelColor] renderingMode:UIImageRenderingModeAlwaysOriginal];
     UIMenuElement *section = collapsible

@@ -393,7 +393,7 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
                                                                   context.threadId ?: @"(unknown)",
                                                                   NSStringFromClass([source class]),
                                                                   source);
-                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, @"Chat not found", nil, @"error_filled", SPKNotificationToneError);
+                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_CHAT_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
                                                            return;
                                                        }
                                                        SPKNotify(kSPKNotificationDirectThreadSeenRule, title, subtitle, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -464,7 +464,7 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
                                                    image:settingsImage
                                               identifier:nil
                                                  handler:^(__unused UIAction *action) {
-                                                     SPKNotify(kSPKNotificationOpenTopicSettings, @"Opened settings", nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
+                                                     SPKNotify(kSPKNotificationOpenTopicSettings, SPKL(@"COMMON_OPENED_SETTINGS_TOAST"), nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
                                                      [SPKUtils showSettingsForTopicTitle:@"Messages"];
                                                  }];
     [children addObject:settingsAction];
@@ -634,7 +634,7 @@ static id SPKDirectInboxContextMenuConfigurationCommon(id self, id indexPath, id
                                                                   context.threadId ?: @"(unknown)",
                                                                   NSStringFromClass([viewModel class]),
                                                                   viewModel);
-                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, @"Chat not found", nil, @"error_filled", SPKNotificationToneError);
+                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_CHAT_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
                                                            return;
                                                        }
                                                        SPKNotify(kSPKNotificationDirectThreadSeenRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -1262,9 +1262,9 @@ SPKPlayButtonTappedHaptic();
 UIViewController *nearestVC = [SPKUtils nearestViewControllerForView:self];
 if ([nearestVC isKindOfClass:%c(IGDirectThreadViewController)]) {
     if (SPKMarkDirectThreadMessagesAsSeen(nearestVC)) {
-        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Marked messages as seen", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARKED_MESSAGES_TOAST"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
     } else {
-        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Unable to mark messages as seen", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARK_MESSAGES_FAILED_TOAST"), nil, @"error_filled", SPKNotificationToneError);
     }
 }
 }
@@ -1325,9 +1325,9 @@ if ([nearestVC isKindOfClass:%c(IGDirectThreadViewController)]) {
 (void)sender;
 SPKPlayButtonTappedHaptic();
 if (SPKMarkDirectThreadMessagesAsSeen(self)) {
-    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Marked messages as seen", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARKED_MESSAGES_TOAST"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
 } else {
-    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Unable to mark messages as seen", nil, @"error_filled", SPKNotificationToneError);
+    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARK_MESSAGES_FAILED_TOAST"), nil, @"error_filled", SPKNotificationToneError);
 }
 // The bubble stays put after marking — no seen-state-driven hide/reappear.
 }

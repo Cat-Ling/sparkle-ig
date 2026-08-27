@@ -32,6 +32,10 @@ FOUNDATION_EXPORT NSString *SPKLocalizedPlural(NSString *key, NSInteger count);
 /// Look up `key` in the active language, falling back active → English → key.
 + (NSString *)localized:(NSString *)key;
 
+/// Look up `key` in one shipped language. Intended for migrations which need
+/// to recognize previously persisted localized defaults.
++ (NSString *)localized:(NSString *)key forLanguage:(NSString *)language;
+
 /// nil = follow the system/Instagram language. Otherwise a shipped code
 /// (e.g. @"de", @"pt-BR"). Persisted in Sparkle's prefs; refreshes the cache.
 @property (class, nonatomic, copy, nullable) NSString *languageOverride;
@@ -41,6 +45,13 @@ FOUNDATION_EXPORT NSString *SPKLocalizedPlural(NSString *key, NSInteger count);
 
 /// Stable, explicitly ordered list used by the language picker.
 + (NSArray<NSString *> *)supportedLanguages;
+
+/// Resolve a requested language identifier to a shipped localization.
++ (nullable NSString *)matchAvailable:(NSString *)requested;
+
+/// Effective shipped language after applying the explicit override, Instagram's
+/// preferred localization, the system language, and the English fallback.
++ (NSString *)activeLanguage;
 
 @end
 

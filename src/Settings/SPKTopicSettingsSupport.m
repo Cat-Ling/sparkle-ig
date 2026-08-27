@@ -361,7 +361,7 @@ UIMenu *SPKGalleryShortcutTargetMenu(void) {
     NSArray<NSDictionary *> *items = @[
         @{@"title" : SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_NONE_TEXT"), @"value" : kGalleryQuickAccessDisabledValue, @"icon" : @"circle_off"},
         @{@"title" : SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_HOME_TEXT"), @"value" : @"mainfeed-tab", @"icon" : @"home"},
-        @{@"title" : @"Reels", @"value" : @"reels-tab", @"icon" : @"reels"}
+        @{@"title" : SPKL(@"REELS_TITLE"), @"value" : @"reels-tab", @"icon" : @"reels"}
     ];
 
     NSMutableArray *allItems = [items mutableCopy];

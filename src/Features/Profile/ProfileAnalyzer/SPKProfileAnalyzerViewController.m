@@ -155,7 +155,7 @@ typedef NS_ENUM(NSInteger, SPKPACategory) {
     }
     [self.statsRow addArrangedSubview:[self statColumnValue:posts caption:SPKL(@"PROFILE_PROFILE_ANALYZER_POSTS_TEXT")]];
     [self.statsRow addArrangedSubview:[self statColumnValue:followers caption:SPKL(@"PROFILE_PROFILE_ANALYZER_FOLLOWERS_TEXT")]];
-    [self.statsRow addArrangedSubview:[self statColumnValue:following caption:@"Following"]];
+    [self.statsRow addArrangedSubview:[self statColumnValue:following caption:SPKL(@"PROFILE_PROFILE_ANALYZER_FOLLOWING_TEXT")]];
 }
 
 @end
@@ -330,6 +330,7 @@ static NSString *SPKPACompact(NSInteger n) {
 
     if (cur.scanDate) {
         NSDateFormatter *df = [NSDateFormatter new];
+        df.locale = [SPKUtils spk_activeFormattingLocale];
         df.dateStyle = NSDateFormatterMediumStyle;
         df.timeStyle = NSDateFormatterShortStyle;
         df.doesRelativeDateFormatting = YES;

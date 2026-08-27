@@ -218,7 +218,7 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
     [self.contentStack addArrangedSubview:[self sectionTitle:SPKL(@"GALLERY_GALLERY_FILTER_SOURCE_TEXT")]];
     [self.contentStack addArrangedSubview:[self createSourceGrid]];
     if (self.availableUsernames.count > 0) {
-        self.usernameSectionTitle = [self sectionTitle:@"Username"];
+        self.usernameSectionTitle = [self sectionTitle:SPKL(@"SETTINGS_PROFILE_USERNAME_TEXT")];
         [self updateUsernameSectionTitle];
         [self.contentStack addArrangedSubview:self.usernameSectionTitle];
         [self.contentStack addArrangedSubview:[self createUsernameRow]];
@@ -268,7 +268,7 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
     NSArray *defs = @[
         @{@"label" : SPKL(@"GALLERY_GALLERY_FILTER_IMAGES_TITLE"), @"resource" : @"photo", @"tag" : @(SPKGalleryMediaTypeImage)},
         @{@"label" : SPKL(@"GALLERY_GALLERY_FILTER_VIDEOS_TITLE"), @"resource" : @"video", @"tag" : @(SPKGalleryMediaTypeVideo)},
-        @{@"label" : @"Audio", @"resource" : @"audio", @"tag" : @(SPKGalleryMediaTypeAudio)},
+        @{@"label" : SPKL(@"COMMON_MEDIA_TYPE_AUDIO"), @"resource" : @"audio", @"tag" : @(SPKGalleryMediaTypeAudio)},
     ];
     for (NSDictionary *d in defs) {
         NSInteger tag = [d[@"tag"] integerValue];

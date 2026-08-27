@@ -160,7 +160,7 @@
         return;
     if (error) {
         if (error.code == NSURLErrorCancelled) {
-            [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorCancelled, @"Download cancelled.", nil)];
+            [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorCancelled, SPKL(@"DOWNLOADS_SCHEDULER_DOWNLOAD_CANCELLED_ERROR"), nil)];
         } else {
             [self finishWithPath:nil error:error];
         }

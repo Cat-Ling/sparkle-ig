@@ -43,7 +43,7 @@
                                                viewController:controller];
     setting.accessoryTextProvider = ^NSString * {
         SPKAppIconItem *currentIcon = [SPKAppIconCatalog currentAppIcon];
-        return currentIcon.displayName.length > 0 ? currentIcon.displayName : @"Default";
+        return currentIcon.displayName.length > 0 ? currentIcon.displayName : SPKL(@"MENU_DEFAULT");
     };
     return setting;
 }

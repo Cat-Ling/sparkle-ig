@@ -739,7 +739,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
         self.title = SPKStoryManualSeenListTitle(_manualSeenEnabled);
         self.showsAddButton = YES;
         self.infoText = SPKStoryManualSeenListHelpText(_manualSeenEnabled);
-        self.emptyTitle = @"No users yet";
+        self.emptyTitle = SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_NO_USERS_YET_TEXT");
         self.emptySubtitle = _manualSeenEnabled
                                  ? SPKL(@"STORIES_STORY_CONTEXT_ADD_USERS_WHOSE_STORIES_SHOULD_KEEP_INSTAGRAM_S_NORMAL_TEXT")
                                  : SPKL(@"STORIES_STORY_CONTEXT_ADD_USERS_WHOSE_STORIES_REQUIRE_EYE_BUTTON_MARK_SEEN_TEXT");
@@ -835,7 +835,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
                                       if (!strongSelf)
                                           return;
                                       if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          [strongSelf presentError:[NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USER_VALUE_NOT_FOUND_FORMAT"), username]];
                                           return;
                                       }
                                       NSString *pk = SPKStringFromValue(user[@"pk"] ?: user[@"id"]);
@@ -886,7 +886,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
     }];
     SPKStorySetManualSeenUserList(users, self.manualSeenEnabled);
     SPKNotify(kSPKNotificationStorySeenUserRule,
-              [NSString stringWithFormat:@"Added @%@", username],
+              [NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ADDED_VALUE_FORMAT"), username],
               SPKStoryManualSeenListTitle(self.manualSeenEnabled),
               @"circle_check_filled",
               SPKNotificationToneSuccess);
@@ -988,8 +988,8 @@ BOOL SPKStoryToggleCurrentUserRule(SPKStoryContext *context, NSString **notifica
 
     if (notificationTitle) {
         *notificationTitle = applies
-                                 ? [NSString stringWithFormat:@"Stories seen on for @%@", username]
-                                 : [NSString stringWithFormat:@"Stories seen off for @%@", username];
+                                 ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_STORIES_SEEN_ON_FORMAT"), username]
+                                 : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_STORIES_SEEN_OFF_FORMAT"), username];
     }
     if (notificationSubtitle)
         *notificationSubtitle = listTitle;

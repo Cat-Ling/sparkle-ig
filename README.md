@@ -68,7 +68,7 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
 - **Custom app font**:
   - Import your own `.otf`/`.ttf` font and use it across Instagram and Sparkle, matched per weight and previewed face by face before you pick it.
 - **17 languages**:
-  - Sparkle follows Instagram's language by default, with a device-wide override in Sparkle Settings. Unsupported languages fall back to English.
+  - Sparkle follows Instagram's language by default. The Translate button in Sparkle Settings opens a full language sheet with a device-wide override and a shortcut for suggesting or correcting translations. Dates use the selected language's ordering, punctuation, and month names while respecting the device's 12/24-hour clock. Built-in Action Button section names follow the selected language; names you customize remain exactly as entered. Unsupported languages fall back to English.
 - **Confirmations**:
   - Optional "are you sure?" guards for accidental likes, follows, reposts, calls, comments, and more.
 - **Liquid Glass (iOS 26+)**:
@@ -231,7 +231,9 @@ Contributions are greatly appreciated! Feel free to open a pull request.
 
 ### Help translate or correct a translation
 
-Open **Sparkle Settings → About → Help Translate Sparkle**, or [start a translation issue](https://github.com/efibalogh/sparkle-ig/issues/new?title=Translation%3A%20). Include the language, the current text, the corrected text, and where it appears. New languages and corrections are both welcome. Keep format placeholders intact and run `tools/lint-i18n.py` when changing catalog files.
+Tap the Translate button in Sparkle Settings and choose **Help Translate Sparkle** at the bottom of the language sheet, or [start a translation issue](https://github.com/efibalogh/sparkle-ig/issues/new?title=Translation%3A%20) directly. Include the language, the current text, the corrected text, and where it appears.
+
+To contribute a complete new language or edit the catalog files directly, follow [TRANSLATING.md](TRANSLATING.md). It covers locale naming, required files and registration points, placeholders, plurals, validation, and device testing.
 
 Not a coder? Documentation improvements are always appreciated too.
 

@@ -641,6 +641,7 @@ static NSString *SPKPARelativeDate(NSDate *date) {
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         df = [NSDateFormatter new];
+        df.locale = [SPKUtils spk_activeFormattingLocale];
         df.dateStyle = NSDateFormatterMediumStyle;
         df.timeStyle = NSDateFormatterShortStyle;
         df.doesRelativeDateFormatting = YES;

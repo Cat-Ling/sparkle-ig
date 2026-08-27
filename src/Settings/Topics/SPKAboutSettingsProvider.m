@@ -52,16 +52,9 @@
                                  subtitle:SPKL(@"ABOUT_COMMUNITY_JOIN_COMMUNITY_UPDATES_SUPPORT_SUBTITLE")
                                  imageUrl:@"https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/960px-Telegram_logo.svg.png"
                                       url:@"https://t.me/sparkle_ig"],
-            [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_HELP_TRANSLATE_TITLE")
-                                 subtitle:SPKL(@"ABOUT_HELP_TRANSLATE_SUBTITLE")
-                                     icon:SPKSettingsIcon(@"web")
-                                      url:@"https://github.com/efibalogh/sparkle-ig/issues/new?title=Translation%3A%20"]
         ],
                         nil),
         SPKTopicSection(SPKL(@"ABOUT_CREDITS_HEADER"), @[
-            [SPKSetting staticCellWithTitle:@"USER"
-                                   subtitle:SPKL(@"ABOUT_CREDITS_LOCALIZATION_SUBTITLE")
-                                       icon:SPKSettingsIcon(@"web")],
             [SPKSetting linkCellWithTitle:SPKL(@"ABOUT_CREDITS_SOCUUL_SCINSTA_TITLE")
                                  subtitle:SPKL(@"ABOUT_CREDITS_BASE_PROJECT_SPARKLE_BUILT_SUBTITLE")
                                  imageUrl:@"https://i.imgur.com/c9CbytZ.png"
@@ -80,6 +73,12 @@
                                       url:@"https://github.com/asdfzxcvbn/zxPluginsInject"]
         ],
                         nil),
+        SPKTopicSection(@"", @[
+            [SPKSetting staticCellWithTitle:@"@grxphxnx" // SPK_I18N_IGNORE: contributor name
+                                   subtitle:SPKL(@"ABOUT_CREDITS_LOCALIZATION_SUBTITLE")
+                                       icon:[SPKAssetUtils instagramIconNamed:@"user"]],
+        ],
+                        nil)
     ]);
 }
 

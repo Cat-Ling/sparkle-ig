@@ -9,9 +9,11 @@ marked **(restart)** and prompt for a relaunch when changed.
 
 ## Localization
 
-- **Language** *(restart)*: Use the Translate button in the top-right of Sparkle Settings. System Default initially follows Instagram, or you can choose Arabic, Chinese (Simplified), English, French, German, Greek, Hindi, Italian, Japanese, Korean, Portuguese (Brazil), Romanian, Russian, Spanish, Turkish, Ukrainian, or Vietnamese.
+- **Language** *(restart)*: Use the Translate button in the top-right of Sparkle Settings to open the language sheet. System Default initially follows Instagram, or you can choose Arabic, Chinese (Simplified), English, French, German, Greek, Hindi, Italian, Japanese, Korean, Portuguese (Brazil), Romanian, Russian, Spanish, Turkish, Ukrainian, or Vietnamese.
 - The choice is device-wide, applies to every Instagram account after restart, and falls back to English when a language or individual translation is unavailable.
-- **Help Translate Sparkle**: The About page opens a prefilled translation issue for suggesting a translation or reporting incorrect copy.
+- Sparkle-owned dates use the selected language's ordering, punctuation, and month names while retaining the device's 12/24-hour clock preference across Action Button menus, Gallery, Downloads, media details, logs, and diagnostics.
+- Built-in collapsible Action Button section names follow the selected language. A section name explicitly customized by the user remains verbatim.
+- **Help Translate Sparkle**: The bottom of the language sheet opens a prefilled translation issue for suggesting a translation or reporting incorrect copy.
 
 ---
 

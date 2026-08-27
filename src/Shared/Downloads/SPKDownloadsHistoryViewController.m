@@ -37,13 +37,8 @@ static NSString *SPKDownloadHistoryDisplayUsername(NSString *username) {
 static NSString *SPKDownloadHistoryDateString(NSTimeInterval timestamp) {
     if (timestamp <= 0)
         return @"";
-    static NSDateFormatter *fmt;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        fmt = [[NSDateFormatter alloc] init];
-        fmt.dateFormat = @"MMM d 'at' h:mm a";
-    });
-    return [fmt stringFromDate:[NSDate dateWithTimeIntervalSince1970:timestamp]];
+    return [SPKUtils spk_formattedDateTime:[NSDate dateWithTimeIntervalSince1970:timestamp]
+                              includingYear:NO] ?: @"";
 }
 
 #pragma mark - Row model
@@ -844,7 +839,7 @@ static void SPKApplyStatusBadge(SPKDownloadHistoryCell *cell, SPKDownloadState s
     cell.representedID = job.jobID;
 
     // Title
-    cell.titleLabel.text = job.title ?: @"Download";
+    cell.titleLabel.text = job.title ?: SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT");
 
     // Thumbnail: destination action icon, no tint bleed
     NSString *actionIcon = SPKActionIconForJob(job);
@@ -980,13 +975,13 @@ static void SPKApplyStatusBadge(SPKDownloadHistoryCell *cell, SPKDownloadState s
     }
     switch (item.mediaKind) {
     case SPKDownloadMediaKindVideo:
-        [parts addObject:@"Video"];
+        [parts addObject:SPKL(@"COMMON_MEDIA_TYPE_VIDEO")];
         break;
     case SPKDownloadMediaKindAudio:
-        [parts addObject:@"Audio"];
+        [parts addObject:SPKL(@"COMMON_MEDIA_TYPE_AUDIO")];
         break;
     case SPKDownloadMediaKindImage:
-        [parts addObject:@"Photo"];
+        [parts addObject:SPKL(@"COMMON_MEDIA_TYPE_PHOTO")];
         break;
     default:
         [parts addObject:[NSString stringWithFormat:SPKL(@"DOWNLOADS_DOWNLOADS_HISTORY_ITEM_VALUE_FORMAT"), (long)(item.index + 1)]];

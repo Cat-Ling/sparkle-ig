@@ -186,7 +186,7 @@ typedef NS_ENUM(NSInteger, SPKGalleryDeleteSection) {
     for (__unused NSDictionary *row in rows) {
         userCount += 1;
     }
-    counts[@"Delete by User"] = @(userCount);
+    counts[SPKL(@"ALERT_ACTION_DELETE_USER")] = @(userCount);
     self.countCache = counts;
 }
 

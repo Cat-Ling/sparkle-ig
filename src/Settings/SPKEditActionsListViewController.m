@@ -189,7 +189,7 @@ static char kSPKActionsListSwitchAssocKey;
     if (indexPath.section == 0) {
         SPKActionMenuSection *section = self.configuration.sections[indexPath.row];
         config.text = section.title;
-        NSString *stateText = section.collapsible ? @"Collapsible" : SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_INLINE_TEXT");
+        NSString *stateText = section.collapsible ? SPKL(@"SETTINGS_ACTION_SECTION_EDIT_COLLAPSIBLE_TEXT") : SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_INLINE_TEXT");
         if ([self sectionHasDisabledAction:section]) {
             // Prefix the Collapsible/Inline subtitle with an amber warning triangle so
             // it's obvious — while arranging sections — that this section contains an

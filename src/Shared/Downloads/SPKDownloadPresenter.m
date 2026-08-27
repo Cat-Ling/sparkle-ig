@@ -172,7 +172,7 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     }
 
     if (activeCount > 1) {
-        [parts addObject:[NSString stringWithFormat:@"%lu of %lu", (unsigned long)activeIndex, (unsigned long)activeCount]];
+        [parts addObject:[NSString stringWithFormat:SPKL(@"COMMON_PROGRESS_FORMAT"), (unsigned long)activeIndex, (unsigned long)activeCount]];
     }
 
     return [parts componentsJoinedByString:@" • "];

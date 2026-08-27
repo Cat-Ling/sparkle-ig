@@ -128,8 +128,15 @@ static NSString *const kSPKStringsTable = @"Localizable";
 + (NSString *)localized:(NSString *)key {
     if (key.length == 0) return key;
 
-    // active language, then English fallback
-    NSBundle *active = [self lprojBundleForLanguage:[self activeLanguage]];
+    return [self localized:key forLanguage:[self activeLanguage]];
+}
+
++ (NSString *)localized:(NSString *)key forLanguage:(NSString *)language {
+    if (key.length == 0) return key;
+
+    // Requested language, then English fallback.
+    NSString *matchedLanguage = [self matchAvailable:language] ?: @"en";
+    NSBundle *active = [self lprojBundleForLanguage:matchedLanguage];
     if (active) {
         NSString *v = [active localizedStringForKey:key value:@"MISS" table:kSPKStringsTable];
         if (![v isEqualToString:@"MISS"]) return v;

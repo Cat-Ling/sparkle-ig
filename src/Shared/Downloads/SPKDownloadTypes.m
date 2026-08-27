@@ -120,13 +120,13 @@ NSString *SPKDownloadDestinationDisplayName(SPKDownloadDestination destination) 
     case SPKDownloadDestinationGallery:
         return SPKL(@"GALLERY_TITLE");
     case SPKDownloadDestinationShare:
-        return @"Share";
+        return SPKL(@"ALERT_ACTION_SHARE");
     case SPKDownloadDestinationClipboard:
         return SPKL(@"DOWNLOADS_DOWNLOAD_TYPES_CLIPBOARD_TEXT");
     case SPKDownloadDestinationCacheOnly:
-        return @"Download";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT");
     }
-    return @"Download";
+    return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT");
 }
 
 NSString *SPKDownloadSourceSurfaceDisplayName(SPKDownloadSourceSurface surface) {
@@ -134,13 +134,13 @@ NSString *SPKDownloadSourceSurfaceDisplayName(SPKDownloadSourceSurface surface) 
     case SPKDownloadSourceSurfaceFeed:
         return SPKL(@"FEED_TITLE");
     case SPKDownloadSourceSurfaceReels:
-        return @"Reels";
+        return SPKL(@"REELS_TITLE");
     case SPKDownloadSourceSurfaceStories:
         return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKDownloadSourceSurfaceDirect:
         return SPKL(@"DOWNLOADS_DOWNLOAD_TYPES_DIRECT_TEXT");
     case SPKDownloadSourceSurfaceAudioPage:
-        return @"Audio";
+        return SPKL(@"COMMON_MEDIA_TYPE_AUDIO");
     case SPKDownloadSourceSurfaceMediaPreview:
         return SPKL(@"NOTIFICATION_PREVIEW_HEADER");
     case SPKDownloadSourceSurfaceGallery:

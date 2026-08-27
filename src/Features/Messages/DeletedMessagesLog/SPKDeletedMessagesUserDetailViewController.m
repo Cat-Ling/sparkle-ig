@@ -40,7 +40,7 @@
 
 // Chip filter columns — see SPKDeletedMessagesViewController for the rationale.
 static NSArray<NSString *> *SPKDMDetailChipTitles(void) {
-    return @[ SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT"), @"Photo", @"Video", SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT"), @"GIF", @"Sticker", SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SHARES_TEXT"), @"Link", SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION") ];
+    return @[ SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT"), SPKL(@"COMMON_MEDIA_TYPE_PHOTO"), SPKL(@"COMMON_MEDIA_TYPE_VIDEO"), SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT"), SPKL(@"COMMON_MEDIA_TYPE_GIF"), SPKL(@"COMMON_MEDIA_TYPE_STICKER"), SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SHARES_TEXT"), SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_LINK_TEXT"), SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION") ];
 }
 static NSArray<NSString *> *SPKDMDetailChipSymbols(void) {
     return @[ @"message", @"photo", @"video", @"voice", @"gif", @"sticker", @"shares", @"link", @"reactions" ];
@@ -317,7 +317,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     if (shouldShowIdentity == self.titleShowingIdentity)
         return;
     self.titleShowingIdentity = shouldShowIdentity;
-    NSString *text = shouldShowIdentity ? [self identityTitleText] : @"Deleted Messages";
+    NSString *text = shouldShowIdentity ? [self identityTitleText] : SPKL(@"DATA_GENERAL_DELETED_MESSAGES_TITLE");
     [UIView transitionWithView:self.titleLabel
                       duration:0.2
                        options:UIViewAnimationOptionTransitionCrossDissolve
@@ -483,7 +483,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     nameLabel.textColor = [SPKUtils SPKColor_InstagramPrimaryText];
     nameLabel.numberOfLines = 1;
     NSString *displayName = self.group.senderFullName.length ? self.group.senderFullName
-                                                             : (self.group.senderUsername.length ? self.group.senderUsername : @"Unknown");
+                                                             : (self.group.senderUsername.length ? self.group.senderUsername : SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_TEXT"));
     nameLabel.text = displayName;
 
     // Username label.

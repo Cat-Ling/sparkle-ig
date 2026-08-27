@@ -186,7 +186,7 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
         @{@"title" : SPKL(@"UI_NOTIFICATION_CENTER_ACTION_BUTTONS_ACTION"),
           @"items" : @[
               SPKNotificationItem(kSPKNotificationDownloadLibrary, SPKL(@"FEED_COMMENT_ACTIONS_SAVE_PHOTOS_TEXT"), @"download"),
-              SPKNotificationItem(kSPKNotificationDownloadShare, @"Share", @"share"),
+              SPKNotificationItem(kSPKNotificationDownloadShare, SPKL(@"ALERT_ACTION_SHARE"), @"share"),
               SPKNotificationItem(kSPKNotificationCopyDownloadLink, SPKL(@"FEED_COMMENT_ACTIONS_COPY_DOWNLOAD_URL_TEXT"), @"link"),
               SPKNotificationItem(kSPKNotificationCopyMedia, SPKL(@"ACTION_BUTTON_COPY_MEDIA_TITLE"), @"copy"),
               SPKNotificationItem(kSPKNotificationDownloadGallery, SPKL(@"FEED_COMMENT_ACTIONS_SAVE_GALLERY_TEXT"), @"sparkle_gallery"),
@@ -252,37 +252,37 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
           ]},
         @{@"title" : SPKL(@"GENERAL_COMMENTS_HEADER"),
           @"items" : @[
-              SPKNotificationItem(kSPKNotificationCopyComment, @"Copy Comment", @"copy"),
+              SPKNotificationItem(kSPKNotificationCopyComment, SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_TITLE"), @"copy"),
               SPKNotificationItem(kSPKNotificationCopyGIFLink, SPKL(@"UI_NOTIFICATION_CENTER_COPY_MEDIA_LINK_TEXT"), @"link"),
               SPKNotificationItem(kSPKNotificationCopyGIFTitle, SPKL(@"UI_NOTIFICATION_CENTER_COPY_GIF_TITLE"), @"info"),
           ]},
-        @{@"title" : @"Media",
+        @{@"title" : SPKL(@"FEED_MEDIA_HEADER"),
           @"items" : @[
-              SPKNotificationItem(kSPKNotificationMediaPreviewSavePhotos, @"Save to Photos", @"download"),
-              SPKNotificationItem(kSPKNotificationMediaPreviewSaveGallery, @"Save to Gallery", @"sparkle_gallery"),
-              SPKNotificationItem(kSPKNotificationMediaPreviewShare, @"Share", @"share"),
-              SPKNotificationItem(kSPKNotificationMediaPreviewCopy, @"Copy Media", @"copy"),
+              SPKNotificationItem(kSPKNotificationMediaPreviewSavePhotos, SPKL(@"FEED_COMMENT_ACTIONS_SAVE_PHOTOS_TEXT"), @"download"),
+              SPKNotificationItem(kSPKNotificationMediaPreviewSaveGallery, SPKL(@"FEED_COMMENT_ACTIONS_SAVE_GALLERY_TEXT"), @"sparkle_gallery"),
+              SPKNotificationItem(kSPKNotificationMediaPreviewShare, SPKL(@"ALERT_ACTION_SHARE"), @"share"),
+              SPKNotificationItem(kSPKNotificationMediaPreviewCopy, SPKL(@"ACTION_BUTTON_COPY_MEDIA_TITLE"), @"copy"),
               SPKNotificationItem(kSPKNotificationMediaPreviewDeleteGallery, SPKL(@"UI_NOTIFICATION_CENTER_DELETE_MEDIA_TEXT"), @"trash"),
               SPKNotificationItem(kSPKNotificationMediaPreviewOpenGallery, SPKL(@"UI_NOTIFICATION_CENTER_OPEN_MEDIA_TEXT"), @"media"),
-              SPKNotificationItem(kSPKNotificationMediaEncodingLogs, @"Encoding Logs", @"logs"),
+              SPKNotificationItem(kSPKNotificationMediaEncodingLogs, SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_ENCODING_LOGS_TEXT"), @"logs"),
           ]},
-        @{@"title" : @"Gallery",
+        @{@"title" : SPKL(@"GALLERY_TITLE"),
           @"items" : @[
-              SPKNotificationItem(kSPKNotificationGalleryOpenOriginal, @"Open Original Post", @"external_link"),
-              SPKNotificationItem(kSPKNotificationGalleryOpenProfile, @"Open Profile", @"user_circle"),
+              SPKNotificationItem(kSPKNotificationGalleryOpenOriginal, SPKL(@"ALERT_ACTION_OPEN_ORIGINAL_POST"), @"external_link"),
+              SPKNotificationItem(kSPKNotificationGalleryOpenProfile, SPKL(@"ALERT_ACTION_OPEN_PROFILE"), @"user_circle"),
               SPKNotificationItem(kSPKNotificationGalleryDeleteFile, SPKL(@"UI_NOTIFICATION_CENTER_DELETE_FILE_TEXT"), @"media"),
               SPKNotificationItem(kSPKNotificationGalleryDeleteSelected, SPKL(@"UI_NOTIFICATION_CENTER_DELETE_SELECTED_FILES_TEXT"), @"circle_check"),
               SPKNotificationItem(kSPKNotificationGalleryBulkDelete, SPKL(@"UI_NOTIFICATION_CENTER_BULK_DELETE_TEXT"), @"trash"),
-              SPKNotificationItem(kSPKNotificationGalleryImport, @"Import Media", @"media"),
+              SPKNotificationItem(kSPKNotificationGalleryImport, SPKL(@"GALLERY_GALLERY_SETTINGS_IMPORT_MEDIA_TITLE"), @"media"),
           ]},
         @{@"title" : SPKL(@"UI_NOTIFICATION_CENTER_SETTINGS_TOOLS_TEXT"),
           @"items" : @[
               SPKNotificationItem(kSPKNotificationSettingsExport, SPKL(@"UI_NOTIFICATION_CENTER_EXPORT_SETTINGS_TEXT"), @"arrow_up"),
               SPKNotificationItem(kSPKNotificationSettingsImport, SPKL(@"UI_NOTIFICATION_CENTER_IMPORT_SETTINGS_TEXT"), @"arrow_down"),
-              SPKNotificationItem(kSPKNotificationSettingsClearCache, @"Clear Cache", @"trash"),
+              SPKNotificationItem(kSPKNotificationSettingsClearCache, SPKL(@"GENERAL_GENERAL_CLEAR_CACHE_TITLE"), @"trash"),
               SPKNotificationItem(kSPKNotificationCopyDescription, SPKL(@"UI_NOTIFICATION_CENTER_COPY_DESCRIPTION_TEXT"), @"copy"),
-              SPKNotificationItem(kSPKNotificationCopyNoteText, @"Copy Note Text", @"copy"),
-              SPKNotificationItem(kSPKNotificationShareLongPressCopyLink, @"Hold Send to Copy Link", @"link"),
+              SPKNotificationItem(kSPKNotificationCopyNoteText, SPKL(@"MESSAGES_NOTES_COPY_NOTE_TEXT_TITLE"), @"copy"),
+              SPKNotificationItem(kSPKNotificationShareLongPressCopyLink, SPKL(@"GENERAL_BEHAVIOR_HOLD_SEND_COPY_LINK_TITLE"), @"link"),
               SPKNotificationItem(kSPKNotificationFlexUnavailable, SPKL(@"UI_NOTIFICATION_CENTER_FLEX_UNAVAILABLE_TEXT"), @"warning"),
           ]},
     ];
@@ -705,11 +705,11 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
             if ([identifier isEqualToString:kSPKNotificationStorySeenUserRule] ||
                 [identifier isEqualToString:kSPKNotificationProfileStorySeenUserRule]) {
                 BOOL manualSeenEnabled = [SPKUtils getBoolPref:@"stories_manual_seen"];
-                resolvedSubtitle = [NSString stringWithFormat:@"Tap to open %@", manualSeenEnabled ? @"excluded list" : @"included list"];
+                resolvedSubtitle = manualSeenEnabled ? SPKL(@"UI_NOTIFICATION_CENTER_TAP_OPEN_EXCLUDED_LIST_TEXT") : SPKL(@"UI_NOTIFICATION_CENTER_TAP_OPEN_INCLUDED_LIST_TEXT");
             } else if ([identifier isEqualToString:kSPKNotificationDirectThreadSeenRule] ||
                        [identifier isEqualToString:kSPKNotificationProfileMessagesSeenUserRule]) {
                 BOOL manualSeenEnabled = [SPKUtils getBoolPref:@"msgs_manual_seen"];
-                resolvedSubtitle = [NSString stringWithFormat:@"Tap to open %@", manualSeenEnabled ? @"excluded list" : @"included list"];
+                resolvedSubtitle = manualSeenEnabled ? SPKL(@"UI_NOTIFICATION_CENTER_TAP_OPEN_EXCLUDED_LIST_TEXT") : SPKL(@"UI_NOTIFICATION_CENTER_TAP_OPEN_INCLUDED_LIST_TEXT");
             } else if ([identifier isEqualToString:kSPKNotificationPresenceUserRule]) {
                 resolvedSubtitle = SPKL(@"MESSAGES_ACTIVITY_TAP_TO_OPEN_LIST_SUBTITLE");
             } else if (SPKAutoSaveListViewControllerForRuleIdentifier(identifier)) {
@@ -805,7 +805,7 @@ static BOOL SPKManualSeenSettingsUIVisible(void) {
             }
         }
         pill = [SPKNotificationPillView progressPill];
-        [pill updateProgressTitle:title ?: @"Downloading..." subtitle:nil];
+        [pill updateProgressTitle:title ?: SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT") subtitle:nil];
         pill.onCancel = onCancel;
         __weak SPKNotificationPillView *weakPillRef = pill;
         pill.onTonePresented = ^(SPKNotificationTone tone) {

@@ -178,7 +178,7 @@ static void SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSource source) {
     if (!feedback)
         return;
     NSString *iconResource = feedback[@"iconResource"] ?: @"ig_icon_reshare_outline_24";
-    SPKNotify(kSPKNotificationRepost, feedback[@"title"] ?: @"Tapped repost button", nil, iconResource, SPKNotificationToneForIconResource(iconResource));
+    SPKNotify(kSPKNotificationRepost, feedback[@"title"] ?: SPKL(@"GENERAL_REPOST_TAPPED_TOAST"), nil, iconResource, SPKNotificationToneForIconResource(iconResource));
 }
 
 @interface _UISheetDetent : NSObject

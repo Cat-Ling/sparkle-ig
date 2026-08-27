@@ -361,7 +361,7 @@ static NSUInteger const kSPKFontSpecimenFaceLimit = 6;
             UIFont *font = [UIFont fontWithName:face.postScriptName size:17.0];
             if (!font)
                 continue;
-            [titles addObject:face.styleName.length > 0 ? face.styleName : @"Regular"];
+            [titles addObject:face.styleName.length > 0 ? face.styleName : SPKL(@"FONT_STYLE_REGULAR")];
             [fonts addObject:font];
         }
         NSUInteger remaining = faces.count - titles.count;
@@ -371,13 +371,16 @@ static NSUInteger const kSPKFontSpecimenFaceLimit = 6;
     } else {
         // The system font is a single variable face, so there is nothing to list;
         // these are the weights Instagram and Sparkle actually ask it for.
-        NSArray<NSString *> *systemTitles = @[ @"Regular", @"Medium", @"Bold", @"Italic" ];
+        NSArray<NSString *> *systemTitles = @[
+            SPKL(@"FONT_STYLE_REGULAR"), SPKL(@"FONT_STYLE_MEDIUM"),
+            SPKL(@"FONT_STYLE_BOLD"), SPKL(@"FONT_STYLE_ITALIC")
+        ];
         NSArray<NSNumber *> *systemWeights = @[ @(UIFontWeightRegular), @(UIFontWeightMedium),
                                                 @(UIFontWeightBold), @(UIFontWeightRegular) ];
         for (NSUInteger index = 0; index < systemTitles.count; index++) {
             UIFont *font = [self systemFontOfSize:17.0
                                            weight:systemWeights[index].doubleValue
-                                           italic:[systemTitles[index] isEqualToString:@"Italic"]];
+                                           italic:(index == 3)];
             if (!font)
                 continue;
             [titles addObject:systemTitles[index]];

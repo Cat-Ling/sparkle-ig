@@ -1135,7 +1135,7 @@ static UIImage *SPKTabEditorGlyph(NSString *iconName) {
 
 - (UIMenu *)swipeMenu {
     __weak typeof(self) weakSelf = self;
-    NSArray<NSArray<NSString *> *> *choices = @[ @[ SPKL(@"MENU_DEFAULT"), @"default" ], @[ @"On", @"enabled" ], @[ @"Off", @"disabled" ] ];
+    NSArray<NSArray<NSString *> *> *choices = @[ @[ SPKL(@"MENU_DEFAULT"), @"default" ], @[ SPKL(@"MENU_ON"), @"enabled" ], @[ SPKL(@"MENU_OFF"), @"disabled" ] ];
     NSMutableArray<UIMenuElement *> *actions = [NSMutableArray array];
     NSMutableArray<UIMenuElement *> *fallback = [NSMutableArray array];
     for (NSArray<NSString *> *choice in choices) {

@@ -64,21 +64,21 @@ NSString *SPKDeletedMessageKindLocalizedName(SPKDeletedMessageKind kind) {
     case SPKDeletedMessageKindText:
         return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT");
     case SPKDeletedMessageKindPhoto:
-        return @"Photo";
+        return SPKL(@"COMMON_MEDIA_TYPE_PHOTO");
     case SPKDeletedMessageKindVideo:
-        return @"Video";
+        return SPKL(@"COMMON_MEDIA_TYPE_VIDEO");
     case SPKDeletedMessageKindVoice:
         return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT");
     case SPKDeletedMessageKindGif:
-        return @"GIF";
+        return SPKL(@"COMMON_MEDIA_TYPE_GIF");
     case SPKDeletedMessageKindSticker:
-        return @"Sticker";
+        return SPKL(@"COMMON_MEDIA_TYPE_STICKER");
     case SPKDeletedMessageKindShare:
-        return @"Share";
+        return SPKL(@"ALERT_ACTION_SHARE");
     case SPKDeletedMessageKindLink:
-        return @"Link";
+        return SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_LINK_TEXT");
     case SPKDeletedMessageKindAudioShare:
-        return @"Audio";
+        return SPKL(@"COMMON_MEDIA_TYPE_AUDIO");
     case SPKDeletedMessageKindReaction:
         return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION");
     case SPKDeletedMessageKindOther:
@@ -125,11 +125,11 @@ NSString *SPKDeletedMessageKindSymbolFilled(SPKDeletedMessageKind kind, BOOL fil
 
 NSString *SPKDeletedMessageShareSubtypeName(NSString *subtype) {
     if ([subtype isEqualToString:@"reel"])
-        return @"Reel";
+        return SPKL(@"COMMON_MEDIA_TYPE_REEL");
     if ([subtype isEqualToString:@"post"])
         return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_POST_TEXT");
     if ([subtype isEqualToString:@"story"])
-        return @"Story";
+        return SPKL(@"COMMON_MEDIA_TYPE_STORY");
     if ([subtype isEqualToString:@"profile"])
         return SPKL(@"PROFILE_TITLE");
     if ([subtype isEqualToString:@"note"])
@@ -137,7 +137,7 @@ NSString *SPKDeletedMessageShareSubtypeName(NSString *subtype) {
     if ([subtype isEqualToString:@"location"])
         return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_LOCATION_TEXT");
     if ([subtype isEqualToString:@"audio"])
-        return @"Audio";
+        return SPKL(@"COMMON_MEDIA_TYPE_AUDIO");
     return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_SHARED_POST_TEXT");
 }
 

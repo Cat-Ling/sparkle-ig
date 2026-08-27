@@ -230,7 +230,7 @@ BOOL SPKAutoSaveFilterListUIVisible(void) {
 
     NSString *name = [self removalDisplayNameForEntry:entry];
     SPKNotify(self.config.ruleNotificationIdentifier,
-              name.length > 0 ? [NSString stringWithFormat:@"Removed %@", name] : SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_REMOVED_ENTRY_TEXT"),
+              name.length > 0 ? [NSString stringWithFormat:SPKL(@"COMMON_REMOVED_VALUE_FORMAT"), name] : SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_REMOVED_ENTRY_TEXT"),
               SPKAutoSaveFilterListTitle(self.config),
               @"circle_check_filled",
               SPKNotificationToneSuccess);

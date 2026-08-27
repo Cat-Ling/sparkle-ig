@@ -985,16 +985,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
 }
 
 - (NSString *)listDownloadDateString {
-    static NSDateFormatter *fmt;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        fmt = [[NSDateFormatter alloc] init];
-        // Date order + time follow the device's regional / 12/24-hour settings.
-        fmt.dateFormat = [NSString stringWithFormat:@"%@ 'at' %@",
-                          [SPKUtils spk_localizedDateComponentIncludingYear:NO],
-                          [SPKUtils spk_localizedTimeComponent]];
-    });
-    return self.dateAdded ? [fmt stringFromDate:self.dateAdded] : @"";
+    return [SPKUtils spk_formattedDateTime:self.dateAdded includingYear:NO] ?: @"";
 }
 
 - (NSURL *)preferredProfileURL {
@@ -1166,7 +1157,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
     case SPKGallerySourceStories:
         return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKGallerySourceReels:
-        return @"Reels";
+        return SPKL(@"REELS_TITLE");
     case SPKGallerySourceProfile:
         return SPKL(@"PROFILE_TITLE");
     case SPKGallerySourceDMs:

@@ -202,7 +202,7 @@ static char kSPKSectionEditSwitchAssocKey;
                 SPKActionMenuSection *ownerSection = [self.configuration sectionWithIdentifier:owner];
                 config.secondaryText = ownerSection.title;
             } else {
-                config.secondaryText = @"Unassigned";
+                config.secondaryText = SPKL(@"ALERT_ACTION_UNASSIGNED");
             }
         }
     }

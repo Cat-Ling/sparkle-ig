@@ -61,15 +61,15 @@ static NSString *SPKDuplicateKey(SPKGallerySaveMetadata *metadata, NSInteger med
     return [NSString stringWithFormat:@"%ld|%@", (long)mediaType, identity];
 }
 
-static NSString *SPKMediaTypeLabel(NSInteger mediaType) {
+static NSString *SPKDuplicateMessageFormat(NSInteger mediaType) {
     switch (mediaType) {
     case SPKGalleryMediaTypeVideo:
-        return @"video";
+        return SPKL(@"DOWNLOADS_DUPLICATE_VIDEO_DESTINATION_FORMAT");
     case SPKGalleryMediaTypeAudio:
-        return @"audio";
+        return SPKL(@"DOWNLOADS_DUPLICATE_AUDIO_DESTINATION_FORMAT");
     case SPKGalleryMediaTypeImage:
     default:
-        return @"photo";
+        return SPKL(@"DOWNLOADS_DUPLICATE_PHOTO_DESTINATION_FORMAT");
     }
 }
 
@@ -172,8 +172,7 @@ static BOOL SPKPresentSingleDuplicateAlert(SPKDownloadDuplicateDestination desti
                                            void (^continuation)(SPKDownloadDuplicateDecision)) {
     if (!SPKHasDuplicate(destination, metadata, mediaType))
         return NO;
-    NSString *message = [NSString stringWithFormat:SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_VALUE_PREVIOUSLY_DOWNLOADED_VALUE_FORMAT"),
-                                                   SPKMediaTypeLabel(mediaType),
+    NSString *message = [NSString stringWithFormat:SPKDuplicateMessageFormat(mediaType),
                                                    SPKDestinationLabel(destination)];
     [SPKIGAlertPresenter presentAlertFromViewController:presenter
                                                   title:SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_DUPLICATE_DOWNLOAD_DETECTED_TEXT")

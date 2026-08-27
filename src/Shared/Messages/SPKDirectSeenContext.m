@@ -1165,8 +1165,8 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
 
     if (notificationTitle) {
         *notificationTitle = applies
-                                 ? [NSString stringWithFormat:@"Messages seen on for %@", threadName]
-                                 : [NSString stringWithFormat:@"Messages seen off for %@", threadName];
+                                 ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MESSAGES_SEEN_ON_FORMAT"), threadName]
+                                 : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MESSAGES_SEEN_OFF_FORMAT"), threadName];
     }
     if (notificationSubtitle)
         *notificationSubtitle = listTitle;
@@ -1187,7 +1187,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
         self.title = SPKDirectManualSeenListTitle(_manualSeenEnabled);
         self.showsAddButton = YES;
         self.infoText = SPKDirectManualSeenListHelpText(_manualSeenEnabled);
-        self.emptyTitle = @"No chats yet";
+        self.emptyTitle = SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_NO_CHATS_YET_TEXT");
         self.emptySubtitle = _manualSeenEnabled
                                  ? SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADD_CHATS_SHOULD_KEEP_INSTAGRAM_S_NORMAL_SEEN_BEHAVIOR_TEXT")
                                  : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADD_CHATS_REQUIRE_EYE_BUTTON_MARK_SEEN_TEXT");
@@ -1196,7 +1196,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
 }
 
 - (NSString *)displayNameForEntry:(NSDictionary *)entry {
-    return SPKDirectDisplayNameForThreadEntry(entry) ?: @"Unknown Chat";
+    return SPKDirectDisplayNameForThreadEntry(entry) ?: SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_UNKNOWN_CHAT_TEXT");
 }
 
 - (NSString *)subtitleForEntry:(NSDictionary *)entry {
@@ -1283,7 +1283,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
     NSString *threadName = [self displayNameForEntry:entry];
     SPKDirectRemoveManualSeenThreadId(threadId, self.manualSeenEnabled);
     SPKNotify(kSPKNotificationDirectThreadSeenRule,
-              [NSString stringWithFormat:@"Removed %@", threadName],
+              [NSString stringWithFormat:SPKL(@"COMMON_REMOVED_VALUE_FORMAT"), threadName],
               SPKDirectManualSeenListTitle(self.manualSeenEnabled),
               @"circle_check_filled",
               SPKNotificationToneSuccess);
@@ -1330,7 +1330,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
                                           return;
                                       if (![user isKindOfClass:[NSDictionary class]] || error) {
                                           SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup failed username=%@ error=%@", username, error);
-                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          [strongSelf presentError:[NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USER_VALUE_NOT_FOUND_FORMAT"), username]];
                                           return;
                                       }
                                       NSString *pk = SPKDirectStringFromValue(user[@"pk"] ?: user[@"id"]);
@@ -1339,7 +1339,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
                                       NSString *profilePicUrl = SPKDirectStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
                                       if (pk.length == 0) {
                                           SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup missing pk username=%@ response=%@", username, user);
-                                          [strongSelf presentError:@"Could not resolve this user's Instagram id."];
+                                          [strongSelf presentError:SPKL(@"MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR")];
                                           return;
                                       }
                                       [strongSelf resolveThreadForPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];

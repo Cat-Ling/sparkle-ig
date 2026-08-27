@@ -18,6 +18,7 @@
 // server-side and cannot be undone from the client.
 
 #import "../../InstagramHeaders.h"
+#import "SPKStrings.h"
 #import "../../Utils.h"
 #import <objc/runtime.h>
 #import <objc/message.h>
@@ -33,27 +34,9 @@ static BOOL SPKLastActiveEnabled(void) {
     return ![style isEqualToString:@"off"];
 }
 
-// "Active " prefix + the formatted timestamp. Cached formatters keyed by the
-// shape we need.
-static NSDateFormatter *SPKLastActiveFormatter(NSString *format) {
-    static NSMutableDictionary<NSString *, NSDateFormatter *> *cache = nil;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        cache = [NSMutableDictionary dictionary];
-    });
-    @synchronized(cache) {
-        NSDateFormatter *df = cache[format];
-        if (!df) {
-            df = [NSDateFormatter new];
-            df.dateFormat = format;
-            cache[format] = df;
-        }
-        return df;
-    }
-}
-
-// Builds "at 1:15 AM" / "Nov 3 at 1:15 AM" / "Nov 3, 2025 at 1:15 AM" from the
-// date, honoring the msgs_last_active_format preference.
+// Builds a locale-aware absolute timestamp and wraps it in the localized
+// "Last active" status. Date order, punctuation and hour cycle come from the
+// active Sparkle language rather than English source literals.
 static NSString *SPKFormattedLastActive(NSDate *date) {
     NSCalendar *cal = [NSCalendar currentCalendar];
     NSDate *now = [NSDate date];
@@ -61,25 +44,16 @@ static NSString *SPKFormattedLastActive(NSDate *date) {
     BOOL sameYear = [cal component:NSCalendarUnitYear fromDate:date] ==
                     [cal component:NSCalendarUnitYear fromDate:now];
 
-    // Date order and time follow the device's regional + 12/24-hour settings.
-    NSString *time = [SPKUtils spk_localizedTimeComponent];
-    NSString *format;
     NSString *style = [SPKUtils getStringPref:@"msgs_last_active_format"] ?: @"smart";
+    NSString *body = nil;
     if ([style isEqualToString:@"smart"] && sameDay) {
-        // Active earlier today — time is enough to be unambiguous.
-        format = [@"'at' " stringByAppendingString:time];
-    } else if (sameYear) {
-        format = [NSString stringWithFormat:@"%@ 'at' %@",
-                  [SPKUtils spk_localizedDateComponentIncludingYear:NO], time];
+        body = [SPKUtils spk_formattedTime:date];
     } else {
-        format = [NSString stringWithFormat:@"%@ 'at' %@",
-                  [SPKUtils spk_localizedDateComponentIncludingYear:YES], time];
+        body = [SPKUtils spk_formattedDateTime:date includingYear:!sameYear];
     }
-
-    NSString *body = [SPKLastActiveFormatter(format) stringFromDate:date];
     if (!body.length)
         return nil;
-    return [@"Active " stringByAppendingString:body];
+    return [NSString stringWithFormat:SPKL(@"MESSAGES_LAST_ACTIVE_STATUS_FORMAT"), body];
 }
 
 // Digs the recipient's last-active date out of the title view. Primary path

@@ -60,11 +60,11 @@ static NSArray<NSDictionary *> *SPKActionButtonDefaultActionSections(SPKActionBu
     NSArray<NSDictionary *> *groups = @[
         @{@"title" : SPKL(@"DOWNLOADS_GENERAL_DOWNLOADS_TITLE"),
           @"actions" : @[ kSPKActionDownloadLibrary, kSPKActionDownloadShare, kSPKActionDownloadGallery ]},
-        @{@"title" : @"Media",
+        @{@"title" : SPKL(@"FEED_MEDIA_HEADER"),
           @"actions" : @[ kSPKActionExpand, kSPKActionViewThumbnail, kSPKActionTrimSave, kSPKActionEditSave ]},
         @{@"title" : SPKL(@"FEED_COMMENT_ACTIONS_COPY_TEXT"),
           @"actions" : @[ kSPKActionCopyDownloadLink, kSPKActionCopyMedia, kSPKActionCopyCaption, kSPKActionProfileCopyInfo ]},
-        @{@"title" : @"Audio",
+        @{@"title" : SPKL(@"COMMON_MEDIA_TYPE_AUDIO"),
           @"actions" : @[ kSPKActionDownloadAudio, kSPKActionDownloadAudioShare, kSPKActionDownloadAudioGallery, kSPKActionPlayAudio, kSPKActionCopyAudioURL ]},
         @{@"title" : SPKL(@"STORIES_OTHER_HEADER"),
           @"actions" : @[ kSPKActionOpenTopicSettings, kSPKActionRepost, kSPKActionStoryMentionsSheet, kSPKActionToggleStorySeenUserRule, kSPKActionDeletedMessagesLog, kSPKActionNone ]}

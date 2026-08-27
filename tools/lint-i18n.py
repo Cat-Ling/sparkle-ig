@@ -20,14 +20,39 @@ PLURAL_CALL_RE = re.compile(r'\bSPKLP\(@"([A-Z][A-Z0-9_]*)"')
 PLACEHOLDER_RE = re.compile(r'%(?!%)(?:\d+\$)?[-+ #0\']*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l|j|z|t|L)?[@diuoxXfFeEgGaAcCsSp]')
 BAD_KEY_RE = re.compile(r'^(?:FEAT_)|VIEWCONTROLLER|(?:^|_)SPK[A-Z0-9_]*CONTROLLER|_[0-9]+$|CONTEXT_[A-F0-9]+$')
 UNSAFE_LINE_RE = re.compile(r'(?:isEqualToString|hasPrefix|hasSuffix|imageNamed|instagramIconNamed|menuIconNamed|menuSizedIcon|URLWithString|get(?:Bool|String|Double)Pref|forKey)\s*:\s*SPKL')
-RAW_UI_RE = re.compile(r'(?:\.title|\.text|\.placeholder|\.accessibilityLabel|\btitle|\bmessage|\bsubtitle|\bheader|\bfooter)\s*[:=]\s*@"[^"\\]*[A-Za-z][^"\\]*"')
+RAW_UI_RE = re.compile(r'(?:\.title|\.text|\.placeholder|\.accessibilityLabel|\.accessibilityHint|\.emptyTitle|\.emptySubtitle|\.infoText|\.successTitle|\.pickerTitle|\.masterTitle|\.finishTitleOverride|\btitle|\bmessage|\bsubtitle|\bheader|\bfooter)\s*[:=]\s*@"[^"\\]*[A-Za-z][^"\\]*"')
 RAW_CHROME_RE = re.compile(
     r'SPKMediaChromeBottomBarButtonItem\(\s*@"[^"]+"\s*,\s*@"[^"\\]*[A-Za-z]'
     r'|SPKMediaChromeTopBarButtonItemWithTint\([^;]{0,500}?,\s*@"[^"\\]*[A-Za-z]"\s*\)'
     r'|SPKMediaChromeTopBarMenuButtonItem(?:WithTint)?\([^;]{0,500}?,\s*@"[^"\\]*[A-Za-z]"\s*\)',
     re.DOTALL,
 )
+# Dictionary literals feed menus, notification rows, progress stages and settings
+# groups all over the tweak, so a raw value there is as user-visible as a property.
+RAW_DICTIONARY_UI_RE = re.compile(
+    r'@"(?:title|label|subtitle|stage|detail|caption|footer|header|message)"\s*:\s*@"[^"\\]*[A-Za-z][^"\\]*"'
+)
+RAW_ERROR_DESCRIPTION_RE = re.compile(r'NSLocalizedDescriptionKey\s*:\s*@"[^"\\]*[A-Za-z][^"\\]*"')
 RAW_BULK_MENU_RE = re.compile(r'SPKBulkActionMenuElementForContext\([^;]{0,900}?,\s*@"[^"\\]*[A-Za-z]"\s*,\s*kSPK', re.DOTALL)
+RAW_SELECTOR_UI_RE = re.compile(
+    r'(?:WithTitle|\btitle|\bmessage|\bsubtitle|\bplaceholder|\bfooter|\bheader|accessibilityLabel|accessibilityHint)'
+    r'\s*:\s*@"[^"\\]*[A-Za-z][^"\\]*"'
+)
+LOCALIZED_CALL_RE = re.compile(r'\bSPKL(?:C|P)?\(\s*@"[A-Z][A-Z0-9_]*"[^)]*\)')
+RAW_LITERAL_RE = re.compile(r'@"((?:\\.|[^"\\])*)"')
+C_UI_SINKS = {
+    "SPKNotify": ((1, "raw user-facing notification title"), (2, "raw user-facing notification subtitle")),
+    "SPKNotificationItem": ((1, "raw user-facing notification row title"),),
+    "SPKAudioDMNotify": ((0, "raw user-facing notification title"), (1, "raw user-facing notification subtitle")),
+    "SPKFFmpegError": ((0, "raw user-facing FFmpeg error message"),),
+    "SPKDownloadError": ((1, "raw user-facing download error message"),),
+    "SPKMediaSection": ((0, "raw user-facing media section title"),),
+    "SPKTopicSection": ((0, "raw user-facing settings section title"), (2, "raw user-facing settings section footer")),
+    "setProgress": ((1, "raw user-facing progress title"),),
+    "report": ((1, "raw user-facing progress title"),),
+    "fail": ((0, "raw user-facing failure title"), (1, "raw user-facing failure message")),
+    "failImport": ((0, "raw user-facing import failure message"),),
+}
 
 
 def source_files() -> list[Path]:
@@ -55,6 +80,84 @@ def placeholders(value: str) -> list[str]:
     return [re.sub(r'^%(?:\d+\$)?', "%", token) for token in PLACEHOLDER_RE.findall(value)]
 
 
+def c_call_arguments(text: str, function_name: str):
+    """Yield (offset, arguments) for balanced C-style calls to function_name."""
+    call_re = re.compile(rf'\b{re.escape(function_name)}\s*\(')
+    for match in call_re.finditer(text):
+        arguments: list[str] = []
+        argument_start = match.end()
+        cursor = argument_start
+        paren_depth = bracket_depth = brace_depth = 0
+        quote: str | None = None
+        escaped = False
+        while cursor < len(text):
+            character = text[cursor]
+            following = text[cursor + 1] if cursor + 1 < len(text) else ""
+            if quote:
+                if escaped:
+                    escaped = False
+                elif character == "\\":
+                    escaped = True
+                elif character == quote:
+                    quote = None
+                cursor += 1
+                continue
+            if character in ('"', "'"):
+                quote = character
+                cursor += 1
+                continue
+            if character == "/" and following == "/":
+                newline = text.find("\n", cursor + 2)
+                cursor = len(text) if newline < 0 else newline + 1
+                continue
+            if character == "/" and following == "*":
+                comment_end = text.find("*/", cursor + 2)
+                cursor = len(text) if comment_end < 0 else comment_end + 2
+                continue
+            if character == "(":
+                paren_depth += 1
+            elif character == ")":
+                if paren_depth == 0 and bracket_depth == 0 and brace_depth == 0:
+                    arguments.append(text[argument_start:cursor].strip())
+                    yield match.start(), arguments
+                    break
+                paren_depth -= 1
+            elif character == "[":
+                bracket_depth += 1
+            elif character == "]":
+                bracket_depth -= 1
+            elif character == "{":
+                brace_depth += 1
+            elif character == "}":
+                brace_depth -= 1
+            elif character == "," and paren_depth == 0 and bracket_depth == 0 and brace_depth == 0:
+                arguments.append(text[argument_start:cursor].strip())
+                argument_start = cursor + 1
+            cursor += 1
+
+
+def contains_raw_user_text(argument: str) -> bool:
+    without_localized_calls = LOCALIZED_CALL_RE.sub("", argument)
+    for match in RAW_LITERAL_RE.finditer(without_localized_calls):
+        value = match.group(1)
+        if not re.search(r"[A-Za-z]", value):
+            continue
+        before = without_localized_calls[:match.start()].rstrip()
+        after = without_localized_calls[match.end():].lstrip()
+        if before.endswith("[") and after.startswith("]"):
+            continue
+        return True
+    return False
+
+
+def ignored_at_offset(text: str, offset: int) -> bool:
+    line_start = text.rfind("\n", 0, offset) + 1
+    line_end = text.find("\n", offset)
+    if line_end < 0:
+        line_end = len(text)
+    return "SPK_I18N_IGNORE" in text[line_start:line_end]
+
+
 def main() -> int:
     errors: list[str] = []
     normal_uses: Counter[str] = Counter()
@@ -69,11 +172,21 @@ def main() -> int:
         for pattern, description in (
             (RAW_CHROME_RE, "raw user-facing chrome label"),
             (RAW_BULK_MENU_RE, "raw user-facing bulk-menu title"),
+            (RAW_SELECTOR_UI_RE, "raw user-facing selector argument"),
+            (RAW_DICTIONARY_UI_RE, "raw user-facing dictionary value"),
+            (RAW_ERROR_DESCRIPTION_RE, "raw user-facing error description"),
         ):
             for match in pattern.finditer(text):
-                if "SPK_I18N_IGNORE" not in match.group(0):
+                if "SPK_I18N_IGNORE" not in match.group(0) and not ignored_at_offset(text, match.start()):
                     line_number = text.count("\n", 0, match.start()) + 1
                     errors.append(f"{path.relative_to(ROOT)}:{line_number}: {description}")
+        for function_name, positions in C_UI_SINKS.items():
+            for offset, arguments in c_call_arguments(text, function_name):
+                for position, description in positions:
+                    if position < len(arguments) and contains_raw_user_text(arguments[position]):
+                        line_number = text.count("\n", 0, offset) + 1
+                        if not ignored_at_offset(text, offset):
+                            errors.append(f"{path.relative_to(ROOT)}:{line_number}: {description}")
         for line_number, line in enumerate(text.splitlines(), 1):
             if UNSAFE_LINE_RE.search(line):
                 errors.append(f"{path.relative_to(ROOT)}:{line_number}: localized value used as an internal identifier or comparison")

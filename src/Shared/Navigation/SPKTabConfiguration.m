@@ -176,13 +176,13 @@ BOOL SPKSingleTabAllowsHidingTabBar(NSString *identifier) {
 }
 
 NSString *SPKTabTitle(NSString *identifier) {
-    if ([identifier isEqualToString:SPKTabIdentifierFeed]) return @"Feed";
-    if ([identifier isEqualToString:SPKTabIdentifierClips]) return @"Reels";
-    if ([identifier isEqualToString:SPKTabIdentifierDirect]) return @"Messages";
+    if ([identifier isEqualToString:SPKTabIdentifierFeed]) return SPKL(@"FEED_TITLE");
+    if ([identifier isEqualToString:SPKTabIdentifierClips]) return SPKL(@"REELS_TITLE");
+    if ([identifier isEqualToString:SPKTabIdentifierDirect]) return SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE");
     if ([identifier isEqualToString:SPKTabIdentifierSearch]) return SPKL(@"TAB_EXPLORE");
-    if ([identifier isEqualToString:SPKTabIdentifierProfile]) return @"Profile";
-    if ([identifier isEqualToString:SPKTabIdentifierCreate]) return @"Create";
-    if ([identifier isEqualToString:SPKTabIdentifierSaved]) return @"Saved";
+    if ([identifier isEqualToString:SPKTabIdentifierProfile]) return SPKL(@"PROFILE_TITLE");
+    if ([identifier isEqualToString:SPKTabIdentifierCreate]) return SPKL(@"TAB_CREATE");
+    if ([identifier isEqualToString:SPKTabIdentifierSaved]) return SPKL(@"TAB_SAVED");
     return identifier ?: SPKL(@"NAVIGATION_TAB_CONFIGURATION_TAB_TEXT");
 }
 
