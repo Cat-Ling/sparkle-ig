@@ -102,6 +102,7 @@ static BOOL SPKFontPathHasFontExtension(NSString *path) {
 
 /// A readable style name for a face whose file declares none, so the picker never
 /// shows a blank label. Deliberately coarse: it only has the weight to go on.
+/// Called when a face is displayed, never while resolving a font.
 static NSString *SPKFontDerivedStyleName(CGFloat weight, BOOL italic) {
     // Regular is tracked separately because its italic form is just "Italic", not
     // "Regular Italic". Comparing the resolved (localized) name would break that.
@@ -162,11 +163,15 @@ static void SPKFontTraitsForName(NSString *postScriptName, CGFloat *outWeight, B
     if (outItalic)
         *outItalic = italic;
     if (outStyle)
-        *outStyle = style.length > 0 ? style : SPKFontDerivedStyleName(weight, italic);
+        *outStyle = style.length > 0 ? style : nil;
 }
 
 /// The faces of `family` with their traits, read from Core Text once and kept.
-/// Each entry is @{@"name", @"weight", @"italic", @"style"}.
+/// Each entry is @{@"name", @"weight", @"italic", @"style"}, where "style" is the
+/// name the file declares or an empty string when it declares none. Nothing here
+/// is localized: this index is built from inside the app-wide UIFont hook, so a
+/// string lookup on this path would re-enter font resolution, and the cache would
+/// otherwise keep whatever language was active when the family was first used.
 static NSArray<NSDictionary *> *SPKFontFacesForFamily(NSString *family) {
     os_unfair_lock_lock(&spk_stateLock);
     NSArray<NSDictionary *> *cached = spk_faceIndex[family];
@@ -185,7 +190,7 @@ static NSArray<NSDictionary *> *SPKFontFacesForFamily(NSString *family) {
             @"name" : name,
             @"weight" : @(faceWeight),
             @"italic" : @(faceItalic),
-            @"style" : faceStyle ?: SPKL(@"FONT_STYLE_REGULAR"),
+            @"style" : faceStyle ?: @"",
         }];
     }
 
@@ -329,9 +334,10 @@ static NSString *SPKFontBestFaceInFamily(NSString *family, CGFloat weight, BOOL 
     for (NSDictionary *entry in SPKFontFacesForFamily(familyName)) {
         SPKFontFace *face = [[SPKFontFace alloc] init];
         face.postScriptName = entry[@"name"];
-        face.styleName = entry[@"style"];
         face.weight = [entry[@"weight"] doubleValue];
         face.italic = [entry[@"italic"] boolValue];
+        NSString *declaredStyle = entry[@"style"];
+        face.styleName = declaredStyle.length > 0 ? declaredStyle : SPKFontDerivedStyleName(face.weight, face.italic);
         [faces addObject:face];
     }
 
