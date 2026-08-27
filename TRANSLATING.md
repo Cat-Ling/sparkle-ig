@@ -7,7 +7,7 @@ If you only want to report a correction, use **Help Translate Sparkle** at the b
 ## Add a new language
 
 1. Choose the canonical Apple/BCP 47 localization identifier for the language, such as `nl`, `es-ES`, `pt-BR`, or `zh-Hans`.
-2. Copy `Sparkle.bundle/en.lproj` to `Sparkle.bundle/<locale>.lproj`. Translate both `Localizable.strings` and `Localizable.stringsdict`.
+2. Copy `resources/Sparkle.bundle/en.lproj` to `resources/Sparkle.bundle/<locale>.lproj`. Translate both `Localizable.strings` and `Localizable.stringsdict`.
 3. Add the locale to:
    - `+[SPKStrings supportedLanguages]` in `src/Shared/i18n/SPKStrings.m`
    - the endonym map in `src/Settings/SPKLanguagePicker.m`
@@ -26,8 +26,8 @@ Use natural grammar and capitalization for the target language rather than copyi
 Run these checks before opening a pull request:
 
 ```sh
-plutil -lint Sparkle.bundle/<locale>.lproj/Localizable.strings
-plutil -lint Sparkle.bundle/<locale>.lproj/Localizable.stringsdict
+plutil -lint resources/Sparkle.bundle/<locale>.lproj/Localizable.strings
+plutil -lint resources/Sparkle.bundle/<locale>.lproj/Localizable.stringsdict
 python3 tools/lint-i18n.py
 git diff --check
 make -j4

@@ -28,7 +28,7 @@ usage() {
 # catalog is never pushed twice. The stamp lives under packages/ because
 # .theos is wiped between builds.
 sparkle_resource_hash() {
-    find "$ROOT_DIR/Sparkle.bundle" -type f \
+    find "$ROOT_DIR/resources/Sparkle.bundle" -type f \
         \( -name '*.strings' -o -name '*.stringsdict' -o -name 'Info.plist' \) \
         -exec shasum {} + \
         | sed "s|$ROOT_DIR/||" \

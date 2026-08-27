@@ -36,7 +36,7 @@ $(TWEAK_NAME)_CXXFLAGS += -std=c++11
 # staging because their install names must be rewritten and signed first.
 $(TWEAK_NAME)_BUNDLE_NAME = Sparkle
 $(TWEAK_NAME)_BUNDLE_INSTALL_PATH = /Library/Application Support
-$(TWEAK_NAME)_BUNDLE_RESOURCE_DIRS = Sparkle.bundle
+$(TWEAK_NAME)_BUNDLE_RESOURCE_DIRS = resources/Sparkle.bundle
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 

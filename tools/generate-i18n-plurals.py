@@ -7,7 +7,7 @@ import plistlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BUNDLE = ROOT / "Sparkle.bundle"
+BUNDLE = ROOT / "resources" / "Sparkle.bundle"
 
 FORMS = {
     "en": {"FILE": ("%ld file", "%ld files"), "ITEM": ("%ld item", "%ld items"), "USER": ("%ld user", "%ld users"), "PARTICIPANT": ("%ld participant", "%ld participants"), "MESSAGE": ("%ld message", "%ld messages"), "SENDER": ("%ld sender", "%ld senders")},

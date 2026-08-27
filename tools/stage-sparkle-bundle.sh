@@ -15,8 +15,8 @@ case "$MODE" in
     ""|--localizations-only)
         rm -rf "$DESTINATION"
         mkdir -p "$DESTINATION"
-        cp "$ROOT_DIR/Sparkle.bundle/Info.plist" "$DESTINATION/Info.plist"
-        for localization in "$ROOT_DIR"/Sparkle.bundle/*.lproj; do
+        cp "$ROOT_DIR/resources/Sparkle.bundle/Info.plist" "$DESTINATION/Info.plist"
+        for localization in "$ROOT_DIR"/resources/Sparkle.bundle/*.lproj; do
             cp -R "$localization" "$DESTINATION/"
         done
         ;;

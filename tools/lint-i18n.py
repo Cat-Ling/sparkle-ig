@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src"
-BUNDLE = ROOT / "Sparkle.bundle"
+BUNDLE = ROOT / "resources" / "Sparkle.bundle"
 LOCALES = ("en", "ar", "de", "el", "es-ES", "fr", "hi", "it", "ja", "ko", "pt-BR", "ro", "ru", "tr", "uk", "vi", "zh-Hans")
 SOURCE_SUFFIXES = {".m", ".mm", ".x", ".xm"}
 STRING_RE = re.compile(r'^"((?:\\.|[^"\\])*)"\s*=\s*"((?:\\.|[^"\\])*)";\s*$')
