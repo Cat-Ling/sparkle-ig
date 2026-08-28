@@ -16,6 +16,10 @@ static NSString *const kSPKFontSpecimenUppercase = @"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 static NSString *const kSPKFontSpecimenLowercase = @"abcdefghijklmnopqrstuvwxyz";
 static NSString *const kSPKFontSpecimenFigures = @"0123456789 &@#%$ ?!.,:;'\"-()";
 
+// Matches an inset-grouped table's own side margins, so the card lines up with the
+// section below it, and the text inside the card with the card's edges.
+static CGFloat const kSPKFontSpecimenInset = 20.0;
+
 // A specimen card for the font currently selected. It is the whole point of the
 // screen: the rows say which fonts exist, this says what the app is about to look
 // like -- at a size worth judging, and face by face, so a family that ships only
@@ -32,9 +36,16 @@ static NSString *const kSPKFontSpecimenFigures = @"0123456789 &@#%$ ?!.,:;'\"-()
 /// ships is a property of the family, not something the card can size for up front.
 @property (nonatomic, strong) UIStackView *facesStack;
 @property (nonatomic, strong) UILabel *hintLabel;
-/// Holds the sample at a constant two lines. Samples differ in length, so without
-/// it the card grows and shrinks under the finger as they are cycled.
+/// Holds the sample at a constant height. Samples differ in length, so without it
+/// the card grows and shrinks under the finger as they are cycled. The height is
+/// whatever the longest of them needs in the current font, not a fixed line count:
+/// a font wide enough (or a translation long enough) to push one sample onto a
+/// third line would otherwise have it truncated with an ellipsis.
 @property (nonatomic, strong) NSLayoutConstraint *sampleHeightConstraint;
+/// Every sample the card can cycle through, kept so the height can be measured
+/// against all of them rather than only the one on screen.
+@property (nonatomic, copy) NSArray<NSString *> *sampleTexts;
+- (void)updateSampleHeightForWidth:(CGFloat)width;
 @end
 
 @implementation SPKFontSpecimenView
@@ -62,7 +73,9 @@ static NSString *const kSPKFontSpecimenFigures = @"0123456789 &@#%$ ?!.,:;'\"-()
 
     _sampleLabel = [[UILabel alloc] init];
     _sampleLabel.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
-    _sampleLabel.numberOfLines = 2;
+    // Line count is governed by the measured height constraint below, which is
+    // sized to hold the longest sample outright.
+    _sampleLabel.numberOfLines = 0;
     _sampleLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [_card addSubview:_sampleLabel];
 
@@ -97,9 +110,7 @@ static NSString *const kSPKFontSpecimenFigures = @"0123456789 &@#%$ ?!.,:;'\"-()
     _hintLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [_card addSubview:_hintLabel];
 
-    // Inset to match an inset-grouped table's own side margins, so the card lines up
-    // with the section below it rather than floating at a different width.
-    CGFloat const inset = 20.0;
+    CGFloat const inset = kSPKFontSpecimenInset;
     [NSLayoutConstraint activateConstraints:@[
         [_card.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:inset],
         [_card.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-inset],
@@ -142,10 +153,36 @@ static NSString *const kSPKFontSpecimenFigures = @"0123456789 &@#%$ ?!.,:;'\"-()
     return label;
 }
 
+// Called again whenever the card's width resolves or changes: the header is sized
+// by frame rather than by Auto Layout, so the width the samples have to fit in is
+// only known from the outside.
+- (void)updateSampleHeightForWidth:(CGFloat)width {
+    UIFont *font = self.sampleLabel.font;
+    if (!font)
+        return;
+    CGFloat twoLines = ceil(font.lineHeight * 2.0);
+    CGFloat available = width - (kSPKFontSpecimenInset * 4.0); // card inset + text inset, both sides
+    CGFloat tallest = twoLines;
+    if (available > 0.0) {
+        for (NSString *text in self.sampleTexts) {
+            if (text.length == 0)
+                continue;
+            CGRect rect = [text boundingRectWithSize:CGSizeMake(available, CGFLOAT_MAX)
+                                             options:NSStringDrawingUsesLineFragmentOrigin
+                                          attributes:@{NSFontAttributeName : font}
+                                             context:nil];
+            tallest = MAX(tallest, ceil(CGRectGetHeight(rect)));
+        }
+    }
+    if (fabs(self.sampleHeightConstraint.constant - tallest) > 0.5)
+        self.sampleHeightConstraint.constant = tallest;
+}
+
 - (void)configureWithName:(NSString *)name
               displayFont:(UIFont *)displayFont
                sampleFont:(UIFont *)sampleFont
                sampleText:(NSString *)sampleText
+              sampleTexts:(NSArray<NSString *> *)sampleTexts
                 glyphFont:(UIFont *)glyphFont
               faceTitles:(NSArray<NSString *> *)faceTitles
                faceFonts:(NSArray<UIFont *> *)faceFonts
@@ -154,7 +191,8 @@ static NSString *const kSPKFontSpecimenFigures = @"0123456789 &@#%$ ?!.,:;'\"-()
     self.nameLabel.font = displayFont;
     self.sampleLabel.text = sampleText;
     self.sampleLabel.font = sampleFont;
-    self.sampleHeightConstraint.constant = ceil(sampleFont.lineHeight * 2.0);
+    self.sampleTexts = sampleTexts.count > 0 ? sampleTexts : (sampleText.length > 0 ? @[ sampleText ] : @[]);
+    [self updateSampleHeightForWidth:CGRectGetWidth(self.bounds)];
 
     for (UIView *line in self.glyphsStack.arrangedSubviews) {
         if ([line isKindOfClass:[UILabel class]])
@@ -310,6 +348,8 @@ static NSArray<NSString *> *SPKFontSpecimenSamples(void) {
     if (width <= 0.0)
         return;
 
+    [self.specimenView updateSampleHeightForWidth:width];
+
     // A table header view is sized by its frame, not by Auto Layout, so the height
     // has to be resolved here and the view re-assigned for the table to pick it up.
     CGFloat height = [self.specimenView systemLayoutSizeFittingSize:CGSizeMake(width, UILayoutFittingCompressedSize.height)
@@ -393,6 +433,7 @@ static NSUInteger const kSPKFontSpecimenFaceLimit = 6;
                              displayFont:[self fontForFamily:family size:30.0 weight:UIFontWeightSemibold]
                               sampleFont:[self fontForFamily:family size:16.0 weight:UIFontWeightRegular]
                               sampleText:samples[self.sampleIndex % samples.count]
+                             sampleTexts:samples
                                glyphFont:[self fontForFamily:family size:15.0 weight:UIFontWeightRegular]
                               faceTitles:titles
                                faceFonts:fonts
