@@ -337,7 +337,7 @@
 "DATA_BACKUP_TRANSFER_IMPORT_HELP" = "Sparkle निर्यात से पुनर्स्थापित करें। आयातित दायरे के लिए प्राथमिकताएं आपके मौजूदा मानों की जगह ले लेती हैं; Gallery, हटाए गए संदेश और Profile Analyzer डेटा मिला दिए जाते हैं और कुछ भी मौजूदा हटाया नहीं जाता।";
 "DATA_BACKUP_TRANSFER_IMPORT_TITLE" = "आयात";
 "DATA_GENERAL_DELETED_MESSAGES_TITLE" = "हटाए गए संदेश";
-"DATA_GENERAL_GALLERY_TITLE" = "Gallery";
+"DATA_GENERAL_GALLERY_TITLE" = "गैलरी";
 "DATA_GENERAL_PROFILE_ANALYZER_TITLE" = "प्रोफाइल विश्लेषक";
 "DATA_GENERAL_RESET_ALL_SETTINGS_TITLE" = "सभी सेटिंग्स रीसेट करें";
 "DATA_GENERAL_SETTINGS_TITLE" = "सेटिंग्स";
@@ -813,7 +813,7 @@
 "GALLERY_SETTINGS_ROW_HELP" = "वही सेटिंग्स स्क्रीन जो आप Gallery के भीतर से खोलते हैं।";
 "GALLERY_SORT_NAME_DESCENDING_TITLE" = "नाम Z-A";
 "GALLERY_SOURCES_HIDE_SOURCE_HELP" = "छिपाए गए स्रोत Gallery में संग्रहित रहते हैं और रखरखाव, निर्यात और डुप्लिकेट जांच के लिए उपलब्ध रहते हैं।";
-"GALLERY_TITLE" = "Gallery";
+"GALLERY_TITLE" = "गैलरी";
 "GALLERY_UNABLE_OPEN_ORIGINAL_POST_TOAST" = "मूल पोस्ट खोलने में सक्षम नहीं";
 "GALLERY_UNABLE_OPEN_ORIGINAL_REEL_TOAST" = "मूल रील नहीं खोली जा सकी";
 "GALLERY_UNABLE_OPEN_ORIGINAL_STORY_TOAST" = "मूल स्टोरी नहीं खोली जा सकी";
@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "ऑफ़लाइन";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "जब कोई ट्रैक किया गया उपयोगकर्ता ऑनलाइन आता है तो आपको सूचित करता है।";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "ऑनलाइन";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "जब Instagram सामने नहीं होता तो पुश नोटिफिकेशन भेजता है। ऐप के भीतर Sparkle इसके बजाय एक पिल दिखाता है।";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "जब Instagram सामने नहीं होता तो टाइपिंग और रीड रसीद के लिए पुश नोटिफिकेशन भेजता है। Instagram केवल खुले रहने पर ही ट्रैक करता है कि कौन ऑनलाइन है, इसलिए ऑनलाइन और ऑफलाइन हमेशा ऐप के भीतर पिल के रूप में दिखते हैं।";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "ऐप के बाहर सूचित करें";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "जब कोई ट्रैक किया गया उपयोगकर्ता आपका भेजा संदेश पढ़ता है तो आपको सूचित करता है।";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "पढ़ा गया";

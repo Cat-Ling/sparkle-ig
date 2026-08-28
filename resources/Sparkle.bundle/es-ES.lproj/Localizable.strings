@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Desconectado";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Te avisa cuando un usuario seguido se conecta.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "En línea";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Envía una notificación push cuando Instagram no está en primer plano. Dentro de la app, Sparkle muestra un aviso en su lugar.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Envía una notificación push cuando Instagram no está en primer plano, para escritura y confirmaciones de lectura. Instagram solo registra quién está en línea mientras está abierto, así que en línea y desconectado siempre aparecen como un aviso dentro de la app.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Notificar fuera de la app";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Te avisa cuando un usuario seguido lee un mensaje que enviaste.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Leído";

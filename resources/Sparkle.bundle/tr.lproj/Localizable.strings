@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Çevrimdışı";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Takip edilen bir kullanıcı çevrimiçi olduğunda seni uyarır.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "Çevrimiçi";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Instagram ön planda değilken bir anlık bildirim gönderir. Uygulama içindeyse Sparkle bunun yerine bir baloncuk gösterir.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Instagram ön planda değilken yazma ve okundu bilgisi için anlık bildirim gönderir. Instagram kimin çevrimiçi olduğunu yalnızca açıkken izler, bu yüzden çevrimiçi ve çevrimdışı her zaman uygulama içinde baloncuk olarak görünür.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Uygulama Dışında Bildir";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Takip edilen bir kullanıcı gönderdiğin mesajı okuduğunda seni uyarır.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Okundu";

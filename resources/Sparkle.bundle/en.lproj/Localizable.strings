@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Offline";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Notifies you when a tracked user comes online.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "Online";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Sends a push notification when Instagram is not in front. Inside the app, Sparkle shows a pill instead.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Sends a push notification when Instagram is not in front, for typing and read receipts. Instagram only tracks who is online while it is open, so online and offline always appear as a pill inside the app.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Notify Outside the App";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Notifies you when a tracked user reads a message you sent.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Read";

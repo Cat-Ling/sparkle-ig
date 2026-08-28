@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Εκτός σύνδεσης";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Σε ειδοποιεί όταν ένας παρακολουθούμενος χρήστης συνδέεται.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "Σε σύνδεση";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Στέλνει ειδοποίηση push όταν το Instagram δεν είναι σε πρώτο πλάνο. Μέσα στην εφαρμογή, το Sparkle δείχνει μια πινακίδα.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Στέλνει ειδοποίηση push όταν το Instagram δεν είναι σε πρώτο πλάνο, για πληκτρολόγηση και αποδείξεις ανάγνωσης. Το Instagram παρακολουθεί ποιος είναι συνδεδεμένος μόνο όσο είναι ανοιχτό, γι' αυτό η σύνδεση και η αποσύνδεση εμφανίζονται πάντα ως πινακίδα μέσα στην εφαρμογή.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Ειδοποίηση Εκτός Εφαρμογής";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Σε ειδοποιεί όταν ένας παρακολουθούμενος χρήστης διαβάσει μήνυμα που έστειλες.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Ανάγνωση";

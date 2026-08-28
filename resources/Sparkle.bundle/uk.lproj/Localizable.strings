@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Офлайн";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Сповіщає, коли відстежуваний користувач з'являється в мережі.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "Онлайн";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Надсилає push-сповіщення, коли Instagram не на передньому плані. Усередині застосунку Sparkle показує плашку.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Надсилає push-сповіщення, коли Instagram не на передньому плані, для набору тексту та сповіщень про прочитання. Instagram відстежує, хто в мережі, лише поки відкритий, тому поява в мережі та вихід завжди показуються плашкою всередині застосунку.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Сповіщати поза програмою";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Сповіщає, коли відстежуваний користувач прочитав надіслане вами повідомлення.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Прочитано";

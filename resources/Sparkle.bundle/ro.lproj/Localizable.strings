@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Offline";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Te anunță când un utilizator urmărit intră online.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "Online";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Trimite o notificare push când Instagram nu este în prim-plan. În aplicație, Sparkle afișează în schimb o pastilă.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Trimite o notificare push când Instagram nu este în prim-plan, pentru tastare și confirmări de citire. Instagram urmărește cine este online doar cât timp este deschis, așa că online și offline apar mereu ca pastilă în aplicație.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Notifică în afara aplicației";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Te anunță când un utilizator urmărit citește un mesaj trimis de tine.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Citit";

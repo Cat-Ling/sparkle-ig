@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Hors ligne";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Vous prévient quand un utilisateur suivi se connecte.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "En ligne";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Envoie une notification push quand Instagram n'est pas au premier plan. Dans l'app, Sparkle affiche une pastille à la place.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Envoie une notification push quand Instagram n'est pas au premier plan, pour la saisie et les accusés de lecture. Instagram ne suit qui est en ligne que lorsqu'il est ouvert, donc en ligne et hors ligne apparaissent toujours sous forme de pastille dans l'app.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Notifier en dehors de l'application";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Vous prévient quand un utilisateur suivi lit un message que vous avez envoyé.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Lu";

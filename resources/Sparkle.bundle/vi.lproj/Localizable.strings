@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Ngoại tuyến";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Thông báo cho bạn khi một người dùng được theo dõi trực tuyến.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "Trực tuyến";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Gửi thông báo đẩy khi Instagram không ở phía trước. Trong ứng dụng, Sparkle hiển thị một thẻ thay thế.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Gửi thông báo đẩy khi Instagram không ở phía trước, cho việc đang nhập và đã xem. Instagram chỉ theo dõi ai đang trực tuyến khi đang mở, nên trực tuyến và ngoại tuyến luôn hiển thị dưới dạng thẻ trong ứng dụng.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Thông báo Bên ngoài Ứng dụng";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Thông báo cho bạn khi một người dùng được theo dõi đọc tin nhắn bạn đã gửi.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Đã đọc";
@@ -1553,7 +1553,7 @@
 "MESSAGES_NOTES_COPY_NOTE_TEXT_HELP" = "Nhấn giữ một note trong khay để sao chép văn bản của nó. Hành động này chỉ xuất hiện trên note có văn bản.";
 "MESSAGES_NOTES_COPY_NOTE_TEXT_TITLE" = "Sao chép Văn bản Ghi chú";
 "MESSAGES_NOTES_DOWNLOAD_AUDIO_HELP" = "Nhấn giữ một note trong khay để tải âm thanh của nó. Hành động này chỉ xuất hiện trên note có âm thanh.";
-"MESSAGES_NOTES_HEADER" = "Notes";
+"MESSAGES_NOTES_HEADER" = "Ghi chú";
 "MESSAGES_NOTES_HIDE_FRIENDS_MAP_HELP" = "Gỡ mục bản đồ bạn bè khỏi hộp thư.";
 "MESSAGES_NOTES_HIDE_FRIENDS_MAP_TITLE" = "Ẩn Bản đồ Bạn bè";
 "MESSAGES_NOTES_HIDE_NOTES_TRAY_HELP" = "Gỡ khay note khỏi đầu hộp thư.";

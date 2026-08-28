@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "Offline";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "Avisa quando um usuário monitorado fica online.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "Online";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Envia uma notificação push quando o Instagram não está em primeiro plano. Dentro do app, o Sparkle mostra um aviso em vez disso.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "Envia uma notificação push quando o Instagram não está em primeiro plano, para digitação e confirmações de leitura. O Instagram só rastreia quem está online enquanto está aberto, então online e offline sempre aparecem como um aviso dentro do app.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "Notificar Fora do Aplicativo";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "Avisa quando um usuário monitorado lê uma mensagem que você enviou.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "Lida";

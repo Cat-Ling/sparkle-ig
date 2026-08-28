@@ -1291,7 +1291,7 @@
 "MESSAGES_ACTIVITY_NOTIFY_OFFLINE_TITLE" = "غير متصل";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_HELP" = "ينبهك عندما يصبح مستخدم متتبَّع متصلاً.";
 "MESSAGES_ACTIVITY_NOTIFY_ONLINE_TITLE" = "متصل";
-"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "يرسل إشعاراً دافعاً عندما لا يكون Instagram في المقدمة. داخل التطبيق يعرض Sparkle كبسولة بدلاً من ذلك.";
+"MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_HELP" = "يرسل إشعاراً دافعاً عندما لا يكون Instagram في المقدمة، وذلك للكتابة وإيصالات القراءة. لا يتتبع Instagram من هو متصل إلا أثناء فتحه، لذا تظهر حالتا الاتصال وعدمه دائماً ككبسولة داخل التطبيق.";
 "MESSAGES_ACTIVITY_NOTIFY_OUTSIDE_APP_TITLE" = "الإخطار خارج التطبيق";
 "MESSAGES_ACTIVITY_NOTIFY_READ_HELP" = "ينبهك عندما يقرأ مستخدم متتبَّع رسالة أرسلتها.";
 "MESSAGES_ACTIVITY_NOTIFY_READ_TITLE" = "القراءة";
