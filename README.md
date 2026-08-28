@@ -68,7 +68,7 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
 - **Custom app font**:
   - Import your own `.otf`/`.ttf` font and use it across Instagram and Sparkle, matched per weight and previewed face by face before you pick it.
 - **17 languages**:
-  - Sparkle follows Instagram's language by default. The Translate button in Sparkle Settings opens a full language sheet with a device-wide override and a shortcut for suggesting or correcting translations. Dates use the selected language's ordering, punctuation, and month names while respecting the device's 12/24-hour clock. Built-in Action Button section names follow the selected language; names you customize remain exactly as entered. Unsupported languages fall back to English.
+  - Sparkle follows Instagram's language by default. The Translate button in Sparkle Settings opens a full language sheet with a device-wide override and a shortcut for suggesting or correcting translations. Dates use the selected language's ordering, punctuation, and month names while respecting the device's 12/24-hour clock. Built-in Action Button section names follow the selected language; names you customize remain exactly as entered. Unsupported languages fall back to English. English is the only language written by hand: every other catalog was machine translated and has not been checked by a native speaker, so some wording reads awkwardly or does not say quite what the English says. Corrections are welcome and easy to send.
 - **Confirmations**:
   - Optional "are you sure?" guards for accidental likes, follows, reposts, calls, comments, and more.
 - **Liquid Glass (iOS 26+)**:
@@ -227,6 +227,8 @@ Contributions are greatly appreciated! Feel free to open a pull request.
 - Run `tools/lint-i18n.py` before submitting any UI copy or translation change.
 
 ### Help translate or correct a translation
+
+The 16 non-English catalogs were produced by machine translation and no native speaker has reviewed them. Expect occasional unnatural phrasing, terms that should have stayed in English, and help text that describes the wrong thing. If you read one of these languages, corrections are the single most useful contribution you can make, and no coding is required.
 
 Tap the Translate button in Sparkle Settings and choose **Help Translate Sparkle** at the bottom of the language sheet, or [start a translation issue](https://github.com/efibalogh/sparkle-ig/issues/new?title=Translation%3A%20) directly. Include the language, the current text, the corrected text, and where it appears.
 

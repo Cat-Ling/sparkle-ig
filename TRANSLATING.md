@@ -2,6 +2,17 @@
 
 Sparkle ships its own localization bundle because it runs inside Instagram and cannot use Instagram's main localization table. Corrections to an existing language and complete new translations are both welcome.
 
+## Status of the shipped catalogs
+
+English is the source language and the only one written by hand. All 16 other catalogs were produced in bulk by machine translation and none has been reviewed by a native speaker.
+
+Treat them accordingly. Known failure modes that have already been found and fixed once include help text generated from the catalog key instead of the English value, one generic sentence reused across dozens of unrelated settings, and Instagram product terms left in English in some strings while being translated in others. Similar problems very likely remain in languages nobody has read yet.
+
+Two consequences for contributors:
+
+- A correction to an existing string does not need justification. If it reads wrong to you as a speaker of that language, it probably is wrong.
+- When correcting a catalog, compare against the English value rather than against neighbouring translated strings. The neighbours are not a reliable style reference, and copying them has already propagated at least one error.
+
 If you only want to report a correction, use **Help Translate Sparkle** at the bottom of the language sheet, opened with the Translate button in Sparkle Settings. Include the language, the current text, the corrected text, and where it appears. You do not need to edit any code.
 
 ## Add a new language
