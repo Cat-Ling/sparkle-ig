@@ -532,19 +532,26 @@ void SPKPresenceHandleUpdate(NSString *pk, BOOL isActive, __unused double lastAc
             return;
         }
 
-        if (isActive && ![SPKUtils getBoolPref:kSPKPresenceNotifyOnlineKey]) {
-            SPKLog(@"Presence", @"[Sparkle Presence] drop pk=%@ reason=online-toggle-off", pk);
-            return;
-        }
-        if (!isActive && ![SPKUtils getBoolPref:kSPKPresenceNotifyOfflineKey]) {
-            SPKLog(@"Presence", @"[Sparkle Presence] drop pk=%@ reason=offline-toggle-off", pk);
-            return;
-        }
-
         NSMutableDictionary *notified = SPKPresenceNotifiedStates();
         NSNumber *lastNotified = notified[pk];
         if (lastNotified != nil && lastNotified.boolValue == isActive) {
             SPKLog(@"Presence", @"[Sparkle Presence] drop pk=%@ reason=already-notified isActive=%d", pk, isActive);
+            return;
+        }
+
+        // A direction the user switched off is still a direction they know about, so
+        // record it before bailing. Leaving it unrecorded makes the next transition
+        // back look like a repeat of the last one that was reported, which silences
+        // the enabled direction from its second occurrence onwards -- with offline
+        // notifications off, a user would come online exactly once per session.
+        if (isActive && ![SPKUtils getBoolPref:kSPKPresenceNotifyOnlineKey]) {
+            notified[pk] = @(isActive);
+            SPKLog(@"Presence", @"[Sparkle Presence] drop pk=%@ reason=online-toggle-off", pk);
+            return;
+        }
+        if (!isActive && ![SPKUtils getBoolPref:kSPKPresenceNotifyOfflineKey]) {
+            notified[pk] = @(isActive);
+            SPKLog(@"Presence", @"[Sparkle Presence] drop pk=%@ reason=offline-toggle-off", pk);
             return;
         }
 
