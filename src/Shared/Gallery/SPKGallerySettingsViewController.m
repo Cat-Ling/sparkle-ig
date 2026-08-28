@@ -55,7 +55,9 @@
         };
         [rows addObject:row];
     }
-    [self replaceSections:@[ SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_SOURCES_HEADER"), rows, SPKL(@"GALLERY_GALLERY_SETTINGS_HIDDEN_SOURCES_STAY_STORED_GALLERY_REMAIN_AVAILABLE_MAINTENANCE_EXPORT_TEXT")) ]];
+    // The note is about the list as a whole, so it stays a footer: repeated once
+    // per source in an info sheet it would say the same thing eight times.
+    [self replaceSections:@[ SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_SOURCES_HEADER"), rows, SPKL(@"GALLERY_SOURCES_HIDE_SOURCE_HELP")) ]];
 }
 
 @end
@@ -99,58 +101,66 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
         ],
                         nil),
         SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_BROWSING_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FAVORITES_TOP_TITLE")
-                                       icon:SPKSettingsIcon(@"heart")
-                                defaultsKey:kFavoritesAtTopKey],
-            [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FILES_SUBFOLDERS_TITLE")
-                                       icon:SPKSettingsIcon(@"folder")
-                                defaultsKey:kSPKGalleryFlatBrowsingKey],
-            [SPKSetting navigationCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_HIDDEN_SOURCES_TITLE")
-                                       subtitle:@""
-                                           icon:SPKSettingsIcon(@"eye_off")
-                                 viewController:[SPKGalleryHiddenSourcesViewController new]]
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FAVORITES_TOP_TITLE")
+                                           icon:SPKSettingsIcon(@"heart")
+                                    defaultsKey:kFavoritesAtTopKey],
+                               SPKL(@"GALLERY_BROWSING_SHOW_FAVORITES_TOP_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FILES_SUBFOLDERS_TITLE")
+                                           icon:SPKSettingsIcon(@"folder")
+                                    defaultsKey:kSPKGalleryFlatBrowsingKey],
+                               SPKL(@"GALLERY_BROWSING_SHOW_FILES_SUBFOLDERS_HELP")),
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_HIDDEN_SOURCES_TITLE")
+                                           subtitle:@""
+                                               icon:SPKSettingsIcon(@"eye_off")
+                                     viewController:[SPKGalleryHiddenSourcesViewController new]],
+                               SPKL(@"GALLERY_VISIBILITY_HIDDEN_SOURCES_HELP"))
         ],
-                        SPKL(@"GALLERY_GALLERY_SETTINGS_PIN_FAVORITES_ABOVE_OTHER_FILES_INSIDE_CURRENT_SORT_FOLDER_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_EDITING_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_ASK_REPLACE_ORIGINAL_TITLE")
-                                       icon:SPKSettingsIcon(@"left_right")
-                                defaultsKey:@"trim_gallery_prompt_replace"]
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_ASK_REPLACE_ORIGINAL_TITLE")
+                                           icon:SPKSettingsIcon(@"left_right")
+                                    defaultsKey:@"trim_gallery_prompt_replace"],
+                               SPKL(@"GALLERY_EDITING_ASK_REPLACE_ORIGINAL_HELP"))
         ],
-                        SPKL(@"GALLERY_GALLERY_SETTINGS_TRIM_EDIT_GALLERY_ITEM_ASK_WHETHER_REPLACE_ORIGINAL_SAVE_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"NOTIFICATION_PREVIEW_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
-                                       icon:SPKSettingsIcon(@"info")
-                                defaultsKey:@"gallery_preview_show_metadata"]
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
+                                           icon:SPKSettingsIcon(@"info")
+                                    defaultsKey:@"gallery_preview_show_metadata"],
+                               SPKL(@"GALLERY_PREVIEW_SHOW_MEDIA_INFO_HELP"))
         ],
-                        SPKL(@"GALLERY_GALLERY_SETTINGS_OVERLAY_USERNAME_SOURCE_SAVED_POSTED_DATES_EXPANDED_PHOTO_PREVIEW_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_LOCK_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_GALLERY_PASSCODE_LOCK_TITLE")
-                                       icon:SPKSettingsIcon(@"lock")
-                                defaultsKey:@""],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_GALLERY_PASSCODE_LOCK_TITLE")
+                                           icon:SPKSettingsIcon(@"lock")
+                                    defaultsKey:@""],
+                               SPKL(@"GALLERY_LOCK_PASSCODE_HELP")),
             [SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_CHANGE_PASSCODE_TITLE")
-                                   subtitle:nil
-                                       icon:SPKSettingsIcon(@"key")
-                                     action:^{
-                                     }]
+                                       subtitle:nil
+                                           icon:SPKSettingsIcon(@"key")
+                                         action:^{
+                                         }]
         ],
-                        SPKL(@"GALLERY_GALLERY_SETTINGS_LOCK_GALLERY_PASSCODE_BIOMETRICS_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_TITLE"), @[
             // A navigation row, not a button: this mirror feeds the settings search index, and a
             // button row's action is what search runs on tap — an empty one silently does nothing.
             // The framework pushes navViewController itself, so the result is actually reachable.
             // No folder context from search, so it imports to the gallery root (nil).
-            [SPKSetting navigationCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_IMPORT_MEDIA_TITLE")
-                                       subtitle:nil
-                                           icon:SPKSettingsIcon(@"media")
-                                 viewController:[[SPKGalleryImportViewController alloc] initWithDestinationFolderPath:nil]]
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_IMPORT_MEDIA_TITLE")
+                                           subtitle:nil
+                                               icon:SPKSettingsIcon(@"media")
+                                     viewController:[[SPKGalleryImportViewController alloc] initWithDestinationFolderPath:nil]],
+                               SPKL(@"GALLERY_IMPORT_MEDIA_HELP"))
         ],
-                        SPKL(@"GALLERY_GALLERY_SETTINGS_IMPORT_MEDIA_FILES_APP_FULL_EDITABLE_METADATA_NCOMING_REGRAM_TEXT")),
+                        nil),
         SPKTopicSection(SPKL(@"ALERT_ACTION_DELETE"), @[
-            [SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_DELETE_DELETE_FILES_TITLE")
-                                   subtitle:nil
-                                       icon:SPKSettingsIcon(@"trash")
-                                     action:^{
-                                     }]
+            SPKSettingWithHelp([SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_DELETE_DELETE_FILES_TITLE")
+                                       subtitle:nil
+                                           icon:SPKSettingsIcon(@"trash")
+                                         action:^{
+                                         }],
+                               SPKL(@"GALLERY_DELETE_FILES_HELP"))
         ],
                         nil)
     ];
@@ -215,12 +225,14 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
               ],
                                         nil)];
 
-    SPKSetting *favoritesRow = [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FAVORITES_TOP_TITLE") icon:SPKSettingsIcon(@"heart") defaultsKey:kFavoritesAtTopKey];
+    SPKSetting *favoritesRow = SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FAVORITES_TOP_TITLE") icon:SPKSettingsIcon(@"heart") defaultsKey:kFavoritesAtTopKey],
+                                                  SPKL(@"GALLERY_BROWSING_SHOW_FAVORITES_TOP_HELP"));
     favoritesRow.action = ^{
         [[NSNotificationCenter defaultCenter] postNotificationName:@"SPKGalleryFavoritesSortPreferenceChanged" object:nil];
     };
     // Defaults ON; the backing pref stores the *disabled* state, so the switch inverts.
-    SPKSetting *pinFolderRow = [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_PIN_FOLDER_BAR_TITLE") icon:SPKSettingsIcon(@"pin") defaultsKey:@""];
+    SPKSetting *pinFolderRow = SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_PIN_FOLDER_BAR_TITLE") icon:SPKSettingsIcon(@"pin") defaultsKey:@""],
+                                                  SPKL(@"GALLERY_BROWSING_PIN_FOLDER_BAR_HELP"));
     pinFolderRow.switchValueProvider = ^BOOL {
         return ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryFolderBarPinDisabledKey];
     };
@@ -228,21 +240,24 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
         [[NSUserDefaults standardUserDefaults] setBool:!isOn forKey:kSPKGalleryFolderBarPinDisabledKey];
         [[NSNotificationCenter defaultCenter] postNotificationName:kSPKGalleryGridControlsChangedNotification object:nil];
     };
-    SPKSetting *flatBrowsingRow = [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FILES_SUBFOLDERS_TITLE") icon:SPKSettingsIcon(@"folder") defaultsKey:kSPKGalleryFlatBrowsingKey];
+    SPKSetting *flatBrowsingRow = SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_FILES_SUBFOLDERS_TITLE") icon:SPKSettingsIcon(@"folder") defaultsKey:kSPKGalleryFlatBrowsingKey],
+                                                     SPKL(@"GALLERY_BROWSING_SHOW_FILES_SUBFOLDERS_HELP"));
     flatBrowsingRow.action = ^{
         [[NSNotificationCenter defaultCenter] postNotificationName:kSPKGalleryBrowsingScopeChangedNotification object:nil];
     };
     [sections addObject:SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_BROWSING_HEADER"), @[favoritesRow, pinFolderRow, flatBrowsingRow],
-                                        SPKL(@"GALLERY_GALLERY_SETTINGS_PIN_FAVORITES_ABOVE_OTHER_FILES_INSIDE_CURRENT_SORT_FOLDER_TEXT"))];
+                                        nil)];
 
     [sections addObject:SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_EDITING_HEADER"), @[
-                  [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_ASK_REPLACE_ORIGINAL_TITLE")
-                                             icon:SPKSettingsIcon(@"left_right")
-                                      defaultsKey:@"trim_gallery_prompt_replace"]
+                  SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_ASK_REPLACE_ORIGINAL_TITLE")
+                                                 icon:SPKSettingsIcon(@"left_right")
+                                          defaultsKey:@"trim_gallery_prompt_replace"],
+                                     SPKL(@"GALLERY_EDITING_ASK_REPLACE_ORIGINAL_HELP"))
               ],
-                                        SPKL(@"GALLERY_GALLERY_SETTINGS_TRIM_EDIT_GALLERY_ITEM_ASK_WHETHER_REPLACE_ORIGINAL_SAVE_FOOTER"))];
+                                        nil)];
 
-    SPKSetting *accountFilterRow = [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_ACCOUNT_ONLY_TITLE") icon:SPKSettingsIcon(@"user_circle") defaultsKey:@"gallery_filter_current_account"];
+    SPKSetting *accountFilterRow = SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_ACCOUNT_ONLY_TITLE") icon:SPKSettingsIcon(@"user_circle") defaultsKey:@"gallery_filter_current_account"],
+                                                      SPKL(@"GALLERY_VISIBILITY_ACCOUNT_ONLY_HELP"));
     __weak typeof(self) weakAccountSelf = self;
     accountFilterRow.action = ^{
         [[NSNotificationCenter defaultCenter] postNotificationName:SPKGalleryHiddenSourcesDidChangeNotification object:nil];
@@ -252,16 +267,18 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
     };
     [sections addObject:SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_VISIBILITY_HEADER"), @[
                   accountFilterRow,
-                  [SPKSetting navigationCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_HIDDEN_SOURCES_TITLE")
-                                             subtitle:@""
-                                                 icon:SPKSettingsIcon(@"eye_off")
-                                       viewController:[SPKGalleryHiddenSourcesViewController new]]
+                  SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_HIDDEN_SOURCES_TITLE")
+                                                 subtitle:@""
+                                                     icon:SPKSettingsIcon(@"eye_off")
+                                           viewController:[SPKGalleryHiddenSourcesViewController new]],
+                                     SPKL(@"GALLERY_VISIBILITY_HIDDEN_SOURCES_HELP"))
               ],
-                                        SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_ONLY_MEDIA_SAVED_WHILE_LOGGED_INTO_CURRENT_ACCOUNT_TEXT"))];
+                                        nil)];
 
     // Grid section: pinch-to-zoom toggle. Defaults ON; the backing pref stores
     // the *disabled* state, so the switch inverts.
-    SPKSetting *pinchRow = [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_PINCH_ZOOM_TITLE") icon:SPKSettingsIcon(@"pinch") defaultsKey:@""];
+    SPKSetting *pinchRow = SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_PINCH_ZOOM_TITLE") icon:SPKSettingsIcon(@"pinch") defaultsKey:@""],
+                                              SPKL(@"GALLERY_GRID_PINCH_ZOOM_HELP"));
     pinchRow.switchValueProvider = ^BOOL {
         return ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryGridPinchDisabledKey];
     };
@@ -270,7 +287,8 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
         [[NSNotificationCenter defaultCenter] postNotificationName:kSPKGalleryGridControlsChangedNotification object:nil];
     };
 
-    SPKSetting *sourceUsernameRow = [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_SOURCE_USERNAME_TITLE") icon:SPKSettingsIcon(@"user_circle") defaultsKey:@""];
+    SPKSetting *sourceUsernameRow = SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_SHOW_SOURCE_USERNAME_TITLE") icon:SPKSettingsIcon(@"user_circle") defaultsKey:@""],
+                                                       SPKL(@"GALLERY_GRID_SOURCE_USERNAME_HELP"));
     sourceUsernameRow.switchValueProvider = ^BOOL {
         return ![[NSUserDefaults standardUserDefaults] boolForKey:kSPKGalleryGridShowSourceUsernameDisabledKey];
     };
@@ -280,19 +298,21 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
     };
 
     [sections addObject:SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_GRID_HEADER"), @[ pinchRow, sourceUsernameRow ],
-                                        SPKL(@"GALLERY_GALLERY_SETTINGS_PINCH_GRID_CHANGE_DENSITY_COLUMNS_N2_OVERLAY_SOURCE_ICON_TEXT"))];
+                                        nil)];
 
     [sections addObject:SPKTopicSection(SPKL(@"NOTIFICATION_PREVIEW_HEADER"), @[
-                  [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
-                                             icon:SPKSettingsIcon(@"info")
-                                      defaultsKey:@"gallery_preview_show_metadata"]
+                  SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
+                                                 icon:SPKSettingsIcon(@"info")
+                                          defaultsKey:@"gallery_preview_show_metadata"],
+                                     SPKL(@"GALLERY_PREVIEW_SHOW_MEDIA_INFO_HELP"))
               ],
-                                        SPKL(@"GALLERY_PREVIEW_OVERLAY_FOOTER"))];
+                                        nil)];
 
     NSMutableArray *lockRows = [NSMutableArray array];
 
     __weak typeof(self) weakSelf = self;
-    SPKSetting *lockSwitch = [SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_GALLERY_PASSCODE_LOCK_TITLE") icon:SPKSettingsIcon(@"lock") defaultsKey:@""];
+    SPKSetting *lockSwitch = SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_GALLERY_PASSCODE_LOCK_TITLE") icon:SPKSettingsIcon(@"lock") defaultsKey:@""],
+                                                SPKL(@"GALLERY_LOCK_PASSCODE_HELP"));
     lockSwitch.switchValueProvider = ^BOOL {
         return [SPKGalleryManager sharedManager].isLockEnabled;
     };
@@ -302,44 +322,46 @@ static NSString *const kGalleryQuickAccessDisabledValue = @"none";
     [lockRows addObject:lockSwitch];
 
     SPKSetting *changePasscode = [SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_CHANGE_PASSCODE_TITLE")
-                                                        subtitle:nil
-                                                            icon:SPKSettingsIcon(@"key")
-                                                          action:^{
-                                                              [SPKGalleryLockViewController presentMode:SPKGalleryLockModeChangePasscode
-                                                                                     fromViewController:self
-                                                                                             completion:^(BOOL success){
-                                                                                             }];
-                                                          }];
+                                                            subtitle:nil
+                                                                icon:SPKSettingsIcon(@"key")
+                                                              action:^{
+                                                                  [SPKGalleryLockViewController presentMode:SPKGalleryLockModeChangePasscode
+                                                                                         fromViewController:self
+                                                                                                 completion:^(BOOL success){
+                                                                                                 }];
+                                                              }];
     changePasscode.enabledProvider = ^BOOL {
         return [SPKGalleryManager sharedManager].isLockEnabled;
     };
     [lockRows addObject:changePasscode];
 
-    [sections addObject:SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_LOCK_HEADER"), lockRows, SPKL(@"GALLERY_GALLERY_SETTINGS_LOCK_GALLERY_PASSCODE_BIOMETRICS_FOOTER"))];
+    [sections addObject:SPKTopicSection(SPKL(@"GALLERY_GALLERY_SETTINGS_LOCK_HEADER"), lockRows, nil)];
 
-    SPKSetting *importRow = [SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_IMPORT_MEDIA_TITLE")
-                                                   subtitle:nil
-                                                       icon:SPKSettingsIcon(@"media")
-                                                     action:^{
-                                                         SPKGalleryImportViewController *vc = [[SPKGalleryImportViewController alloc] initWithDestinationFolderPath:self.importDestinationFolderPath];
-                                                         [self.navigationController pushViewController:vc animated:YES];
-                                                     }];
+    SPKSetting *importRow = SPKSettingWithHelp([SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_SETTINGS_IMPORT_MEDIA_TITLE")
+                                                       subtitle:nil
+                                                           icon:SPKSettingsIcon(@"media")
+                                                         action:^{
+                                                             SPKGalleryImportViewController *vc = [[SPKGalleryImportViewController alloc] initWithDestinationFolderPath:self.importDestinationFolderPath];
+                                                             [self.navigationController pushViewController:vc animated:YES];
+                                                         }],
+                                               SPKL(@"GALLERY_IMPORT_MEDIA_HELP"));
     [sections addObject:SPKTopicSection(SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_TITLE"), @[ importRow ],
-                                        SPKL(@"GALLERY_GALLERY_SETTINGS_IMPORT_MEDIA_FILES_APP_FULL_EDITABLE_METADATA_NCOMING_REGRAM_TEXT"))];
+                                        nil)];
 
-    SPKSetting *deleteRow = [SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_DELETE_DELETE_FILES_TITLE")
-                                                   subtitle:nil
-                                                       icon:SPKSettingsIcon(@"trash")
-                                                     action:^{
-                                                         SPKGalleryDeleteViewController *vc = [[SPKGalleryDeleteViewController alloc] initWithMode:SPKGalleryDeletePageModeRoot];
-                                                         __weak typeof(self) weakSelf = self;
-                                                         vc.onDidDelete = ^{
-                                                             [weakSelf reloadStats];
-                                                             [weakSelf rebuildSections];
-                                                             [[NSNotificationCenter defaultCenter] postNotificationName:@"SPKGalleryFavoritesSortPreferenceChanged" object:nil];
-                                                         };
-                                                         [self.navigationController pushViewController:vc animated:YES];
-                                                     }];
+    SPKSetting *deleteRow = SPKSettingWithHelp([SPKSetting buttonCellWithTitle:SPKL(@"GALLERY_GALLERY_DELETE_DELETE_FILES_TITLE")
+                                                       subtitle:nil
+                                                           icon:SPKSettingsIcon(@"trash")
+                                                         action:^{
+                                                             SPKGalleryDeleteViewController *vc = [[SPKGalleryDeleteViewController alloc] initWithMode:SPKGalleryDeletePageModeRoot];
+                                                             __weak typeof(self) weakSelf = self;
+                                                             vc.onDidDelete = ^{
+                                                                 [weakSelf reloadStats];
+                                                                 [weakSelf rebuildSections];
+                                                                 [[NSNotificationCenter defaultCenter] postNotificationName:@"SPKGalleryFavoritesSortPreferenceChanged" object:nil];
+                                                             };
+                                                             [self.navigationController pushViewController:vc animated:YES];
+                                                         }],
+                                               SPKL(@"GALLERY_DELETE_FILES_HELP"));
     deleteRow.tintColor = [SPKUtils SPKColor_InstagramDestructive];
     deleteRow.iconTintColor = [SPKUtils SPKColor_InstagramDestructive];
 

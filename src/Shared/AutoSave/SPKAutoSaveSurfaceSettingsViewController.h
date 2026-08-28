@@ -21,8 +21,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// Builds the list screen. A block, not an instance: the screen reads the current
 /// Filter Mode at init, so it has to be built fresh each time the page is shown.
 @property (nonatomic, copy) UIViewController * (^listProvider)(void);
-/// Numbered footer lines matching the rows, per mode.
-@property (nonatomic, copy) NSString * (^footerProvider)(BOOL allMode);
+/// Explains what the surface's master toggle actually saves. Filter Mode and the
+/// list row say enough for themselves.
+@property (nonatomic, copy) NSString *masterHelp;
 @end
 
 /// Downloads > Auto-Save > <Surface>. Surface-specific settings only: enable, filter

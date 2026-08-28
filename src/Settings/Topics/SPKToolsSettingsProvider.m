@@ -80,6 +80,8 @@ static NSDictionary *SPKSettingsLockSection(void) {
         }
     };
 
+    lockSwitch.helpText = SPKL(@"TOOLS_SETTINGS_LOCK_PASSCODE_HELP");
+
     SPKSetting *changePasscode = [SPKSetting buttonCellWithTitle:SPKL(@"TOOLS_GENERAL_CHANGE_SETTINGS_PASSCODE_TITLE")
                                                         subtitle:nil
                                                             icon:SPKSettingsIcon(@"key")
@@ -94,16 +96,14 @@ static NSDictionary *SPKSettingsLockSection(void) {
         return [SPKSettingsLockManager sharedManager].isLockEnabled;
     };
 
-    return SPKTopicSection(SPKL(@"TOOLS_SETTINGS_LOCK_HEADER"), @[ lockSwitch, changePasscode ], SPKL(@"TOOLS_SETTINGS_LOCK_FOOTER"));
+    return SPKTopicSection(SPKL(@"TOOLS_SETTINGS_LOCK_HEADER"), @[ lockSwitch, changePasscode ], nil);
 }
 
 @implementation SPKToolsSettingsProvider
 
 + (SPKSetting *)rootSetting {
     BOOL flexInstalled = SPKFlexIsBundled();
-    NSString *flexFooter = flexInstalled
-                               ? SPKL(@"FLEX_SETTINGS_FIRST_OPEN_FOOTER")
-                               : SPKL(@"FLEX_SETTINGS_NOT_INSTALLED_FOOTER");
+    NSString *flexFooter = flexInstalled ? nil : SPKL(@"FLEX_SETTINGS_NOT_INSTALLED_FOOTER");
     SPKSetting *flexGesture = [SPKSetting switchCellWithTitle:SPKL(@"TOOLS_SETTINGS_LOCK_THREE_FINGER_HOLD_TITLE") defaultsKey:@"tools_flex_instagram"];
     SPKSetting *flexLaunch = [SPKSetting switchCellWithTitle:SPKL(@"TOOLS_SETTINGS_LOCK_OPEN_APP_LAUNCH_TITLE") defaultsKey:@"tools_flex_app_launch"];
     SPKSetting *flexFocus = [SPKSetting switchCellWithTitle:SPKL(@"TOOLS_SETTINGS_LOCK_OPEN_APP_FOCUS_TITLE") defaultsKey:@"tools_flex_app_start"];
@@ -113,6 +113,12 @@ static NSDictionary *SPKSettingsLockSection(void) {
                                                     action:^(void) {
                                                         SPKFlexShowExplorer(@"settings");
                                                     }];
+    if (flexInstalled) {
+        flexOpen.helpText = SPKL(@"TOOLS_FLEX_OPEN_NOW_HELP");
+        flexGesture.helpText = SPKL(@"TOOLS_FLEX_THREE_FINGER_HOLD_HELP");
+        flexLaunch.helpText = SPKL(@"TOOLS_FLEX_OPEN_APP_LAUNCH_HELP");
+        flexFocus.helpText = SPKL(@"TOOLS_FLEX_OPEN_APP_FOCUS_HELP");
+    }
     if (!flexInstalled) {
         flexGesture.userInfo = @{@"enabled" : @NO};
         flexLaunch.userInfo = @{@"enabled" : @NO};
@@ -122,39 +128,46 @@ static NSDictionary *SPKSettingsLockSection(void) {
     NSMutableArray *sections = [NSMutableArray arrayWithArray:@[
         SPKTopicSection(SPKL(@"TOOLS_FLEX_HEADER"), @[ flexOpen, flexGesture, flexLaunch, flexFocus ], flexFooter),
         SPKTopicSection(SPKL(@"TOOLS_TWEAK_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_QUICK_SETTINGS_ACCESS_TITLE")
-                                defaultsKey:@"tools_settings_shortcut"
-                            requiresRestart:YES],
-            [SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_SHORTCUT_HAPTICS_TITLE")
-                                defaultsKey:@"tools_shortcut_haptics"],
-            [SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_SHOW_SETTINGS_APP_LAUNCH_TITLE")
-                                defaultsKey:@"tools_open_settings_on_launch"],
-            [SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_DISABLE_ALL_SETTINGS_TITLE")
-                                defaultsKey:@"tools_disable_all"
-                            requiresRestart:YES],
-            [SPKSetting buttonCellWithTitle:SPKL(@"TOOLS_TWEAK_SHOW_ONBOARDING_TITLE")
-                                   subtitle:@""
-                                       icon:nil
-                                     action:^(void) {
-                                         [SPKOnboardingViewController presentFromViewController:nil onFinish:nil];
-                                     }],
-            [SPKSetting buttonCellWithTitle:SPKL(@"TOOLS_TWEAK_SHOW_WHAT_S_NEW_TITLE")
-                                   subtitle:@""
-                                       icon:nil
-                                     action:^(void) {
-                                         [SPKWhatsNewViewController presentFromViewController:nil onFinish:nil];
-                                     }],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_QUICK_SETTINGS_ACCESS_TITLE")
+                                    defaultsKey:@"tools_settings_shortcut"
+                                requiresRestart:YES],
+                               SPKL(@"TOOLS_TWEAK_QUICK_SETTINGS_ACCESS_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_SHORTCUT_HAPTICS_TITLE")
+                                    defaultsKey:@"tools_shortcut_haptics"],
+                               SPKL(@"TOOLS_TWEAK_SHORTCUT_HAPTICS_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_SHOW_SETTINGS_APP_LAUNCH_TITLE")
+                                    defaultsKey:@"tools_open_settings_on_launch"],
+                               SPKL(@"TOOLS_TWEAK_SHOW_SETTINGS_APP_LAUNCH_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"TOOLS_TWEAK_DISABLE_ALL_SETTINGS_TITLE")
+                                    defaultsKey:@"tools_disable_all"
+                                requiresRestart:YES],
+                               SPKL(@"TOOLS_TWEAK_DISABLE_ALL_SETTINGS_HELP")),
+            SPKSettingWithHelp([SPKSetting buttonCellWithTitle:SPKL(@"TOOLS_TWEAK_SHOW_ONBOARDING_TITLE")
+                                       subtitle:@""
+                                           icon:nil
+                                         action:^(void) {
+                                             [SPKOnboardingViewController presentFromViewController:nil onFinish:nil];
+                                         }],
+                               SPKL(@"TOOLS_TWEAK_SHOW_ONBOARDING_HELP")),
+            SPKSettingWithHelp([SPKSetting buttonCellWithTitle:SPKL(@"TOOLS_TWEAK_SHOW_WHAT_S_NEW_TITLE")
+                                       subtitle:@""
+                                           icon:nil
+                                         action:^(void) {
+                                             [SPKWhatsNewViewController presentFromViewController:nil onFinish:nil];
+                                         }],
+                               SPKL(@"TOOLS_TWEAK_SHOW_WHATS_NEW_HELP")),
         ],
-                        SPKL(@"SETTINGS_TOOLS_OPENS_SETTINGS_LONG_PRESSING_HOME_TAB_NEXT_VISIBLE_TAB_TEXT")),
+                        nil),
 
         SPKTopicSection(@"", @[
-            [SPKSetting buttonCellWithTitle:SPKL(@"TOOLS_TWEAK_RESET_SAFE_STARTUP_MODE_TITLE")
-                                   subtitle:@""
-                                       icon:nil
-                                     action:^(void) {
-                                         SPKStabilityGuardReset();
-                                         [SPKUtils showRestartConfirmation];
-                                     }],
+            SPKSettingWithHelp([SPKSetting buttonCellWithTitle:SPKL(@"TOOLS_TWEAK_RESET_SAFE_STARTUP_MODE_TITLE")
+                                       subtitle:@""
+                                           icon:nil
+                                         action:^(void) {
+                                             SPKStabilityGuardReset();
+                                             [SPKUtils showRestartConfirmation];
+                                         }],
+                               SPKL(@"TOOLS_TWEAK_RESET_SAFE_STARTUP_MODE_HELP")),
 #if SPK_DEV
             // Dev builds only: wipe the intro-sheet state so the onboarding /
             // What's New gating fires from scratch on the next launch.
@@ -168,11 +181,11 @@ static NSDictionary *SPKSettingsLockSection(void) {
                                          [SPKUtils showRestartConfirmation];
                                      }],
 #endif
-        ], SPKL(@"TOOLS_X_FOOTER")),
+        ], nil),
 #if SPK_DEV
         SPKTopicSection(SPKL(@"TOOLS_DIAGNOSTICS_HEADER"),
-                        @[ [SPKHookBisectSettingsProvider rootSetting] ],
-                        SPKL(@"TOOLS_DIAGNOSTICS_FOOTER")),
+                        @[ SPKSettingWithHelp([SPKHookBisectSettingsProvider rootSetting], SPKL(@"TOOLS_DIAGNOSTICS_HOOK_BISECT_HELP")) ],
+                        nil),
 #endif
         SPKSettingsLockSection(),
     ]];
@@ -181,24 +194,19 @@ static NSDictionary *SPKSettingsLockSection(void) {
     // On dev builds, we keep a toggle to allow disabling it for testing.
     NSMutableArray *instagramCells = [NSMutableArray array];
 #if SPK_DEV
-    [instagramCells addObject:[SPKSetting switchCellWithTitle:SPKL(@"TOOLS_DIAGNOSTICS_DEV_HIDE_TESTFLIGHT_POPUP_TITLE")
-                                                  defaultsKey:@"tools_hide_testflight_popup"
-                                              requiresRestart:YES]];
+    [instagramCells addObject:SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"TOOLS_DIAGNOSTICS_DEV_HIDE_TESTFLIGHT_POPUP_TITLE")
+                                                      defaultsKey:@"tools_hide_testflight_popup"
+                                                  requiresRestart:YES],
+                                                 SPKL(@"TOOLS_INSTAGRAM_HIDE_TESTFLIGHT_POPUP_HELP"))];
 #endif
-    [instagramCells addObject:[SPKSetting switchCellWithTitle:SPKL(@"TOOLS_DIAGNOSTICS_FIX_DUPLICATE_NOTIFICATIONS_TITLE")
-                                                  defaultsKey:@"tools_fix_duplicate_notifications"]];
-    [instagramCells addObject:[SPKSetting switchCellWithTitle:SPKL(@"TOOLS_DIAGNOSTICS_DISABLE_SAFE_MODE_TITLE")
-                                                  defaultsKey:@"tools_disable_safe_mode"]];
+    [instagramCells addObject:SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"TOOLS_DIAGNOSTICS_FIX_DUPLICATE_NOTIFICATIONS_TITLE")
+                                                      defaultsKey:@"tools_fix_duplicate_notifications"],
+                                                 SPKL(@"TOOLS_INSTAGRAM_FIX_DUPLICATE_NOTIFICATIONS_HELP"))];
+    [instagramCells addObject:SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"TOOLS_DIAGNOSTICS_DISABLE_SAFE_MODE_TITLE")
+                                                      defaultsKey:@"tools_disable_safe_mode"],
+                                                 SPKL(@"TOOLS_INSTAGRAM_DISABLE_SAFE_MODE_HELP"))];
 
-#if SPK_DEV
-    NSString *instagramFooter =
-        SPKL(@"TOOLS_SETTINGS_INSTAGRAM_FIXES_FOOTER");
-#else
-    NSString *instagramFooter =
-        SPKL(@"SETTINGS_TOOLS_DROPS_DUPLICATE_APP_BANNER_SIDELOADED_INSTAGRAM_POSTS_WHILE_NOTIFICATION_TEXT");
-#endif
-
-    [sections addObject:SPKTopicSection(SPKL(@"ABOUT_INFORMATION_INSTAGRAM_TITLE"), instagramCells, instagramFooter)];
+    [sections addObject:SPKTopicSection(SPKL(@"ABOUT_INFORMATION_INSTAGRAM_TITLE"), instagramCells, nil)];
 
     return SPKTopicNavigationSetting(SPKL(@"TOOLS_TITLE"), @"toolbox", 24.0, sections);
 }

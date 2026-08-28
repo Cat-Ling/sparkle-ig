@@ -35,13 +35,18 @@ RAW_DICTIONARY_UI_RE = re.compile(
 RAW_ERROR_DESCRIPTION_RE = re.compile(r'NSLocalizedDescriptionKey\s*:\s*@"[^"\\]*[A-Za-z][^"\\]*"')
 RAW_BULK_MENU_RE = re.compile(r'SPKBulkActionMenuElementForContext\([^;]{0,900}?,\s*@"[^"\\]*[A-Za-z]"\s*,\s*kSPK', re.DOTALL)
 RAW_SELECTOR_UI_RE = re.compile(
-    r'(?:WithTitle|\btitle|\bmessage|\bsubtitle|\bplaceholder|\bfooter|\bheader|accessibilityLabel|accessibilityHint)'
+    r'(?:WithTitle|updateProgressTitle|\btitle|\bmessage|\bsubtitle|\bplaceholder|\bfooter|\bheader|accessibilityLabel|accessibilityHint)'
     r'\s*:\s*@"[^"\\]*[A-Za-z][^"\\]*"'
+)
+RAW_FORMATTED_SELECTOR_UI_RE = re.compile(
+    r'(?:WithTitle|updateProgressTitle|\btitle|\bmessage|\bsubtitle|\bplaceholder|\bfooter|\bheader|accessibilityLabel|accessibilityHint)'
+    r'\s*:\s*\[NSString\s+stringWithFormat\s*:\s*@"[^"\\]*(?<![%A-Za-z])[A-Za-z]{3,}[^"\\]*"'
 )
 LOCALIZED_CALL_RE = re.compile(r'\bSPKL(?:C|P)?\(\s*@"[A-Z][A-Z0-9_]*"[^)]*\)')
 RAW_LITERAL_RE = re.compile(r'@"((?:\\.|[^"\\])*)"')
 C_UI_SINKS = {
     "SPKNotify": ((1, "raw user-facing notification title"), (2, "raw user-facing notification subtitle")),
+    "SPKNotifyProgress": ((1, "raw user-facing progress title"),),
     "SPKNotificationItem": ((1, "raw user-facing notification row title"),),
     "SPKAudioDMNotify": ((0, "raw user-facing notification title"), (1, "raw user-facing notification subtitle")),
     "SPKFFmpegError": ((0, "raw user-facing FFmpeg error message"),),
@@ -173,6 +178,7 @@ def main() -> int:
             (RAW_CHROME_RE, "raw user-facing chrome label"),
             (RAW_BULK_MENU_RE, "raw user-facing bulk-menu title"),
             (RAW_SELECTOR_UI_RE, "raw user-facing selector argument"),
+            (RAW_FORMATTED_SELECTOR_UI_RE, "raw formatted user-facing selector argument"),
             (RAW_DICTIONARY_UI_RE, "raw user-facing dictionary value"),
             (RAW_ERROR_DESCRIPTION_RE, "raw user-facing error description"),
         ):
@@ -203,6 +209,13 @@ def main() -> int:
             continue
         values, parse_errors = parse_strings(strings_path)
         errors.extend(parse_errors)
+        key_order = list(values)
+        if key_order != sorted(key_order):
+            first_mismatch = next(
+                (key for key, expected in zip(key_order, sorted(key_order)) if key != expected),
+                "unknown",
+            )
+            errors.append(f"{locale}: catalog keys are not sorted near {first_mismatch}")
         try:
             with plural_path.open("rb") as stream:
                 plurals = plistlib.load(stream)

@@ -14,6 +14,7 @@
                                                              subtitle:nil
                                                                  icon:SPKSettingsIcon(@"settings")
                                                        viewController:[[SPKGallerySettingsViewController alloc] init]];
+    gallerySettings.helpText = SPKL(@"GALLERY_SETTINGS_ROW_HELP");
     gallerySettings.searchSectionsProvider = ^NSArray * {
         return [SPKGallerySettingsViewController searchSections];
     };
@@ -21,18 +22,19 @@
     return SPKTopicNavigationSetting(SPKL(@"GALLERY_TITLE"), @"sparkle_gallery", 24.0, @[
         SPKTopicSection(SPKL(@"GALLERY_ACCESS_HEADER"), @[
             [SPKSetting buttonCellWithTitle:SPKL(@"ALERT_ACTION_OPEN_GALLERY")
-                                   subtitle:@""
-                                       icon:SPKSettingsIcon(@"sparkle_gallery")
-                                     action:^(void) {
-                                         [SPKGalleryViewController presentGallery];
-                                     }],
-            SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"GALLERY_ACCESS_QUICK_GALLERY_ACCESS_TITLE") icon:SPKSettingsIcon(@"circle_off") menu:SPKGalleryShortcutTargetMenu()], SPKSettingsIcon(@"circle_off"))
+                                       subtitle:@""
+                                           icon:SPKSettingsIcon(@"sparkle_gallery")
+                                         action:^(void) {
+                                             [SPKGalleryViewController presentGallery];
+                                         }],
+            SPKSettingWithHelp(SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"GALLERY_ACCESS_QUICK_GALLERY_ACCESS_TITLE") icon:SPKSettingsIcon(@"circle_off") menu:SPKGalleryShortcutTargetMenu()], SPKSettingsIcon(@"circle_off")),
+                               SPKL(@"GALLERY_ACCESS_QUICK_ACCESS_HELP"))
         ],
-                        SPKL(@"GALLERY_ACCESS_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"DATA_GENERAL_SETTINGS_TITLE"), @[
             gallerySettings
         ],
-                        SPKL(@"GALLERY_SETTINGS_FOOTER"))
+                        nil)
     ]);
 }
 

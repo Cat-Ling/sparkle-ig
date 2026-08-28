@@ -990,11 +990,11 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
     NSFileManager *fm = [NSFileManager defaultManager];
     [fm createDirectoryAtPath:bundleRoot withIntermediateDirectories:YES attributes:nil error:nil];
 
-    SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationSettingsExport, @"Exporting...", nil);
+    SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationSettingsExport, SPKL(@"SETTINGS_TRANSFER_EXPORT_PROGRESS_TITLE"), nil);
     void (^setProgress)(float, NSString *) = ^(float fraction, NSString *subtitle) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [pill setProgress:fraction animated:YES];
-            [pill updateProgressTitle:@"Exporting..." subtitle:subtitle];
+            [pill updateProgressTitle:SPKL(@"SETTINGS_TRANSFER_EXPORT_PROGRESS_TITLE") subtitle:subtitle];
         });
     };
     void (^failExport)(NSString *) = ^(NSString *message) {
@@ -1157,11 +1157,11 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
     BOOL scoped = [url startAccessingSecurityScopedResource];
 
     // Progress pill so unzip + the heavy merges never block the UI.
-    SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationSettingsImport, @"Importing...", nil);
+    SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationSettingsImport, SPKL(@"GALLERY_IMPORT_IMPORTING_PROGRESS"), nil);
     void (^setProgress)(float, NSString *) = ^(float fraction, NSString *sub) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [pill setProgress:fraction animated:YES];
-            [pill updateProgressTitle:@"Importing..." subtitle:sub];
+            [pill updateProgressTitle:SPKL(@"GALLERY_IMPORT_IMPORTING_PROGRESS") subtitle:sub];
         });
     };
     void (^failImport)(NSString *) = ^(NSString *message) {
@@ -1397,7 +1397,7 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
                                                                                       handler:^{
                                                                                           mergeGalleryThenFinish(SPKGalleryImportConflictStrategyDuplicate);
                                                                                       }],
-                                                            [SPKIGAlertAction actionWithTitle:[NSString stringWithFormat:@"Skip %@", conflicts == 1 ? @"It" : @"Them"]
+                                                            [SPKIGAlertAction actionWithTitle:SPKL(@"VC_BTN_SKIP")
                                                                                         style:SPKIGAlertActionStyleCancel
                                                                                       handler:^{
                                                                                           mergeGalleryThenFinish(SPKGalleryImportConflictStrategySkip);

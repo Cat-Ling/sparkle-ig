@@ -1778,21 +1778,24 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 
     [sections
         addObject:SPKTopicSection(
-                      @"", @[ [SPKSetting
-                               switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_TEXT")
-                                       defaultsKey:@"downloads_adv_encoding"] ],
-                      SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_EXPOSES_CODEC_PRESET_BITRATE_CRF_RESOLUTION_AUDIO_TEXT"))];
+                      @"", @[ SPKSettingWithHelp([SPKSetting
+                                                     switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_TEXT")
+                                                             defaultsKey:@"downloads_adv_encoding"],
+                                                 SPKL(@"MEDIA_ENCODING_ADVANCED_HELP")) ],
+                      nil)];
 
     if ([SPKUtils getBoolPref:@"downloads_adv_encoding"]) {
         [sections addObject:SPKTopicSection(
                                 SPKL(@"COMMON_MEDIA_TYPE_VIDEO"),
                                 @[
-                                    [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_CODEC_TEXT")
-                                                         subtitle:nil
-                                                             menu:[self codecMenu]],
-                                    [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PRESET_TEXT")
-                                                         subtitle:nil
-                                                             menu:[self presetMenu]],
+                                    SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_CODEC_TEXT")
+                                                             subtitle:nil
+                                                                 menu:[self codecMenu]],
+                                                       SPKL(@"MEDIA_ENCODING_VIDEO_CODEC_HELP")),
+                                    SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PRESET_TEXT")
+                                                             subtitle:nil
+                                                                 menu:[self presetMenu]],
+                                                       SPKL(@"MEDIA_ENCODING_PRESET_HELP")),
                                     [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_H_PROFILE_TEXT")
                                                          subtitle:nil
                                                              menu:[self profileMenu]],
@@ -1806,20 +1809,23 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
             addObject:SPKTopicSection(
                           SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"),
                           @[
-                              [SPKSetting
-                                  textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CRF_TEXT")
-                                             placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
-                                            keyboardType:UIKeyboardTypeNumberPad
-                                             defaultsKey:@"downloads_encoding_crf"],
-                              [SPKSetting
-                                  textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_BITRATE_TEXT")
-                                             placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
-                                            keyboardType:UIKeyboardTypeNumberPad
-                                             defaultsKey:@"downloads_encoding_"
-                                                         @"vid_bitrate_kbps"],
-                              [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MAX_RESOLUTION_TEXT")
-                                                   subtitle:nil
-                                                       menu:[self maxResMenu]]
+                              SPKSettingWithHelp([SPKSetting
+                                                     textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CRF_TEXT")
+                                                                placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
+                                                               keyboardType:UIKeyboardTypeNumberPad
+                                                                defaultsKey:@"downloads_encoding_crf"],
+                                                 SPKL(@"MEDIA_ENCODING_CRF_HELP")),
+                              SPKSettingWithHelp([SPKSetting
+                                                     textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_BITRATE_TEXT")
+                                                                placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
+                                                               keyboardType:UIKeyboardTypeNumberPad
+                                                                defaultsKey:@"downloads_encoding_"
+                                                                            @"vid_bitrate_kbps"],
+                                                 SPKL(@"MEDIA_ENCODING_VIDEO_BITRATE_HELP")),
+                              SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MAX_RESOLUTION_TEXT")
+                                                       subtitle:nil
+                                                           menu:[self maxResMenu]],
+                                                 SPKL(@"MEDIA_ENCODING_MAX_RESOLUTION_HELP"))
                           ],
                           nil)];
 
@@ -1827,15 +1833,17 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
             addObject:SPKTopicSection(
                           SPKL(@"COMMON_MEDIA_TYPE_AUDIO"),
                           @[
-                              [SPKSetting
-                                  textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_BITRATE_TEXT")
-                                             placeholder:@"128"
-                                            keyboardType:UIKeyboardTypeNumberPad
-                                             defaultsKey:@"downloads_encoding_"
-                                                         @"audio_bitrate_kbps"],
-                              [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_CHANNELS_TEXT")
-                                                   subtitle:nil
-                                                       menu:[self audioChannelsMenu]]
+                              SPKSettingWithHelp([SPKSetting
+                                                     textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_BITRATE_TEXT")
+                                                                placeholder:@"128"
+                                                               keyboardType:UIKeyboardTypeNumberPad
+                                                                defaultsKey:@"downloads_encoding_"
+                                                                            @"audio_bitrate_kbps"],
+                                                 SPKL(@"MEDIA_ENCODING_AUDIO_BITRATE_HELP")),
+                              SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_CHANNELS_TEXT")
+                                                       subtitle:nil
+                                                           menu:[self audioChannelsMenu]],
+                                                 SPKL(@"MEDIA_ENCODING_AUDIO_CHANNELS_HELP"))
                           ],
                           nil)];
 
@@ -1847,11 +1855,12 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                         [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PIXEL_FORMAT")
                                              subtitle:nil
                                                  menu:[self pixelFormatMenu]],
-                        [SPKSetting
-                            switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_START_TEXT")
-                                    defaultsKey:@"downloads_encoding_faststart"]
+                        SPKSettingWithHelp([SPKSetting
+                                               switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_START_TEXT")
+                                                       defaultsKey:@"downloads_encoding_faststart"],
+                                           SPKL(@"MEDIA_ENCODING_FAST_START_HELP"))
                     ],
-                    SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_START_MOVES_MP4_METADATA_BEGINNING_FILE_ALLOWING_VIDEO_TEXT"))];
+                    nil)];
 
         __weak typeof(self) weakSelf = self;
         SPKSetting *resetEncoding = 
@@ -1900,7 +1909,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                     SPKL(@"COMMON_MEDIA_TYPE_VIDEO"), @[ [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ENCODING_SPEED_TEXT")
                                                       subtitle:nil
                                                           menu:[self speedMenu]] ],
-                    SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CONTROLS_LIBX264_ENCODING_EFFORT_SLOWER_PRESETS_TAKE_LONGER_BUT_TEXT"))];
+                    nil)];
     }
 
     return sections;
@@ -1916,21 +1925,24 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
 
     return @[
         SPKTopicSection(
-            @"", @[ [SPKSetting switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_TEXT")
-                                        defaultsKey:@"downloads_adv_encoding"] ],
-            SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_EXPOSES_CODEC_PRESET_BITRATE_CRF_RESOLUTION_AUDIO_TEXT")),
+            @"", @[ SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_TEXT")
+                                                           defaultsKey:@"downloads_adv_encoding"],
+                                       SPKL(@"MEDIA_ENCODING_ADVANCED_HELP")) ],
+            nil),
         SPKTopicSection(
             SPKL(@"COMMON_MEDIA_TYPE_VIDEO"),
             @[
                 [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ENCODING_SPEED_TEXT")
                                      subtitle:nil
                                          menu:[self speedMenu]],
-                [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_CODEC_TEXT")
-                                     subtitle:nil
-                                         menu:[self codecMenu]],
-                [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PRESET_TEXT")
-                                     subtitle:nil
-                                         menu:[self presetMenu]],
+                SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_CODEC_TEXT")
+                                         subtitle:nil
+                                             menu:[self codecMenu]],
+                                   SPKL(@"MEDIA_ENCODING_VIDEO_CODEC_HELP")),
+                SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PRESET_TEXT")
+                                         subtitle:nil
+                                             menu:[self presetMenu]],
+                                   SPKL(@"MEDIA_ENCODING_PRESET_HELP")),
                 [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_H_PROFILE_TEXT")
                                      subtitle:nil
                                          menu:[self profileMenu]],
@@ -1938,35 +1950,40 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                                      subtitle:nil
                                          menu:[self levelMenu]]
             ],
-            SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CONTROLS_LIBX264_ENCODING_EFFORT_SLOWER_PRESETS_TAKE_LONGER_BUT_TEXT")),
+            nil),
         SPKTopicSection(
             SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"),
             @[
-                [SPKSetting textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CRF_TEXT")
-                                       placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
-                                      keyboardType:UIKeyboardTypeNumberPad
-                                       defaultsKey:@"downloads_encoding_crf"],
-                [SPKSetting
-                    textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_BITRATE_TEXT")
-                               placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
-                              keyboardType:UIKeyboardTypeNumberPad
-                               defaultsKey:@"downloads_encoding_vid_bitrate_kbps"],
-                [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MAX_RESOLUTION_TEXT")
-                                     subtitle:nil
-                                         menu:[self maxResMenu]]
+                SPKSettingWithHelp([SPKSetting textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_CRF_TEXT")
+                                                          placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
+                                                         keyboardType:UIKeyboardTypeNumberPad
+                                                          defaultsKey:@"downloads_encoding_crf"],
+                                   SPKL(@"MEDIA_ENCODING_CRF_HELP")),
+                SPKSettingWithHelp([SPKSetting
+                                       textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_BITRATE_TEXT")
+                                                  placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
+                                                 keyboardType:UIKeyboardTypeNumberPad
+                                                  defaultsKey:@"downloads_encoding_vid_bitrate_kbps"],
+                                   SPKL(@"MEDIA_ENCODING_VIDEO_BITRATE_HELP")),
+                SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MAX_RESOLUTION_TEXT")
+                                         subtitle:nil
+                                             menu:[self maxResMenu]],
+                                   SPKL(@"MEDIA_ENCODING_MAX_RESOLUTION_HELP"))
             ],
             nil),
         SPKTopicSection(
             SPKL(@"COMMON_MEDIA_TYPE_AUDIO"),
             @[
-                [SPKSetting
-                    textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_BITRATE_TEXT")
-                               placeholder:@"128"
-                              keyboardType:UIKeyboardTypeNumberPad
-                               defaultsKey:@"downloads_encoding_audio_bitrate_kbps"],
-                [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_CHANNELS_TEXT")
-                                     subtitle:nil
-                                         menu:[self audioChannelsMenu]]
+                SPKSettingWithHelp([SPKSetting
+                                       textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_BITRATE_TEXT")
+                                                  placeholder:@"128"
+                                                 keyboardType:UIKeyboardTypeNumberPad
+                                                  defaultsKey:@"downloads_encoding_audio_bitrate_kbps"],
+                                   SPKL(@"MEDIA_ENCODING_AUDIO_BITRATE_HELP")),
+                SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_CHANNELS_TEXT")
+                                         subtitle:nil
+                                             menu:[self audioChannelsMenu]],
+                                   SPKL(@"MEDIA_ENCODING_AUDIO_CHANNELS_HELP"))
             ],
             nil),
         SPKTopicSection(
@@ -1975,10 +1992,11 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                 [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PIXEL_FORMAT")
                                      subtitle:nil
                                          menu:[self pixelFormatMenu]],
-                [SPKSetting switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_START_TEXT")
-                                    defaultsKey:@"downloads_encoding_faststart"]
+                SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_START_TEXT")
+                                                       defaultsKey:@"downloads_encoding_faststart"],
+                                   SPKL(@"MEDIA_ENCODING_FAST_START_HELP"))
             ],
-            SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_START_MOVES_MP4_METADATA_BEGINNING_FILE_ALLOWING_VIDEO_TEXT")),
+            nil),
         SPKTopicSection(@"", @[ ffmpegInfo ], nil)
     ];
 }

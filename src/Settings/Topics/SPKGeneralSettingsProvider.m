@@ -31,6 +31,7 @@
     setting.iconProvider = ^UIImage * {
         return SPKSettingsIcon(SPKActionButtonOpenMenuIconName());
     };
+    setting.helpText = SPKL(@"GENERAL_APP_OPEN_MENU_ICON_HELP");
     return setting;
 }
 
@@ -45,6 +46,7 @@
         SPKAppIconItem *currentIcon = [SPKAppIconCatalog currentAppIcon];
         return currentIcon.displayName.length > 0 ? currentIcon.displayName : SPKL(@"MENU_DEFAULT");
     };
+    setting.helpText = SPKL(@"GENERAL_APP_APP_ICON_HELP");
     return setting;
 }
 
@@ -52,6 +54,7 @@
     SPKSetting *setting = [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE")
                                                      icon:SPKSettingsIcon(@"user_circle")
                                               defaultsKey:kSPKPrefPerAccountSettings];
+    setting.helpText = SPKL(@"GENERAL_ACCOUNTS_PER_ACCOUNT_SETTINGS_HELP");
     // Changes which key namespace every feature reads, and most enabled-state is
     // captured at hook install, so a restart applies it cleanly.
     setting.requiresRestart = YES;
@@ -59,7 +62,7 @@
 }
 
 + (SPKSetting *)perAccountInfoSetting {
-    return [SPKSetting buttonCellWithTitle:SPKL(@"ALERT_ACTION_HOW_WORKS")
+    return SPKSettingWithHelp([SPKSetting buttonCellWithTitle:SPKL(@"ALERT_ACTION_HOW_WORKS")
                                   subtitle:nil
                                       icon:SPKSettingsIcon(@"info")
                                     action:^{
@@ -70,7 +73,8 @@
                                                                                       title:SPKL(@"GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE")
                                                                                     message:message
                                                                                     actions:@[ [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_OK") style:SPKIGAlertActionStyleCancel handler:nil] ]];
-                                    }];
+                                    }],
+                              SPKL(@"GENERAL_ACCOUNTS_HOW_IT_WORKS_HELP"));
 }
 
 + (SPKSetting *)rootSetting {
@@ -89,43 +93,51 @@
     clearCacheSetting.accessoryTextProvider = ^NSString * {
         return [SPKUtils formattedCacheSize];
     };
+    clearCacheSetting.helpText = SPKL(@"GENERAL_STORAGE_CLEAR_CACHE_HELP");
 
     return SPKTopicNavigationSetting(SPKL(@"GENERAL_TITLE"), @"settings", 24.0, @[
         SPKTopicSection(SPKL(@"GENERAL_ACCOUNTS_HEADER"), @[
             [self perAccountSetting],
             [self perAccountInfoSetting]
         ],
-                        SPKL(@"GENERAL_ACCOUNTS_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"GENERAL_BEHAVIOR_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"ALERT_ACTION_COPY_TEXT")
-                                       icon:SPKSettingsIcon(@"text")
-                                defaultsKey:@"general_copy_text"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_BEHAVIOR_HIDE_RECENT_SEARCHES_TITLE")
-                                       icon:SPKSettingsIcon(@"search")
-                                defaultsKey:@"general_hide_recent_searches"
-                            requiresRestart:YES],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_BEHAVIOR_COPY_LINKS_WITHOUT_TRACKING_TITLE")
-                                       icon:SPKSettingsIcon(@"user_unfollow")
-                                defaultsKey:@"general_strip_share_link_tracking"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_BEHAVIOR_HOLD_SEND_COPY_LINK_TITLE")
-                                       icon:SPKSettingsIcon(@"link")
-                                defaultsKey:@"general_hold_send_copy_link"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"ALERT_ACTION_COPY_TEXT")
+                                                          icon:SPKSettingsIcon(@"text")
+                                                   defaultsKey:@"general_copy_text"],
+                               SPKL(@"GENERAL_BEHAVIOR_COPY_TEXT_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_BEHAVIOR_HIDE_RECENT_SEARCHES_TITLE")
+                                                          icon:SPKSettingsIcon(@"search")
+                                                   defaultsKey:@"general_hide_recent_searches"
+                                               requiresRestart:YES],
+                               SPKL(@"GENERAL_BEHAVIOR_HIDE_RECENT_SEARCHES_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_BEHAVIOR_COPY_LINKS_WITHOUT_TRACKING_TITLE")
+                                                          icon:SPKSettingsIcon(@"user_unfollow")
+                                                   defaultsKey:@"general_strip_share_link_tracking"],
+                               SPKL(@"GENERAL_BEHAVIOR_COPY_LINKS_WITHOUT_TRACKING_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_BEHAVIOR_HOLD_SEND_COPY_LINK_TITLE")
+                                                          icon:SPKSettingsIcon(@"link")
+                                                   defaultsKey:@"general_hold_send_copy_link"],
+                               SPKL(@"GENERAL_BEHAVIOR_HOLD_SEND_COPY_LINK_HELP")),
         ],
-                        SPKL(@"SETTINGS_GENERAL_LONG_PRESS_TEXT_FIELDS_ACROSS_APP_COPY_N2_HIDE_TEXT")),
+                        nil),
         SPKTopicSection(SPKL(@"GENERAL_SHARING_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_SHARING_HIDE_CREATE_GROUP_BUTTON_TITLE")
-                                       icon:SPKSettingsIcon(@"group")
-                                defaultsKey:@"general_hide_create_group"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_SHARING_CONFIRM_CREATE_GROUP_TITLE")
-                                       icon:SPKSettingsIcon(@"group")
-                                defaultsKey:@"general_confirm_create_group"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_SHARING_CONFIRM_SENDING_POST_TITLE")
-                                       icon:SPKSettingsIcon(@"messages")
-                                defaultsKey:@"general_confirm_send"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_SHARING_HIDE_CREATE_GROUP_BUTTON_TITLE")
+                                                          icon:SPKSettingsIcon(@"group")
+                                                   defaultsKey:@"general_hide_create_group"],
+                               SPKL(@"GENERAL_SHARING_HIDE_CREATE_GROUP_BUTTON_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_SHARING_CONFIRM_CREATE_GROUP_TITLE")
+                                                          icon:SPKSettingsIcon(@"group")
+                                                   defaultsKey:@"general_confirm_create_group"],
+                               SPKL(@"GENERAL_SHARING_CONFIRM_CREATE_GROUP_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_SHARING_CONFIRM_SENDING_POST_TITLE")
+                                                          icon:SPKSettingsIcon(@"messages")
+                                                   defaultsKey:@"general_confirm_send"],
+                               SPKL(@"GENERAL_SHARING_CONFIRM_SENDING_POST_HELP")),
         ],
-                        SPKL(@"SETTINGS_GENERAL_HIDE_CREATE_GROUP_BUTTON_INSTAGRAM_SEND_SHARE_SHEET_N2_TEXT")),
+                        nil),
         SPKTopicSection(SPKL(@"GENERAL_RECOMMENDATIONS_HEADER"), @[
-            [SPKSetting navigationCellWithTitle:SPKL(@"GENERAL_ADS_HEADER")
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"GENERAL_ADS_HEADER")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"ads")
                                     navSections:@[
@@ -143,25 +155,29 @@
                                         ],
                                                         nil)
                                     ]],
-            [SPKSetting navigationCellWithTitle:SPKL(@"GENERAL_ADS_META_AI_TITLE")
+                               SPKL(@"GENERAL_RECOMMENDATIONS_ADS_HELP")),
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"GENERAL_ADS_META_AI_TITLE")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"meta_ai")
                                     navSections:@[
                                         SPKTopicSection(@"", @[
-                                            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_ADS_HIDE_DIRECT_TITLE")
-                                                                defaultsKey:@"general_hide_meta_ai_msgs"],
+                                            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_ADS_HIDE_DIRECT_TITLE")
+                                                                                  defaultsKey:@"general_hide_meta_ai_msgs"],
+                                                               SPKL(@"GENERAL_ADS_HIDE_DIRECT_HELP")),
                                             [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_ADS_HIDE_EXPLORE_SEARCH_TITLE")
                                                                 defaultsKey:@"general_hide_meta_ai_explore"],
                                             [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_ADS_HIDE_COMMENTS_TITLE")
                                                                 defaultsKey:@"general_hide_meta_ai_comments"],
                                             [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_ADS_HIDE_CREATION_TOOLS_TITLE")
                                                                 defaultsKey:@"general_hide_meta_ai_creation"],
-                                            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_ADS_HIDE_GLOBAL_AI_CHROME_TITLE")
-                                                                defaultsKey:@"general_hide_meta_ai_global"]
+                                            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_ADS_HIDE_GLOBAL_AI_CHROME_TITLE")
+                                                                                  defaultsKey:@"general_hide_meta_ai_global"],
+                                                               SPKL(@"GENERAL_ADS_HIDE_GLOBAL_AI_CHROME_HELP"))
                                         ],
-                                                        SPKL(@"GENERAL_RECOMMENDATIONS_FOOTER"))
+                                                        nil)
                                     ]],
-            [SPKSetting navigationCellWithTitle:SPKL(@"GENERAL_ADS_SUGGESTED_USERS_TITLE")
+                               SPKL(@"GENERAL_RECOMMENDATIONS_META_AI_HELP")),
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"GENERAL_ADS_SUGGESTED_USERS_TITLE")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"users")
                                     navSections:@[
@@ -184,67 +200,81 @@
                                                                 defaultsKey:@"general_hide_suggested_users_subscriptions"]
                                         ],
                                                         nil)
-                                    ]]
+                                    ]],
+                               SPKL(@"GENERAL_RECOMMENDATIONS_SUGGESTED_USERS_HELP"))
         ],
-                        SPKL(@"GENERAL_SUGGESTED_USERS_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
-                                       icon:SPKSettingsIcon(@"info")
-                                defaultsKey:@"general_preview_show_metadata"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE")
-                                       icon:SPKSettingsIcon(@"calendar")
-                                defaultsKey:@"general_action_btn_show_date"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
+                                                          icon:SPKSettingsIcon(@"info")
+                                                   defaultsKey:@"general_preview_show_metadata"],
+                               SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE")
+                                                          icon:SPKSettingsIcon(@"calendar")
+                                                   defaultsKey:@"general_action_btn_show_date"],
+                               SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP")),
         ],
-                        SPKL(@"SETTINGS_GENERAL_OVERLAY_AUTHOR_POST_DATE_EXPANDED_PHOTO_PREVIEW_N2_SHOW_TEXT")),
+                        nil),
         SPKTopicSection(SPKL(@"GENERAL_COMMENTS_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_TITLE")
-                                       icon:SPKSettingsIcon(@"copy")
-                                defaultsKey:@"general_comments_copy_text"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_COMMENT_MEDIA_ACTIONS_TITLE")
-                                       icon:SPKSettingsIcon(@"action")
-                                defaultsKey:@"general_comments_media_actions"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_SHOW_GIF_TITLE_TITLE")
-                                       icon:SPKSettingsIcon(@"info")
-                                defaultsKey:@"general_comments_gif_title"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_UPLOAD_PHOTO_GALLERY_TITLE")
-                                       icon:SPKSettingsIcon(@"photo")
-                                defaultsKey:@"general_comments_gallery_upload"]
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_TITLE")
+                                                          icon:SPKSettingsIcon(@"copy")
+                                                   defaultsKey:@"general_comments_copy_text"],
+                               SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_COMMENT_MEDIA_ACTIONS_TITLE")
+                                                          icon:SPKSettingsIcon(@"action")
+                                                   defaultsKey:@"general_comments_media_actions"],
+                               SPKL(@"GENERAL_COMMENTS_COMMENT_MEDIA_ACTIONS_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_SHOW_GIF_TITLE_TITLE")
+                                                          icon:SPKSettingsIcon(@"info")
+                                                   defaultsKey:@"general_comments_gif_title"],
+                               SPKL(@"GENERAL_COMMENTS_SHOW_GIF_TITLE_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_UPLOAD_PHOTO_GALLERY_TITLE")
+                                                          icon:SPKSettingsIcon(@"photo")
+                                                   defaultsKey:@"general_comments_gallery_upload"],
+                               SPKL(@"GENERAL_COMMENTS_UPLOAD_PHOTO_GALLERY_HELP"))
         ],
-                        SPKL(@"SETTINGS_GENERAL_ADDS_COPY_ACTION_COMMENT_MENUS_N2_ADDS_PHOTOS_SHARE_ACTION")),
+                        nil),
         SPKTopicSection(@"", @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_SWIPE_CLOSE_COMMENTS_TITLE")
-                                       icon:SPKSettingsIcon(@"left_right")
-                                defaultsKey:@"general_comments_swipe_close"],
-            SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"GENERAL_COMMENTS_SWIPE_DIRECTION_TITLE") icon:SPKSettingsIcon(@"left_right") menu:SPKSwipeCloseCommentsDirectionMenu()], SPKSettingsIcon(@"left_right")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_SWIPE_CLOSE_COMMENTS_TITLE")
+                                                          icon:SPKSettingsIcon(@"left_right")
+                                                   defaultsKey:@"general_comments_swipe_close"],
+                               SPKL(@"GENERAL_COMMENTS_SWIPE_CLOSE_COMMENTS_HELP")),
+            SPKSettingWithHelp(SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"GENERAL_COMMENTS_SWIPE_DIRECTION_TITLE") icon:SPKSettingsIcon(@"left_right") menu:SPKSwipeCloseCommentsDirectionMenu()], SPKSettingsIcon(@"left_right")),
+                               SPKL(@"GENERAL_COMMENTS_SWIPE_DIRECTION_HELP")),
         ],
-                        SPKL(@"GENERAL_X_FOOTER")),
+                        nil),
         SPKTopicSection(@"", @[
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_CONFIRM_COMMENT_LIKE_TITLE")
-                                       icon:SPKSettingsIcon(@"heart")
-                                defaultsKey:@"general_comments_confirm_like"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_HIDE_COMMENT_SHOPPING_TITLE")
-                                       icon:SPKSettingsIcon(@"shopping_bag")
-                                defaultsKey:@"general_comments_hide_shopping"],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_HIDE_GIFTS_BUTTON_TITLE")
-                                       icon:SPKSettingsIcon(@"gift")
-                                defaultsKey:@"general_comments_hide_gifts_button"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_CONFIRM_COMMENT_LIKE_TITLE")
+                                                          icon:SPKSettingsIcon(@"heart")
+                                                   defaultsKey:@"general_comments_confirm_like"],
+                               SPKL(@"GENERAL_COMMENTS_CONFIRM_COMMENT_LIKE_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_HIDE_COMMENT_SHOPPING_TITLE")
+                                                          icon:SPKSettingsIcon(@"shopping_bag")
+                                                   defaultsKey:@"general_comments_hide_shopping"],
+                               SPKL(@"GENERAL_COMMENTS_HIDE_COMMENT_SHOPPING_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_HIDE_GIFTS_BUTTON_TITLE")
+                                                          icon:SPKSettingsIcon(@"gift")
+                                                   defaultsKey:@"general_comments_hide_gifts_button"],
+                               SPKL(@"GENERAL_COMMENTS_HIDE_GIFTS_BUTTON_HELP")),
         ],
-                        SPKL(@"SETTINGS_GENERAL_SHOWS_CONFIRMATION_ALERT_BEFORE_LIKING_COMMENT_N2_REMOVES_COMMERCE_TEXT")),
+                        nil),
         SPKTopicSection(SPKL(@"ALERT_ACTION_STORAGE"), @[
             clearCacheSetting,
-            [SPKSetting menuCellWithTitle:SPKL(@"GENERAL_STORAGE_AUTO_CLEAR_CACHE_TITLE")
-                                     icon:SPKSettingsIcon(@"clock")
-                                     menu:SPKCacheAutoClearMenu()]
+            SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"GENERAL_STORAGE_AUTO_CLEAR_CACHE_TITLE")
+                                                        icon:SPKSettingsIcon(@"clock")
+                                                        menu:SPKCacheAutoClearMenu()],
+                               SPKL(@"GENERAL_STORAGE_AUTO_CLEAR_CACHE_HELP"))
         ],
-                        SPKL(@"GENERAL_STORAGE_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"GENERAL_APP_HEADER"), @[
             [self appIconSetting],
             [self defaultMenuIconSetting],
-            [SPKSetting switchCellWithTitle:SPKL(@"GENERAL_APP_DISABLE_APP_HAPTICS_TITLE")
-                                       icon:SPKSettingsIcon(@"haptics")
-                                defaultsKey:@"general_disable_haptics"]
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_APP_DISABLE_APP_HAPTICS_TITLE")
+                                                          icon:SPKSettingsIcon(@"haptics")
+                                                   defaultsKey:@"general_disable_haptics"],
+                               SPKL(@"GENERAL_APP_DISABLE_APP_HAPTICS_HELP"))
         ],
-                        SPKL(@"GENERAL_APP_FOOTER")),
+                        nil),
     ]);
 }
 

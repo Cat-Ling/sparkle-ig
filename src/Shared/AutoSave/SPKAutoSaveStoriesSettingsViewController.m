@@ -20,10 +20,7 @@
         descriptor.listProvider = ^UIViewController * {
             return SPKStoryAutoSaveListViewController();
         };
-        descriptor.footerProvider = ^NSString *(BOOL allMode) {
-            return allMode ? SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_SAVE_STORIES_WATCH_STORIES_ALREADY_SKIPPED_SO_RE_WATCHING_TEXT")
-                           : SPKL(@"AUTO_SAVE_STORIES_SELECTED_USERS_FOOTER");
-        };
+        descriptor.masterHelp = SPKL(@"AUTO_SAVE_STORIES_MASTER_HELP");
     });
     return descriptor;
 }
@@ -44,10 +41,7 @@
         descriptor.listProvider = ^UIViewController * {
             return SPKDirectAutoSaveListViewController();
         };
-        descriptor.footerProvider = ^NSString *(BOOL allMode) {
-            return allMode ? SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_SAVE_VIEW_ONCE_REPLAYABLE_PHOTOS_VIDEOS_OPEN_MEDIA_ALREADY_TEXT")
-                           : SPKL(@"AUTO_SAVE_VISUAL_MESSAGES_SELECTED_CHATS_FOOTER");
-        };
+        descriptor.masterHelp = SPKL(@"AUTO_SAVE_MESSAGES_MASTER_HELP");
     });
     return descriptor;
 }
@@ -68,10 +62,7 @@
         descriptor.listProvider = ^UIViewController * {
             return SPKInstantsAutoSaveListViewController();
         };
-        descriptor.footerProvider = ^NSString *(BOOL allMode) {
-            return allMode ? SPKL(@"AUTO_SAVE_AUTO_SAVE_STORIES_SETTINGS_SAVE_INSTANTS_OPEN_INCLUDING_EACH_ONE_TAP_THROUGH_INSTANTS_TEXT")
-                           : SPKL(@"AUTO_SAVE_INSTANTS_SELECTED_USERS_FOOTER");
-        };
+        descriptor.masterHelp = SPKL(@"AUTO_SAVE_INSTANTS_MASTER_HELP");
     });
     return descriptor;
 }

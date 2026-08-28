@@ -16,19 +16,21 @@
 + (SPKSetting *)rootSetting {
     NSMutableArray *sections = [NSMutableArray arrayWithArray:@[
         SPKTopicSection(SPKL(@"INTERFACE_NOTIFICATIONS_HEADER"), @[
-            [SPKSetting navigationCellWithTitle:SPKL(@"INTERFACE_NOTIFICATIONS_HEADER")
-                                       subtitle:nil
-                                           icon:SPKSettingsIcon(@"notification")
-                                    navSections:[SPKNotificationSettingsProvider sections]]
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"INTERFACE_NOTIFICATIONS_HEADER")
+                                           subtitle:nil
+                                               icon:SPKSettingsIcon(@"notification")
+                                        navSections:[SPKNotificationSettingsProvider sections]],
+                               SPKL(@"INTERFACE_NOTIFICATIONS_HELP"))
         ],
                         nil),
         SPKTopicSection(SPKL(@"INTERFACE_TABS_HEADER"), @[
-            [SPKSetting navigationCellWithTitle:SPKL(@"INTERFACE_TABS_TAB_EDITOR_TITLE")
-                                       subtitle:nil
-                                           icon:SPKSettingsIcon(@"edit")
-                                 viewController:[[SPKTabEditorViewController alloc] init]],
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"INTERFACE_TABS_TAB_EDITOR_TITLE")
+                                           subtitle:nil
+                                               icon:SPKSettingsIcon(@"edit")
+                                     viewController:[[SPKTabEditorViewController alloc] init]],
+                               SPKL(@"INTERFACE_TABS_TAB_EDITOR_HELP")),
         ],
-                        SPKL(@"INTERFACE_NOTIFICATIONS_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"INTERFACE_APPEARANCE_HEADER"), @[
             ({
                 SPKSetting *appFont = [SPKSetting navigationCellWithTitle:SPKL(@"FONT_APP_FONT_TITLE")
@@ -38,10 +40,11 @@
                 appFont.accessoryTextProvider = ^NSString * {
                     return [SPKFontManager selectedFamilyName] ?: SPKL(@"FONT_DEFAULT_ROW_TITLE");
                 };
+                appFont.helpText = SPKL(@"INTERFACE_APPEARANCE_APP_FONT_HELP");
                 appFont;
             }),
         ],
-                        SPKL(@"INTERFACE_APPEARANCE_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"INTERFACE_EXPLORE_SEARCH_HEADER"), @[
             ({
                 SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_HIDE_EXPLORE_POSTS_GRID_TITLE")
@@ -51,17 +54,20 @@
                     SPKPreferenceSetObject(@(isOn), @"interface_hide_explore_grid");
                     [[NSNotificationCenter defaultCenter] postNotificationName:SPKHideExploreGridPreferenceDidChangeNotification object:nil];
                 };
+                s.helpText = SPKL(@"INTERFACE_EXPLORE_SEARCH_HIDE_EXPLORE_GRID_HELP");
                 s;
             }),
-            [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_HIDE_TRENDING_SEARCHES_TITLE")
-                                       icon:SPKSettingsIcon(@"trending")
-                                defaultsKey:@"interface_hide_trending_searches"
-                            requiresRestart:YES],
-            [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_OPEN_CLIPBOARD_LINK_TITLE")
-                                       icon:SPKSettingsIcon(@"link")
-                                defaultsKey:@"interface_open_clipboard_link"]
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_HIDE_TRENDING_SEARCHES_TITLE")
+                                           icon:SPKSettingsIcon(@"trending")
+                                    defaultsKey:@"interface_hide_trending_searches"
+                                requiresRestart:YES],
+                               SPKL(@"INTERFACE_EXPLORE_SEARCH_HIDE_TRENDING_SEARCHES_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_EXPLORE_SEARCH_OPEN_CLIPBOARD_LINK_TITLE")
+                                           icon:SPKSettingsIcon(@"link")
+                                    defaultsKey:@"interface_open_clipboard_link"],
+                               SPKL(@"INTERFACE_EXPLORE_SEARCH_OPEN_CLIPBOARD_LINK_HELP"))
         ],
-                        SPKL(@"SETTINGS_INTERFACE_HIDE_GRID_SUGGESTED_POSTS_EXPLORE_TAB_N2_HIDE_TRENDING_TEXT")),
+                        nil),
         SPKTopicSection(SPKL(@"INTERFACE_CAPTURE_HEADER"), @[
             ({
                 SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_CAPTURE_HIDE_UI_CAPTURE_TITLE")
@@ -71,10 +77,11 @@
                     [[NSUserDefaults standardUserDefaults] setBool:isOn forKey:@"interface_hide_ui_on_capture"];
                     [[NSNotificationCenter defaultCenter] postNotificationName:SPKHideUIOnCapturePreferenceDidChangeNotification object:nil];
                 };
+                s.helpText = SPKL(@"INTERFACE_CAPTURE_HIDE_UI_CAPTURE_HELP");
                 s;
             })
         ],
-                        SPKL(@"INTERFACE_CAPTURE_FOOTER"))
+                        nil)
     ]];
 
     {
@@ -89,6 +96,7 @@
             tabBarBehavior.enabledProvider = ^BOOL {
                 return [SPKUtils getBoolPref:kSPKPrefInterfaceLiquidGlass];
             };
+            tabBarBehavior.helpText = SPKL(@"INTERFACE_TAB_BAR_BEHAVIOR_HELP");
             return tabBarBehavior;
         };
 
@@ -100,6 +108,7 @@
             liquidGlass.switchValueProvider = ^BOOL {
                 return [SPKUtils getBoolPref:kSPKPrefInterfaceLiquidGlass];
             };
+            liquidGlass.helpText = SPKL(@"INTERFACE_LIQUID_GLASS_HELP");
             liquidGlass.switchChangeHandler = ^(BOOL isOn) {
                 [[NSUserDefaults standardUserDefaults] setBool:isOn forKey:kSPKPrefInterfaceLiquidGlass];
                 [SPKUtils showRestartConfirmation];
@@ -107,13 +116,14 @@
             SPKSetting *progressiveBlur = [SPKSetting switchCellWithTitle:SPKL(@"INTERFACE_CAPTURE_PROGRESSIVE_BLUR_TITLE")
                                                              defaultsKey:kSPKPrefInterfaceProgressiveBlur
                                                           requiresRestart:YES];
+            progressiveBlur.helpText = SPKL(@"INTERFACE_PROGRESSIVE_BLUR_HELP");
 
             [sections addObject:SPKTopicSection(SPKL(@"INTERFACE_LIQUID_GLASS_BLUR_HEADER"), @[
                           liquidGlass,
                           progressiveBlur,
                           tabBarBehaviorCell(),
                       ],
-                                                SPKL(@"SETTINGS_INTERFACE_FORCE_ENABLE_INSTAGRAM_S_NATIVE_LIQUID_GLASS_UI_N2_TEXT"))];
+                                                nil)];
         } else {
             // Pre-iOS 26 can't render the glass material, but the same tab bar
             // experiment gates still reshape the bar into the floating pill.
@@ -124,6 +134,7 @@
             pillTabBar.switchValueProvider = ^BOOL {
                 return [SPKUtils getBoolPref:kSPKPrefInterfaceLiquidGlass];
             };
+            pillTabBar.helpText = SPKL(@"INTERFACE_PILL_TAB_BAR_HELP");
             pillTabBar.switchChangeHandler = ^(BOOL isOn) {
                 [[NSUserDefaults standardUserDefaults] setBool:isOn forKey:kSPKPrefInterfaceLiquidGlass];
                 [SPKUtils showRestartConfirmation];
@@ -133,7 +144,7 @@
                           pillTabBar,
                           tabBarBehaviorCell(),
                       ],
-                                                SPKL(@"INTERFACE_TAB_BAR_FOOTER"))];
+                                                nil)];
         }
     }
 

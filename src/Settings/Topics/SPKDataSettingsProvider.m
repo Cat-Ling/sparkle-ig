@@ -150,34 +150,38 @@
                                                                     presenter = presenter.presentedViewController;
                                                                 [[SPKSettingsTransferManager sharedManager] resetAllSettingsFromController:presenter];
                                                             }];
+    resetAllSettings.helpText = SPKL(@"DATA_RESET_ALL_SETTINGS_HELP");
     resetAllSettings.tintColor = [SPKUtils SPKColor_InstagramDestructive];
     resetAllSettings.iconTintColor = [SPKUtils SPKColor_InstagramDestructive];
 
     NSArray *sections = @[
         SPKTopicSection(SPKL(@"ALERT_ACTION_STORAGE"), @[
-            [SPKSetting navigationCellWithTitle:SPKL(@"DATA_STORAGE_STORAGE_USAGE_TITLE")
-                                       subtitle:@""
-                                           icon:SPKSettingsIcon(@"info")
-                                 viewController:[SPKStorageUsageViewController new]]
+            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"DATA_STORAGE_STORAGE_USAGE_TITLE")
+                                           subtitle:@""
+                                               icon:SPKSettingsIcon(@"info")
+                                     viewController:[SPKStorageUsageViewController new]],
+                               SPKL(@"DATA_STORAGE_USAGE_HELP"))
         ],
-                        SPKL(@"DATA_X_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"DATA_BACKUP_TRANSFER_HEADER"), @[
-            SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:SPKL(@"DATA_BACKUP_TRANSFER_EXPORT_TITLE")
+            SPKSettingWithHelp(SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:SPKL(@"DATA_BACKUP_TRANSFER_EXPORT_TITLE")
                                                                subtitle:@""
                                                                    icon:SPKSettingsIcon(@"arrow_up")
                                                          viewController:[[SPKSettingsTransferSelectionViewController alloc] initWithImportMode:NO]],
                                     [SPKUtils SPKColor_InstagramPrimaryText]),
-            SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_TITLE")
+                               SPKL(@"DATA_BACKUP_TRANSFER_EXPORT_HELP")),
+            SPKSettingWithHelp(SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_TITLE")
                                                                subtitle:@""
                                                                    icon:SPKSettingsIcon(@"arrow_down")
                                                          viewController:[[SPKSettingsTransferSelectionViewController alloc] initWithImportMode:YES]],
-                                    [SPKUtils SPKColor_InstagramPrimaryText])
+                                    [SPKUtils SPKColor_InstagramPrimaryText]),
+                               SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_HELP"))
         ],
-                        SPKL(@"DATA_BACKUP_TRANSFER_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"ALERT_ACTION_RESET"), @[
             resetAllSettings
         ],
-                        SPKL(@"DATA_RESET_FOOTER"))
+                        nil)
     ];
 
     return SPKTopicNavigationSetting(SPKL(@"DATA_TITLE"), @"cloud", 24.0, sections);

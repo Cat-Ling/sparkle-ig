@@ -30,19 +30,21 @@ static NSArray *SPKInstantsSettingsSections(void);
 static NSArray *SPKInstantsSettingsSections(void) {
     return @[
         SPKTopicSection(SPKL(@"FEED_ACTION_BUTTON_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_ACTION_BUTTON_INSTANTS_ACTION_BUTTON_TITLE")
-                                       icon:SPKSettingsIcon(@"action")
-                                defaultsKey:kSPKInstantsActionButtonEnabledKey],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_ACTION_BUTTON_INSTANTS_ACTION_BUTTON_TITLE")
+                                           icon:SPKSettingsIcon(@"action")
+                                    defaultsKey:kSPKInstantsActionButtonEnabledKey],
+                               SPKL(@"INSTANTS_ACTION_BUTTON_ENABLED_HELP")),
             SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSourceInstants),
             SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSourceInstants, SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE"), SPKActionButtonSupportedActionsForSource(SPKActionButtonSourceInstants), SPKActionButtonDefaultSectionsForSource(SPKActionButtonSourceInstants))
         ],
-                        SPKL(@"FEED_ACTION_BUTTON_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"INSTANTS_PRIVACY_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_PRIVACY_ALLOW_SCREENSHOTS_TITLE")
-                                       icon:SPKSettingsIcon(@"warning")
-                                defaultsKey:@"instants_allow_screenshot"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_PRIVACY_ALLOW_SCREENSHOTS_TITLE")
+                                           icon:SPKSettingsIcon(@"warning")
+                                    defaultsKey:@"instants_allow_screenshot"],
+                               SPKL(@"INSTANTS_PRIVACY_ALLOW_SCREENSHOTS_HELP")),
         ],
-                        SPKL(@"INSTANTS_PRIVACY_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"INSTANTS_CREATION_HEADER"), @[
             ({
                 SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CREATION_DISABLE_INSTANTS_CREATION_TITLE") icon:SPKSettingsIcon(@"instants") defaultsKey:@"instants_disable_creation"];
@@ -50,28 +52,32 @@ static NSArray *SPKInstantsSettingsSections(void) {
                     SPKPreferenceSetObject(@(isOn), @"instants_disable_creation");
                     [[NSNotificationCenter defaultCenter] postNotificationName:@"SPKQuickSnapCreationPrefChangedNotification" object:nil];
                 };
+                s.helpText = SPKL(@"INSTANTS_CREATION_DISABLE_CREATION_HELP");
                 s;
             }),
-            [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CREATION_SKIP_CAMERA_AFTER_INSTANTS_TITLE")
-                                       icon:SPKSettingsIcon(@"camera")
-                                defaultsKey:@"instants_skip_camera_after_viewing"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CREATION_SKIP_CAMERA_AFTER_INSTANTS_TITLE")
+                                           icon:SPKSettingsIcon(@"camera")
+                                    defaultsKey:@"instants_skip_camera_after_viewing"],
+                               SPKL(@"INSTANTS_CREATION_SKIP_CAMERA_HELP")),
             ({
                 BOOL cameraControlAvailable = SPKPrefIsAvailable(@"instants_disable_camera_control");
                 SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_TITLE")
                                                        subtitle:cameraControlAvailable ? @"" : SPKL(@"SETTINGS_INSTANTS_REQUIRES_IPHONE_CAMERA_CONTROL_TEXT")
                                                            icon:SPKSettingsSystemIcon(@"button.vertical.right.press", SPKSettingsCellIconPointSize, UIImageSymbolWeightSemibold)
                                                     defaultsKey:@"instants_disable_camera_control"];
+                s.helpText = SPKL(@"INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP");
                 s;
             }),
         ],
-                        SPKL(@"SETTINGS_INSTANTS_BLOCKS_INSTANT_CAPTURE_PHOTO_VIDEO_WITHOUT_DISABLING_RECEIVED_INSTANTS_TEXT")),
+                        nil),
         SPKTopicSection(@"", @[
             // Same glyph the button itself wears: the global "Open Menu Icon" choice.
-            [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE")
-                                       icon:SPKSettingsIcon(SPKActionButtonOpenMenuIconName())
-                                defaultsKey:@"instants_camera_btn"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE")
+                                           icon:SPKSettingsIcon(SPKActionButtonOpenMenuIconName())
+                                    defaultsKey:@"instants_camera_btn"],
+                               SPKL(@"INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP")),
         ],
-                        SPKL(@"INSTANTS_X_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"FEED_CONFIRMATION_HEADER"), @[
             ({
                 SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE")
@@ -80,13 +86,15 @@ static NSArray *SPKInstantsSettingsSections(void) {
                 s.enabledProvider = ^BOOL {
                     return NO;
                 };
+                s.helpText = SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP");
                 s;
             }),
-            [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE")
-                                       icon:SPKSettingsIcon(@"reactions")
-                                defaultsKey:@"instants_confirm_reaction"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE")
+                                           icon:SPKSettingsIcon(@"reactions")
+                                    defaultsKey:@"instants_confirm_reaction"],
+                               SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP")),
         ],
-                        SPKL(@"SETTINGS_INSTANTS_ASKS_CONFIRMATION_SEND_CAPTURED_INSTANT_TEMPORARILY_UNAVAILABLE_N2_SHOWS_TEXT")),
+                        nil),
     ];
 }
 

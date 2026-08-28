@@ -1,3 +1,4 @@
+#import "SPKSettingsInfoSheetViewController.h"
 #import "SPKStrings.h"
 #import "SPKTopicSettingsSupport.h"
 #import "../Features/Feed/HeaderActionButton.h"
@@ -27,6 +28,15 @@ NSDictionary *SPKTopicSection(NSString *header, NSArray *rows, NSString *footer)
     }
 
     return [section copy];
+}
+
+NSDictionary *SPKTopicSectionWithInfoSheet(NSDictionary *section, BOOL usesInfoSheet) {
+    if (![section isKindOfClass:[NSDictionary class]])
+        return section;
+
+    NSMutableDictionary *overridden = [section mutableCopy];
+    overridden[SPKTopicSectionInfoSheetKey] = @(usesInfoSheet);
+    return [overridden copy];
 }
 
 UIImage *SPKSettingsIcon(NSString *name) {
@@ -68,6 +78,11 @@ UIImage *SPKSettingsSystemIcon(NSString *name, CGFloat pointSize, UIImageSymbolW
         [symbol drawInRect:CGRectIntegral(drawRect)];
     }];
     return [normalized imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+}
+
+SPKSetting *SPKSettingWithHelp(SPKSetting *setting, NSString *helpText) {
+    setting.helpText = helpText;
+    return setting;
 }
 
 SPKSetting *SPKSettingApplyIconTint(SPKSetting *setting, UIColor *tintColor) {

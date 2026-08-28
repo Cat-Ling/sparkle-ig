@@ -19,8 +19,9 @@
                                                        icon:SPKSettingsIcon(toPhotos ? @"photo_gallery" : @"sparkle_gallery")
                                                        menu:SPKAutoSaveDestinationMenu()];
 
-    return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_DESTINATION_HEADER"), @[ destination ],
-                           SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_AUTO_SAVED_MEDIA_LANDS_EVERY_SURFACE_SPARKLE_GALLERY_KEEPS_FOOTER"));
+    destination.helpText = SPKL(@"AUTO_SAVE_DESTINATION_HELP");
+
+    return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_DESTINATION_HEADER"), @[ destination ], nil);
 }
 
 + (NSDictionary *)qualitySection {
@@ -31,23 +32,26 @@
                                                         icon:SPKSettingsIcon(@"video")
                                                         menu:SPKAutoSaveVideoQualityMenu()];
     videoQuality.userInfo = @{@"enabled" : @(ffmpegAvailable)};
+    videoQuality.helpText = SPKL(@"AUTO_SAVE_VIDEO_QUALITY_HELP");
 
     return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"), @[
-        [SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_PHOTO_QUALITY_TITLE")
-                                 icon:SPKSettingsIcon(@"photo")
-                                 menu:SPKAutoSavePhotoQualityMenu()],
+        SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_PHOTO_QUALITY_TITLE")
+                                     icon:SPKSettingsIcon(@"photo")
+                                     menu:SPKAutoSavePhotoQualityMenu()],
+                           SPKL(@"AUTO_SAVE_PHOTO_QUALITY_HELP")),
         videoQuality,
     ],
-                           SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_PREFERRED_QUALITY_AUTO_SAVED_PHOTOS_N2_DEFAULT_TAKES_INSTAGRAM_TEXT"));
+                           nil);
 }
 
 + (NSDictionary *)feedbackSection {
     return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_HISTORY_HEADER"), @[
-        [SPKSetting switchCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_KEEP_DOWNLOAD_HISTORY_TITLE")
-                                   icon:SPKSettingsIcon(@"history")
-                            defaultsKey:kSPKAutoSaveKeepHistoryKey],
+        SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_KEEP_DOWNLOAD_HISTORY_TITLE")
+                                       icon:SPKSettingsIcon(@"history")
+                                defaultsKey:kSPKAutoSaveKeepHistoryKey],
+                           SPKL(@"AUTO_SAVE_KEEP_HISTORY_HELP")),
     ],
-                           SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_AUTO_SAVES_REMOVED_DOWNLOAD_HISTORY_ONCE_SAVED_ENABLE_KEEP_FOOTER"));
+                           nil);
 }
 
 + (SPKSetting *)surfaceRowWithTitle:(NSString *)title
@@ -62,6 +66,7 @@
     row.searchSectionsProvider = ^NSArray * {
         return [surfaceClass searchSections];
     };
+    row.helpText = SPKL(@"AUTO_SAVE_SURFACE_ROW_HELP");
     return row;
 }
 

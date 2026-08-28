@@ -45,12 +45,14 @@
                                                            icon:SPKSettingsIcon(@"video")
                                                                menu:SPKMediaVideoQualityMenu()];
     videoQualitySetting.userInfo = @{@"enabled" : @(ffmpegAvailable)};
+    videoQualitySetting.helpText = SPKL(@"DOWNLOADS_QUALITY_DEFAULT_VIDEO_HELP");
 
     SPKSetting *encodingSettings = [SPKSetting navigationCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENCODING_SETTINGS_TITLE")
                                                               subtitle:(ffmpegAvailable ? @"" : SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_REQUIRES_FFMPEGKIT_TEXT"))
                                                               icon:SPKSettingsIcon(@"settings")
                                                         viewController:[SPKMediaQualityManager encodingSettingsViewController]];
     encodingSettings.userInfo = @{@"enabled" : @(ffmpegAvailable)};
+    encodingSettings.helpText = SPKL(@"DOWNLOADS_QUALITY_ENCODING_SETTINGS_HELP");
     encodingSettings.searchSectionsProvider = ^NSArray * {
         return [SPKMediaQualityManager encodingSettingsSearchSections];
     };
@@ -60,49 +62,55 @@
                                                               icon:SPKSettingsIcon(@"logs")
                                                     viewController:[SPKMediaFFmpeg logsViewController]];
     encodingLogs.userInfo = @{@"enabled" : @YES};
+    encodingLogs.helpText = SPKL(@"DOWNLOADS_QUALITY_ENCODING_LOGS_HELP");
 
-    NSString *qualityFooter = ffmpegAvailable
-        ? SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_REQUEST_4K_IMAGE_CANDIDATES_MIMICKING_WEB_BROWSER_EXTRA_CALL_TEXT")
-        : SPKL(@"DOWNLOADS_QUALITY_OPTIONS_FOOTER");
+    // Without FFmpeg the section-wide requirement notice is the message that
+    // matters, so that one stays a footer.
+    NSString *qualityFooter = ffmpegAvailable ? nil : SPKL(@"DOWNLOADS_QUALITY_OPTIONS_FOOTER");
 
     SPKSetting *autoSave = [SPKSetting navigationCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_AUTO_SAVE_HEADER")
                                                       subtitle:@""
                                                           icon:SPKSettingsIcon(@"download")
                                                 viewController:[SPKAutoSaveSettingsViewController new]];
+    autoSave.helpText = SPKL(@"DOWNLOADS_AUTO_SAVE_HELP");
     autoSave.searchSectionsProvider = ^NSArray * {
         return [SPKAutoSaveSettingsViewController searchSections];
     };
 
     return @[
         SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_AUTO_SAVE_HEADER"), @[ autoSave ],
-                        SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUTOMATICALLY_DOWNLOAD_MEDIA_VIEW_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"GENERAL_BEHAVIOR_HEADER"), @[
-            [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DETECT_DUPLICATE_DOWNLOADS_TITLE")
-                                       icon:SPKSettingsIcon(@"duplicate")
-                                defaultsKey:kSPKDownloadDetectDuplicatesKey],
-            [SPKSetting stepperCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_PARALLEL_DOWNLOADS_TITLE")
-                                    subtitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_VALUE_CONCURRENT_VALUE_SUBTITLE")
-                                        icon:SPKSettingsIcon(@"parallel")
-                                 defaultsKey:kSPKDownloadMaxConcurrentKey
-                                         min:1
-                                         max:4
-                                        step:1
-                                       label:SPKL(@"SETTINGS_STORAGE_USAGE_DOWNLOADS_TEXT")
-                               singularLabel:@"download"],
-            [SPKSetting stepperCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_HISTORY_LIMIT_TITLE")
-                                    subtitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_VALUE_SAVED_VALUE_SUBTITLE")
-                                        icon:SPKSettingsIcon(@"history")
-                                 defaultsKey:kSPKDownloadHistoryLimitKey
-                                         min:50
-                                         max:1000
-                                        step:50
-                                       label:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENTRIES_TEXT")
-                               singularLabel:@"entry"],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DETECT_DUPLICATE_DOWNLOADS_TITLE")
+                                           icon:SPKSettingsIcon(@"duplicate")
+                                    defaultsKey:kSPKDownloadDetectDuplicatesKey],
+                               SPKL(@"DOWNLOADS_BEHAVIOR_DETECT_DUPLICATES_HELP")),
+            SPKSettingWithHelp([SPKSetting stepperCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_PARALLEL_DOWNLOADS_TITLE")
+                                        subtitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_VALUE_CONCURRENT_VALUE_SUBTITLE")
+                                            icon:SPKSettingsIcon(@"parallel")
+                                     defaultsKey:kSPKDownloadMaxConcurrentKey
+                                             min:1
+                                             max:4
+                                            step:1
+                                           label:SPKL(@"SETTINGS_STORAGE_USAGE_DOWNLOADS_TEXT")
+                                   singularLabel:@"download"],
+                               SPKL(@"DOWNLOADS_BEHAVIOR_PARALLEL_DOWNLOADS_HELP")),
+            SPKSettingWithHelp([SPKSetting stepperCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_HISTORY_LIMIT_TITLE")
+                                        subtitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_VALUE_SAVED_VALUE_SUBTITLE")
+                                            icon:SPKSettingsIcon(@"history")
+                                     defaultsKey:kSPKDownloadHistoryLimitKey
+                                             min:50
+                                             max:1000
+                                            step:50
+                                           label:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENTRIES_TEXT")
+                                   singularLabel:@"entry"],
+                               SPKL(@"DOWNLOADS_BEHAVIOR_HISTORY_LIMIT_HELP")),
             ({
                 SPKSetting *toggle = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_SAVE_CUSTOM_ALBUM_TITLE")
                                                                 icon:SPKSettingsIcon(@"photo_gallery")
                                                          defaultsKey:@"downloads_photos_album_enabled"];
                 toggle.reloadsTableOnSwitchChange = YES;
+                toggle.helpText = SPKL(@"DOWNLOADS_BEHAVIOR_CUSTOM_ALBUM_HELP");
                 toggle;
             }),
             ({
@@ -114,10 +122,11 @@
                 album.enabledProvider = ^BOOL {
                     return [SPKUtils getBoolPref:@"downloads_photos_album_enabled"];
                 };
+                album.helpText = SPKL(@"DOWNLOADS_BEHAVIOR_ALBUM_NAME_HELP");
                 album;
             }),
         ],
-                        SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_CHECK_BEFORE_DOWNLOADING_SKIP_MEDIA_ALREADY_SAVED_GALLERY_CHECKS_TEXT")),
+                        nil),
         SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"), @[
             ({
                 SPKSetting *toggle = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_FETCH_4K_IMAGES_TITLE")
@@ -134,14 +143,17 @@
                     }
                 };
                 toggle.reloadsTableOnSwitchChange = YES;
+                toggle.helpText = SPKL(@"DOWNLOADS_QUALITY_FETCH_4K_HELP");
                 toggle;
             }),
-            [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENHANCED_MEDIA_RESOLUTION_TITLE")
-                                       icon:SPKSettingsIcon(@"hd")
-                                defaultsKey:@"downloads_enhanced_media_resolution"],
-            [SPKSetting menuCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DEFAULT_PHOTO_QUALITY_TITLE")
-                                     icon:SPKSettingsIcon(@"photo")
-                                     menu:SPKMediaPhotoQualityMenu()],
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ENHANCED_MEDIA_RESOLUTION_TITLE")
+                                           icon:SPKSettingsIcon(@"hd")
+                                    defaultsKey:@"downloads_enhanced_media_resolution"],
+                               SPKL(@"DOWNLOADS_QUALITY_ENHANCED_RESOLUTION_HELP")),
+            SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_DEFAULT_PHOTO_QUALITY_TITLE")
+                                         icon:SPKSettingsIcon(@"photo")
+                                         menu:SPKMediaPhotoQualityMenu()],
+                               SPKL(@"DOWNLOADS_QUALITY_DEFAULT_PHOTO_HELP")),
             videoQualitySetting,
             encodingSettings,
             encodingLogs
@@ -166,15 +178,17 @@
             SPKInstallEnabledFeatureHooks();
     };
     master.reloadsTableOnSwitchChange = YES; // grey out / re-enable the dependents live
+    master.helpText = SPKL(@"DOWNLOADS_AUDIO_MASTER_HELP");
 
     SPKSetting *pageButton = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUDIO_PAGE_BUTTON_TITLE") icon:SPKSettingsIcon(@"audio_page") defaultsKey:@"downloads_audio_page_button"];
+    pageButton.helpText = SPKL(@"DOWNLOADS_AUDIO_PAGE_BUTTON_HELP");
     pageButton.enabledProvider = audioEnabled;
 
     SPKSetting *pageDefault = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUDIO_PAGE_DEFAULT_ACTION_TITLE") icon:SPKSettingsIcon(@"action") menu:[self audioPageDefaultActionMenu]], SPKSettingsIcon(@"action"));
+    pageDefault.helpText = SPKL(@"DOWNLOADS_AUDIO_PAGE_DEFAULT_ACTION_HELP");
     pageDefault.enabledProvider = audioEnabled;
 
-    return SPKTopicSection(SPKL(@"MESSAGES_DIRECT_MESSAGE_MENU_AUDIO_TITLE"), @[ master, pageButton, pageDefault ],
-                           SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_ADDS_AUDIO_ACTIONS_AUDIO_PAGES_MEDIA_ACTION_BUTTONS_FOOTER"));
+    return SPKTopicSection(SPKL(@"MESSAGES_DIRECT_MESSAGE_MENU_AUDIO_TITLE"), @[ master, pageButton, pageDefault ], nil);
 }
 
 + (NSArray *)searchSections {

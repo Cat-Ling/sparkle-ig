@@ -21,9 +21,9 @@
 
     return SPKTopicNavigationSetting(SPKL(@"ABOUT_TITLE"), @"info", 24.0, @[
         SPKTopicSection(SPKL(@"ABOUT_SUPPORT_HEADER"), @[
-            donate
+            SPKSettingWithHelp(donate, SPKL(@"ABOUT_SUPPORT_DONATE_HELP"))
         ],
-                        SPKL(@"ABOUT_SUPPORT_FOOTER")),
+                        nil),
         SPKTopicSection(SPKL(@"ABOUT_INFORMATION_HEADER"), @[
             [SPKSetting staticCellWithTitle:SPKL(@"ABOUT_INFORMATION_SPARKLE_TITLE")
                                    subtitle:SPKVersionString
