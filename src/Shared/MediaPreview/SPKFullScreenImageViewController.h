@@ -9,6 +9,12 @@
 /// Reports the zoom state of the content so the host can adapt chrome (e.g.
 /// show a material backing behind the bars when content fills behind them).
 - (void)mediaContent:(UIViewController *)controller didChangeZoomState:(BOOL)isZoomed;
+/// Reports Live Text highlighting (the OCR button being switched on). While it is
+/// active VisionKit draws its own "Copy All" quick action over the bottom of the
+/// image, inside the content hierarchy, so the host has to move its own chrome out
+/// of the way rather than raise anything above it.
+- (void)mediaContent:(UIViewController *)controller
+    didChangeLiveTextHighlight:(BOOL)highlighted;
 @end
 
 NS_ASSUME_NONNULL_BEGIN
@@ -39,6 +45,11 @@ static inline BOOL SPKFullScreenPreviewShouldInsetMediaBetweenBars(void) {
     return window.safeAreaInsets.bottom <= 0.0;
 }
 
+/// YES when VisionKit can analyze images on this device: iOS 16+ with an analyzer
+/// the hardware supports. The Live Text controls over the photo preview, and the
+/// setting that governs them, are both meaningless without it.
+FOUNDATION_EXPORT BOOL SPKLiveTextIsSupported(void);
+
 @interface SPKFullScreenImageViewController : UIViewController
 
 @property (nonatomic, strong, readonly) SPKMediaItem *mediaItem;
@@ -50,6 +61,10 @@ static inline BOOL SPKFullScreenPreviewShouldInsetMediaBetweenBars(void) {
 - (void)cleanup;
 - (void)resetZoomIfNeeded;
 - (void)applyMediaContentInsets:(UIEdgeInsets)insets;
+/// Distance from the bottom of the screen to the top of the host's action toolbar,
+/// measured by the host while the chrome is visible. Floating controls anchor to it
+/// instead of the safe area, which shrinks and grows as the bars come and go.
+- (void)applyChromeBottomLimit:(CGFloat)bottomLimit;
 
 @end
 

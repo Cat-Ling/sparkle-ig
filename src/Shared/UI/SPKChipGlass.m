@@ -106,8 +106,11 @@ BOOL SPKChipApplyGlass(UIButton *chip, BOOL selected, CGFloat cornerRadius, UICo
         SPKApplyLegibilityStyle(chip, probe.traitCollection.userInterfaceStyle);
     } else {
         glass.effect = effect;
-        [chip sendSubviewToBack:glass]; // stay behind the title/image
     }
+    // Always re-sink it: a button's title/image views can be created after the
+    // glass is inserted, which would leave the material sitting over the content
+    // as a translucent film until something else reordered the subviews.
+    [chip sendSubviewToBack:glass];
     glass.layer.cornerRadius = cornerRadius;
     chip.backgroundColor = [UIColor clearColor];
     return YES;

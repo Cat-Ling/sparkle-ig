@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "أيقونة فتح القائمة";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "إعدادات لكل حساب";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "معاينة الوسائط والقائمة";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "يتعرف على النص في معاينة الصورة الموسعة ويضيف زرًا لتحديده ونسخه.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "تحديد النص في الصور";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "يعرض التاريخ والوقت الدقيقين لنشر المنشور في قائمة زر الإجراء.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "عرض التاريخ في القائمة";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "يعرض صاحب المنشور وتاريخ النشر فوق معاينة الصورة الموسّعة.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "مستوى جهد الترميز في libx264. الإعدادات الأبطأ تستغرق وقتاً أطول لكنها تنتج ملفات أصغر بالجودة المرئية نفسها، وultrafast هو الأسرع والأكبر حجماً.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "معدل بت الفيديو المستهدف، يُستخدم بدل CRF عند ضبطه.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "الترميز المستخدم لإعادة ترميز الفيديو.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "نسخ الكل";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "فشل تحميل الصورة";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "لا توجد عنوان URL للصورة";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "تحديد النص";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "تم نسخ النص";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "نسخ الصوت";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "فشل الحفظ";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "ملف الصورة غير متاح.";

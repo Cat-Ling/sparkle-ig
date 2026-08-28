@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Open Menu Icon";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Per-Account Settings";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Media Preview & Menu";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Recognizes text in the expanded photo preview and adds a button to select and copy it.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Select Text in Photos";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Shows the exact date and time a post was made in the action button menu.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Show Date in Menu";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Overlays the author and post date on the expanded photo preview.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "The libx264 encoding effort. Slower presets take longer but produce smaller files at the same visual quality; ultrafast is quickest and largest.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Target video bitrate, used instead of CRF when set.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "The codec used to re-encode video.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Copy All";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Failed to load image";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "No image URL";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Select Text";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Text copied";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Copy Audio";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Failed to save";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "The image file is unavailable.";

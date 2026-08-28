@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Εικονίδιο Ανοίγματος Μενού";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Ρυθμίσεις ανά Λογαριασμό";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Προεπιόπτρισμα Πολυμέσων & Μενού";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Αναγνωρίζει κείμενο στη μεγεθυμένη προεπισκόπηση φωτογραφίας και προσθέτει κουμπί για επιλογή και αντιγραφή.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Επιλογή κειμένου σε φωτογραφίες";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Δείχνει την ακριβή ημερομηνία και ώρα μιας δημοσίευσης στο μενού του κουμπιού ενεργειών.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Εμφάνιση Ημερομηνίας στο Μενού";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Εμφανίζει τον δημιουργό και την ημερομηνία δημοσίευσης πάνω στη μεγεθυμένη προεπισκόπηση φωτογραφίας.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "Η προσπάθεια κωδικοποίησης του libx264. Οι πιο αργές προεπιλογές διαρκούν περισσότερο αλλά δίνουν μικρότερα αρχεία στην ίδια οπτική ποιότητα· η ultrafast είναι η ταχύτερη και η μεγαλύτερη.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Επιθυμητός ρυθμός bit βίντεο, χρησιμοποιείται αντί του CRF όταν οριστεί.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "Το codec που χρησιμοποιείται για την επανακωδικοποίηση του βίντεο.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Αντιγραφή όλων";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Αποτυχία φόρτωσης εικόνας";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "Δεν υπάρχει URL εικόνας";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Επιλογή κειμένου";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Το κείμενο αντιγράφηκε";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Αντιγραφή Ήχου";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Αποτυχία αποθήκευσης";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "Το αρχείο εικόνας δεν είναι διαθέσιμο.";

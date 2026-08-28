@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Иконка открытия меню";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Настройки по аккаунтам";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Предпросмотр медиа и меню";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Распознает текст в увеличенном просмотре фото и добавляет кнопку для его выделения и копирования.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Выделение текста на фото";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Показывает точную дату и время публикации в меню кнопки действия.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Показать дату в меню";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Накладывает автора и дату публикации на увеличенный просмотр фото.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "Уровень усилий кодирования libx264. Медленные пресеты работают дольше, но дают файлы меньшего размера при том же качестве картинки; ultrafast самый быстрый и самый объёмный.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Целевой битрейт видео, используется вместо CRF, когда задан.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "Кодек, которым перекодируется видео.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Скопировать все";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Ошибка загрузки изображения";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "Нет URL изображения";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Выделить текст";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Текст скопирован";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Копировать аудио";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Ошибка сохранения";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "Файл изображения недоступен.";

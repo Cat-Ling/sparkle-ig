@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Icône Ouvrir le menu";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Paramètres par compte";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Aperçu et menu des médias";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Reconnaît le texte dans l’aperçu photo agrandi et ajoute un bouton pour le sélectionner et le copier.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Sélectionner le texte des photos";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Affiche la date et l'heure exactes d'une publication dans le menu du bouton d'action.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Afficher la date dans le menu";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Superpose l'auteur et la date de publication sur l'aperçu photo agrandi.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "L'effort d'encodage de libx264. Les préréglages plus lents prennent plus de temps mais produisent des fichiers plus petits à qualité visuelle égale ; ultrafast est le plus rapide et le plus volumineux.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Débit vidéo visé, utilisé à la place du CRF lorsqu'il est défini.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "Le codec utilisé pour réencoder la vidéo.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Tout copier";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Échec du chargement de l'image";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "Pas d'URL d'image";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Sélectionner le texte";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Texte copié";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Copier l'audio";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Échec de l'enregistrement";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "Le fichier image n'est pas disponible.";

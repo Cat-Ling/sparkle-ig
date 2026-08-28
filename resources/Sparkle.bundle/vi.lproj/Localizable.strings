@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Biểu tượng Menu Mở";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Cài đặt Theo tài khoản";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Bản Xem Trước & Menu Phương Tiện";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Nhận dạng văn bản trong bản xem trước ảnh phóng to và thêm nút để chọn và sao chép.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Chọn văn bản trong ảnh";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Hiển thị chính xác ngày giờ đăng bài trong menu nút hành động.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Hiển Thị Ngày Trong Menu";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Hiển thị tác giả và ngày đăng lên bản xem trước ảnh phóng to.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "Mức nỗ lực mã hóa của libx264. Preset chậm hơn tốn thời gian hơn nhưng cho tệp nhỏ hơn ở cùng chất lượng hình ảnh; ultrafast là nhanh nhất và cho tệp lớn nhất.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Bitrate video mục tiêu, được dùng thay cho CRF khi bạn đặt giá trị.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "Codec dùng để mã hóa lại video.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Sao chép tất cả";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Không tải được hình ảnh";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "Không có URL hình ảnh";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Chọn văn bản";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Đã sao chép văn bản";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Sao chép âm thanh";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Không lưu được";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "Tệp hình ảnh không khả dụng.";

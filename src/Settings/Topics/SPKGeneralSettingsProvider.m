@@ -9,7 +9,31 @@
 #import "../SPKActionSectionIconPickerViewController.h"
 #import "../SPKAppIconCatalog.h"
 #import "../SPKAppIconPickerViewController.h"
+#import "../../Shared/MediaPreview/SPKFullScreenImageViewController.h"
+#import "../SPKPreferenceAvailability.h"
 #import "../SPKTopicSettingsSupport.h"
+
+// Media Preview & Menu rows. Built rather than declared inline because the Live Text
+// toggle is omitted outright on systems whose VisionKit can't analyze images: it is
+// not a setting the user can act on there, so it isn't shown at all.
+static NSArray<SPKSetting *> *SPKGeneralMediaPreviewRows(void) {
+    NSMutableArray<SPKSetting *> *rows = [NSMutableArray array];
+    [rows addObject:SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
+                                                                  icon:SPKSettingsIcon(@"info")
+                                                           defaultsKey:@"general_preview_show_metadata"],
+                                       SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP"))];
+    if (SPKLiveTextIsSupported()) {
+        [rows addObject:SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE")
+                                                                      icon:SPKSettingsIcon(@"text")
+                                                               defaultsKey:@"general_preview_live_text"],
+                                           SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP"))];
+    }
+    [rows addObject:SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE")
+                                                                  icon:SPKSettingsIcon(@"calendar")
+                                                           defaultsKey:@"general_action_btn_show_date"],
+                                       SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP"))];
+    return rows;
+}
 
 @implementation SPKGeneralSettingsProvider
 
@@ -204,17 +228,8 @@
                                SPKL(@"GENERAL_RECOMMENDATIONS_SUGGESTED_USERS_HELP"))
         ],
                         nil),
-        SPKTopicSection(SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_HEADER"), @[
-            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_TITLE")
-                                                          icon:SPKSettingsIcon(@"info")
-                                                   defaultsKey:@"general_preview_show_metadata"],
-                               SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP")),
-            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE")
-                                                          icon:SPKSettingsIcon(@"calendar")
-                                                   defaultsKey:@"general_action_btn_show_date"],
-                               SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP")),
-        ],
-                        nil),
+        SPKTopicSection(SPKL(@"GENERAL_MEDIA_PREVIEW_MENU_HEADER"),
+                        SPKGeneralMediaPreviewRows(), nil),
         SPKTopicSection(SPKL(@"GENERAL_COMMENTS_HEADER"), @[
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_TITLE")
                                                           icon:SPKSettingsIcon(@"copy")

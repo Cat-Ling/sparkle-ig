@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Іконка Відкрити меню";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Налаштування за аккаунтом";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Попередній перегляд медіа та меню";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Розпізнає текст у збільшеному перегляді фото та додає кнопку для виділення й копіювання.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Виділення тексту на фото";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Показує точну дату й час допису в меню кнопки дії.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Показати дату в меню";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Накладає автора й дату допису на збільшений перегляд фото.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "Рівень зусиль кодування libx264. Повільніші пресети тривають довше, але дають менші файли за тієї самої якості зображення; ultrafast найшвидший і найбільший.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Цільовий бітрейт відео, використовується замість CRF, коли задано.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "Кодек, яким перекодовується відео.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Копіювати все";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Не вдалося завантажити зображення";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "Немає URL зображення";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Виділити текст";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Текст скопійовано";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Копіювати аудіо";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Не вдалося зберегти";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "Файл зображення недоступний.";

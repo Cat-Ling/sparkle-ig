@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "मेनू खोलें आइकन";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "प्रति-खाता सेटिंग्स";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "मीडिया पूर्वावलोकन और मेनू";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "बड़े किए गए फ़ोटो प्रीव्यू में टेक्स्ट पहचानता है और उसे चुनने व कॉपी करने के लिए बटन जोड़ता है।";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "फ़ोटो में टेक्स्ट चुनें";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "एक्शन बटन मेन्यू में पोस्ट किए जाने की सटीक तारीख और समय दिखाता है।";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "मेनू में दिनांक दिखाएं";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "बड़े किए गए फ़ोटो पूर्वावलोकन पर लेखक और पोस्ट की तारीख दिखाता है।";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "libx264 एन्कोडिंग प्रयास। धीमे प्रीसेट अधिक समय लेते हैं लेकिन समान दृश्य गुणवत्ता पर छोटी फाइलें बनाते हैं; ultrafast सबसे तेज और सबसे बड़ी फाइल देता है।";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "लक्षित वीडियो बिटरेट, सेट होने पर CRF के बजाय इस्तेमाल होता है।";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "वीडियो को दोबारा एन्कोड करने के लिए इस्तेमाल होने वाला कोडेक।";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "सभी कॉपी करें";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "छवि लोड करने में विफल";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "कोई छवि URL नहीं";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "टेक्स्ट चुनें";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "टेक्स्ट कॉपी हो गया";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "ऑडियो कॉपी करें";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "सहेजने में विफल";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "छवि फ़ाइल अनुपलब्ध है।";

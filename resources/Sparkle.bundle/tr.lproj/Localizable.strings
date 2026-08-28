@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Menüyü Aç Simgesi";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Hesap Başına Ayarlar";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Medya Önizlemesi & Menü";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Büyütülmüş fotoğraf önizlemesindeki metni tanır ve seçip kopyalamak için bir düğme ekler.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Fotoğraflarda metin seç";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Bir gönderinin tam tarih ve saatini işlem düğmesi menüsünde gösterir.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Menüde Tarihi Göster";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Büyütülmüş fotoğraf önizlemesinin üzerine yazarı ve paylaşım tarihini bindirir.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "libx264'ün kodlama çabası. Yavaş ön ayarlar daha uzun sürer ama aynı görsel kalitede daha küçük dosyalar üretir; ultrafast en hızlısı ve en büyüğüdür.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Hedef video bit hızı, ayarlandığında CRF yerine kullanılır.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "Videoyu yeniden kodlamak için kullanılan codec.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Tümünü kopyala";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Resim yüklenemedi";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "Resim URL'si yok";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Metni seç";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Metin kopyalandı";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Sesi Kopyala";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Kaydedilemedi";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "Görüntü dosyası kullanılamıyor.";

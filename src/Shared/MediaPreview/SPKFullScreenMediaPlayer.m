@@ -246,6 +246,16 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 /// Bottom pin for the overlay, frozen to the toolbar-visible position so the overlay
 /// fades in place rather than sliding as the chrome (and its safe-area inset) moves.
 @property (nonatomic, strong, nullable) NSLayoutConstraint *infoOverlayBottomConstraint;
+/// Live Text is highlighting recognized text on the visible photo. VisionKit draws
+/// its "Copy All" quick action over the bottom of the image, from inside the page's
+/// own view hierarchy, so it lands underneath the info overlay in the exact same
+/// spot. Both cannot be readable at once; the info overlay yields.
+@property (nonatomic, assign) BOOL liveTextHighlightActive;
+/// Distance from the bottom of the player's view to the top of the action toolbar,
+/// captured while the chrome is visible. Pages anchor their own floating controls to
+/// it so they stay put when the chrome toggles instead of riding the safe area.
+@property (nonatomic, assign) CGFloat chromeBottomLimit;
+@property (nonatomic, assign) BOOL hasChromeBottomLimit;
 
 @end
 
@@ -605,7 +615,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
 
     _infoOverlay = [[SPKMediaPreviewInfoOverlay alloc] initWithFrame:CGRectZero];
     _infoOverlay.translatesAutoresizingMaskIntoConstraints = NO;
-    _infoOverlay.alpha = _isToolbarVisible ? 1.0 : 0.0;
+    _infoOverlay.alpha = [self infoOverlayVisibleAlpha];
     [self.view addSubview:_infoOverlay];
     _infoOverlayBottomConstraint =
         [_infoOverlay.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor];
@@ -642,9 +652,56 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     }
 }
 
+// Same frozen measurement the info overlay uses, handed to the pages so their own
+// floating controls (the Live Text button) sit at a fixed height. Recomputed only
+// while the chrome is visible and settled, so toggling it never moves anything.
+- (void)updateChromeBottomLimitIfNeeded {
+    if (!_isToolbarVisible || self.chromeToggleInProgress)
+        return;
+
+    UIToolbar *toolbar = self.navigationController.toolbar;
+    CGFloat toolbarTopInView;
+    if (toolbar && !toolbar.hidden && toolbar.window) {
+        CGRect frameInView = [self.view convertRect:toolbar.bounds fromView:toolbar];
+        toolbarTopInView = CGRectGetMinY(frameInView);
+    } else {
+        toolbarTopInView =
+            CGRectGetMaxY(self.view.bounds) - self.view.safeAreaInsets.bottom;
+    }
+
+    CGFloat limit = MAX(0.0, CGRectGetMaxY(self.view.bounds) - toolbarTopInView);
+    if (_hasChromeBottomLimit && ABS(limit - _chromeBottomLimit) < 0.5)
+        return;
+    _chromeBottomLimit = limit;
+    _hasChromeBottomLimit = YES;
+    for (UIViewController *controller in self.pageViewController.viewControllers) {
+        [self applyChromeBottomLimitToController:controller];
+    }
+}
+
+- (void)applyChromeBottomLimitToController:(UIViewController *)controller {
+    if (!_hasChromeBottomLimit)
+        return;
+    if ([controller respondsToSelector:@selector(applyChromeBottomLimit:)]) {
+        [(id)controller applyChromeBottomLimit:_chromeBottomLimit];
+    }
+}
+
+// The overlay is visible only while the chrome is and Live Text is not drawing its
+// own quick action over the same corner.
+- (CGFloat)infoOverlayVisibleAlpha {
+    return (_isToolbarVisible && !_liveTextHighlightActive) ? 1.0 : 0.0;
+}
+
 - (void)refreshInfoOverlay {
     if (!_infoOverlay)
         return;
+    // A new page carries no highlight of its own; the page left behind keeps its
+    // VisionKit state but is no longer on screen.
+    if (_liveTextHighlightActive) {
+        _liveTextHighlightActive = NO;
+        _infoOverlay.alpha = [self infoOverlayVisibleAlpha];
+    }
 
     SPKMediaItem *item = [self currentItem];
     // Photos only — the video transport bar has no free space for it.
@@ -736,6 +793,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     [super viewDidLayoutSubviews];
     [self updateMediaContentBarInsetsIfNeeded];
     [self updateInfoOverlayPositionIfNeeded];
+    [self updateChromeBottomLimitIfNeeded];
 }
 
 // On non-notched devices the opaque top/bottom bars overlap edge-to-edge media,
@@ -1118,6 +1176,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     // Keep the fixed between-bars inset applied to whatever page is shown.
     [controller loadViewIfNeeded];
     [self applyMediaContentBarInsetsToController:controller];
+    [self applyChromeBottomLimitToController:controller];
 }
 
 - (void)prepareAdjacentViewControllersAroundIndex:(NSInteger)index {
@@ -1277,6 +1336,28 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         return;
     SPKMediaChromeSetBarsMaterialActive(self.navigationController, isZoomed);
     _pageScrollView.scrollEnabled = !isZoomed;
+}
+
+- (void)mediaContent:(UIViewController *)controller
+    didChangeLiveTextHighlight:(BOOL)highlighted {
+    // Only the visible page owns the chrome; a page being torn down or preloaded
+    // off screen must not fade the overlay for the photo the user is looking at.
+    if (controller != self.pageViewController.viewControllers.firstObject)
+        return;
+    if (_liveTextHighlightActive == highlighted)
+        return;
+    _liveTextHighlightActive = highlighted;
+    if (!_infoOverlay || _infoOverlay.hidden)
+        return;
+    // Match the chrome toggle so the two never look like separate events.
+    [UIView animateWithDuration:UINavigationControllerHideShowBarDuration
+                          delay:0.0
+                        options:UIViewAnimationOptionCurveEaseInOut |
+                                UIViewAnimationOptionBeginFromCurrentState
+                     animations:^{
+                         self.infoOverlay.alpha = [self infoOverlayVisibleAlpha];
+                     }
+                     completion:nil];
 }
 
 #pragma mark - UI Updates
@@ -1800,7 +1881,8 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         animations:^{
             [self setNeedsStatusBarAppearanceUpdate];
             [navigationController setNeedsStatusBarAppearanceUpdate];
-            self.infoOverlay.alpha = visible ? 1.0 : 0.0;
+            self.infoOverlay.alpha =
+                (visible && !self.liveTextHighlightActive) ? 1.0 : 0.0;
             for (UIViewController *controller in self.pageViewController
                      .viewControllers) {
                 [self applyMediaContentBarInsetsToController:controller];
@@ -2849,7 +2931,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
                     self.navigationController.navigationBar.alpha = alpha;
                     self.navigationController.toolbar.alpha = alpha;
                     self.infoOverlay.transform = CGAffineTransformIdentity;
-                    self.infoOverlay.alpha = alpha;
+                    self.infoOverlay.alpha = [self infoOverlayVisibleAlpha];
                 }
                 completion:^(BOOL finished) {
                     UIViewController *currentVC =
@@ -2898,7 +2980,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         self.navigationController.navigationBar.alpha = alpha;
         self.navigationController.toolbar.alpha = alpha;
         self.infoOverlay.transform = CGAffineTransformIdentity;
-        self.infoOverlay.alpha = alpha;
+        self.infoOverlay.alpha = [self infoOverlayVisibleAlpha];
     };
     if (animated) {
         [UIView animateWithDuration:0.25 animations:animations];
@@ -2948,7 +3030,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     // Keep the info overlay attached to the media: translate with it and fade
     // together with the chrome.
     self.infoOverlay.transform = CGAffineTransformMakeTranslation(0.0, verticalDelta);
-    self.infoOverlay.alpha = MAX(0.0, fade);
+    self.infoOverlay.alpha = MAX(0.0, fade) * [self infoOverlayVisibleAlpha];
 }
 
 - (void)removeTransitionToViewForCancelledInteractiveDismissalIfNeeded {
@@ -2990,7 +3072,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
     self.pageViewController.view.transform = CGAffineTransformIdentity;
     self.pageViewController.view.center = SPKCenterForBounds(self.view.bounds);
     self.infoOverlay.transform = CGAffineTransformIdentity;
-    self.infoOverlay.alpha = self.isToolbarVisible ? 1.0 : 0.0;
+    self.infoOverlay.alpha = [self infoOverlayVisibleAlpha];
 }
 
 - (id<UIViewControllerAnimatedTransitioning>)
@@ -3088,7 +3170,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
             if (!completed) {
                 self.pageViewController.view.alpha = 1.0;
                 self.presentationBackdropView.alpha = 1.0;
-                self.infoOverlay.alpha = self.isToolbarVisible ? 1.0 : 0.0;
+                self.infoOverlay.alpha = [self infoOverlayVisibleAlpha];
                 [toView removeFromSuperview];
             }
             [transitionContext completeTransition:completed];

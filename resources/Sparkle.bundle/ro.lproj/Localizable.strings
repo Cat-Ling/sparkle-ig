@@ -882,6 +882,8 @@
 "GENERAL_GENERAL_OPEN_MENU_ICON_TITLE" = "Pictogramă deschide meniu";
 "GENERAL_GENERAL_PER_ACCOUNT_SETTINGS_TITLE" = "Setări pe cont";
 "GENERAL_MEDIA_PREVIEW_MENU_HEADER" = "Previzualizare media și meniu";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_HELP" = "Recunoaște textul din previzualizarea extinsă a fotografiei și adaugă un buton pentru selectare și copiere.";
+"GENERAL_MEDIA_PREVIEW_MENU_SELECT_TEXT_TITLE" = "Selectează textul din fotografii";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_HELP" = "Arată data și ora exactă a unei postări în meniul butonului de acțiune.";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_DATE_MENU_TITLE" = "Afișează dată în meniu";
 "GENERAL_MEDIA_PREVIEW_MENU_SHOW_MEDIA_INFO_HELP" = "Suprapune autorul și data postării peste previzualizarea mărită a pozei.";
@@ -1134,8 +1136,11 @@
 "MEDIA_ENCODING_PRESET_HELP" = "Efortul de codare al libx264. Presetările mai lente durează mai mult, dar produc fișiere mai mici la aceeași calitate vizuală; ultrafast este cea mai rapidă și cea mai mare.";
 "MEDIA_ENCODING_VIDEO_BITRATE_HELP" = "Rata de biți video vizată, folosită în locul CRF când este setată.";
 "MEDIA_ENCODING_VIDEO_CODEC_HELP" = "Codecul folosit pentru recodarea video.";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_COPY_ALL_BUTTON_TITLE" = "Copiază tot";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_FAILED_LOAD_IMAGE_TEXT" = "Nu s-a putut încărca imaginea";
 "MEDIA_PREVIEW_FULL_SCREEN_IMAGE_NO_IMAGE_URL_TEXT" = "Niciun URL imagine";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_SELECT_TEXT_BUTTON_ACCESSIBILITY_LABEL" = "Selectează textul";
+"MEDIA_PREVIEW_FULL_SCREEN_IMAGE_TEXT_COPIED_TEXT" = "Text copiat";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT" = "Copiază audio";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_FAILED_SAVE_TEXT" = "Nu s-a putut salva";
 "MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_IMAGE_FILE_UNAVAILABLE_TEXT" = "Fișierul imagine nu este disponibil.";
