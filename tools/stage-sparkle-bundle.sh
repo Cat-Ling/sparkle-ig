@@ -11,6 +11,15 @@ if [ "$(basename "$DESTINATION")" != "Sparkle.bundle" ]; then
     exit 1
 fi
 
+normalize_bundle_permissions() {
+    # Contributed catalogs can arrive with owner-only permissions. Jailbreak
+    # packages install resources as root:wheel, while Instagram reads them as
+    # mobile, so every bundled resource must remain world-readable. Preserve
+    # executable bits on framework binaries while removing unintended writes.
+    find "$DESTINATION" -type d -exec chmod 755 {} +
+    find "$DESTINATION" -type f -exec chmod a+r,u+w,go-w {} +
+}
+
 case "$MODE" in
     ""|--localizations-only)
         rm -rf "$DESTINATION"
@@ -34,6 +43,7 @@ case "$MODE" in
 esac
 
 if [ "$MODE" = "--localizations-only" ]; then
+    normalize_bundle_permissions
     exit 0
 fi
 
@@ -94,3 +104,5 @@ if [ "$framework_count" != 8 ]; then
     echo "Sparkle.bundle must contain exactly eight FFmpeg frameworks; found $framework_count" >&2
     exit 1
 fi
+
+normalize_bundle_permissions
