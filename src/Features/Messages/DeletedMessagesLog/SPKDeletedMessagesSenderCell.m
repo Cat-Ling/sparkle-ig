@@ -151,14 +151,12 @@ static NSString *SPKDeletedMessagesSenderPreview(SPKDeletedMessageGroup *group) 
     if (latest.kind == SPKDeletedMessageKindShare) {
         // "Reel • @author" / "Post • caption" so shares read by type at a glance.
         NSString *type = SPKDeletedMessageShareSubtypeName(latest.shareSubtype);
-        NSString *detail = latest.shareAuthor.length ? latest.shareAuthor
-                                                     : (latest.text.length ? latest.text : latest.previewText);
+        NSString *detail = latest.shareAuthor.length ? latest.shareAuthor : SPKDeletedMessageDisplayBody(latest);
         body = detail.length ? [NSString stringWithFormat:@"%@ • %@", type, detail] : type;
-    } else if (latest.text.length)
-        body = latest.text;
-    else if (latest.previewText.length)
-        body = latest.previewText;
-    else
+    } else {
+        body = SPKDeletedMessageDisplayBody(latest);
+    }
+    if (!body.length)
         body = SPKDeletedMessageKindLocalizedName(latest.kind);
 
     body = [body stringByReplacingOccurrencesOfString:@"\n" withString:@" "];

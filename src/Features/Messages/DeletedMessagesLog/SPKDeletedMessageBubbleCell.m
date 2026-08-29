@@ -588,7 +588,9 @@ static NSString *SPKDeletedFormatDuration(double seconds);
 }
 
 - (void)configureTextWithMessage:(SPKDeletedMessage *)message {
-    NSString *body = message.text.length ? message.text : (message.previewText.length ? message.previewText : SPKDeletedMessageKindLocalizedName(message.kind));
+    NSString *body = SPKDeletedMessageDisplayBody(message);
+    if (!body.length)
+        body = SPKDeletedMessageKindLocalizedName(message.kind);
     self.textLabel_.text = body;
     self.textLabel_.hidden = NO;
 }
@@ -607,9 +609,11 @@ static NSString *SPKDeletedFormatDuration(double seconds);
         self.durationPill.hidden = NO;
     }
 
-    // A caption can ride along with media.
-    if (message.text.length) {
-        self.textLabel_.text = message.text;
+    // A caption can ride along with media. Use the display helper so generated
+    // reaction bodies are rebuilt in the reader's current language as well.
+    NSString *body = SPKDeletedMessageDisplayBody(message);
+    if (body.length) {
+        self.textLabel_.text = body;
         self.textLabel_.hidden = NO;
     }
 }
@@ -639,7 +643,7 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     }
 
     // First line of the caption (if any).
-    NSString *caption = message.text.length ? message.text : message.previewText;
+    NSString *caption = SPKDeletedMessageDisplayBody(message);
     NSRange newline = caption.length ? [caption rangeOfString:@"\n"] : NSMakeRange(NSNotFound, 0);
     if (newline.location != NSNotFound)
         caption = [caption substringToIndex:newline.location];

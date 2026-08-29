@@ -424,12 +424,10 @@
 "DOWNLOADS_DOWNLOAD_PRESENTER_VALUE_ITEMS_SAVED_FORMAT" = "%lu éléments enregistrés";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_CONVERSION_FAILED_TEXT" = "La conversion audio a échoué.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_DOWNLOAD_FAILED_TEXT" = "Échec du téléchargement audio.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_BULK_DOWNLOAD_TEXT" = "Téléchargement en masse";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_COMPLETED_TEXT" = "Terminé";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_DOWNLOAD_FAILED_TEXT" = "Téléchargement échoué.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_AUDIO_URL_TEXT" = "URL audio invalide.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_MEDIA_URL_TEXT" = "URL de média invalide.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_MEDIA_DOWNLOAD_TEXT" = "Téléchargement du média";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_LOCAL_FILE_TEXT" = "Préparation du fichier local";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_MEDIA_TEXT" = "Préparation du média";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_SKIPPED_DUPLICATE_TEXT" = "Doublon ignoré";
@@ -1026,8 +1024,6 @@
 "LANGUAGE_SYSTEM_DEFAULT" = "Par défaut du système";
 "LANGUAGE_TITLE" = "Langue";
 "MEDIA_DOWNLOAD_FFMPEG_AUDIO_DURATION_MISMATCH_FORMAT" = "Échec de la validation de sortie : durées vidéo/audio différentes (vidéo %.3f s, audio %.3f s).";
-"MEDIA_DOWNLOAD_FFMPEG_CANCELLED_TEXT" = "Annulé";
-"MEDIA_DOWNLOAD_FFMPEG_COMMAND_SUCCEEDED_TEXT" = "Commande FFmpeg réussie";
 "MEDIA_DOWNLOAD_FFMPEG_CONTAINER_DURATION_MISMATCH_FORMAT" = "Échec de la validation de sortie : durées vidéo/conteneur différentes (vidéo %.3f s, conteneur %.3f s).";
 "MEDIA_DOWNLOAD_FFMPEG_FASTSTART_FAILED_ERROR" = "Échec du déplacement faststart";
 "MEDIA_DOWNLOAD_FFMPEG_NORMALIZATION_FAILED_ERROR" = "Échec de la normalisation de la vidéo";
@@ -1045,7 +1041,6 @@
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_COMMAND_FAILED_TEXT" = "Échec de la commande FFmpeg";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_FAILED_TEXT" = "Échec de FFmpeg";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_RUNS_APPEAR_HERE_AFTER_MERGE_ATTEMPTS_TEXT" = "Les exécutions FFmpeg s'afficheront ici après les tentatives de fusion.";
-"MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOADED_VALUE_BUT_FFMPEGKIT_CLASSES_UNAVAILABLE_FORMAT" = "Chargé %@ mais les classes FFmpegKit n'étaient pas disponibles";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOGS_CLEARED_TEXT" = "Journaux effacés";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_COPIED_TEXT" = "Journal copié";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_FILE_EMPTY_TEXT" = "Ce fichier journal est vide.";

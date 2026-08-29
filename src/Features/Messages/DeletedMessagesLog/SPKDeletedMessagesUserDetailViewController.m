@@ -688,13 +688,14 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 - (UIMenu *)contextMenuForMessage:(SPKDeletedMessage *)message {
     __weak typeof(self) weakSelf = self;
     NSMutableArray<UIMenuElement *> *children = [NSMutableArray array];
+    NSString *displayBody = SPKDeletedMessageDisplayBody(message);
 
-    if (message.text.length || message.previewText.length) {
+    if (displayBody.length) {
         UIAction *copyAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_COPY_TEXT")
                                                    image:[SPKAssetUtils menuIconNamed:@"copy"]
                                               identifier:nil
                                                  handler:^(__unused UIAction *a) {
-                                                     UIPasteboard.generalPasteboard.string = message.text ?: message.previewText;
+                                                     UIPasteboard.generalPasteboard.string = displayBody;
                                                      SPKNotify(kSPKNotificationUnsentMessage, SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_COPIED_CLIPBOARD_TEXT"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
                                                  }];
         [children addObject:copyAction];

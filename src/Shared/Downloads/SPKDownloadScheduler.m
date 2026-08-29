@@ -298,11 +298,6 @@ static NSString *SPKRenameStagedPath(NSString *stagedPath, SPKDownloadItem *item
 - (void)submitRequest:(SPKDownloadRequest *)request completion:(void (^)(NSString *, NSError *))completion {
     NSString *jobID = NSUUID.UUID.UUIDString;
     SPKDownloadJob *job = [[SPKDownloadJob alloc] initWithRequest:request jobID:jobID];
-    NSString *title = [SPKDownloadHelpers historyTitleForRequest:request];
-    if (!title.length) {
-        title = request.items.count > 1 ? SPKL(@"DOWNLOADS_DOWNLOAD_SCHEDULER_BULK_DOWNLOAD_TEXT") : SPKL(@"DOWNLOADS_DOWNLOAD_SCHEDULER_MEDIA_DOWNLOAD_TEXT");
-    }
-    job.title = title;
     @synchronized(self) {
         [self.jobs insertObject:job atIndex:0];
     }

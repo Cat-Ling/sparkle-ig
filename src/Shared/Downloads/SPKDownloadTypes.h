@@ -107,6 +107,8 @@ FOUNDATION_EXPORT NSString *const SPKDownloadNotificationItemIDKey;
 FOUNDATION_EXPORT NSString *const SPKDownloadNotificationSnapshotKey;
 
 FOUNDATION_EXPORT NSError *SPKDownloadError(SPKDownloadErrorCode code, NSString *description, NSString *_Nullable recovery);
+/// Returns a current-locale description without relying on localized text stored in history.
+FOUNDATION_EXPORT NSString *_Nullable SPKDownloadErrorDisplayDescription(NSError *_Nullable error);
 FOUNDATION_EXPORT BOOL SPKDownloadStateIsTerminal(SPKDownloadState state);
 FOUNDATION_EXPORT BOOL SPKDownloadStateAllowsTransition(SPKDownloadState from, SPKDownloadState to);
 FOUNDATION_EXPORT SPKDownloadState SPKDownloadDerivedJobState(NSArray<NSNumber *> *itemStates);

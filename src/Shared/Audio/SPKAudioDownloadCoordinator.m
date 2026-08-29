@@ -1137,8 +1137,7 @@ static void SPKAudioDownloadForSaveToFiles(SPKAudioItem *item, BOOL convert,
         request.presenter = presenter;
         request.anchorView = sourceView;
         request.sourceSurface = SPKDownloadSourceSurfaceAudioPage;
-        request.titleOverride =
-            item.title.length > 0 ? item.title : SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_AUDIO_DOWNLOAD_TEXT");
+        request.titleOverride = item.title.length > 0 ? item.title : nil;
         request.presentationMode = SPKNotificationIsEnabled(identifier)
                                        ? SPKDownloadPresentationModeQueuePill
                                        : SPKDownloadPresentationModeQuiet;
@@ -1162,8 +1161,7 @@ static void SPKAudioDownloadForSaveToFiles(SPKAudioItem *item, BOOL convert,
     request.presenter = presenter;
     request.anchorView = sourceView;
     request.sourceSurface = SPKDownloadSourceSurfaceAudioPage;
-    request.titleOverride =
-        item.title.length > 0 ? item.title : SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_AUDIO_DOWNLOAD_TEXT");
+    request.titleOverride = item.title.length > 0 ? item.title : nil;
     request.presentationMode = SPKNotificationIsEnabled(identifier)
                                    ? SPKDownloadPresentationModeQueuePill
                                    : SPKDownloadPresentationModeQuiet;

@@ -424,12 +424,10 @@
 "DOWNLOADS_DOWNLOAD_PRESENTER_VALUE_ITEMS_SAVED_FORMAT" = "%lu αντικείμενα αποθηκεύτηκαν";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_CONVERSION_FAILED_TEXT" = "Η μετατροπή ήχου απέτυχε.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_DOWNLOAD_FAILED_TEXT" = "Αποτυχία λήψης ήχου.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_BULK_DOWNLOAD_TEXT" = "Μαζική λήψη";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_COMPLETED_TEXT" = "Ολοκληρώθηκε";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_DOWNLOAD_FAILED_TEXT" = "Αποτυχία λήψης.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_AUDIO_URL_TEXT" = "Ακατάλληλη διεύθυνση URL ήχου.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_MEDIA_URL_TEXT" = "Ακατάλληλη διεύθυνση URL μέσου.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_MEDIA_DOWNLOAD_TEXT" = "Λήψη μέσου";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_LOCAL_FILE_TEXT" = "Προετοιμασία τοπικού αρχείου";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_MEDIA_TEXT" = "Προετοιμασία πολυμέσων";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_SKIPPED_DUPLICATE_TEXT" = "Παραλήφθηκε διπλότυπο";
@@ -1026,8 +1024,6 @@
 "LANGUAGE_SYSTEM_DEFAULT" = "Προεπιλογή συστήματος";
 "LANGUAGE_TITLE" = "Γλώσσα";
 "MEDIA_DOWNLOAD_FFMPEG_AUDIO_DURATION_MISMATCH_FORMAT" = "Η επικύρωση εξόδου απέτυχε: αναντιστοιχία διάρκειας βίντεο/ήχου (βίντεο %.3f δευτ., ήχος %.3f δευτ.).";
-"MEDIA_DOWNLOAD_FFMPEG_CANCELLED_TEXT" = "Ακυρώθηκε";
-"MEDIA_DOWNLOAD_FFMPEG_COMMAND_SUCCEEDED_TEXT" = "Η εντολή FFmpeg ολοκληρώθηκε";
 "MEDIA_DOWNLOAD_FFMPEG_CONTAINER_DURATION_MISMATCH_FORMAT" = "Η επικύρωση εξόδου απέτυχε: αναντιστοιχία διάρκειας βίντεο/κοντέινερ (βίντεο %.3f δευτ., κοντέινερ %.3f δευτ.).";
 "MEDIA_DOWNLOAD_FFMPEG_FASTSTART_FAILED_ERROR" = "Η μετακίνηση faststart απέτυχε";
 "MEDIA_DOWNLOAD_FFMPEG_NORMALIZATION_FAILED_ERROR" = "Η κανονικοποίηση βίντεο απέτυχε";
@@ -1045,7 +1041,6 @@
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_COMMAND_FAILED_TEXT" = "Η εντολή FFmpeg απέτυχε";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_FAILED_TEXT" = "Αποτυχία FFmpeg";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_RUNS_APPEAR_HERE_AFTER_MERGE_ATTEMPTS_TEXT" = "Οι εκτελέσεις FFmpeg θα εμφανίζονται εδώ μετά τις προσπάθειες συγχώνευσης.";
-"MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOADED_VALUE_BUT_FFMPEGKIT_CLASSES_UNAVAILABLE_FORMAT" = "Φορτώθηκε %@ αλλά οι κλάσεις FFmpegKit δεν ήταν διαθέσιμες";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOGS_CLEARED_TEXT" = "Αρχεία καταγραφής διαγραμμένα";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_COPIED_TEXT" = "Αρχείο καταγραφής αντιγράφτηκε";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_FILE_EMPTY_TEXT" = "Το αρχείο καταγραφής είναι άδειο.";

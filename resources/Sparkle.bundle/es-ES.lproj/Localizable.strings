@@ -424,12 +424,10 @@
 "DOWNLOADS_DOWNLOAD_PRESENTER_VALUE_ITEMS_SAVED_FORMAT" = "%lu elementos guardados";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_CONVERSION_FAILED_TEXT" = "La conversión de audio falló.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_DOWNLOAD_FAILED_TEXT" = "Error en la descarga de audio.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_BULK_DOWNLOAD_TEXT" = "Descargar en lote";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_COMPLETED_TEXT" = "Completado";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_DOWNLOAD_FAILED_TEXT" = "Error al descargar.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_AUDIO_URL_TEXT" = "URL de audio no válida.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_MEDIA_URL_TEXT" = "URL de contenido no válida.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_MEDIA_DOWNLOAD_TEXT" = "Descarga de contenido";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_LOCAL_FILE_TEXT" = "Preparando archivo local";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_MEDIA_TEXT" = "Preparando contenido";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_SKIPPED_DUPLICATE_TEXT" = "Duplicado omitido";
@@ -1026,8 +1024,6 @@
 "LANGUAGE_SYSTEM_DEFAULT" = "Predeterminado del sistema";
 "LANGUAGE_TITLE" = "Idioma";
 "MEDIA_DOWNLOAD_FFMPEG_AUDIO_DURATION_MISMATCH_FORMAT" = "La validación de salida ha fallado: la duración de vídeo/audio no coincide (vídeo %.3f s, audio %.3f s).";
-"MEDIA_DOWNLOAD_FFMPEG_CANCELLED_TEXT" = "Cancelado";
-"MEDIA_DOWNLOAD_FFMPEG_COMMAND_SUCCEEDED_TEXT" = "Comando de FFmpeg completado";
 "MEDIA_DOWNLOAD_FFMPEG_CONTAINER_DURATION_MISMATCH_FORMAT" = "La validación de salida ha fallado: la duración de vídeo/contenedor no coincide (vídeo %.3f s, contenedor %.3f s).";
 "MEDIA_DOWNLOAD_FFMPEG_FASTSTART_FAILED_ERROR" = "No se ha podido reubicar faststart";
 "MEDIA_DOWNLOAD_FFMPEG_NORMALIZATION_FAILED_ERROR" = "No se ha podido normalizar el vídeo";
@@ -1045,7 +1041,6 @@
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_COMMAND_FAILED_TEXT" = "Comando de FFmpeg ha fallado";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_FAILED_TEXT" = "FFmpeg falló";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_RUNS_APPEAR_HERE_AFTER_MERGE_ATTEMPTS_TEXT" = "Los procesos de FFmpeg aparecerán aquí después de los intentos de fusión.";
-"MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOADED_VALUE_BUT_FFMPEGKIT_CLASSES_UNAVAILABLE_FORMAT" = "Se cargó %@ pero las clases FFmpegKit no estaban disponibles";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOGS_CLEARED_TEXT" = "Registros borrados";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_COPIED_TEXT" = "Registro copiado";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_FILE_EMPTY_TEXT" = "Este archivo de registro está vacío.";

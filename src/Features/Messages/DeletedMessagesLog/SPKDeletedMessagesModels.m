@@ -31,6 +31,27 @@ NSString *SPKDeletedMessageKindToString(SPKDeletedMessageKind kind) {
     }
 }
 
+NSString *_Nullable SPKDeletedMessageDisplayBody(SPKDeletedMessage *message) {
+    if (!message)
+        return nil;
+    if (message.kind == SPKDeletedMessageKindReaction) {
+        // Composed here rather than read back from `text` so the sentence follows
+        // the reader's language instead of whichever one was active at capture.
+        NSString *emoji = message.reactionEmoji;
+        NSString *target = message.reactionTargetPreview;
+        if (!target.length && message.reactionTargetKind != SPKDeletedMessageKindUnknown)
+            target = [SPKDeletedMessageKindLocalizedName(message.reactionTargetKind) lowercaseString];
+        if (emoji.length && target.length)
+            return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_VALUE_VALUE_FORMAT"), emoji, target];
+        if (emoji.length)
+            return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_REACTION_VALUE_ACTION"), emoji];
+        // Records written before the emoji was captured still carry a stored body.
+        if (!message.text.length && !message.previewText.length)
+            return SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_REACTION_ACTION");
+    }
+    return message.text.length ? message.text : message.previewText;
+}
+
 SPKDeletedMessageKind SPKDeletedMessageKindFromString(NSString *s) {
     if (![s isKindOfClass:[NSString class]])
         return SPKDeletedMessageKindUnknown;
@@ -203,6 +224,9 @@ static double spkDouble(id v) {
     m.replyToMessageId = spkStr(dict[@"reply_to_id"]);
     m.reactionEmoji = spkStr(dict[@"reaction_emoji"]);
     m.reactionTargetPreview = spkStr(dict[@"reaction_target"]);
+    // Absent on records written before the field existed, which decode to
+    // Unknown and keep falling back to their stored body.
+    m.reactionTargetKind = SPKDeletedMessageKindFromString(spkStr(dict[@"reaction_target_kind"]));
     m.shareSubtype = spkStr(dict[@"share_subtype"]);
     m.shareAuthor = spkStr(dict[@"share_author"]);
     if (!m.messageId.length || !m.senderPk.length)
@@ -273,6 +297,8 @@ static double spkDouble(id v) {
         d[@"reaction_emoji"] = self.reactionEmoji;
     if (self.reactionTargetPreview.length)
         d[@"reaction_target"] = self.reactionTargetPreview;
+    if (self.reactionTargetKind != SPKDeletedMessageKindUnknown)
+        d[@"reaction_target_kind"] = SPKDeletedMessageKindToString(self.reactionTargetKind);
     if (self.shareSubtype.length)
         d[@"share_subtype"] = self.shareSubtype;
     if (self.shareAuthor.length)

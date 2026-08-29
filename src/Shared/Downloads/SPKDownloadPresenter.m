@@ -78,16 +78,10 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     if (item.state == SPKDownloadStateFinalizing) {
         return [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_SAVING_VALUE_FORMAT"), SPKDownloadDestinationDisplayName(job.request.destination)];
     }
-    if (item.detail.length > 0) {
-        if ([item.detail containsString:@"Merging"] || [item.detail containsString:@"Re-encoding"])
-            return item.detail;
-        if ([item.detail containsString:@"Converting"])
-            return SPKL(@"AUDIO_AUDIO_DMUPLOAD_COORDINATOR_CONVERTING_AUDIO_TEXT");
-        if ([item.detail containsString:@"Downloading video"])
-            return SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_VIDEO_TEXT");
-        if ([item.detail containsString:@"Downloading audio"])
-            return SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_DOWNLOADING_AUDIO_TEXT");
-    }
+    // Detail is already localized at the point where the current progress
+    // stage is reported. Never use English text matching as a stage signal.
+    if (item.detail.length > 0)
+        return item.detail;
     switch (item.mediaKind) {
     case SPKDownloadMediaKindVideo:
         return SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_VIDEO_TEXT");
@@ -309,7 +303,7 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     }
 
     if (job.state == SPKDownloadStateFailed || job.state == SPKDownloadStatePartial) {
-        NSString *message = job.items.firstObject.error.localizedDescription ?: SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
+        NSString *message = SPKDownloadErrorDisplayDescription(job.items.firstObject.error) ?: SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
         [self.activePill showErrorWithTitle:job.state == SPKDownloadStatePartial ? SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SOME_DOWNLOADS_FAILED_TEXT") : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT")
                                    subtitle:message
                                        icon:nil];

@@ -127,10 +127,11 @@ static void SPKFFmpegPersistCommandLog(NSString *identifier, NSString *status, N
         return;
     }
 
+    NSDate *now = [NSDate date];
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     formatter.locale = [NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"];
     formatter.dateFormat = @"yyyy-MM-dd_HH-mm-ss";
-    NSString *timestamp = [formatter stringFromDate:[NSDate date]];
+    NSString *timestamp = [formatter stringFromDate:now];
     NSString *safeIdentifier = identifier.length > 0 ? identifier : @"session";
     NSString *safeStatus = status.length > 0 ? status : @"info";
     NSString *fileName = [NSString stringWithFormat:@"%@_%@.txt", timestamp, safeIdentifier];
@@ -139,7 +140,7 @@ static void SPKFFmpegPersistCommandLog(NSString *identifier, NSString *status, N
     NSMutableString *body = [NSMutableString string];
     [body appendFormat:@"Identifier: %@\n", safeIdentifier];
     [body appendFormat:@"Status: %@\n", safeStatus];
-    [body appendFormat:@"Date: %@\n\n", [NSDate date]];
+    [body appendFormat:@"Date: %@\n\n", [timestamp stringByReplacingOccurrencesOfString:@"_" withString:@" "]];
     if (command.length > 0) {
         [body appendFormat:@"Command:\n%@\n\n", command];
     }
@@ -231,7 +232,7 @@ static void SPKFFmpegEnsureLoaded(void) {
             sSPKFFmpegAvailable = YES;
             return;
         }
-        [errors addObject:[NSString stringWithFormat:SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOADED_VALUE_BUT_FFMPEGKIT_CLASSES_UNAVAILABLE_FORMAT"), candidate.lastPathComponent]];
+        [errors addObject:[NSString stringWithFormat:@"Loaded %@ but FFmpegKit classes were unavailable", candidate.lastPathComponent]];
     }
 
     SPKFFmpegPersistLoaderFailure(errors);
@@ -1044,7 +1045,12 @@ static void _SPKFFmpegRunAsyncImpl(id commandOrArgs,
             logs = ((id (*)(id, SEL))objc_msgSend)(session, @selector(getOutput));
         }
 
-        NSString *description = cancelled ? SPKL(@"MEDIA_DOWNLOAD_FFMPEG_CANCELLED_TEXT") : (logs.length > 0 ? logs : (success ? SPKL(@"MEDIA_DOWNLOAD_FFMPEG_COMMAND_SUCCEEDED_TEXT") : SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_COMMAND_FAILED_TEXT")));
+        // The log file is a diagnostic artifact that gets copied into bug
+        // reports, so its body stays English no matter the app language.
+        NSString *description = cancelled ? @"Cancelled"
+                                          : (logs.length > 0 ? logs
+                                                             : (success ? @"FFmpeg command succeeded"
+                                                                        : @"FFmpeg command failed"));
         SPKFFmpegPersistCommandLog(identifier, cancelled ? @"cancelled" : (success ? @"success" : @"failure"), commandForLog, description);
         if (success && successURL) {
             if (completion)
@@ -1114,24 +1120,35 @@ static void SPKFFmpegRunAsyncCommand(NSArray<NSString *> *arguments,
 static NSString *SPKFFmpegValidationErrorForOutputURL(NSURL *outputURL,
                                                       BOOL expectsVideo,
                                                       BOOL expectsAudio,
-                                                      NSTimeInterval expectedDuration) {
+                                                      NSTimeInterval expectedDuration,
+                                                      NSString **diagnosticOut) {
+    if (diagnosticOut)
+        *diagnosticOut = nil;
     NSDictionary<NSString *, id> *options = @{AVURLAssetPreferPreciseDurationAndTimingKey : @NO};
     AVURLAsset *asset = [AVURLAsset URLAssetWithURL:outputURL options:options];
     if (!asset) {
+        if (diagnosticOut)
+            *diagnosticOut = @"Output validation failed: asset could not be opened.";
         return SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_OUTPUT_VALIDATION_FAILED_ASSET_COULD_NOT_OPENED_TEXT");
     }
 
     NSArray<AVAssetTrack *> *videoTracks = [asset tracksWithMediaType:AVMediaTypeVideo];
     NSArray<AVAssetTrack *> *audioTracks = [asset tracksWithMediaType:AVMediaTypeAudio];
     if (expectsVideo && videoTracks.count == 0) {
+        if (diagnosticOut)
+            *diagnosticOut = @"Output validation failed: merged file has no video track.";
         return SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_OUTPUT_VALIDATION_FAILED_MERGED_FILE_NO_VIDEO_TRACK_TEXT");
     }
     if (expectsAudio && audioTracks.count == 0) {
+        if (diagnosticOut)
+            *diagnosticOut = @"Output validation failed: merged file has no audio track.";
         return SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_OUTPUT_VALIDATION_FAILED_MERGED_FILE_NO_AUDIO_TRACK_TEXT");
     }
 
     CMTime duration = asset.duration;
     if (CMTIME_IS_INVALID(duration) || CMTIME_IS_INDEFINITE(duration) || CMTimeGetSeconds(duration) <= 0.0) {
+        if (diagnosticOut)
+            *diagnosticOut = @"Output validation failed: merged file duration is invalid.";
         return SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_OUTPUT_VALIDATION_FAILED_MERGED_FILE_DURATION_INVALID_TEXT");
     }
 
@@ -1139,6 +1156,8 @@ static NSString *SPKFFmpegValidationErrorForOutputURL(NSURL *outputURL,
         AVAssetTrack *track = videoTracks.firstObject;
         CGSize size = track.naturalSize;
         if (size.width <= 0.0 || size.height <= 0.0) {
+            if (diagnosticOut)
+                *diagnosticOut = @"Output validation failed: merged video track has invalid dimensions.";
             return SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_OUTPUT_VALIDATION_FAILED_MERGED_VIDEO_TRACK_INVALID_DIMENSIONS_TEXT");
         }
     }
@@ -1152,11 +1171,15 @@ static NSString *SPKFFmpegValidationErrorForOutputURL(NSURL *outputURL,
         NSTimeInterval tolerance = MAX(0.35, MIN(1.5, expectedDuration > 0.0 ? expectedDuration * 0.10 : 0.75));
 
         if (videoDuration > 0.0 && audioDuration > 0.0 && fabs(videoDuration - audioDuration) > tolerance) {
+            if (diagnosticOut)
+                *diagnosticOut = [NSString stringWithFormat:@"Output validation failed: video/audio duration mismatch (video=%.3f, audio=%.3f).", videoDuration, audioDuration];
             return [NSString stringWithFormat:SPKL(@"MEDIA_DOWNLOAD_FFMPEG_AUDIO_DURATION_MISMATCH_FORMAT"),
                                               videoDuration,
                                               audioDuration];
         }
         if (videoDuration > 0.0 && containerDuration > 0.0 && fabs(videoDuration - containerDuration) > tolerance) {
+            if (diagnosticOut)
+                *diagnosticOut = [NSString stringWithFormat:@"Output validation failed: video/container duration mismatch (video=%.3f, container=%.3f).", videoDuration, containerDuration];
             return [NSString stringWithFormat:SPKL(@"MEDIA_DOWNLOAD_FFMPEG_CONTAINER_DURATION_MISMATCH_FORMAT"),
                                               videoDuration,
                                               containerDuration];
@@ -1213,7 +1236,8 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
     };
 
     void (^validateAndFinalize)(NSURL *) = ^(NSURL *finalURL) {
-        NSString *validationError = SPKFFmpegValidationErrorForOutputURL(finalURL, expectsVideo, expectsAudio, expectedDuration);
+        NSString *validationDiagnostic = nil;
+        NSString *validationError = SPKFFmpegValidationErrorForOutputURL(finalURL, expectsVideo, expectsAudio, expectedDuration, &validationDiagnostic);
         if (validationError.length == 0) {
             cleanupAttemptTemps();
             if (completion)
@@ -1224,7 +1248,7 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         SPKFFmpegPersistCommandLog([NSString stringWithFormat:@"%@-validation", attempt[@"identifier"] ?: @"merge"],
                                    @"validation-failure",
                                    loggedCommand,
-                                   validationError);
+                                   validationDiagnostic ?: @"Output validation failed.");
         cleanupAttemptTemps();
         NSError *invalidOutputError = SPKFFmpegError(validationError, 4);
         SPKFFmpegRunMergeAttempts(attempts, index + 1, outputURL, expectedDuration,
@@ -1636,9 +1660,14 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
             // Conversion failed — log it, then fall back to the original
             // audio. Stream-copy through FFmpeg may still work for AAC-LC
             // sources that AVFoundation rejects for some other reason.
+            NSString *conversionDetails = convertError
+                                               ? [NSString stringWithFormat:@"AVAssetExportSession failed (domain=%@, code=%ld)",
+                                                                            convertError.domain.length > 0 ? convertError.domain : @"unknown",
+                                                                            (long)convertError.code]
+                                               : @"AVAssetExportSession failed without an error";
             SPKFFmpegPersistErrorLog(@"audio-aaclc-prepare",
                                      [NSString stringWithFormat:@"AVAssetExportSession m4a %@ -> %@", audioFileURL.path, convertedAudioURL.path],
-                                     convertError.localizedDescription ?: @"unknown");
+                                     conversionDetails);
             [self _mergePreparedVideoFileURL:videoFileURL
                                 audioFileURL:audioFileURL
                                preCleanupURL:nil

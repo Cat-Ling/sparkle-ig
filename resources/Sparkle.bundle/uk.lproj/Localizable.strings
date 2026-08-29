@@ -424,12 +424,10 @@
 "DOWNLOADS_DOWNLOAD_PRESENTER_VALUE_ITEMS_SAVED_FORMAT" = "%lu елементів збережено";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_CONVERSION_FAILED_TEXT" = "Помилка конвертування аудіо.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_AUDIO_DOWNLOAD_FAILED_TEXT" = "Завантаження аудіо не вдалося.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_BULK_DOWNLOAD_TEXT" = "Групове завантаження";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_COMPLETED_TEXT" = "Завершено";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_DOWNLOAD_FAILED_TEXT" = "Завантаження не вдалося.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_AUDIO_URL_TEXT" = "Недійсний URL аудіо.";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_INVALID_MEDIA_URL_TEXT" = "Недійсний URL медіа.";
-"DOWNLOADS_DOWNLOAD_SCHEDULER_MEDIA_DOWNLOAD_TEXT" = "Завантаження медіа";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_LOCAL_FILE_TEXT" = "Підготовка локального файлу";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_PREPARING_MEDIA_TEXT" = "Підготовка медіа";
 "DOWNLOADS_DOWNLOAD_SCHEDULER_SKIPPED_DUPLICATE_TEXT" = "Пропущено дублікат";
@@ -1026,8 +1024,6 @@
 "LANGUAGE_SYSTEM_DEFAULT" = "Системна за замовчуванням";
 "LANGUAGE_TITLE" = "Мова";
 "MEDIA_DOWNLOAD_FFMPEG_AUDIO_DURATION_MISMATCH_FORMAT" = "Перевірку результату не пройдено: тривалість відео й аудіо не збігається (відео %.3f с, аудіо %.3f с).";
-"MEDIA_DOWNLOAD_FFMPEG_CANCELLED_TEXT" = "Скасовано";
-"MEDIA_DOWNLOAD_FFMPEG_COMMAND_SUCCEEDED_TEXT" = "Команду FFmpeg виконано";
 "MEDIA_DOWNLOAD_FFMPEG_CONTAINER_DURATION_MISMATCH_FORMAT" = "Перевірку результату не пройдено: тривалість відео й контейнера не збігається (відео %.3f с, контейнер %.3f с).";
 "MEDIA_DOWNLOAD_FFMPEG_FASTSTART_FAILED_ERROR" = "Не вдалося перемістити faststart";
 "MEDIA_DOWNLOAD_FFMPEG_NORMALIZATION_FAILED_ERROR" = "Не вдалося нормалізувати відео";
@@ -1045,7 +1041,6 @@
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_COMMAND_FAILED_TEXT" = "Помилка команди FFmpeg";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_FAILED_TEXT" = "FFmpeg не вдалося";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_FFMPEG_RUNS_APPEAR_HERE_AFTER_MERGE_ATTEMPTS_TEXT" = "Запуски FFmpeg з'являтимуться тут після спроб об'єднання.";
-"MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOADED_VALUE_BUT_FFMPEGKIT_CLASSES_UNAVAILABLE_FORMAT" = "Завантажено %@, але класи FFmpegKit були недоступні";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOGS_CLEARED_TEXT" = "Журнали очищені";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_COPIED_TEXT" = "Журнал скопійовано";
 "MEDIA_DOWNLOAD_MEDIA_FFMPEG_LOG_FILE_EMPTY_TEXT" = "Цей файл журналу порожній.";

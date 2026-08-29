@@ -12,6 +12,7 @@
 #import "../UI/SPKIGAlertPresenter.h"
 #import "../UI/SPKMediaChrome.h"
 #import "SPKDownloadService.h"
+#import "SPKDownloadHelpers.h"
 #import "SPKDownloadTypes.h"
 #import "SPKDownloadsSettingsViewController.h"
 #import <AVFoundation/AVFoundation.h>
@@ -839,7 +840,8 @@ static void SPKApplyStatusBadge(SPKDownloadHistoryCell *cell, SPKDownloadState s
     cell.representedID = job.jobID;
 
     // Title
-    cell.titleLabel.text = job.title ?: SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT");
+    NSString *historyTitle = [SPKDownloadHelpers historyTitleForRequest:job.request];
+    cell.titleLabel.text = job.title ?: historyTitle ?: SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT");
 
     // Thumbnail: destination action icon, no tint bleed
     NSString *actionIcon = SPKActionIconForJob(job);
@@ -1047,8 +1049,7 @@ static void SPKApplyStatusBadge(SPKDownloadHistoryCell *cell, SPKDownloadState s
     // Failed/interrupted → show error alert with Retry + Dismiss
     if (item.state == SPKDownloadStateFailed || item.state == SPKDownloadStateInterrupted) {
         NSString *title = item.state == SPKDownloadStateFailed ? SPKL(@"DOWNLOADS_DOWNLOADS_HISTORY_DOWNLOAD_FAILED_TEXT") : SPKL(@"DOWNLOADS_DOWNLOADS_HISTORY_DOWNLOAD_INTERRUPTED_TEXT");
-        NSString *message = item.error.localizedDescription ?: item.detail ?
-                                                                           : SPKL(@"DOWNLOADS_DOWNLOADS_HISTORY_UNKNOWN_ERROR_OCCURRED_TEXT");
+        NSString *message = SPKDownloadErrorDisplayDescription(item.error) ?: SPKL(@"DOWNLOADS_DOWNLOADS_HISTORY_UNKNOWN_ERROR_OCCURRED_TEXT");
         NSString *jobID = row.job.jobID;
         NSString *itemID = item.itemID;
         BOOL isChild = (row.kind == SPKDownloadsHistoryRowKindChild);

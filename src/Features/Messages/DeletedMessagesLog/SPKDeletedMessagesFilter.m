@@ -96,7 +96,7 @@
     if (!q.length)
         return YES;
     NSStringCompareOptions opt = NSCaseInsensitiveSearch | NSDiacriticInsensitiveSearch;
-    NSArray *fields = @[ m.text ?: @"", m.previewText ?: @"",
+    NSArray *fields = @[ SPKDeletedMessageDisplayBody(m) ?: @"", m.text ?: @"", m.previewText ?: @"",
                          m.senderUsername ?: @"", m.senderFullName ?: @"",
                          m.threadTitle ?: @"" ];
     for (NSString *f in fields) {
