@@ -953,6 +953,8 @@
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Подтвердить реакцию на Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Запрашивает подтверждение перед отправкой реакции на инстант.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE" = "Вы уверены, что хотите отправить этот Instant?";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE" = "Подтвердить отправку Instant";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP" = "Добавляет кнопку Sparkle в камеру инстантов, чтобы загрузить фото из Фото, Файлов или галереи и просмотреть сохранённые инстанты.";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE" = "Кнопка представления камеры";
 "INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP" = "Не даёт аппаратной кнопке управления камерой на iPhone 16 и 17 снимать инстант.";
@@ -1491,9 +1493,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "Не удалось определить Instagram id этого пользователя.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Отмечено как просмотренное";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "Сообщение не найдено";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Отправить это записанное видео Instant?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Захват момента заблокирован";
-"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Отправить Instant?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Подтвердить отправку голосового сообщения";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE" = "Вы уверены, что хотите отправить это голосовое сообщение?";
 "MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE" = "Название GIF недоступно";

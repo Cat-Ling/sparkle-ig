@@ -953,6 +953,8 @@
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "تأكيد تفاعل Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "يطلب تأكيداً قبل إرسال تفاعل على لحظة.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE" = "هل أنت متأكد أنك تريد إرسال هذا الـ Instant؟";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE" = "تأكيد إرسال Instant";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP" = "يضيف زر Sparkle إلى واجهة كاميرا اللحظات لرفع صورة من الصور أو الملفات أو المعرض، ولتصفح اللحظات التي حفظتها.";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE" = "زر عرض الكاميرا";
 "INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP" = "يمنع زر التحكم بالكاميرا في iPhone 16 و17 من التقاط لحظة.";
@@ -1491,9 +1493,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "تعذر تحديد معرف Instagram لهذا المستخدم.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "تم تحديد كمشاهد";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "لم يتم العثور على الرسالة";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "إرسال فيديو Instant المسجّل هذا؟";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "تم حظر التقاط اللحظة";
-"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "إرسال رسالة فورية؟";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "تأكيد إرسال الرسالة الصوتية";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE" = "هل أنت متأكد من أنك تريد إرسال هذه رسالة صوتية؟";
 "MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE" = "عنوان GIF غير متاح";

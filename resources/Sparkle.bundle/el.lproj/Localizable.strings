@@ -953,6 +953,8 @@
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Επιβεβαίωση άμεσης αντίδρασης";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Ζητά επιβεβαίωση πριν σταλεί μια αντίδραση σε instant.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE" = "Είστε βέβαιοι ότι θέλετε να στείλετε αυτό το Instant;";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE" = "Επιβεβαίωση αποστολής Instant";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP" = "Προσθέτει ένα κουμπί Sparkle στην κάμερα των instants για μεταφόρτωση φωτογραφίας από τις Φωτογραφίες, τα Αρχεία ή τη συλλογή, και για περιήγηση στα instants που έχεις αποθηκεύσει.";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE" = "Κουμπί Προβολής Κάμερας";
 "INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP" = "Εμποδίζει το φυσικό κουμπί Camera Control σε iPhone 16 και 17 να τραβήξει instant.";
@@ -1491,9 +1493,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "Δεν ήταν δυνατή η εύρεση του Instagram id αυτού του χρήστη.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Σήμανση ως προβεβλημένο";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "Το μήνυμα δεν βρέθηκε";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Αποστολή αυτού του εγγεγραμμένου βίντεο Instant;";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Στιγμιαία σύλληψη φραγμένη";
-"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Αποστολή Στιγμιαίου;";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Επιβεβαίωση Αποστολής Σημείωσης Φωνής";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE" = "Είστε σίγουρος ότι θέλετε να στείλετε αυτό το μήνυμα φωνής;";
 "MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE" = "Τίτλος GIF μη διαθέσιμος";

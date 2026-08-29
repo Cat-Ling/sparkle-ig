@@ -953,6 +953,8 @@
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Anında Tepkiyi Onayla";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Bir instant tepkisi gönderilmeden önce onay ister.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE" = "Bu Instant'ı göndermek istediğinizden emin misiniz?";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE" = "Instant Gönderimini Onayla";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP" = "Instants kamera görünümüne, Fotoğraflar'dan, Dosyalar'dan veya galeriden fotoğraf yüklemek ve kaydettiğin instant'lara göz atmak için bir Sparkle düğmesi ekler.";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE" = "Kamera Görünümü Düğmesi";
 "INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP" = "iPhone 16 ve 17'deki fiziksel Kamera Kontrolü düğmesinin instant çekmesini engeller.";
@@ -1491,9 +1493,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "Bu kullanıcının Instagram kimliği çözümlenemedi.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Görüldü Olarak İşaretlendi";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "İleti Bulunamadı";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Kaydedilen bu Instant videosu gönderilsin mi?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Instant yakalanması engellendi";
-"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Instant Gönder?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Ses Mesajı Göndermeyi Onayla";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE" = "Bu ses iletisini göndermek istediğinden emin misin?";
 "MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE" = "GIF başlığı kullanılabilir değil";

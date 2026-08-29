@@ -1246,6 +1246,15 @@ extern "C" void SPKInstallInstantsGalleryUploadHooksIfEnabled(void) {
                               @selector(stopRecording),
                               (IMP)replaced_movieOutputStopRecording,
                               (IMP *)&orig_movieOutputStopRecording);
+        [[NSNotificationCenter defaultCenter] addObserverForName:SPKInstantsVideoSendConfirmedNotification
+                                                          object:nil
+                                                           queue:NSOperationQueue.mainQueue
+                                                      usingBlock:^(__unused NSNotification *note) {
+                                                          if ([SPKInstantsVideoStreamer isArmed]) {
+                                                              SPKInstantsClearPendingImageForCreationView(
+                                                                  sSPKInstantsVisibleCreationView);
+                                                          }
+                                                      }];
         SPKLog(@"Instants", @"[Sparkle] Instants gallery upload hooks installed");
     });
 }

@@ -33,6 +33,7 @@ static NSString *const kSPKQuickSnapDisableCreationPref = @"instants_disable_cre
 static NSString *const kSPKQuickSnapConfirmCapturePref = @"instants_confirm_capture";
 static NSString *const kSPKQuickSnapDisableCameraControlPref = @"instants_disable_camera_control";
 static NSString *const kSPKQuickSnapSkipCameraAfterViewingPref = @"instants_skip_camera_after_viewing";
+NSNotificationName const SPKInstantsVideoSendConfirmedNotification = @"SPKInstantsVideoSendConfirmedNotification";
 
 typedef void (*SPKQuickSnapVoidIMP)(id, SEL);
 typedef void (*SPKQuickSnapVoidOneArgIMP)(id, SEL, id);
@@ -232,14 +233,19 @@ static void SPKQuickSnapPresentVideoConfirmation(void (^completion)(void), NSUIn
                 return;
             if (completion)
                 completion();
+            [[NSNotificationCenter defaultCenter] postNotificationName:SPKInstantsVideoSendConfirmedNotification
+                                                                object:nil];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                SPKQuickSnapRearmCaptureControl(weakControlView);
+            });
         }
         cancelHandler:^{
             if (!SPKQuickSnapResolveConfirmation(generation))
                 return;
             SPKQuickSnapRearmCaptureControl(weakControlView);
         }
-        title:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION")
-        message:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION")];
+        title:SPKL(@"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE")
+        message:SPKL(@"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE")];
 }
 
 void SPKInstantsVideoConfirmationHandleLongPress(UIView *captureButton, UIGestureRecognizer *gesture) {

@@ -953,6 +953,8 @@
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Confirmar reacción a Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Pide confirmación antes de enviar una reacción a un instant.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE" = "¿Seguro que quieres enviar este Instant?";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE" = "Confirmar envío del Instant";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP" = "Añade un botón de Sparkle a la vista de cámara de los instants para subir una foto desde Fotos, Archivos o la galería, y para explorar los instants que has guardado.";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE" = "Botón de Vista de Cámara";
 "INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP" = "Evita que el botón físico Control de la cámara del iPhone 16 y 17 capture un instant.";
@@ -1491,9 +1493,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "No se ha podido resolver el id de Instagram de este usuario.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Marcado como visto";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "Mensaje no encontrado";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "¿Enviar este vídeo Instant grabado?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Captura de instante bloqueada";
-"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "¿Enviar momento?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Confirmar envío de nota de voz";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE" = "¿Estás seguro de que deseas enviar este mensaje de voz?";
 "MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE" = "Título GIF no disponible";

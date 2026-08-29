@@ -953,6 +953,8 @@
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Xác nhận phản ứng Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Hỏi xác nhận trước khi gửi một phản ứng Instant.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE" = "Bạn có chắc muốn gửi Instant này không?";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE" = "Xác nhận gửi Instant";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP" = "Thêm nút Sparkle vào chế độ xem máy ảnh Instants để tải ảnh lên từ Ảnh, Tệp hoặc Thư viện, và để duyệt các Instant bạn đã lưu.";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE" = "Nút Chế Độ Xem Máy Ảnh";
 "INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP" = "Chặn nút Camera Control vật lý trên iPhone 16 và 17 chụp một Instant.";
@@ -1491,9 +1493,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "Không thể xác định id Instagram của người dùng này.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Đánh dấu là đã xem";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "Không tìm thấy tin nhắn";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Gửi video Instant đã quay này?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Bị chặn chụp Instant";
-"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Gửi Instant?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Xác nhận gửi tin nhắn thoại";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE" = "Bạn có chắc chắn muốn gửi tin nhắn thoại này?";
 "MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE" = "Tiêu đề GIF không khả dụng";

@@ -303,7 +303,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 - **Browse Saved Instants**: Lists everyone you have saved Instants from, with a count per user. Picking one navigates to the Gallery filtered to that user's Instants (across folders), titled with their username and with a back chevron to the list; filter and search are dropped there, since the screen already is the filter. Behind the Gallery lock when one is set.
 
 ### Confirmation
-- **Confirm Instant Videos**: Finishes recording first, then asks before Instagram sends the video. Confirm sends the completed clip; cancel discards the send and rearms the camera. This works only with video Instants; photo Instants are not supported. While enabled, the hardware Camera Control button is disabled because its video path cannot be confirmed safely.
+- **Confirm Instant Videos**: Finishes recording first, then asks before Instagram sends the video. Confirm sends the completed clip and returns to a fresh camera feed; cancel discards the send and rearms the camera, preserving injected media for another try. This works only with video Instants; photo Instants are not supported. While enabled, the hardware Camera Control button is disabled because its video path cannot be confirmed safely.
 - **Confirm Instant Reaction**: Asks before an Instant reaction is sent.
 
 ---

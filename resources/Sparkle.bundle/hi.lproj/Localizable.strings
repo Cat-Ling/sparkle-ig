@@ -953,6 +953,8 @@
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Instant प्रतिक्रिया की पुष्टि करें";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Instant प्रतिक्रिया भेजने से पहले पुष्टि माँगता है।";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_MESSAGE" = "क्या आप वाकई यह Instant भेजना चाहते हैं?";
+"INSTANTS_CONFIRMATION_SEND_VIDEO_TITLE" = "Instant भेजने की पुष्टि करें";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_HELP" = "Instants कैमरा दृश्य में Sparkle बटन जोड़ता है, जिससे फ़ोटो, फ़ाइलों या Gallery से फ़ोटो अपलोड की जा सकें और सहेजे गए Instants ब्राउज़ किए जा सकें।";
 "INSTANTS_CREATION_CAMERA_VIEW_BUTTON_TITLE" = "कैमरा दृश्य बटन";
 "INSTANTS_CREATION_DISABLE_CAMERA_CONTROL_HELP" = "iPhone 16 और 17 के हार्डवेयर Camera Control बटन से Instant लेने की सुविधा बंद करता है।";
@@ -1491,9 +1493,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "इस उपयोगकर्ता की Instagram id प्राप्त नहीं हो सकी।";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "देखे जाने के रूप में चिह्नित";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "संदेश नहीं मिला";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "रिकॉर्ड किया गया यह वीडियो Instant भेजें?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Instant कैप्चर ब्लॉक किया गया";
-"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Instant भेजें?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "वॉयस संदेश भेजने की पुष्टि करें";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_SEND_VOICE_MESSAGE_CONFIRMATION_MESSAGE" = "क्या आप निश्चित रूप से यह वॉयस संदेश भेजना चाहते हैं?";
 "MESSAGES_DMGIF_TITLE_GIF_TITLE_UNAVAILABLE_TITLE" = "GIF शीर्षक उपलब्ध नहीं";
