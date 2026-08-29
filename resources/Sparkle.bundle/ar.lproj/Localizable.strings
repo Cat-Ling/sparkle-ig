@@ -948,8 +948,8 @@
 "INSTANTS_ACTION_STOP_CONFIRMATION_MESSAGE_FORMAT" = "هل تريد إيقاف الحفظ التلقائي للحظات من @%@؟";
 "INSTANTS_ACTION_TOGGLE_TITLE" = "تبديل الحفظ التلقائي لـ Instants";
 "INSTANTS_AUTO_SAVE_AUTHOR_NOT_FOUND_TOAST" = "لم يتم العثور على مؤلف اللحظة";
-"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "يطلب تأكيداً عند إرسال لحظة ملتقطة. غير متاح مؤقتاً.";
-"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "تأكيد التقاط Instant";
+"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "يطلب التأكيد قبل إرسال فيديو Instant تم التقاطه. صور Instant غير مدعومة.";
+"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "تأكيد فيديوهات Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "تأكيد تفاعل Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "يطلب تأكيداً قبل إرسال تفاعل على لحظة.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
@@ -1491,7 +1491,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "تعذر تحديد معرف Instagram لهذا المستخدم.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "تم تحديد كمشاهد";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "لم يتم العثور على الرسالة";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "التقط وأرسل هذا Instant؟";
+"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "إرسال فيديو Instant المسجّل هذا؟";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "تم حظر التقاط اللحظة";
 "MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "إرسال رسالة فورية؟";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "تأكيد إرسال الرسالة الصوتية";

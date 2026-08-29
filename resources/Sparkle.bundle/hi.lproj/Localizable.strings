@@ -948,8 +948,8 @@
 "INSTANTS_ACTION_STOP_CONFIRMATION_MESSAGE_FORMAT" = "क्या आप @%@ के Instants का ऑटो-सेव बंद करना चाहते हैं?";
 "INSTANTS_ACTION_TOGGLE_TITLE" = "Instant ऑटो-सेव टॉगल करें";
 "INSTANTS_AUTO_SAVE_AUTHOR_NOT_FOUND_TOAST" = "Instant का लेखक नहीं मिला";
-"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "कैप्चर किए गए Instant को भेजने से पहले पुष्टि माँगता है। फिलहाल उपलब्ध नहीं है।";
-"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Instant कैप्चर की पुष्टि करें";
+"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "कैप्चर किए गए वीडियो Instant को भेजने से पहले पुष्टि माँगता है। फ़ोटो Instant समर्थित नहीं हैं।";
+"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Instant वीडियो की पुष्टि करें";
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Instant प्रतिक्रिया की पुष्टि करें";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Instant प्रतिक्रिया भेजने से पहले पुष्टि माँगता है।";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
@@ -1491,7 +1491,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "इस उपयोगकर्ता की Instagram id प्राप्त नहीं हो सकी।";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "देखे जाने के रूप में चिह्नित";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "संदेश नहीं मिला";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "इस Instant को कैप्चर और भेजें?";
+"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "रिकॉर्ड किया गया यह वीडियो Instant भेजें?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Instant कैप्चर ब्लॉक किया गया";
 "MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Instant भेजें?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "वॉयस संदेश भेजने की पुष्टि करें";

@@ -83,8 +83,9 @@ static NSArray *SPKInstantsSettingsSections(void) {
                 SPKSetting *s = [SPKSetting switchCellWithTitle:SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE")
                                                            icon:SPKSettingsIcon(@"instants_burst")
                                                     defaultsKey:@"instants_confirm_capture"];
-                s.enabledProvider = ^BOOL {
-                    return NO;
+                s.switchChangeHandler = ^(BOOL isOn) {
+                    SPKPreferenceSetObject(@(isOn), @"instants_confirm_capture");
+                    [[NSNotificationCenter defaultCenter] postNotificationName:@"SPKQuickSnapCreationPrefChangedNotification" object:nil];
                 };
                 s.helpText = SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP");
                 s;

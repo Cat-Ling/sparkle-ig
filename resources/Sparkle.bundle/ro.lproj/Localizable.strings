@@ -948,8 +948,8 @@
 "INSTANTS_ACTION_STOP_CONFIRMATION_MESSAGE_FORMAT" = "Vrei să nu mai salvezi automat instantele de la @%@?";
 "INSTANTS_ACTION_TOGGLE_TITLE" = "Comută salvarea automată a instantului";
 "INSTANTS_AUTO_SAVE_AUTHOR_NOT_FOUND_TOAST" = "Autorul instantului nu a fost găsit";
-"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "Cere confirmare când un instant capturat este trimis. Temporar indisponibil.";
-"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Confirmare captură instant";
+"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "Cere confirmare înainte de trimiterea unui videoclip Instant capturat. Fotografiile Instant nu sunt acceptate.";
+"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Confirmare videoclipuri Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Confirmare reacție instant";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Cere confirmare înainte de trimiterea unei reacții la un instant.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
@@ -1491,7 +1491,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "Nu s-a putut determina id-ul Instagram al acestui utilizator.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Marcat ca vizualizat";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "Mesaj nu a fost găsit";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Capturați și trimiteți acest instant?";
+"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Trimiți acest videoclip Instant înregistrat?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "captura instant blocată";
 "MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Trimite instant?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Confirma trimiterea mesajului vocal";

@@ -948,8 +948,8 @@
 "INSTANTS_ACTION_STOP_CONFIRMATION_MESSAGE_FORMAT" = "Do you want to stop auto-saving instants from @%@?";
 "INSTANTS_ACTION_TOGGLE_TITLE" = "Toggle Instant Auto-Save";
 "INSTANTS_AUTO_SAVE_AUTHOR_NOT_FOUND_TOAST" = "Instant author not found";
-"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "Asks for confirmation when a captured Instant is sent. Temporarily unavailable.";
-"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Confirm Instant Capture";
+"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "Asks for confirmation before a captured video Instant is sent. Photo Instants are not supported.";
+"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Confirm Instant Videos";
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Confirm Instant Reaction";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Asks for confirmation before an Instant reaction is sent.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
@@ -1491,7 +1491,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "Could not resolve this user's Instagram id.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Marked as seen";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "Message not found";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Capture and send this Instant?";
+"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Send this recorded video Instant?";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Instant capture blocked";
 "MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Send Instant?";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Confirm Sending Voice Message";

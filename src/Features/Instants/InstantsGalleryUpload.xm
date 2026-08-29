@@ -12,7 +12,7 @@
 #import "../../Settings/Topics/SPKInstantsSettingsProvider.h"
 #import "../../Shared/Gallery/SPKGalleryFile.h"
 #import "../../Shared/Gallery/SPKGalleryPickerViewController.h"
-#import "../../Shared/Instants/SPKInstantsFrameInjector.h"
+#import "../../Shared/Instants/SPKInstantsVideoConfirmation.h"
 #import "../../Shared/Instants/SPKInstantsSavedUsersViewController.h"
 #import "../../Shared/Instants/SPKInstantsVideoStreamer.h"
 #import "../../Shared/MediaTrim/SPKTrimConfiguration.h"
@@ -41,22 +41,6 @@ static __weak UIImage *sSPKInstantsCachedImage = nil;
 static int32_t sSPKInstantsCachedWidth = 0;
 static int32_t sSPKInstantsCachedHeight = 0;
 static OSType sSPKInstantsCachedFormat = 0;
-
-// Confirm-capture freeze: the injector keeps the most recent live pixel buffer so
-// freezeNow can snapshot it instantly. While frozen, that frame is replayed
-// downstream so the preview (and the resulting capture) is the exact frame the
-// user pressed the shutter on.
-static CVPixelBufferRef sSPKInstantsLatestLivePixelBuffer = NULL;
-static CVPixelBufferRef sSPKInstantsFrozenPixelBuffer = NULL;
-static BOOL sSPKInstantsIsFrozen = NO;
-static dispatch_queue_t SPKInstantsFreezeQueue(void) {
-    static dispatch_queue_t queue;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        queue = dispatch_queue_create("com.sparkle.sparkle.instants.freeze", DISPATCH_QUEUE_SERIAL);
-    });
-    return queue;
-}
 
 static const void *kSPKInstantsGalleryButtonKey = &kSPKInstantsGalleryButtonKey;
 static const void *kSPKInstantsGalleryFrameKey = &kSPKInstantsGalleryFrameKey;
@@ -581,19 +565,6 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
     if (!realDelegate)
         return;
 
-    // Keep the most recent live frame so a confirm-capture freeze can snapshot it
-    // instantly. Cheap: just retain the current pixel buffer (no conversion).
-    CVPixelBufferRef livePixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    if (livePixelBuffer) {
-        CVPixelBufferRetain(livePixelBuffer);
-        dispatch_sync(SPKInstantsFreezeQueue(), ^{
-            if (sSPKInstantsLatestLivePixelBuffer) {
-                CVPixelBufferRelease(sSPKInstantsLatestLivePixelBuffer);
-            }
-            sSPKInstantsLatestLivePixelBuffer = livePixelBuffer;
-        });
-    }
-
     // A pending video outranks everything for the same reason a pending image does:
     // it is the content the user chose to send. Frames come pre-rendered to the
     // camera's exact geometry and pixel format, so they drop straight in.
@@ -620,34 +591,11 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
         }
     }
 
-    // Gallery/files upload: when the user has positioned and cropped an image to send,
-    // this pending image MUST take priority over everything else — including the
-    // confirm-capture frozen frame. The pending image is the user's intended content.
+    // Gallery/files upload: when the user has positioned and cropped an image to
+    // send, this pending image is the user's intended content.
     UIImage *pendingImage = SPKInstantsCameraButtonEnabled() ? sSPKInstantsPendingImage : nil;
     if (pendingImage) {
         CMSampleBufferRef replacement = SPKInstantsSampleBufferForImage(pendingImage, sampleBuffer);
-        if (replacement) {
-            [(id<AVCaptureVideoDataOutputSampleBufferDelegate>)realDelegate captureOutput:output
-                                                                    didOutputSampleBuffer:replacement
-                                                                           fromConnection:connection];
-            CFRelease(replacement);
-            return;
-        }
-    }
-
-    // While frozen (confirm-capture), replay the snapshotted frame so the preview
-    // and the eventual capture are the exact frame the user pressed the shutter on.
-    __block CVPixelBufferRef frozen = NULL;
-    if (sSPKInstantsIsFrozen) {
-        dispatch_sync(SPKInstantsFreezeQueue(), ^{
-            if (sSPKInstantsFrozenPixelBuffer) {
-                frozen = CVPixelBufferRetain(sSPKInstantsFrozenPixelBuffer);
-            }
-        });
-    }
-    if (frozen) {
-        CMSampleBufferRef replacement = SPKInstantsSampleBufferForPixelBuffer(frozen, sampleBuffer);
-        CVPixelBufferRelease(frozen);
         if (replacement) {
             [(id<AVCaptureVideoDataOutputSampleBufferDelegate>)realDelegate captureOutput:output
                                                                     didOutputSampleBuffer:replacement
@@ -663,32 +611,6 @@ static CMSampleBufferRef SPKInstantsSampleBufferForImage(UIImage *image,
                                                                        fromConnection:connection];
     }
 }
-@end
-
-@implementation SPKInstantsFrameInjector
-
-+ (void)freezeNow {
-    dispatch_sync(SPKInstantsFreezeQueue(), ^{
-        if (!sSPKInstantsLatestLivePixelBuffer)
-            return;
-        if (sSPKInstantsFrozenPixelBuffer) {
-            CVPixelBufferRelease(sSPKInstantsFrozenPixelBuffer);
-        }
-        sSPKInstantsFrozenPixelBuffer = CVPixelBufferRetain(sSPKInstantsLatestLivePixelBuffer);
-        sSPKInstantsIsFrozen = YES;
-    });
-}
-
-+ (void)clearFrozen {
-    dispatch_sync(SPKInstantsFreezeQueue(), ^{
-        sSPKInstantsIsFrozen = NO;
-        if (sSPKInstantsFrozenPixelBuffer) {
-            CVPixelBufferRelease(sSPKInstantsFrozenPixelBuffer);
-            sSPKInstantsFrozenPixelBuffer = NULL;
-        }
-    });
-}
-
 @end
 
 @interface SPKInstantsImagePickerDelegate : NSObject <UIImagePickerControllerDelegate, UINavigationControllerDelegate>
@@ -1153,16 +1075,8 @@ static void replaced_headerLayoutSubviews(id self, SEL _cmd) {
     SPKInstantsInstallGalleryButton((UIView *)self);
 }
 
-static BOOL SPKInstantsConfirmCaptureEnabled(void) {
-    return [SPKUtils getBoolPref:@"instants_confirm_capture"];
-}
-
 static void replaced_setSampleBufferDelegate(id self, SEL _cmd, id delegate, dispatch_queue_t queue) {
-    // Wrap the camera's sample-buffer delegate when EITHER feature needs it:
-    // gallery upload (replace the feed with a chosen image) or confirm-capture
-    // (freeze the live frame while confirming so the sent frame is exact).
-    BOOL wants = SPKInstantsCameraButtonEnabled() || SPKInstantsConfirmCaptureEnabled();
-    if (delegate && wants && ![delegate isKindOfClass:SPKInstantsVideoBufferInjector.class]) {
+    if (delegate && SPKInstantsCameraButtonEnabled() && ![delegate isKindOfClass:SPKInstantsVideoBufferInjector.class]) {
         SPKInstantsVideoBufferInjector *injector = [[SPKInstantsVideoBufferInjector alloc] init];
         injector.realDelegate = delegate;
         objc_setAssociatedObject(self, kSPKInstantsVideoInjectorKey, injector, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -1240,6 +1154,9 @@ static void replaced_cancelRecordingIfAny(id self, SEL _cmd) {
 // start of a take -- and being a gesture handler it is necessarily @objc.
 static void (*orig_captureButtonLongPress)(id, SEL, id) = NULL;
 static void replaced_captureButtonLongPress(id self, SEL _cmd, id gesture) {
+    if ([self isKindOfClass:UIView.class] && [gesture isKindOfClass:UIGestureRecognizer.class]) {
+        SPKInstantsVideoConfirmationHandleLongPress((UIView *)self, (UIGestureRecognizer *)gesture);
+    }
     UIGestureRecognizerState state = [(UIGestureRecognizer *)gesture state];
     if (state == UIGestureRecognizerStateBegan) {
         SPKInstantsHandleRecordingStart("IGCameraCaptureButton.longPress");
@@ -1251,10 +1168,9 @@ static void replaced_captureButtonLongPress(id self, SEL _cmd, id gesture) {
         orig_captureButtonLongPress(self, _cmd, gesture);
 }
 
-// AVCaptureMovieFileOutput is the signal RyukGram drives its own Instants video
-// injection from, so IG's take goes through here even though Optic owns the
-// pipeline. Hooked on the AVFoundation class rather than an IG one, which also
-// makes it immune to IG's class churn.
+// AVCaptureMovieFileOutput provides a stable recording signal even though Optic
+// owns the surrounding pipeline. Hooking AVFoundation avoids Instagram class
+// churn while the handler remains gated by an armed injected video.
 static void (*orig_startRecordingToOutputFileURL)(id, SEL, id, id) = NULL;
 static void replaced_startRecordingToOutputFileURL(id self, SEL _cmd, id fileURL, id delegate) {
     SPKInstantsHandleRecordingStart("AVCaptureMovieFileOutput.startRecording");

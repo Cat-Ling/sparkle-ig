@@ -41,6 +41,7 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
   - Import your own media from Files with editable metadata, or bring your whole Regram Media Vault over in one go.
   - Browse saved Instants by user straight from the Instants camera.
   - Send any photo or video you already have as an Instant, from Photos, Files, or the Gallery.
+  - Confirm recorded video Instants before Instagram sends them. Photo Instants are not supported.
 - **Built-in editors**:
   - Trim any video down to a clip, a single still frame, or audio-only.
   - Crop, pan/zoom, rotate, and flip a video's framing, applied in the same pass as the trim.

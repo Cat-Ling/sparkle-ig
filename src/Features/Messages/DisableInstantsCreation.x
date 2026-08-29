@@ -7,30 +7,25 @@
 //                                    IGCameraCaptureButtonDelegate surface is
 //                                    swallowed (so press-and-hold can't record),
 //                                    and the hardware Camera Control is disabled.
-//   - Confirm Instant Capture     -> let the photo be CAPTURED normally (so the
-//                                    exact frame is preserved), then ask for
-//                                    confirmation when the user taps Send on the
-//                                    post-creation screen. Cancel keeps the
-//                                    captured photo on screen so nothing sends and
-//                                    the frame isn't lost; confirm sends it.
+//   - Confirm Instant Videos      -> let video finalization finish, then hold
+//                                    only Instagram's send continuation while
+//                                    asking for confirmation.
 //   - Skip Camera After Instants  -> skip the camera IG auto-opens after the last
 //                                    received Instant is viewed.
 //
-// Why gate SEND, not CAPTURE, for confirm: the on-screen shutter auto-sends on
-// release and the hardware Camera Control capture path is Swift/AVKit-internal
-// (no ObjC selector to prompt on — verified via a full class-dump). Gating the
-// release/confirm of the *capture* meant the photo was never actually taken, so
-// confirming later re-captured a different frame. Instead we let capture happen
-// and intercept the post-creation Send button (IGQuickSnapPostCreationView
-// -didTapConfirm), which fires after the frame is frozen.
+// Why gate the continuation, not the shutter: video finalization supplies a
+// completion block after its asset writer has finished. Holding that block does
+// not alter when recording starts or which frames enter the finished clip.
 
 #import <AVFoundation/AVFoundation.h>
 #import <objc/message.h>
 #import <objc/runtime.h>
+#import <os/lock.h>
 #import <substrate.h>
 
 #import "../../Settings/SPKPreferences.h"
-#import "../../Shared/Instants/SPKInstantsFrameInjector.h"
+#import "../../Shared/Account/SPKAccountManager.h"
+#import "../../Shared/Instants/SPKInstantsVideoConfirmation.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
 
@@ -74,6 +69,13 @@ static BOOL sSPKQuickSnapSkipNextCreation = NO;
 static BOOL sSPKQuickSnapExplicitCameraEntry = NO;
 
 static BOOL sSPKQuickSnapSendConfirmVisible = NO;
+static NSUInteger sSPKQuickSnapSendConfirmGeneration = 0;
+
+// The writer may finish off the main thread. Protect the narrow recording flag
+// independently; all alert and camera-control state remains main-thread-owned.
+static os_unfair_lock sSPKQuickSnapVideoStateLock = OS_UNFAIR_LOCK_INIT;
+static BOOL sSPKQuickSnapVideoCaptureArmed = NO;
+static NSUInteger sSPKQuickSnapVideoCaptureGeneration = 0;
 
 // Posted by the settings toggle so a visible camera refreshes its darken state
 // live (no app or Instants restart needed).
@@ -88,22 +90,16 @@ static BOOL SPKQuickSnapCreationDisabled(void) {
 }
 
 static BOOL SPKQuickSnapSendConfirmEnabled(void) {
-    /// TODO: investigate — hard-disabled. Confirm Instant Capture cannot gate IG's
-    /// new VIDEO Instants pipeline: capture happens regardless of the capture-button
-    /// delegate (those callbacks are notification-only; swallowing them only breaks
-    /// the shutter UI), and both photo & video auto-send through the undo-send pill /
-    /// IGQuickSnapPendingSendManager — whose commit/timer is Swift-internal with
-    /// stripped symbols. +isVideoCaptureEnabled: is baked before our %ctor so it
-    /// can't be forced off either. The capture-button release gate below is therefore
-    /// a no-op for the new flow. Revisit when the undo-pill / pending-send commit can
-    /// be intercepted (would need deep ARM64 RE). See memory:
-    /// instants-confirm-capture-video-blocked. Restore by returning the pref read.
-    return NO;
-    // return [SPKUtils getBoolPref:kSPKQuickSnapConfirmCapturePref];
+    return [SPKUtils getBoolPref:kSPKQuickSnapConfirmCapturePref];
 }
 
 static BOOL SPKQuickSnapDisableCameraControlEnabled(void) {
     return [SPKUtils getBoolPref:kSPKQuickSnapDisableCameraControlPref] && SPKDeviceHasCameraControl();
+}
+
+static BOOL SPKQuickSnapHardwareCaptureShouldBeDisabled(void) {
+    return SPKDeviceHasCameraControl() &&
+           (SPKQuickSnapDisableCameraControlEnabled() || SPKQuickSnapSendConfirmEnabled());
 }
 
 static BOOL SPKQuickSnapSkipCameraAfterViewingEnabled(void) {
@@ -118,91 +114,225 @@ static void SPKQuickSnapNotifyBlocked(void) {
               SPKNotificationToneInfo);
 }
 
+// MARK: - Capture confirmation
+
+static UIView *SPKQuickSnapFindCaptureButton(UIView *root);
+
+static BOOL SPKQuickSnapViewIsModernControlView(UIView *view) {
+    Class controlClass = NSClassFromString(@"_TtC34IGQuickSnapCameraControlController28IGQuickSnapCameraControlView");
+    if (!controlClass)
+        return NO;
+    for (UIView *candidate = view; candidate; candidate = candidate.superview) {
+        if ([candidate isKindOfClass:controlClass])
+            return YES;
+    }
+    return NO;
+}
+
+static void SPKQuickSnapSetVideoCaptureArmed(BOOL armed) {
+    os_unfair_lock_lock(&sSPKQuickSnapVideoStateLock);
+    sSPKQuickSnapVideoCaptureArmed = armed;
+    sSPKQuickSnapVideoCaptureGeneration += 1;
+    os_unfair_lock_unlock(&sSPKQuickSnapVideoStateLock);
+}
+
+static NSUInteger SPKQuickSnapArmVideoCapture(void) {
+    os_unfair_lock_lock(&sSPKQuickSnapVideoStateLock);
+    sSPKQuickSnapVideoCaptureArmed = YES;
+    sSPKQuickSnapVideoCaptureGeneration += 1;
+    NSUInteger generation = sSPKQuickSnapVideoCaptureGeneration;
+    os_unfair_lock_unlock(&sSPKQuickSnapVideoStateLock);
+    return generation;
+}
+
+static void SPKQuickSnapExpireVideoCapture(NSUInteger generation) {
+    os_unfair_lock_lock(&sSPKQuickSnapVideoStateLock);
+    if (generation == sSPKQuickSnapVideoCaptureGeneration) {
+        sSPKQuickSnapVideoCaptureArmed = NO;
+        sSPKQuickSnapVideoCaptureGeneration += 1;
+    }
+    os_unfair_lock_unlock(&sSPKQuickSnapVideoStateLock);
+}
+
+static BOOL SPKQuickSnapConsumeVideoCaptureArmed(NSUInteger *generation) {
+    os_unfair_lock_lock(&sSPKQuickSnapVideoStateLock);
+    BOOL armed = sSPKQuickSnapVideoCaptureArmed;
+    sSPKQuickSnapVideoCaptureArmed = NO;
+    if (generation)
+        *generation = sSPKQuickSnapVideoCaptureGeneration;
+    os_unfair_lock_unlock(&sSPKQuickSnapVideoStateLock);
+    return armed;
+}
+
+static BOOL SPKQuickSnapVideoCaptureGenerationIsCurrent(NSUInteger generation) {
+    os_unfair_lock_lock(&sSPKQuickSnapVideoStateLock);
+    BOOL current = generation == sSPKQuickSnapVideoCaptureGeneration;
+    os_unfair_lock_unlock(&sSPKQuickSnapVideoStateLock);
+    return current;
+}
+
+static void SPKQuickSnapRearmCaptureControl(UIView *controlView) {
+    UIView *captureButton = SPKQuickSnapFindCaptureButton(controlView);
+    if (!captureButton)
+        return;
+
+    SEL recognizerSelector = @selector(longPressGestureRecognizer);
+    UIGestureRecognizer *recognizer = nil;
+    if ([captureButton respondsToSelector:recognizerSelector]) {
+        recognizer = ((id (*)(id, SEL))objc_msgSend)(captureButton, recognizerSelector);
+    }
+    UIControl *gestureView = [recognizer.view isKindOfClass:UIControl.class] ? (UIControl *)recognizer.view : nil;
+    if (gestureView) {
+        gestureView.enabled = NO;
+        gestureView.enabled = YES;
+    }
+
+    SEL stateSelector = @selector(setButtonState:);
+    if ([captureButton respondsToSelector:stateSelector]) {
+        ((void (*)(id, SEL, long long))objc_msgSend)(captureButton, stateSelector, 1);
+    }
+}
+
+static void SPKQuickSnapInvalidateConfirmation(void) {
+    sSPKQuickSnapSendConfirmGeneration += 1;
+    sSPKQuickSnapSendConfirmVisible = NO;
+    SPKQuickSnapSetVideoCaptureArmed(NO);
+}
+
+static NSUInteger SPKQuickSnapBeginConfirmation(void) {
+    if (sSPKQuickSnapSendConfirmVisible)
+        return 0;
+    sSPKQuickSnapSendConfirmVisible = YES;
+    sSPKQuickSnapSendConfirmGeneration += 1;
+    return sSPKQuickSnapSendConfirmGeneration;
+}
+
+static BOOL SPKQuickSnapResolveConfirmation(NSUInteger generation) {
+    if (!sSPKQuickSnapSendConfirmVisible || generation != sSPKQuickSnapSendConfirmGeneration)
+        return NO;
+    sSPKQuickSnapSendConfirmVisible = NO;
+    return YES;
+}
+
+static void SPKQuickSnapPresentVideoConfirmation(void (^completion)(void), NSUInteger videoGeneration) {
+    if (!SPKQuickSnapVideoCaptureGenerationIsCurrent(videoGeneration))
+        return;
+    UIView *controlView = sSPKQuickSnapVisibleControlView;
+    if (!controlView.window || !SPKQuickSnapSendConfirmEnabled())
+        return;
+
+    NSUInteger generation = SPKQuickSnapBeginConfirmation();
+    if (generation == 0)
+        return;
+    SPKQuickSnapRearmCaptureControl(controlView);
+    __weak UIView *weakControlView = controlView;
+    [SPKUtils
+        showConfirmation:^{
+            if (!SPKQuickSnapResolveConfirmation(generation))
+                return;
+            if (completion)
+                completion();
+        }
+        cancelHandler:^{
+            if (!SPKQuickSnapResolveConfirmation(generation))
+                return;
+            SPKQuickSnapRearmCaptureControl(weakControlView);
+        }
+        title:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION")
+        message:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION")];
+}
+
+void SPKInstantsVideoConfirmationHandleLongPress(UIView *captureButton, UIGestureRecognizer *gesture) {
+    if (!SPKQuickSnapViewIsModernControlView(captureButton))
+        return;
+    switch (gesture.state) {
+    case UIGestureRecognizerStateBegan:
+        if (SPKQuickSnapSendConfirmEnabled() && !SPKQuickSnapCreationDisabled()) {
+            NSUInteger generation = SPKQuickSnapArmVideoCapture();
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(15 * NSEC_PER_SEC)),
+                           dispatch_get_main_queue(), ^{
+                               SPKQuickSnapExpireVideoCapture(generation);
+                           });
+        } else {
+            SPKQuickSnapSetVideoCaptureArmed(NO);
+        }
+        break;
+    case UIGestureRecognizerStateCancelled:
+    case UIGestureRecognizerStateFailed:
+        SPKQuickSnapSetVideoCaptureArmed(NO);
+        break;
+    default:
+        break;
+    }
+}
+
+static void (*orig_assetWriterFinishWriting)(id, SEL, void (^)(void)) = NULL;
+static void replaced_assetWriterFinishWriting(id self, SEL _cmd, void (^completion)(void)) {
+    NSUInteger videoGeneration = 0;
+    BOOL shouldConfirm = completion && SPKQuickSnapSendConfirmEnabled() &&
+                         SPKQuickSnapConsumeVideoCaptureArmed(&videoGeneration);
+    if (!shouldConfirm || !orig_assetWriterFinishWriting) {
+        if (orig_assetWriterFinishWriting)
+            orig_assetWriterFinishWriting(self, _cmd, completion);
+        return;
+    }
+
+    void (^capturedCompletion)(void) = [completion copy];
+    orig_assetWriterFinishWriting(self, _cmd, ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
+            SPKQuickSnapPresentVideoConfirmation(capturedCompletion, videoGeneration);
+        });
+    });
+}
+
 // MARK: - Capture button delegate gate
-//
-// One handler for the whole IGCameraCaptureButtonDelegate surface.
-//   - Disable-Creation: swallow EVERYTHING so neither a tap (photo) nor a
-//     press-and-hold (video) can start.
-//   - Confirm-Capture: pass the press/expand lifecycle through untouched (so the
-//     shutter animates normally), but defer the capture-INITIATING callbacks
-//     behind a confirmation. On confirm we run the original; on cancel we do
-//     nothing. This gates the release callback, the only viable interception point,
-//     since QuickSnap captures-and-sends on release (audience is chosen before the shutter;
-//     there is no post-capture review screen).
-//
-// `isCaptureInitiation` marks the callbacks that actually trigger a photo/video
-// send (so we only prompt once, on the meaningful event).
-static void SPKQuickSnapHandleCaptureDelegate(id self, SEL _cmd, SPKQuickSnapVoidIMP original, BOOL isCaptureInitiation) {
+
+static BOOL SPKQuickSnapShouldBlockCapture(SEL selector, BOOL notify) {
     if (SPKQuickSnapCreationDisabled()) {
-        SPKLog(@"General", @"[Sparkle] Blocking Instant capture (%@)", NSStringFromSelector(_cmd));
-        if (isCaptureInitiation)
+        SPKLog(@"General", @"[Sparkle] Blocking Instant capture (%@)", NSStringFromSelector(selector));
+        if (notify)
             SPKQuickSnapNotifyBlocked();
-        return;
+        return YES;
     }
-
-    if (SPKQuickSnapSendConfirmEnabled() && isCaptureInitiation) {
-        if (sSPKQuickSnapSendConfirmVisible)
-            return;
-        sSPKQuickSnapSendConfirmVisible = YES;
-        // Freeze the live preview on the exact frame the user pressed the shutter
-        // on, so confirming sends THAT frame (not a later one) and the preview
-        // doesn't keep moving under the alert.
-        [SPKInstantsFrameInjector freezeNow];
-        id capturedSelf = self;
-        SEL capturedSelector = _cmd;
-        SPKQuickSnapVoidIMP capturedOriginal = original;
-        [SPKUtils
-            showConfirmation:^{
-                sSPKQuickSnapSendConfirmVisible = NO;
-                // Keep the frozen frame in place through the capture so the sent
-                // media is exactly what was confirmed, then resume the live feed.
-                if (capturedOriginal)
-                    capturedOriginal(capturedSelf, capturedSelector);
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    [SPKInstantsFrameInjector clearFrozen];
-                });
-            }
-            cancelHandler:^{
-                sSPKQuickSnapSendConfirmVisible = NO;
-                [SPKInstantsFrameInjector clearFrozen];
-            }
-            title:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION")
-            message:SPKL(@"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION")];
-        return;
-    }
-
-    if (original)
-        original(self, _cmd);
+    return NO;
 }
 
 static void replaced_captureButtonDidTouchDown(id self, SEL _cmd) {
-    SPKQuickSnapHandleCaptureDelegate(self, _cmd, orig_captureButtonDidTouchDown, NO);
+    if (!SPKQuickSnapShouldBlockCapture(_cmd, NO) && orig_captureButtonDidTouchDown)
+        orig_captureButtonDidTouchDown(self, _cmd);
 }
 
 static void replaced_captureButtonDidBeginExpanding(id self, SEL _cmd) {
-    SPKQuickSnapHandleCaptureDelegate(self, _cmd, orig_captureButtonDidBeginExpanding, NO);
+    if (!SPKQuickSnapShouldBlockCapture(_cmd, NO) && orig_captureButtonDidBeginExpanding)
+        orig_captureButtonDidBeginExpanding(self, _cmd);
 }
 
 static void replaced_captureButtonDidEndExpanding(id self, SEL _cmd) {
-    SPKQuickSnapHandleCaptureDelegate(self, _cmd, orig_captureButtonDidEndExpanding, NO);
+    if (!SPKQuickSnapShouldBlockCapture(_cmd, NO) && orig_captureButtonDidEndExpanding)
+        orig_captureButtonDidEndExpanding(self, _cmd);
 }
 
 static void replaced_captureButtonDidReleaseBeforeExpandingFinished(id self, SEL _cmd) {
-    // The primary tap-to-capture (photo) callback.
-    SPKQuickSnapHandleCaptureDelegate(self, _cmd, orig_captureButtonDidReleaseBeforeExpandingFinished, YES);
+    if (!SPKQuickSnapShouldBlockCapture(_cmd, YES) && orig_captureButtonDidReleaseBeforeExpandingFinished)
+        orig_captureButtonDidReleaseBeforeExpandingFinished(self, _cmd);
 }
 
 static void replaced_captureButtonDidReleaseAfterExpandingFinished(id self, SEL _cmd) {
-    // The press-and-hold finish (video) callback.
-    SPKQuickSnapHandleCaptureDelegate(self, _cmd, orig_captureButtonDidReleaseAfterExpandingFinished, YES);
+    if (!SPKQuickSnapShouldBlockCapture(_cmd, YES) && orig_captureButtonDidReleaseAfterExpandingFinished)
+        orig_captureButtonDidReleaseAfterExpandingFinished(self, _cmd);
 }
 
 static void replaced_captureButtonDidReleaseFromInterruption(id self, SEL _cmd) {
-    SPKQuickSnapHandleCaptureDelegate(self, _cmd, orig_captureButtonDidReleaseFromInterruption, NO);
+    SPKQuickSnapInvalidateConfirmation();
+    if (!SPKQuickSnapShouldBlockCapture(_cmd, NO) && orig_captureButtonDidReleaseFromInterruption)
+        orig_captureButtonDidReleaseFromInterruption(self, _cmd);
 }
 
 static void replaced_captureButtonDidConfirm(id self, SEL _cmd) {
-    SPKQuickSnapHandleCaptureDelegate(self, _cmd, orig_captureButtonDidConfirm, YES);
+    if (sSPKQuickSnapSendConfirmVisible)
+        return;
+    if (!SPKQuickSnapShouldBlockCapture(_cmd, YES) && orig_captureButtonDidConfirm)
+        orig_captureButtonDidConfirm(self, _cmd);
 }
 
 // MARK: - Hardware Camera Control (iPhone 16/17) — dedicated toggle
@@ -213,11 +343,9 @@ static void replaced_captureButtonDidConfirm(id self, SEL _cmd) {
 // selector to hook — verified via a full class-dump). We can't prompt on it, but
 // we CAN keep the interaction disabled.
 //
-// Driven by its own pref (`instants_disable_camera_control`), independent of
-// Disable-Creation / Confirm-Capture. Disabling via a single layout-time pass was
-// unreliable (IG re-creates/re-enables the interaction after our pass), so we ALSO
-// hook AVCaptureEventInteraction -setEnabled: and force it back to NO while the
-// QuickSnap camera is on screen and the pref is on. Safe on iOS 15 (class absent).
+// Driven by its own pref (`instants_disable_camera_control`). It is also disabled
+// while video confirmation is enabled because that Swift/AVKit path has no
+// verified post-capture continuation and must not silently bypass confirmation.
 
 // Tracks whether the QuickSnap camera UI is currently on screen, so the global
 // setEnabled: hook only clamps the interaction in that context (not the main
@@ -226,7 +354,7 @@ static BOOL sSPKQuickSnapCameraOnScreen = NO;
 
 static void (*orig_avCaptureEventInteraction_setEnabled)(id, SEL, BOOL) = NULL;
 static void replaced_avCaptureEventInteraction_setEnabled(id self, SEL _cmd, BOOL enabled) {
-    if (enabled && sSPKQuickSnapCameraOnScreen && SPKQuickSnapDisableCameraControlEnabled()) {
+    if (enabled && sSPKQuickSnapCameraOnScreen && SPKQuickSnapHardwareCaptureShouldBeDisabled()) {
         enabled = NO;
     }
     if (orig_avCaptureEventInteraction_setEnabled)
@@ -240,7 +368,7 @@ static void SPKQuickSnapDisableHardwareCaptureInTree(UIView *root) {
     if (!interactionClass)
         return;
 
-    BOOL disable = SPKQuickSnapDisableCameraControlEnabled();
+    BOOL disable = SPKQuickSnapHardwareCaptureShouldBeDisabled();
 
     NSMutableArray<UIView *> *queue = [NSMutableArray arrayWithObject:root];
     while (queue.count > 0) {
@@ -313,6 +441,11 @@ static void replaced_cameraControlViewWillMoveToWindow(id self, SEL _cmd, id win
     // Track QuickSnap camera presence so the global AVCaptureEventInteraction
     // clamp only applies while the Instants camera is up.
     sSPKQuickSnapCameraOnScreen = (window != nil);
+    if (!window) {
+        if (sSPKQuickSnapVisibleControlView == (UIView *)self)
+            sSPKQuickSnapVisibleControlView = nil;
+        SPKQuickSnapInvalidateConfirmation();
+    }
     if (window && [self isKindOfClass:[UIView class]]) {
         UIView *controlView = (UIView *)self;
         sSPKQuickSnapVisibleControlView = controlView;
@@ -459,6 +592,17 @@ void SPKInstallDisableInstantsCreationHooksIfEnabled(void) {
                               (IMP)replaced_cameraControlViewWillMoveToWindow,
                               (IMP *)&orig_cameraControlViewWillMoveToWindow);
 
+        // Keep the global writer hook out of older Instagram builds where the
+        // modern QuickSnap control-view pipeline is absent.
+        Class modernControlClass = objc_getClass(cameraControlView);
+        if (modernControlClass &&
+            class_getInstanceMethod(modernControlClass, @selector(captureButtonDidReleaseBeforeExpandingFinished))) {
+            SPKHookInstanceMethod("AVAssetWriter",
+                                  @selector(finishWritingWithCompletionHandler:),
+                                  (IMP)replaced_assetWriterFinishWriting,
+                                  (IMP *)&orig_assetWriterFinishWriting);
+        }
+
         // Robustly keep the hardware Camera Control's AVCaptureEventInteraction
         // disabled while the QuickSnap camera is up and the pref is on — IG may
         // re-enable it after our layout-time pass, so we clamp its setEnabled:.
@@ -475,6 +619,8 @@ void SPKInstallDisableInstantsCreationHooksIfEnabled(void) {
                                                           object:nil
                                                            queue:NSOperationQueue.mainQueue
                                                       usingBlock:^(__unused NSNotification *note) {
+                                                          if (SPKQuickSnapCreationDisabled() || !SPKQuickSnapSendConfirmEnabled())
+                                                              SPKQuickSnapInvalidateConfirmation();
                                                           UIView *controlView = sSPKQuickSnapVisibleControlView;
                                                           if (!controlView.window)
                                                               return;
@@ -482,6 +628,12 @@ void SPKInstallDisableInstantsCreationHooksIfEnabled(void) {
                                                           UIView *scope = controlView.window ?: controlView;
                                                           SPKQuickSnapDisableHardwareCaptureInTree(scope);
                                                           [controlView setNeedsLayout];
+                                                      }];
+        [[NSNotificationCenter defaultCenter] addObserverForName:SPKAccountDidChangeNotification
+                                                          object:nil
+                                                           queue:NSOperationQueue.mainQueue
+                                                      usingBlock:^(__unused NSNotification *note) {
+                                                          SPKQuickSnapInvalidateConfirmation();
                                                       }];
 
         // Explicit camera entry points (clear the skip flag).

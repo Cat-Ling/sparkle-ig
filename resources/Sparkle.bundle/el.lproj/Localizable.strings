@@ -948,8 +948,8 @@
 "INSTANTS_ACTION_STOP_CONFIRMATION_MESSAGE_FORMAT" = "Θέλετε να σταματήσετε την αυτόματη αποθήκευση στιγμιαίων από @%@;";
 "INSTANTS_ACTION_TOGGLE_TITLE" = "Εναλλαγή Αυτόματης Αποθήκευσης Στιγμιαίου";
 "INSTANTS_AUTO_SAVE_AUTHOR_NOT_FOUND_TOAST" = "Δημιουργός στιγμιαίου δεν βρέθηκε";
-"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "Ζητά επιβεβαίωση όταν στέλνεται ένα instant που τράβηξες. Προσωρινά μη διαθέσιμο.";
-"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Επιβεβαίωση Σύλληψης Instant";
+"INSTANTS_CONFIRMATION_CONFIRM_CAPTURE_HELP" = "Ζητά επιβεβαίωση πριν σταλεί ένα καταγεγραμμένο βίντεο Instant. Οι φωτογραφίες Instant δεν υποστηρίζονται.";
+"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_CAPTURE_TITLE" = "Επιβεβαίωση βίντεο Instant";
 "INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE" = "Επιβεβαίωση άμεσης αντίδρασης";
 "INSTANTS_CONFIRMATION_CONFIRM_REACTION_HELP" = "Ζητά επιβεβαίωση πριν σταλεί μια αντίδραση σε instant.";
 "INSTANTS_CONFIRMATION_INSTANTS_TITLE" = "Instants";
@@ -1491,7 +1491,7 @@
 "MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR" = "Δεν ήταν δυνατή η εύρεση του Instagram id αυτού του χρήστη.";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MARKED_SEEN_TEXT" = "Σήμανση ως προβεβλημένο";
 "MESSAGES_DIRECT_VISUAL_SEEN_BUTTONS_MESSAGE_NOT_FOUND_MESSAGE" = "Το μήνυμα δεν βρέθηκε";
-"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Καταγραφή και αποστολή αυτού του Instant;";
+"MESSAGES_DISABLE_INSTANTS_CREATION_CAPTURE_SEND_INSTANT_QUESTION" = "Αποστολή αυτού του εγγεγραμμένου βίντεο Instant;";
 "MESSAGES_DISABLE_INSTANTS_CREATION_INSTANT_CAPTURE_BLOCKED_TEXT" = "Στιγμιαία σύλληψη φραγμένη";
 "MESSAGES_DISABLE_INSTANTS_CREATION_SEND_INSTANT_QUESTION" = "Αποστολή Στιγμιαίου;";
 "MESSAGES_DMAUDIO_MSG_CONFIRM_CONFIRM_SENDING_VOICE_MESSAGE" = "Επιβεβαίωση Αποστολής Σημείωσης Φωνής";
