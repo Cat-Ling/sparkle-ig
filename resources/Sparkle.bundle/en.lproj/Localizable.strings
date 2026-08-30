@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Adds a button above the bottom story bar that lists every mentioned user.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Show Story Mentions";
 "STORIES_OTHER_STORIES_TITLE" = "Stories";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Toggle story audio";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Adds a speaker button above the bottom story bar. Tap it to mute or unmute story playback audio.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Story Audio Button";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Search viewers";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Story Viewers";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "These users keep Instagram's normal seen behavior and do not need the eye button.";

@@ -299,6 +299,11 @@
 
 @interface IGStoryFullscreenSectionController : NSObject
 @property (nonatomic, strong, readwrite) IGMedia *currentStoryItem;
+- (BOOL)audioEnabled;
+- (void)setAudioEnabled:(BOOL)enabled reason:(long long)reason;
+- (void)didUpdateToObject:(id)object;
+- (void)didSelectItemAtIndex:(long long)index;
+- (id)overlayView;
 @end
 
 @interface IGStoriesMidcardsController : NSObject
@@ -309,6 +314,7 @@
 
 @interface IGStoryVideoView : UIView
 @property (nonatomic, weak, readwrite) IGStoryFullscreenSectionController *captionDelegate;
+@property (nonatomic, readonly) BOOL isAudioAvailable;
 @end
 
 @interface IGStoryModernVideoView : UIView
@@ -323,6 +329,12 @@
 // Real superclass is IGViewController; UIViewController is enough for the
 // appearance callbacks Sparkle hooks here.
 @interface IGStoryViewerViewController : UIViewController
+@end
+
+@interface IGAudioStatusAnnouncer : NSObject
++ (instancetype)sharedInstance;
+- (BOOL)isAudioEnabledForSoundBehavior:(long long)behavior;
+- (void)_announceForDeviceStateChangesIfNeededForAudioEnabled:(BOOL)enabled reason:(long long)reason;
 @end
 
 @interface IGDirectVisualMessageViewerController : UIViewController

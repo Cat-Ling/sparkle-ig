@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Aggiunge sopra la barra inferiore delle storie un pulsante che elenca tutti gli utenti menzionati.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Mostra Menzioni Storia";
 "STORIES_OTHER_STORIES_TITLE" = "Storie";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Attiva o disattiva l'audio delle storie";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Aggiunge un pulsante dell’altoparlante sopra la barra inferiore delle storie. Toccalo per disattivare o riattivare l’audio delle storie.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Pulsante audio delle storie";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Ricerca spettatori";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Visualizzatori storie";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Questi utenti mantengono il normale comportamento di visualizzazione di Instagram e non hanno bisogno del pulsante occhio.";

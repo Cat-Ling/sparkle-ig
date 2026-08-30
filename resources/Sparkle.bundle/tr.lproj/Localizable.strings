@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Alt hikaye çubuğunun üstüne, bahsedilen tüm kullanıcıları listeleyen bir düğme ekler.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Hikaye Bahsetmelerini Göster";
 "STORIES_OTHER_STORIES_TITLE" = "Hikayeler";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Hikaye sesini değiştir";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Hikayelerin alt çubuğunun üstüne bir hoparlör düğmesi ekler. Hikaye oynatma sesini kapatmak veya açmak için düğmeye dokunun.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Hikaye Ses Düğmesi";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "İzleyenleri ara";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Hikaye İzleyicileri";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Bu kullanıcılar Instagram'ın normal görüldü davranışını korur ve göz düğmesine ihtiyaç duymaz.";

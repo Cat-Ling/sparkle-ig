@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Ajoute au-dessus de la barre inférieure des stories un bouton qui liste tous les utilisateurs mentionnés.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Afficher les mentions de la Story";
 "STORIES_OTHER_STORIES_TITLE" = "Stories";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Activer ou désactiver le son des stories";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Ajoute un bouton de haut-parleur au-dessus de la barre inférieure des stories. Touchez-le pour couper ou réactiver le son des stories.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Bouton audio des stories";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Rechercher les spectateurs";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Spectateurs des stories";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Ces utilisateurs gardent le comportement de lecture normal d'Instagram et n'ont pas besoin du bouton œil.";

@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Προσθέτει πάνω από την κάτω γραμμή των ιστοριών ένα κουμπί που απαριθμεί όλους τους χρήστες που αναφέρονται.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Εμφάνιση Αναφορών Ιστορίας";
 "STORIES_OTHER_STORIES_TITLE" = "Stories";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Εναλλαγή ήχου Story";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Προσθέτει ένα κουμπί ηχείου πάνω από την κάτω γραμμή Story. Πατήστε το για σίγαση ή κατάργηση σίγασης του ήχου αναπαραγωγής του Story.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Κουμπί ήχου Story";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Αναζήτηση θεατών";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Θεατές Ιστορίας";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Αυτοί οι χρήστες κρατούν την κανονική συμπεριφορά προβολών του Instagram και δεν χρειάζονται το κουμπί ματιού.";

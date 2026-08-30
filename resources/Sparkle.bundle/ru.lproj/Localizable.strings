@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Добавляет над нижней панелью историй кнопку со списком всех упомянутых пользователей.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Показать упоминания в истории";
 "STORIES_OTHER_STORIES_TITLE" = "Истории";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Переключить звук истории";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Добавляет кнопку динамика над нижней панелью истории. Нажмите её, чтобы выключить или включить звук истории.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Кнопка звука историй";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Поиск просмотров";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Просмотры историй";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Для этих пользователей сохраняется обычное поведение просмотров Instagram, и кнопка-глаз не нужна.";

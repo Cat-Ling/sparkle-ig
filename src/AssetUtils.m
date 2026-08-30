@@ -300,6 +300,8 @@ static NSDictionary<NSString *, SPKAssetDescriptor *> *SPKAssetOverrides(void) {
             @"view_twice" : @{@"candidates" : @[ @"ig_icon_view_twice_outline_24" ]},
             @"voice" : @{@"candidates" : @[ @"ig_icon_microphone_pano_outline_24", @"ig_icon_microphone_outline_24" ]},
             @"voice_filled" : @{@"candidates" : @[ @"ig_icon_microphone_filled_24" ]},
+            @"volume" : @{@"candidates" : @[ @"ig_icon_volume_pano_outline_24", @"ig_icon_volume_outline_24" ]},
+            @"volume_none" : @{@"candidates" : @[ @"ig_icon_volume_none_pano_outline_24" ]},
             @"volume_off" : @{@"candidates" : @[ @"ig_icon_volume_off_pano_outline_24", @"ig_icon_volume_off_outline_24" ]},
             @"warning" : @{@"candidates" : @[ @"ig_icon_warning_pano_outline_24", @"ig_icon_warning_outline_24" ]},
             @"warning_filled" : @{@"candidates" : @[ @"ig_icon_warning_pano_filled_24", @"ig_icon_warning_filled_24" ]},

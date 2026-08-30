@@ -1,6 +1,7 @@
 #import "SPKStrings.h"
 #import "SPKStoriesSettingsProvider.h"
 
+#import "../../Features/Stories/StoryAudioToggle.h"
 #import "../../Shared/ActionButton/SPKActionButtonConfiguration.h"
 #import "../../Shared/Stories/SPKStoryContext.h"
 #import "../../Utils.h"
@@ -145,6 +146,17 @@ static NSArray *SPKStoriesSettingsSections(void) {
                         nil),
 
         SPKTopicSection(SPKL(@"STORIES_OTHER_HEADER"), @[
+            ({
+                SPKSetting *storyAudioToggle = [SPKSetting switchCellWithTitle:SPKL(@"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE")
+                                                                           icon:SPKSettingsIcon(@"volume")
+                                                                    defaultsKey:@"stories_audio_toggle"];
+                storyAudioToggle.switchChangeHandler = ^(BOOL isOn) {
+                    SPKPreferenceSetObject(@(isOn), @"stories_audio_toggle");
+                    [[NSNotificationCenter defaultCenter] postNotificationName:SPKStoryAudioTogglePreferenceDidChangeNotification object:nil];
+                };
+                storyAudioToggle.helpText = SPKL(@"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP");
+                storyAudioToggle;
+            }),
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE")
                                            icon:SPKSettingsIcon(@"search")
                                     defaultsKey:@"stories_search_viewer_list"],

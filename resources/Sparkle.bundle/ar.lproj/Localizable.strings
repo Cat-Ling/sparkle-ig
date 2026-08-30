@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "يضيف زراً فوق شريط القصة السفلي يعرض كل مستخدم تمت الإشارة إليه.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "عرض إشارات القصة";
 "STORIES_OTHER_STORIES_TITLE" = "القصص";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "تبديل صوت القصة";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "يضيف زر مكبر صوت فوق شريط القصة السفلي. اضغط عليه لكتم صوت تشغيل القصة أو إلغاء كتمه.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "زر صوت القصة";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "البحث عن المشاهدين";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "مشاهدو Story";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "يحتفظ هؤلاء المستخدمون بسلوك المشاهدة المعتاد في Instagram ولا يحتاجون زر العين.";

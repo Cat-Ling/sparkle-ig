@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "스토리 하단 바 위에 언급된 모든 사용자를 나열하는 버튼을 추가합니다.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "스토리 멘션 표시";
 "STORIES_OTHER_STORIES_TITLE" = "스토리";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "스토리 오디오 전환";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "스토리 하단 바 위에 스피커 버튼을 추가합니다. 탭하여 스토리 재생 오디오를 음소거하거나 음소거 해제합니다.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "스토리 오디오 버튼";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "조회자 검색";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "스토리 조회자";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "이 사용자들은 Instagram의 기본 읽음 동작을 그대로 유지하며 눈 버튼이 필요하지 않습니다.";

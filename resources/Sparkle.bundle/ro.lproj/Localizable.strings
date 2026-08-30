@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Adaugă deasupra barei de jos a poveștilor un buton care listează toți utilizatorii menționați.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Arată mențiuni poveste";
 "STORIES_OTHER_STORIES_TITLE" = "Povești";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Comută sunetul poveștii";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Adaugă un buton cu difuzor deasupra barei de jos a poveștii. Atinge-l pentru a opri sau porni sunetul poveștii.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Buton audio pentru povești";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Caută privitorii";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Vizualizatori povești";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Acești utilizatori păstrează comportamentul normal de vizionare al Instagram și nu au nevoie de butonul ochi.";

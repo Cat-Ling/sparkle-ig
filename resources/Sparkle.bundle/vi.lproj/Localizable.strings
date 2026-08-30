@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Tùy chọn này thêm a button above the bottom story bar that lists every mentioned user.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Hiển thị Đề cập Story";
 "STORIES_OTHER_STORIES_TITLE" = "Stories";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Bật hoặc tắt âm thanh story";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Thêm nút loa phía trên thanh story bên dưới. Nhấn để tắt hoặc bật âm thanh phát story.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Nút âm thanh Story";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Tìm kiếm người xem";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Những người xem Story";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Tùy chọn này These users keep Instagram's normal seen behavior and do not need the eye button.";

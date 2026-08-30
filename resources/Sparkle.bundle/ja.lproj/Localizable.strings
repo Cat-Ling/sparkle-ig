@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "ストーリーズの下部バーの上に、メンションされた全ユーザーを一覧表示するボタンを追加します。";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "ストーリーメンションを表示";
 "STORIES_OTHER_STORIES_TITLE" = "ストーリーズ";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "ストーリーズの音声を切り替え";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "ストーリーズの下部バーの上にスピーカーボタンを追加します。タップしてストーリーズの再生音声をミュートまたはミュート解除します。";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "ストーリーオーディオボタン";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "閲覧者を検索";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "ストーリービューアー";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "これらのユーザーはInstagramの通常の既読動作のままで、目のボタンは不要です。";

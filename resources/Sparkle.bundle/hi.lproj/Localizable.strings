@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "यह सेटिंग जोड़ती है a button above the bottom story bar that lists every mentioned user.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Story उल्लेख दिखाएं";
 "STORIES_OTHER_STORIES_TITLE" = "कहानियाँ";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "स्टोरी ऑडियो टॉगल करें";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "स्टोरी की निचली बार के ऊपर एक स्पीकर बटन जोड़ता है। स्टोरी का प्लेबैक ऑडियो म्यूट या अनम्यूट करने के लिए इसे टैप करें।";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "स्टोरी ऑडियो बटन";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "दर्शकों को खोजें";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Story दर्शक";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "यह सेटिंग These users keep Instagram's normal seen behavior and do not need the eye button.";

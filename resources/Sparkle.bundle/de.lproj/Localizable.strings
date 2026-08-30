@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Fügt über der unteren Story-Leiste einen Button hinzu, der alle erwähnten Nutzer auflistet.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Story-Erwähnungen anzeigen";
 "STORIES_OTHER_STORIES_TITLE" = "Stories";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Story-Ton umschalten";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Fügt über der unteren Story-Leiste eine Lautsprecherschaltfläche hinzu. Tippe darauf, um den Story-Ton stummzuschalten oder wieder einzuschalten.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Story-Audio-Schaltfläche";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Betrachter durchsuchen";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Story-Betrachter";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Diese Nutzer behalten das normale Gelesen-Verhalten von Instagram und benötigen den Augen-Button nicht.";

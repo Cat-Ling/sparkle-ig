@@ -1955,6 +1955,9 @@
 "STORIES_OTHER_SHOW_STORY_MENTIONS_HELP" = "Додає над нижньою панеллю історій кнопку зі списком усіх згаданих користувачів.";
 "STORIES_OTHER_SHOW_STORY_MENTIONS_TITLE" = "Показати упомянення в історії";
 "STORIES_OTHER_STORIES_TITLE" = "Історії";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_ACCESSIBILITY_LABEL" = "Перемкнути звук історії";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_HELP" = "Додає кнопку динаміка над нижньою панеллю історії. Натисніть її, щоб вимкнути або ввімкнути звук історії.";
+"STORIES_PLAYBACK_AUDIO_TOGGLE_TITLE" = "Кнопка звуку історій";
 "STORIES_SEARCH_STORY_VIEWERS_SEARCH_VIEWERS_TEXT" = "Пошук глядачів";
 "STORIES_SEARCH_STORY_VIEWERS_STORY_VIEWERS_TEXT" = "Глядачі Історії";
 "STORIES_SEEN_RECEIPTS_EXCLUDED_USERS_HELP" = "Для цих користувачів зберігається звичайна поведінка переглядів Instagram, і кнопка-око не потрібна.";
