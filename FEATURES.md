@@ -206,7 +206,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 
 ### Limits
 - **Disable Scrolling Reels**: Blocks scrolling to the next reel. **(restart)**
-- **Prevent Doom Scrolling** + **Doom Scrolling Limit**: Caps the number of reels that load (1–100).
+- **Prevent Doom Scrolling** + **Doom Scrolling Limit**: Caps the number of reels that load in the main Reels feed (1–100). Profile reels are unaffected.
 
 ### Layout
 - **Hide Reels Header**, **Hide Repost Button** **(restart)**, **Hide Suggested Accounts**.

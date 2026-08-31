@@ -727,6 +727,14 @@
 - (id)tabStringFromSurfaceIntent;
 @end
 
+@protocol IGSundialFeedSource <NSObject>
+@property (readonly, nonatomic) BOOL isReelsHomeOrTab;
+@end
+
+@interface IGSundialFeedDataSource : NSObject
+- (NSArray *)objectsForListAdapter:(id)adapter;
+@end
+
 @interface IGSundialFeedViewController : UIViewController
 - (void)refreshControlDidEndFinishLoadingAnimation:(id)arg1;
 - (void)finishPullToRefreshLoading;

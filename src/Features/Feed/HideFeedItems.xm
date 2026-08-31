@@ -2,6 +2,7 @@
 #import "../../InstagramHeaders.h"
 #import "../../Utils.h"
 #import "../../App/SPKPerfMeter.h"
+#import <objc/runtime.h>
 
 typedef NS_ENUM(NSInteger, SPKFeedFilterSurface) {
     SPKFeedFilterSurfaceFeed,
@@ -194,12 +195,51 @@ static NSArray *removeItemsInList(NSArray *list, SPKFeedFilterSurface surface) {
 
 %group SPKFeedFilteringDeferredHooks
 
-static NSArray *spkSundialFilterAndLimit(NSArray *list) {
+static id SPKSundialObjectIvar(id object, const char *name) {
+    if (!object || !name)
+        return nil;
+
+    for (Class cls = object_getClass(object); cls; cls = class_getSuperclass(cls)) {
+        Ivar ivar = class_getInstanceVariable(cls, name);
+        if (ivar)
+            return object_getIvar(object, ivar);
+    }
+
+    return nil;
+}
+
+static BOOL SPKSundialBoolForSelector(id object, SEL selector) {
+    if (!object || !selector || ![object respondsToSelector:selector])
+        return NO;
+
+    IMP implementation = [object methodForSelector:selector];
+    return implementation ? ((BOOL (*)(id, SEL))implementation)(object, selector) : NO;
+}
+
+static BOOL SPKSundialIsReelsHomeOrTab(id dataSource) {
+    id networkSource = SPKSundialObjectIvar(dataSource, "_networkSource");
+
+    if (!networkSource) {
+        id context = SPKSundialObjectIvar(dataSource, "context");
+        if (!context)
+            context = SPKSundialObjectIvar(dataSource, "_context");
+
+        if ([context respondsToSelector:@selector(networkSource)]) {
+            IMP implementation = [context methodForSelector:@selector(networkSource)];
+            if (implementation)
+                networkSource = ((id (*)(id, SEL))implementation)(context, @selector(networkSource));
+        }
+    }
+
+    return SPKSundialBoolForSelector(networkSource, @selector(isReelsHomeOrTab));
+}
+
+static NSArray *spkSundialFilterAndLimit(NSArray *list, id dataSource) {
     NSArray *filteredList = removeItemsInList(list, SPKFeedFilterSurfaceReels);
 
-    if ([SPKUtils getBoolPref:@"reels_prevent_doom_scroll"]) {
-        double reelCount = [SPKUtils getDoublePref:@"reels_doom_scroll_limit"];
-        return [filteredList subarrayWithRange:NSMakeRange(0, MIN((NSUInteger)reelCount, filteredList.count))];
+    if ([SPKUtils getBoolPref:@"reels_prevent_doom_scroll"] && SPKSundialIsReelsHomeOrTab(dataSource)) {
+        NSUInteger reelCount = (NSUInteger)[SPKUtils getDoublePref:@"reels_doom_scroll_limit"];
+        return [filteredList subarrayWithRange:NSMakeRange(0, MIN(reelCount, filteredList.count))];
     }
 
     return filteredList;
@@ -207,21 +247,21 @@ static NSArray *spkSundialFilterAndLimit(NSArray *list) {
 
 %hook IGSundialFeedDataSource
 - (NSArray *)objectsForListAdapter:(id)arg1 {
-    return spkSundialFilterAndLimit(%orig);
+    return spkSundialFilterAndLimit(%orig, self);
 }
 %end
 
 // Demangled name: IGSundialFeed.IGSundialFeedDataSource (IG <= 433)
 %hook _TtC13IGSundialFeed23IGSundialFeedDataSource
 - (NSArray *)objectsForListAdapter:(id)arg1 {
-    return spkSundialFilterAndLimit(%orig);
+    return spkSundialFilterAndLimit(%orig, self);
 }
 %end
 
 // Demangled name: IGSundialFeedDataSource.IGSundialFeedDataSource (IG 434+, class moved module)
 %hook _TtC23IGSundialFeedDataSource23IGSundialFeedDataSource
 - (NSArray *)objectsForListAdapter:(id)arg1 {
-    return spkSundialFilterAndLimit(%orig);
+    return spkSundialFilterAndLimit(%orig, self);
 }
 %end
 
