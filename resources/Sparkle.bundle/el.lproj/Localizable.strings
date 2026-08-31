@@ -301,6 +301,8 @@
 "BATCH_UNSENT_MESSAGES_FORMAT" = "%@ ανέστειλε %lu μηνύματα";
 "COMMON_ACTION_CLOSE" = "Κλείσιμο";
 "COMMON_DELETE_FAILED_TOAST" = "Αποτυχία διαγραφής";
+"COMMON_FOLLOW_BUTTON_FOLLOW_BACK" = "Ακολούθησε κι εσύ";
+"COMMON_FOLLOW_BUTTON_REQUESTED" = "Στάλθηκε αίτημα";
 "COMMON_MEDIA_TYPE_AUDIO" = "Ήχος";
 "COMMON_MEDIA_TYPE_GIF" = "GIF";
 "COMMON_MEDIA_TYPE_PHOTO" = "Φωτογραφία";

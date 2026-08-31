@@ -1,13 +1,14 @@
 // Story Mentions — Gallery-style bottom sheet listing mentioned users with Follow/Following buttons.
 // Triggered by the @ button in story overlays (SeenButtons.x). The user list
 // itself comes from SPKStoryMentions, the single deduped source shared with the
-// overlay button.
+// overlay button and its count badge.
 
 #import "../../AssetUtils.h"
 #import "SPKStrings.h"
 #import "../../InstagramHeaders.h"
 #import "../../Networking/SPKInstagramAPI.h"
 #import "../../Shared/Stories/SPKStoryMentions.h"
+#import "../../Shared/UI/SPKFollowButton.h"
 #import "../../Shared/UI/SPKMediaChrome.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
@@ -30,20 +31,7 @@ static void SPKStoryMentionsEnsureSessionCaches(void) {
 }
 
 static const void *kSPKMentionButtonPKKey = &kSPKMentionButtonPKKey;
-static const void *kSPKMentionButtonFollowingKey = &kSPKMentionButtonFollowingKey;
-
-static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
-    [btn setTitle:following ? SPKL(@"MENU_FOLLOWING") : SPKL(@"VC_BTN_FOLLOW") forState:UIControlStateNormal];
-    if (following) {
-        [btn setTitleColor:[SPKUtils SPKColor_InstagramPrimaryText] forState:UIControlStateNormal];
-        btn.backgroundColor = [SPKUtils SPKColor_InstagramSecondaryBackground];
-    } else {
-        [btn setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
-        btn.backgroundColor = [SPKUtils SPKColor_InstagramBlue] ?: UIColor.systemBlueColor;
-    }
-    btn.layer.cornerRadius = 8.0;
-    btn.clipsToBounds = YES;
-}
+static const void *kSPKMentionButtonStateKey = &kSPKMentionButtonStateKey;
 
 
 /// ============ Bottom sheet VC ============
@@ -55,8 +43,7 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
 @property (nonatomic, strong) UIImageView *avatarView;
 @property (nonatomic, strong) UILabel *nameLabel;
 @property (nonatomic, strong) UILabel *subLabel;
-@property (nonatomic, strong) UIButton *followBtn;
-@property (nonatomic, strong) UIActivityIndicatorView *spinner;
+@property (nonatomic, strong) UIControl *followBtn;
 @end
 
 @implementation SPKMentionCell
@@ -86,17 +73,8 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
         self.subLabel.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
         self.subLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
-        self.followBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-        self.followBtn.titleLabel.font = [UIFont systemFontOfSize:13 weight:UIFontWeightBold];
-        self.followBtn.layer.cornerRadius = 8.0;
-        self.followBtn.clipsToBounds = YES;
-        self.followBtn.translatesAutoresizingMaskIntoConstraints = NO;
+        self.followBtn = [SPKFollowButton button];
         [self.contentView addSubview:self.followBtn];
-
-        self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
-        self.spinner.hidesWhenStopped = YES;
-        self.spinner.translatesAutoresizingMaskIntoConstraints = NO;
-        [self.followBtn addSubview:self.spinner];
 
         UIStackView *textStack = [[UIStackView alloc] initWithArrangedSubviews:@[ self.nameLabel, self.subLabel ]];
         textStack.axis = UILayoutConstraintAxisVertical;
@@ -122,9 +100,6 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
             [self.followBtn.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
             [self.followBtn.widthAnchor constraintGreaterThanOrEqualToConstant:88],
             [self.followBtn.heightAnchor constraintEqualToConstant:32],
-
-            [self.spinner.centerXAnchor constraintEqualToAnchor:self.followBtn.centerXAnchor],
-            [self.spinner.centerYAnchor constraintEqualToAnchor:self.followBtn.centerYAnchor],
         ]];
     }
     return self;
@@ -137,8 +112,7 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
     // registration or one tap would fire a request per reuse. The button may also
     // arrive mid-request from the row it is being recycled away from.
     [self.followBtn removeTarget:nil action:NULL forControlEvents:UIControlEventAllEvents];
-    [self.spinner stopAnimating];
-    self.followBtn.userInteractionEnabled = YES;
+    [SPKFollowButton setLoading:NO forButton:self.followBtn];
 }
 
 @end
@@ -308,8 +282,7 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
 
     // Follow button state
     [cell.followBtn removeTarget:nil action:NULL forControlEvents:UIControlEventTouchUpInside];
-    [cell.spinner stopAnimating];
-    cell.spinner.color = [SPKUtils SPKColor_InstagramSecondaryText];
+    [SPKFollowButton setLoading:NO forButton:cell.followBtn];
 
     BOOL isMe = self.currentUsername && [username isEqualToString:self.currentUsername];
     if (isMe) {
@@ -317,16 +290,13 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
     } else {
         cell.followBtn.hidden = NO;
 
-        BOOL following = NO;
         NSString *pk = mention.pk;
         NSDictionary *status = pk ? self.friendshipStatuses[pk] : nil;
-        if ([status isKindOfClass:[NSDictionary class]]) {
-            following = [status[@"following"] boolValue];
-        }
-        SPKMentionStyleFollowButton(cell.followBtn, following);
+        SPKFollowButtonState state = [SPKFollowButton stateForFriendshipStatus:status];
+        [SPKFollowButton applyState:state toButton:cell.followBtn];
 
         objc_setAssociatedObject(cell.followBtn, kSPKMentionButtonPKKey, pk, OBJC_ASSOCIATION_COPY_NONATOMIC);
-        objc_setAssociatedObject(cell.followBtn, kSPKMentionButtonFollowingKey, @(following), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        objc_setAssociatedObject(cell.followBtn, kSPKMentionButtonStateKey, @(state), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [cell.followBtn addTarget:self action:@selector(spk_followTapped:) forControlEvents:UIControlEventTouchUpInside];
     }
 
@@ -335,36 +305,40 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
 
 #pragma mark - Follow/Unfollow
 
-- (void)spk_followTapped:(UIButton *)sender {
+- (void)spk_followTapped:(UIControl *)sender {
     NSString *pk = objc_getAssociatedObject(sender, kSPKMentionButtonPKKey);
     if (!pk.length)
         return;
 
     // Tracked explicitly rather than read back off the button title, which is
     // localized and would invert the action on every non-English language.
-    BOOL unfollowing = [objc_getAssociatedObject(sender, kSPKMentionButtonFollowingKey) boolValue];
+    SPKFollowButtonState currentState = (SPKFollowButtonState)[objc_getAssociatedObject(sender, kSPKMentionButtonStateKey) integerValue];
+    // Covers withdrawing a pending request as well as unfollowing.
+    BOOL unfollowing = [SPKFollowButton tapUnfollowsFromState:currentState];
 
     void (^doIt)(void) = ^{
-        UIActivityIndicatorView *spinner = nil;
-        for (UIView *subview in sender.subviews) {
-            if ([subview isKindOfClass:[UIActivityIndicatorView class]]) {
-                spinner = (UIActivityIndicatorView *)subview;
-                break;
-            }
-        }
-        NSString *savedTitle = [sender titleForState:UIControlStateNormal];
-        [sender setTitle:@"" forState:UIControlStateNormal];
-        sender.userInteractionEnabled = NO;
-        [spinner startAnimating];
+        [SPKFollowButton setLoading:YES forButton:sender];
 
         __weak typeof(self) weakSelf = self;
         SPKAPICompletion done = ^(NSDictionary *response, NSError *error) {
             BOOL ok = (response && [response[@"status"] isEqualToString:@"ok"]);
 
+            SPKFollowButtonState resolvedState = currentState;
             if (ok) {
-                NSMutableDictionary *merged = [weakSelf.friendshipStatuses[pk] mutableCopy] ?: [NSMutableDictionary dictionary];
-                merged[@"following"] = @(!unfollowing);
-                NSDictionary *updatedStatus = [merged copy];
+                // Following a private account yields a pending request rather than
+                // a follow, so prefer the status Instagram reports back over
+                // assuming the relationship we asked for.
+                NSDictionary *reported = response[@"friendship_status"];
+                NSDictionary *updatedStatus = nil;
+                if ([reported isKindOfClass:[NSDictionary class]]) {
+                    updatedStatus = reported;
+                } else {
+                    NSMutableDictionary *merged = [weakSelf.friendshipStatuses[pk] mutableCopy] ?: [NSMutableDictionary dictionary];
+                    merged[@"following"] = @(!unfollowing);
+                    merged[@"outgoing_request"] = @NO;
+                    updatedStatus = [merged copy];
+                }
+                resolvedState = [SPKFollowButton stateForFriendshipStatus:updatedStatus];
                 weakSelf.friendshipStatuses[pk] = updatedStatus;
                 SPKStoryMentionsEnsureSessionCaches();
                 SPKStoryMentionsFriendshipStatusCache[pk] = updatedStatus;
@@ -377,13 +351,10 @@ static void SPKMentionStyleFollowButton(UIButton *btn, BOOL following) {
             if (![currentPK isEqualToString:pk])
                 return;
 
-            [spinner stopAnimating];
-            sender.userInteractionEnabled = YES;
+            [SPKFollowButton setLoading:NO forButton:sender];
             if (ok) {
-                SPKMentionStyleFollowButton(sender, !unfollowing);
-                objc_setAssociatedObject(sender, kSPKMentionButtonFollowingKey, @(!unfollowing), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            } else {
-                [sender setTitle:savedTitle forState:UIControlStateNormal];
+                [SPKFollowButton applyState:resolvedState toButton:sender];
+                objc_setAssociatedObject(sender, kSPKMentionButtonStateKey, @(resolvedState), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
             }
         };
 

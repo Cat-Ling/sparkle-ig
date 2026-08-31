@@ -301,6 +301,8 @@
 "BATCH_UNSENT_MESSAGES_FORMAT" = "%@ desfez o envio de %lu mensagens";
 "COMMON_ACTION_CLOSE" = "Fechar";
 "COMMON_DELETE_FAILED_TOAST" = "Falha ao excluir";
+"COMMON_FOLLOW_BUTTON_FOLLOW_BACK" = "Seguir de volta";
+"COMMON_FOLLOW_BUTTON_REQUESTED" = "Solicitado";
 "COMMON_MEDIA_TYPE_AUDIO" = "Áudio";
 "COMMON_MEDIA_TYPE_GIF" = "GIF";
 "COMMON_MEDIA_TYPE_PHOTO" = "Foto";

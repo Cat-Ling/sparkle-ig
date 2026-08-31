@@ -301,6 +301,8 @@
 "BATCH_UNSENT_MESSAGES_FORMAT" = "%@ удалил(а) %lu сообщений";
 "COMMON_ACTION_CLOSE" = "Закрыть";
 "COMMON_DELETE_FAILED_TOAST" = "Ошибка удаления";
+"COMMON_FOLLOW_BUTTON_FOLLOW_BACK" = "Подписаться в ответ";
+"COMMON_FOLLOW_BUTTON_REQUESTED" = "Запрошено";
 "COMMON_MEDIA_TYPE_AUDIO" = "Аудио";
 "COMMON_MEDIA_TYPE_GIF" = "GIF";
 "COMMON_MEDIA_TYPE_PHOTO" = "Фото";

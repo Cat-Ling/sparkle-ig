@@ -301,6 +301,8 @@
 "BATCH_UNSENT_MESSAGES_FORMAT" = "%@ ha annullato %lu messaggi";
 "COMMON_ACTION_CLOSE" = "Chiudi";
 "COMMON_DELETE_FAILED_TOAST" = "Eliminazione non riuscita";
+"COMMON_FOLLOW_BUTTON_FOLLOW_BACK" = "Segui anche tu";
+"COMMON_FOLLOW_BUTTON_REQUESTED" = "Richiesto";
 "COMMON_MEDIA_TYPE_AUDIO" = "Audio";
 "COMMON_MEDIA_TYPE_GIF" = "GIF";
 "COMMON_MEDIA_TYPE_PHOTO" = "Foto";

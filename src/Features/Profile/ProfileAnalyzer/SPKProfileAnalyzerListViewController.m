@@ -3,6 +3,7 @@
 #import "../../../AssetUtils.h"
 #import "../../../Networking/SPKInstagramAPI.h"
 #import "../../../Shared/Avatars/SPKAvatarCache.h"
+#import "../../../Shared/UI/SPKFollowButton.h"
 #import "../../../Shared/UI/SPKIGAlertPresenter.h"
 #import "../../../Shared/UI/SPKMediaChrome.h"
 #import "../../../Utils.h"
@@ -25,8 +26,9 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
 #pragma mark - Follow-state memory cache (process-wide, TTL'd)
 
 @interface SPKPAFollowCache : NSObject
-+ (NSNumber *)followingForPK:(NSString *)pk;
-+ (void)setFollowing:(BOOL)following forPK:(NSString *)pk;
+/// Boxed SPKFollowButtonState, or nil when unknown or expired.
++ (NSNumber *)stateForPK:(NSString *)pk;
++ (void)setState:(SPKFollowButtonState)state forPK:(NSString *)pk;
 @end
 
 @implementation SPKPAFollowCache
@@ -38,7 +40,7 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
     });
     return m;
 }
-+ (NSNumber *)followingForPK:(NSString *)pk {
++ (NSNumber *)stateForPK:(NSString *)pk {
     if (!pk.length)
         return nil;
     NSDictionary *e = [self store][pk];
@@ -48,12 +50,12 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
         [[self store] removeObjectForKey:pk];
         return nil;
     }
-    return e[@"following"];
+    return e[@"state"];
 }
-+ (void)setFollowing:(BOOL)following forPK:(NSString *)pk {
++ (void)setState:(SPKFollowButtonState)state forPK:(NSString *)pk {
     if (!pk.length)
         return;
-    [self store][pk] = @{@"following" : @(following), @"ts" : [NSDate date]};
+    [self store][pk] = @{@"state" : @(state), @"ts" : [NSDate date]};
 }
 @end
 
@@ -64,8 +66,7 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
 @property (nonatomic, strong) UILabel *usernameLabel;
 @property (nonatomic, strong) UIImageView *verifiedBadge;
 @property (nonatomic, strong) UILabel *subtitleLabel;
-@property (nonatomic, strong) UIButton *actionButton;
-@property (nonatomic, strong) UIActivityIndicatorView *actionSpinner;
+@property (nonatomic, strong) UIControl *actionButton;
 @property (nonatomic, strong) NSLayoutConstraint *nameTrailingToButton;
 @property (nonatomic, strong) NSLayoutConstraint *nameTrailingToEdge;
 @property (nonatomic, strong) NSLayoutConstraint *nameTopConstraint;    // active when a subtitle is shown
@@ -115,22 +116,12 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
     _subtitleLabel.numberOfLines = 1;
     [self.contentView addSubview:_subtitleLabel];
 
-    _actionButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    _actionButton.translatesAutoresizingMaskIntoConstraints = NO;
-    _actionButton.titleLabel.font = [UIFont systemFontOfSize:14.0 weight:UIFontWeightSemibold];
-    _actionButton.layer.cornerRadius = 8.0;
-    _actionButton.contentEdgeInsets = UIEdgeInsetsMake(6, 14, 6, 14);
+    _actionButton = [SPKFollowButton button];
     _actionButton.hidden = YES;
     [_actionButton addTarget:self action:@selector(onAction) forControlEvents:UIControlEventTouchUpInside];
     [_actionButton setContentHuggingPriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
     [_actionButton setContentCompressionResistancePriority:UILayoutPriorityRequired forAxis:UILayoutConstraintAxisHorizontal];
     [self.contentView addSubview:_actionButton];
-
-    _actionSpinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
-    _actionSpinner.translatesAutoresizingMaskIntoConstraints = NO;
-    _actionSpinner.color = [SPKUtils SPKColor_InstagramSecondaryText];
-    _actionSpinner.hidesWhenStopped = YES;
-    [self.contentView addSubview:_actionSpinner];
 
     _nameTrailingToButton = [nameRow.trailingAnchor constraintLessThanOrEqualToAnchor:_actionButton.leadingAnchor constant:-10.0];
     _nameTrailingToEdge = [nameRow.trailingAnchor constraintLessThanOrEqualToAnchor:self.contentView.trailingAnchor constant:-16.0];
@@ -156,9 +147,6 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
         [_actionButton.trailingAnchor constraintEqualToAnchor:self.contentView.trailingAnchor
                                                      constant:-16.0],
         [_actionButton.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
-
-        [_actionSpinner.centerXAnchor constraintEqualToAnchor:_actionButton.centerXAnchor],
-        [_actionSpinner.centerYAnchor constraintEqualToAnchor:_actionButton.centerYAnchor],
     ]];
     _nameTrailingToButton.active = YES;
     _nameTopConstraint.active = YES;
@@ -190,7 +178,7 @@ typedef NS_ENUM(NSInteger, SPKPASortMode) {
     self.boundPK = nil;
     self.verifiedBadge.hidden = YES;
     self.onActionTap = nil;
-    [self.actionSpinner stopAnimating];
+    [SPKFollowButton setLoading:NO forButton:self.actionButton];
     self.actionButton.hidden = YES;
     self.subtitleLabel.hidden = NO;
     self.nameCenterConstraint.active = NO;
@@ -756,11 +744,14 @@ static NSString *SPKPARelativeDate(NSDate *date) {
     BOOL wantsButton = (self.kind == SPKPAListKindFollow || self.kind == SPKPAListKindUnfollow);
     [cell setActionButtonVisible:wantsButton];
     if (wantsButton) {
-        BOOL following = (self.kind == SPKPAListKindUnfollow);
-        NSNumber *cached = [SPKPAFollowCache followingForPK:user.pk];
+        // Until the batched lookup lands, assume the relationship the list itself
+        // implies: an unfollow list is people you follow.
+        SPKFollowButtonState state = (self.kind == SPKPAListKindUnfollow) ? SPKFollowButtonStateFollowing
+                                                                         : SPKFollowButtonStateNotFollowing;
+        NSNumber *cached = [SPKPAFollowCache stateForPK:user.pk];
         if (cached)
-            following = cached.boolValue;
-        [self styleButton:cell.actionButton following:following];
+            state = (SPKFollowButtonState)cached.integerValue;
+        [self styleButton:cell.actionButton state:state];
         __weak typeof(self) weakSelf = self;
         cell.onActionTap = ^(SPKPAUserCell *c) {
             [weakSelf toggleFollowForCell:c];
@@ -800,7 +791,7 @@ static NSString *SPKPARelativeDate(NSDate *date) {
     NSString *pk = user.pk;
     if (!pk.length)
         return;
-    if ([SPKPAFollowCache followingForPK:pk])
+    if ([SPKPAFollowCache stateForPK:pk])
         return;
     if ([self.requestedFollowPKs containsObject:pk])
         return;
@@ -833,7 +824,7 @@ static NSString *SPKPARelativeDate(NSDate *date) {
                                                 for (NSString *pk in statuses) {
                                                     id s = statuses[pk];
                                                     if ([s isKindOfClass:[NSDictionary class]])
-                                                        [SPKPAFollowCache setFollowing:[s[@"following"] boolValue] forPK:pk];
+                                                        [SPKPAFollowCache setState:[SPKFollowButton stateForFriendshipStatus:s] forPK:pk];
                                                 }
                                                 [weakSelf refreshVisibleFollowButtons];
                                             }
@@ -847,9 +838,9 @@ static NSString *SPKPARelativeDate(NSDate *date) {
         SPKPAUserCell *cell = (SPKPAUserCell *)[self.tableView cellForRowAtIndexPath:ip];
         if (![cell isKindOfClass:[SPKPAUserCell class]])
             continue;
-        NSNumber *cached = [SPKPAFollowCache followingForPK:cell.boundPK];
+        NSNumber *cached = [SPKPAFollowCache stateForPK:cell.boundPK];
         if (cached && !cell.actionButton.hidden)
-            [self styleButton:cell.actionButton following:cached.boolValue];
+            [self styleButton:cell.actionButton state:(SPKFollowButtonState)cached.integerValue];
     }
 }
 
@@ -955,18 +946,8 @@ static NSString *SPKPARelativeDate(NSDate *date) {
 
 #pragma mark - Follow / unfollow
 
-- (void)styleButton:(UIButton *)button following:(BOOL)following {
-    if (following) {
-        [button setTitle:SPKL(@"MENU_FOLLOWING") forState:UIControlStateNormal];
-        [button setTitleColor:[SPKUtils SPKColor_InstagramPrimaryText] forState:UIControlStateNormal];
-        button.backgroundColor = [SPKUtils SPKColor_InstagramSecondaryBackground];
-        button.layer.borderWidth = 0.0;
-    } else {
-        [button setTitle:SPKL(@"VC_BTN_FOLLOW") forState:UIControlStateNormal];
-        [button setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        button.backgroundColor = [SPKUtils SPKColor_InstagramBlue] ?: [UIColor systemBlueColor];
-        button.layer.borderWidth = 0.0;
-    }
+- (void)styleButton:(UIControl *)button state:(SPKFollowButtonState)state {
+    [SPKFollowButton applyState:state toButton:button];
 }
 
 - (void)toggleFollowForCell:(SPKPAUserCell *)cell {
@@ -974,32 +955,43 @@ static NSString *SPKPARelativeDate(NSDate *date) {
     if (!pk.length)
         return;
 
-    NSNumber *cached = [SPKPAFollowCache followingForPK:pk];
-    BOOL currentlyFollowing = cached ? cached.boolValue : (self.kind == SPKPAListKindUnfollow);
+    NSNumber *cached = [SPKPAFollowCache stateForPK:pk];
+    SPKFollowButtonState currentState = cached ? (SPKFollowButtonState)cached.integerValue
+                                               : (self.kind == SPKPAListKindUnfollow ? SPKFollowButtonStateFollowing
+                                                                                     : SPKFollowButtonStateNotFollowing);
+    BOOL unfollowing = [SPKFollowButton tapUnfollowsFromState:currentState];
 
-    cell.actionButton.hidden = YES;
-    [cell.actionSpinner startAnimating];
+    [SPKFollowButton setLoading:YES forButton:cell.actionButton];
 
-    void (^finish)(BOOL) = ^(BOOL nowFollowing) {
-        [SPKPAFollowCache setFollowing:nowFollowing forPK:pk];
-        [cell.actionSpinner stopAnimating];
-        if ([cell.boundPK isEqualToString:pk]) {
-            cell.actionButton.hidden = NO;
-            [self styleButton:cell.actionButton following:nowFollowing];
-        }
+    void (^finish)(SPKFollowButtonState) = ^(SPKFollowButtonState newState) {
+        [SPKPAFollowCache setState:newState forPK:pk];
+        // The cell may have been recycled onto another user mid-request; its new
+        // row is already configured, so leave the control to it.
+        if (![cell.boundPK isEqualToString:pk])
+            return;
+        [SPKFollowButton setLoading:NO forButton:cell.actionButton];
+        [self styleButton:cell.actionButton state:newState];
     };
 
-    if (currentlyFollowing) {
-        [SPKInstagramAPI unfollowUserPK:pk
-                             completion:^(NSDictionary *resp, NSError *error) {
-                                 finish(error ? currentlyFollowing : NO);
-                             }];
-    } else {
-        [SPKInstagramAPI followUserPK:pk
-                           completion:^(NSDictionary *resp, NSError *error) {
-                               finish(error ? currentlyFollowing : YES);
-                           }];
-    }
+    // Following a private account yields a pending request rather than a follow,
+    // so prefer the status Instagram reports back over the one we asked for.
+    SPKAPICompletion done = ^(NSDictionary *resp, NSError *error) {
+        if (error) {
+            finish(currentState);
+            return;
+        }
+        NSDictionary *reported = resp[@"friendship_status"];
+        if ([reported isKindOfClass:[NSDictionary class]]) {
+            finish([SPKFollowButton stateForFriendshipStatus:reported]);
+            return;
+        }
+        finish(unfollowing ? SPKFollowButtonStateNotFollowing : SPKFollowButtonStateFollowing);
+    };
+
+    if (unfollowing)
+        [SPKInstagramAPI unfollowUserPK:pk completion:done];
+    else
+        [SPKInstagramAPI followUserPK:pk completion:done];
 }
 
 @end

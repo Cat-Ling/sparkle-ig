@@ -301,6 +301,8 @@
 "BATCH_UNSENT_MESSAGES_FORMAT" = "%@ hat %lu Nachrichten zurückgezogen";
 "COMMON_ACTION_CLOSE" = "Schließen";
 "COMMON_DELETE_FAILED_TOAST" = "Löschen fehlgeschlagen";
+"COMMON_FOLLOW_BUTTON_FOLLOW_BACK" = "Zurückfolgen";
+"COMMON_FOLLOW_BUTTON_REQUESTED" = "Angefragt";
 "COMMON_MEDIA_TYPE_AUDIO" = "Audio";
 "COMMON_MEDIA_TYPE_GIF" = "GIF";
 "COMMON_MEDIA_TYPE_PHOTO" = "Foto";

@@ -301,6 +301,8 @@
 "BATCH_UNSENT_MESSAGES_FORMAT" = "%@ ने %lu संदेशों को भेजना रद्द किया";
 "COMMON_ACTION_CLOSE" = "बंद करें";
 "COMMON_DELETE_FAILED_TOAST" = "हटाने में विफल";
+"COMMON_FOLLOW_BUTTON_FOLLOW_BACK" = "वापस फ़ॉलो करें";
+"COMMON_FOLLOW_BUTTON_REQUESTED" = "अनुरोध भेजा";
 "COMMON_MEDIA_TYPE_AUDIO" = "ऑडियो";
 "COMMON_MEDIA_TYPE_GIF" = "GIF";
 "COMMON_MEDIA_TYPE_PHOTO" = "फोटो";

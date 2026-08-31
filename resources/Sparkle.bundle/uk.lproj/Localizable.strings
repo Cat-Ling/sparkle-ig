@@ -301,6 +301,8 @@
 "BATCH_UNSENT_MESSAGES_FORMAT" = "%@ видалив(-ла) %lu повідомлень";
 "COMMON_ACTION_CLOSE" = "Закрити";
 "COMMON_DELETE_FAILED_TOAST" = "Не вдалося видалити";
+"COMMON_FOLLOW_BUTTON_FOLLOW_BACK" = "Стежити взаємно";
+"COMMON_FOLLOW_BUTTON_REQUESTED" = "Запит надіслано";
 "COMMON_MEDIA_TYPE_AUDIO" = "Аудіо";
 "COMMON_MEDIA_TYPE_GIF" = "GIF";
 "COMMON_MEDIA_TYPE_PHOTO" = "Фото";

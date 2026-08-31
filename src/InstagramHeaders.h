@@ -995,3 +995,25 @@ typedef FLEXAlertAction *_Nonnull (^FLEXAlertActionHandler)(void (^handler)(NSAr
 - (long long)switchToUser:(id)user destinationAppSurface:(id)surface destinationURL:(id)url entryPoint:(long long)point loggingData:(id)data;
 - (long long)switchToUserWithPK:(id)pk destinationAppSurface:(id)surface destinationURL:(id)url entryPoint:(long long)point loggingData:(id)data;
 @end
+
+// Instagram's follow control. Declared as a protocol because the class itself is
+// plain Objective-C on older builds and a Swift class on newer ones, so it is
+// resolved by name at runtime and messaged through this contract. Mirrors
+// IGFollowButtonConforming; the control is a UIControl, not a UIButton, and it
+// renders its own attributed title, so setTitle:forState: does not exist on it.
+@protocol SPKIGFollowButtonConforming <NSObject>
+- (instancetype)initWithViewConfiguration:(id)configuration;
+- (void)setViewConfiguration:(id)configuration;
+@property (nonatomic) long long buttonState;
+@property (nonatomic, readonly) UILabel *titleLabel;
+@property (nonatomic) double minimumWidth;
+@property (nonatomic) double maximumWidth;
+- (void)setIsShimmering:(BOOL)shimmering;
+@end
+
+// Value object describing the follow control's appearance. Stays Objective-C on
+// every supported build; the category carrying the default factory was renamed
+// between versions but the selector itself did not change.
+@interface IGFollowButtonViewConfiguration : NSObject
++ (instancetype)defaultButtonConfiguration;
+@end
