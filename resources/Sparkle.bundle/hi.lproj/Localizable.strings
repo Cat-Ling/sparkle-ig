@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Instagram Plus बटन छिपाएं";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "यह सेटिंग The story long-press menu shows the actual story without putting you on the viewer list.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "Story पूर्वावलोकन अनलॉक करें";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "स्टोरी मेंशन खोले गए";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "यह सेटिंग Moves to the next story when you press the eye button.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "यह सेटिंग Moves to the next story when you press like.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "ट्रेंडिंग में शामिल हों छिपाएं";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "यह सेटिंग हटाती है stories people recently added to their highlights, from the tray and from playing past the last story. Opening a highlight yourself still works.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "हाल के हाइलाइट्स छिपाएं";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "स्टोरी मेंशन बटन पर उल्लिखित अलग-अलग खातों की संख्या दिखाता है। इसके लिए “Story उल्लेख दिखाएं” चालू होना ज़रूरी है।";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "मेंशन गिनती बैज";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "यह सेटिंग जोड़ती है a search button to your story's viewer list to search by name, filter by either side of the follow relationship, and star viewers.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "दर्शक सूची खोजें";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "यह सेटिंग Shows the vote count for each poll option.";

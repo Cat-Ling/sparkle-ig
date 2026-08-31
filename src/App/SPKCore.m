@@ -122,6 +122,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"stories_gallery_upload_sticker" : @(NO),
         @"stories_hide_join_trending" : @(NO),
         @"stories_mentions_btn" : @(NO),
+        @"stories_mentions_count_badge" : @(YES),
         @"stories_unlock_preview" : @(NO),
         @"stories_hide_ig_plus_button" : @(NO),
         @"stories_search_viewer_list" : @(NO),

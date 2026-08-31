@@ -62,6 +62,20 @@ BOOL SPKChromeCanvasOwnsSecureField(UITextField *field);
 /// IG-styled glyph via `+[SPKAssetUtils instagramIconNamed:]`. Clears `symbolName`.
 - (void)setIconResource:(NSString *)resourceName pointSize:(CGFloat)pointSize;
 
+/// Adds `view` inside the button's capture-redacted canvas, so accessories such
+/// as a count badge disappear from screenshots and recordings along with the
+/// glyph. A plain `addSubview:` lands outside the canvas and stays visible: the
+/// generic tag-based capture interception deliberately skips this class because
+/// the button owns its redaction.
+///
+/// Constrain the view against `chromeAnchorView`, never against its resulting
+/// superview: the canvas re-parents its children once the secure canvas layer
+/// materialises, and only constraints pinned to the stable ancestor survive.
+- (void)addChromeSubview:(UIView *)view;
+
+/// Stable ancestor to constrain views passed to `addChromeSubview:` against.
+@property (nonatomic, strong, readonly) UIView *chromeAnchorView;
+
 - (instancetype)init NS_UNAVAILABLE;
 - (instancetype)initWithFrame:(CGRect)frame NS_UNAVAILABLE;
 - (instancetype)initWithCoder:(NSCoder *)coder NS_UNAVAILABLE;

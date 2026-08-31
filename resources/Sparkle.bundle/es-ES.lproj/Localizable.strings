@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Ocultar botón de Instagram Plus";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "El menú de pulsación larga sobre una historia muestra la historia real sin incluirte en la lista de espectadores.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "Desbloquear vista previa de historia";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "Menciones de historias abiertas";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "Pasa a la siguiente historia cuando pulsas el botón del ojo.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "Pasa a la siguiente historia cuando das me gusta.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "Ocultar unirse a tendencias";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "Quita las historias que otras personas han añadido recientemente a sus destacadas, tanto de la barra como de la reproducción después de la última historia. Abrir una destacada tú sigue funcionando.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "Ocultar destacadas recientes";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "Muestra el número de cuentas mencionadas únicas en el botón de menciones de la historia. Requiere «Mostrar menciones de historia».";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "Insignia de recuento de menciones";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "Añade un botón de búsqueda a la lista de espectadores de tu historia para buscar por nombre, filtrar por cada lado de la relación de seguimiento y destacar espectadores.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "Buscar en lista de visualización";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "Muestra el número de votos de cada opción de la encuesta.";

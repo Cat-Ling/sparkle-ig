@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Ascunde buton Instagram Plus";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "Meniul de apăsare lungă pe o poveste arată povestea reală fără să te treacă în lista de vizionări.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "Deblochează previzualizare poveste";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "Mențiunile din povești au fost deschise";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "Trece la povestea următoare când apeși butonul ochi.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "Trece la povestea următoare când apreciezi.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "Ascunde alăturați-vă unui trending";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "Elimină poveștile adăugate recent de alții la evidențieri, atât din bară, cât și din redarea de după ultima poveste. Deschiderea unei evidențieri de către tine funcționează în continuare.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "Ascunde highlights recente";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "Afișează numărul de conturi menționate unice pe butonul de mențiuni al poveștii. Necesită „Arată mențiuni poveste”.";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "Insignă cu numărul de mențiuni";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "Adaugă un buton de căutare în lista celor care ți-au văzut povestea, pentru a căuta după nume, a filtra după fiecare parte a relației de urmărire și a marca vizitatori cu stea.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "Caută în lista de vizualizare";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "Arată numărul de voturi pentru fiecare opțiune din sondaj.";

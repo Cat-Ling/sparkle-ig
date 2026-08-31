@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Ẩn Nút Instagram Plus";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "Tùy chọn này The story long-press menu shows the actual story without putting you on the viewer list.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "Mở khóa Xem trước Story";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "Đã mở lượt nhắc trong tin";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "Tùy chọn này Moves to the next story when you press the eye button.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "Tùy chọn này Moves to the next story when you press like.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "Ẩn Tham gia Xu hướng";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "Tùy chọn này xóa stories people recently added to their highlights, from the tray and from playing past the last story. Opening a highlight yourself still works.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "Ẩn Tin nổi bật Gần đây";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "Hiển thị số tài khoản riêng biệt được nhắc đến trên nút nhắc đến của tin. Yêu cầu “Hiển thị Đề cập Story”.";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "Huy hiệu số lượt nhắc";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "Tùy chọn này thêm a search button to your story's viewer list to search by name, filter by either side of the follow relationship, and star viewers.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "Tìm kiếm Danh sách Người xem";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "Tùy chọn này Shows the vote count for each poll option.";

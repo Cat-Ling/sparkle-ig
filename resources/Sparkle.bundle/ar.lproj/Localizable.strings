@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "إخفاء زر Instagram Plus";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "تعرض قائمة الضغط المطول على القصة القصة الفعلية دون إدراجك في قائمة المشاهدين.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "فتح معاينة القصة";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "تم فتح إشارات القصص";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "ينتقل إلى القصة التالية عند الضغط على زر العين.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "ينتقل إلى القصة التالية عند الضغط على إعجاب.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "إخفاء الانضمام إلى رائج";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "يزيل القصص التي أضافها الناس مؤخراً إلى أبرز الأحداث، من الشريط ومن التشغيل بعد آخر قصة. فتح أبرز الأحداث بنفسك يبقى متاحاً.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "إخفاء الأبرز المضافة مؤخراً";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "تعرض عدد الحسابات المذكورة الفريدة على زر إشارات القصة. يتطلب «عرض إشارات القصة».";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "شارة عدد الإشارات";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "يضيف زر بحث إلى قائمة مشاهدي قصتك للبحث بالاسم والتصفية حسب أي من طرفي علاقة المتابعة وتمييز المشاهدين بنجمة.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "قائمة المشاهدين للبحث";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "يعرض عدد الأصوات لكل خيار في استطلاع الرأي.";

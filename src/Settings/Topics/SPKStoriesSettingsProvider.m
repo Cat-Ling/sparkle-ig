@@ -173,6 +173,10 @@ static NSArray *SPKStoriesSettingsSections(void) {
                                            icon:SPKSettingsIcon(@"mention")
                                     defaultsKey:@"stories_mentions_btn"],
                                SPKL(@"STORIES_OTHER_SHOW_STORY_MENTIONS_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE")
+                                           icon:SPKSettingsIcon(@"users")
+                                    defaultsKey:@"stories_mentions_count_badge"],
+                               SPKL(@"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP")),
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_TITLE")
                                            icon:SPKSettingsIcon(@"poll")
                                     defaultsKey:@"stories_poll_vote_counts"],

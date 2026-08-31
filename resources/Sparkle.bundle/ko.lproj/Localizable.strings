@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Instagram Plus 버튼 숨기기";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "스토리 길게 누르기 메뉴에서 시청자 목록에 남지 않고 실제 스토리를 확인할 수 있습니다.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "스토리 미리보기 잠금 해제";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "스토리 언급을 열었습니다";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "눈 버튼을 누르면 다음 스토리로 이동합니다.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "좋아요를 누르면 다음 스토리로 이동합니다.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "트렌딩 참여 숨기기";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "사람들이 최근 하이라이트에 추가한 스토리를 트레이와 마지막 스토리 이후 자동 재생에서 제거합니다. 직접 하이라이트를 여는 것은 그대로 작동합니다.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "최근 하이라이트 숨기기";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "스토리 멘션 버튼에 중복을 제외한 멘션된 계정 수를 표시합니다. “스토리 멘션 표시”가 필요합니다.";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "멘션 개수 배지";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "내 스토리의 뷰어 목록에 검색 버튼을 추가해 이름으로 검색하고, 팔로우 관계의 양쪽으로 필터링하고, 뷰어에 별표를 지정합니다.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "뷰어 목록 검색";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "각 설문 항목의 투표 수를 표시합니다.";

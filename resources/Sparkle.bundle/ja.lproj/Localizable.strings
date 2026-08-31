@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Instagram Plus ボタンを非表示";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "ストーリーズの長押しメニューで、閲覧者リストに載ることなく実際のストーリーズを表示します。";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "ストーリープレビューをアンロック";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "ストーリーズのメンションを開きました";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "目のボタンを押すと次のストーリーズに進みます。";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "いいねを押すと次のストーリーズに進みます。";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "トレンドに参加を非表示";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "トレイと、最後のストーリーズの後に自動再生される表示の両方から、他の人が最近ハイライトに追加したストーリーズを取り除きます。自分でハイライトを開く操作は引き続き機能します。";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "最近のハイライトを非表示";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "ストーリーズのメンションボタンに、重複を除いたメンション先アカウント数を表示します。 「ストーリーメンションを表示」が必要です。";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "メンション数バッジ";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "自分のストーリーズの閲覧者リストに検索ボタンを追加し、名前で検索したり、フォロー関係のどちらか一方で絞り込んだり、閲覧者にスターを付けたりできます。";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "視聴者リストを検索";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "投票の各選択肢の得票数を表示します。";

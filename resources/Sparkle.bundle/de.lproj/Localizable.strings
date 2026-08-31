@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Instagram Plus-Schaltfläche ausblenden";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "Das Menü beim langen Drücken auf eine Story zeigt die tatsächliche Story, ohne dich in die Zuschauerliste zu setzen.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "Story-Vorschau entsperren";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "Story-Erwähnungen geöffnet";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "Wechselt zur nächsten Story, wenn du den Augen-Button drückst.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "Wechselt zur nächsten Story, wenn du likest.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "Trending beitreten ausblenden";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "Entfernt Storys, die andere kürzlich zu ihren Highlights hinzugefügt haben, aus der Leiste und aus der Wiedergabe nach der letzten Story. Ein Highlight selbst zu öffnen funktioniert weiterhin.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "Kürzlich hinzugefügte Highlights ausblenden";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "Zeigt die Anzahl der eindeutig erwähnten Konten auf der Story-Erwähnungsschaltfläche an. Erfordert „Story-Erwähnungen anzeigen“.";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "Erwähnungszähler";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "Fügt der Zuschauerliste deiner Story einen Suchbutton hinzu, um nach Namen zu suchen, nach beiden Seiten der Folgebeziehung zu filtern und Zuschauer mit einem Stern zu markieren.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "Zuschauerliste durchsuchen";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "Zeigt die Stimmenzahl für jede Umfrageoption.";

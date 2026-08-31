@@ -185,6 +185,7 @@ On systems without Liquid Glass, the tab bar section is replaced by a focused to
 - **Hide Story Midcards**: Removes the "Join a trending" / "Add Yours" promo cards from the stories tray. 
 - **Hide Recent Highlights**: Removes resurfaced highlights, the stories Instagram serves once you have watched every unseen story. They are dropped in two places, because the story tray and the story viewer are fed separately: from the tray, so they no longer appear as rings, and from the viewer's own reel list, so tapping forward past the last story no longer walks into them. Opening a highlight yourself from a profile is unaffected.
 - **Show Story Mentions**: Adds a mentions button listing mentioned users. Each account appears once no matter how many mention stickers point at it, and the story's own author is left out of the list. Tapping a user opens their real profile over the story viewer instead of closing it, so swiping back or tapping the back button returns you straight to the story.
+- **Mention Count Badge**: Shows the number of unique mentioned accounts on the story mentions button. Requires Show Story Mentions. The badge is redacted along with the button when Hide UI on Capture is on.
 - **Show Poll Vote Counts**: Shows vote counts next to poll options.
 
 ---

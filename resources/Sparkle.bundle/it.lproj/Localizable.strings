@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Nascondi Pulsante Instagram Plus";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "Il menu che appare tenendo premuta una storia mostra la storia reale senza inserirti nell'elenco di chi l'ha vista.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "Sblocca Anteprima Storia";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "Menzioni nelle storie aperte";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "Passa alla storia successiva quando premi il pulsante occhio.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "Passa alla storia successiva quando metti mi piace.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "Nascondi Unisciti a Trending";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "Rimuove le storie che altri hanno aggiunto di recente alle loro in evidenza, sia dalla barra sia dalla riproduzione dopo l'ultima storia. Aprire tu una storia in evidenza continua a funzionare.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "Nascondi In Evidenza Recenti";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "Mostra il numero di account menzionati univoci sul pulsante delle menzioni della storia. Richiede «Mostra Menzioni Storia».";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "Badge conteggio menzioni";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "Aggiunge un pulsante di ricerca all'elenco di chi ha visto la tua storia per cercare per nome, filtrare per entrambi i lati della relazione di follow e mettere una stella agli spettatori.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "Ricerca Elenco Visualizzatori";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "Mostra il numero di voti per ogni opzione del sondaggio.";

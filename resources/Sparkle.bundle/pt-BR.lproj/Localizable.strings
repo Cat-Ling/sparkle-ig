@@ -1938,6 +1938,7 @@
 "STORIES_INSTAGRAM_PLUS_HIDE_INSTAGRAM_PLUS_BUTTON_TITLE" = "Ocultar Botão Instagram Plus";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_HELP" = "O menu de toque longo em um story mostra o story real sem colocar você na lista de quem viu.";
 "STORIES_INSTAGRAM_PLUS_UNLOCK_STORY_PREVIEW_TITLE" = "Desbloquear Visualização de Story";
+"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT" = "%@+";
 "STORIES_MENTIONS_OPENED_TOAST" = "Menções em stories abertas";
 "STORIES_NAVIGATION_ADVANCE_EYE_BUTTON_HELP" = "Vai para o próximo story quando você pressiona o botão de olho.";
 "STORIES_NAVIGATION_ADVANCE_STORY_LIKE_HELP" = "Vai para o próximo story quando você curte.";
@@ -1948,6 +1949,8 @@
 "STORIES_OTHER_HIDE_JOIN_TRENDING_TITLE" = "Ocultar Junte-se a Tendência";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_HELP" = "Remove os stories que outras pessoas adicionaram recentemente aos destaques, tanto da barra quanto da reprodução após o último story. Abrir um destaque por conta própria continua funcionando.";
 "STORIES_OTHER_HIDE_RECENT_HIGHLIGHTS_TITLE" = "Ocultar Destaques Recentes";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_HELP" = "Mostra o número de contas mencionadas únicas no botão de menções do story. Requer “Mostrar Menções de Story”.";
+"STORIES_OTHER_MENTIONS_COUNT_BADGE_TITLE" = "Selo de contagem de menções";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_HELP" = "Adiciona um botão de busca à lista de quem viu seu story para procurar por nome, filtrar por cada lado da relação de seguir e marcar pessoas com estrela.";
 "STORIES_OTHER_SEARCH_VIEWER_LIST_TITLE" = "Pesquisar Lista de Visualizadores";
 "STORIES_OTHER_SHOW_POLL_VOTE_COUNTS_HELP" = "Mostra a quantidade de votos de cada opção da enquete.";
