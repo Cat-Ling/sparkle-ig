@@ -119,9 +119,6 @@ typedef NS_ENUM(int16_t, SPKGallerySource) {
 /// Human-readable label for the source type.
 - (NSString *)sourceLabel;
 
-/// Short label for origin pill (e.g. Reel, Feed).
-- (NSString *)shortSourceLabel;
-
 /// Primary line in list mode: username when known, else `displayName`.
 - (NSString *)listPrimaryTitle;
 
@@ -140,8 +137,6 @@ typedef NS_ENUM(int16_t, SPKGallerySource) {
 
 /// Source-appropriate title for the "open original" action (e.g. "Open Story", "Open Reel", "Open Post").
 - (NSString *)openOriginalActionTitle;
-
-+ (NSString *)shortLabelForSource:(SPKGallerySource)source;
 
 + (void)generateThumbnailForFile:(SPKGalleryFile *)file
                       completion:(void (^_Nullable)(BOOL success))completion;

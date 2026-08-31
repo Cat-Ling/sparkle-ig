@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryLockViewController.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
@@ -148,7 +149,7 @@ static NSInteger const kPasscodeLength = 4;
     [self.keyPressFeedbackGenerator prepare];
 
     self.cancelButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.cancelButton setTitle:@"Cancel" forState:UIControlStateNormal];
+    [self.cancelButton setTitle:SPKL(@"ALERT_ACTION_CANCEL") forState:UIControlStateNormal];
     [self.cancelButton setTitleColor:[SPKUtils SPKColor_InstagramPrimaryText] forState:UIControlStateNormal];
     self.cancelButton.titleLabel.font = [UIFont systemFontOfSize:17];
     self.cancelButton.translatesAutoresizingMaskIntoConstraints = NO;
@@ -290,26 +291,26 @@ static NSInteger const kPasscodeLength = 4;
     NSString *protectedName = self.lockManager.protectedContentName;
     switch (self.mode) {
     case SPKGalleryLockModeUnlock:
-        self.titleLabel.text = @"Enter Passcode";
-        self.subtitleLabel.text = [NSString stringWithFormat:@"Enter your passcode to unlock %@", protectedName];
+        self.titleLabel.text = SPKL(@"GALLERY_GALLERY_LOCK_ENTER_PASSCODE_TEXT");
+        self.subtitleLabel.text = [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_LOCK_ENTER_PASSCODE_UNLOCK_VALUE_FORMAT"), protectedName];
         break;
 
     case SPKGalleryLockModeSetPasscode:
-        self.titleLabel.text = self.firstPasscode ? @"Confirm Passcode" : @"New Passcode";
+        self.titleLabel.text = self.firstPasscode ? SPKL(@"GALLERY_GALLERY_LOCK_CONFIRM_PASSCODE_TEXT") : SPKL(@"GALLERY_GALLERY_LOCK_NEW_PASSCODE_TEXT");
         self.subtitleLabel.text = self.firstPasscode
-                                      ? @"Re-enter your new passcode"
-                                      : [NSString stringWithFormat:@"Create a passcode to protect %@", protectedName];
+                                      ? SPKL(@"GALLERY_GALLERY_LOCK_RE_ENTER_NEW_PASSCODE_TEXT")
+                                      : [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_LOCK_CREATE_PASSCODE_PROTECT_VALUE_FORMAT"), protectedName];
         break;
 
     case SPKGalleryLockModeChangePasscode:
         if (!self.hasVerifiedOldPasscode) {
-            self.titleLabel.text = @"Enter Current Passcode";
-            self.subtitleLabel.text = [NSString stringWithFormat:@"Enter your current %@ passcode", protectedName];
+            self.titleLabel.text = SPKL(@"GALLERY_GALLERY_LOCK_ENTER_CURRENT_PASSCODE_TEXT");
+            self.subtitleLabel.text = [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_LOCK_ENTER_CURRENT_VALUE_PASSCODE_FORMAT"), protectedName];
         } else {
-            self.titleLabel.text = self.firstPasscode ? @"Confirm Passcode" : @"New Passcode";
+            self.titleLabel.text = self.firstPasscode ? SPKL(@"GALLERY_GALLERY_LOCK_CONFIRM_PASSCODE_TEXT") : SPKL(@"GALLERY_GALLERY_LOCK_NEW_PASSCODE_TEXT");
             self.subtitleLabel.text = self.firstPasscode
-                                          ? @"Re-enter your new passcode"
-                                          : @"Create a new passcode";
+                                          ? SPKL(@"GALLERY_GALLERY_LOCK_RE_ENTER_NEW_PASSCODE_TEXT")
+                                          : SPKL(@"GALLERY_GALLERY_LOCK_CREATE_NEW_PASSCODE_TEXT");
         }
         break;
     }

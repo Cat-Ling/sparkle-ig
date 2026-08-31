@@ -6,6 +6,7 @@
 #import "../../Shared/Gallery/SPKGalleryViewController.h"
 #import "../../Utils.h"
 #import "../../App/SPKPerfMeter.h"
+#import "../../Shared/Navigation/SPKTabConfiguration.h"
 
 static const void *kSPKHomeTabSettingsLongPressAssocKey = &kSPKHomeTabSettingsLongPressAssocKey;
 static const void *kSPKGalleryTabLongPressAssocKey = &kSPKGalleryTabLongPressAssocKey;
@@ -192,20 +193,27 @@ static BOOL SPKTabButtonMatchesTarget(NSString *identifier, NSString *label, NSS
 }
 
 static BOOL SPKIsMessagesOnlyMode(void) {
-    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
-    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
-    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
-    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
-    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
-    
-    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
-    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
-    
-    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
+    return [SPKSingleVisibleTabIdentifierFromPreferences() isEqualToString:SPKTabIdentifierDirect];
+}
+
+static NSString *SPKSparkleTabIdentifierForAccessibilityIdentifier(NSString *identifier) {
+    if ([identifier isEqualToString:@"mainfeed-tab"]) return SPKTabIdentifierFeed;
+    if ([identifier isEqualToString:@"reels-tab"]) return SPKTabIdentifierClips;
+    if ([identifier isEqualToString:@"direct-inbox-tab"]) return SPKTabIdentifierDirect;
+    if ([identifier isEqualToString:@"camera-tab"]) return SPKTabIdentifierCreate;
+    if ([identifier isEqualToString:@"explore-tab"]) return SPKTabIdentifierSearch;
+    if ([identifier isEqualToString:@"profile-tab"]) return SPKTabIdentifierProfile;
+    return nil;
 }
 
 static BOOL SPKTabHiddenForIdentifier(NSString *identifier) {
     BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
+
+    // A hidden tab that Saved is borrowing still has its button on the bar, so
+    // the shortcut stays on it instead of moving to the next tab along.
+    NSString *sparkleIdentifier = SPKSparkleTabIdentifierForAccessibilityIdentifier(identifier);
+    if (sparkleIdentifier && [sparkleIdentifier isEqualToString:SPKEffectiveSavedCarrier()])
+        return NO;
 
     if ([identifier isEqualToString:@"mainfeed-tab"])
         return [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
@@ -263,10 +271,11 @@ static BOOL SPKTabIdentifierMatchesGalleryShortcut(NSString *identifier, NSStrin
     return SPKTabButtonMatchesTarget(identifier, label, SPKResolvedGalleryShortcutTabIdentifier());
 }
 
+// The accessibility label is localized, so it can never be compared against an
+// English string. Identity comes from the identifier match alone.
 static BOOL SPKShouldReplaceProfileTabLongPress(NSString *identifier, NSString *label) {
-    return [SPKGalleryShortcutTabIdentifier() isEqualToString:@"profile-tab"] &&
-           [identifier isEqualToString:@"profile-tab"] &&
-           [(label ?: @"") isEqualToString:@"Profile"];
+    return [SPKResolvedGalleryShortcutTabIdentifier() isEqualToString:@"profile-tab"] &&
+           SPKTabButtonMatchesTarget(identifier, label, @"profile-tab");
 }
 
 // Show Sparkle tweak settings by holding on the settings/more icon under profile for ~1 second
@@ -295,19 +304,6 @@ static BOOL SPKShouldReplaceProfileTabLongPress(NSString *identifier, NSString *
     NSString *settingsHost = SPKResolvedSettingsShortcutTabIdentifier();
     BOOL hostsSettings = settingsHost && SPKTabButtonMatchesTarget(identifier, label, settingsHost);
     BOOL matchesGallery = SPKTabIdentifierMatchesGalleryShortcut(identifier, label);
-
-    SPKLog(@"TabBar", @"[Sparkle] IGTabBarButton layoutSubviews: ID='%@', label='%@', settingsHost='%@', hostsSettings=%d, matchesGallery=%d",
-           identifier, label, settingsHost, hostsSettings, matchesGallery);
-
-    for (UIGestureRecognizer *g in self.gestureRecognizers) {
-        if ([g isKindOfClass:[UILongPressGestureRecognizer class]]) {
-            SPKLog(@"TabBar", @"[Sparkle] Existing gesture before changes: %@, hasGalleryAssoc=%d, hasSettingsAssoc=%d, duration=%f",
-                   NSStringFromClass(g.class),
-                   objc_getAssociatedObject(g, kSPKGalleryTabLongPressAssocKey) != nil,
-                   objc_getAssociatedObject(g, kSPKHomeTabSettingsLongPressAssocKey) != nil,
-                   ((UILongPressGestureRecognizer *)g).minimumPressDuration);
-        }
-    }
 
     if (hostsSettings) {
         [self spk_removeGalleryLongPressIfNeeded];
@@ -399,14 +395,11 @@ for (UIGestureRecognizer *gesture in [self.gestureRecognizers copy]) {
 }
 
 %new - (void)handleHomeTabLongPress:(UILongPressGestureRecognizer *)sender {
-SPKLog(@"TabBar", @"[Sparkle] handleHomeTabLongPress: state=%ld, view=%@, window=%@",
-       (long)sender.state, NSStringFromClass([sender.view class]),
-       sender.view.window ? @"YES" : @"NO");
-if (sender.state != UIGestureRecognizerStateBegan)
-    return;
+    if (sender.state != UIGestureRecognizerStateBegan)
+        return;
 
-SPKFireShortcutHaptic();
-[SPKUtils showSettingsVC:[self window]];
+    SPKFireShortcutHaptic();
+    [SPKUtils showSettingsVC:[self window]];
 }
 
 %new - (void)handleDirectInboxTabLongPress:(UILongPressGestureRecognizer *)sender {

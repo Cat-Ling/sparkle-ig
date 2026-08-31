@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import "SPKStrings.h"
 #import <objc/message.h>
 #import <substrate.h>
 
@@ -296,8 +297,8 @@ static void SPKConfirmDMRefresh(id self, id arg, void (^confirmBlock)(void)) {
             sSPKDMRefreshAlertVisible = NO;
             SPKDMEndRefreshIfNeeded(self, arg);
         }
-        title:@"Confirm Inbox Refresh"
-        message:@"Refreshing your inbox reloads direct messages from the server. Any unsent messages kept in chats will be lost."];
+        title:SPKL(@"MESSAGES_DELETED_MESSAGES_CONFIRM_INBOX_REFRESH_TITLE")
+        message:SPKL(@"MESSAGES_DMREFRESH_CONFIRM_REFRESHING_INBOX_RELOADS_DIRECT_MESSAGES_SERVER_ANY_UNSENT_MESSAGES_MESSAGE")];
 }
 
 static void replaced_inboxRefreshControlArg(id self, SEL _cmd, id arg) {
@@ -343,8 +344,8 @@ static BOOL replaced_executePullToRefreshWithParams(id self, SEL _cmd, id params
             sSPKDMRefreshAlertVisible = NO;
             SPKDMEndRefreshIfNeeded(self, nil);
         }
-        title:@"Confirm Inbox Refresh"
-        message:@"Refreshing your inbox reloads direct messages from the server. Any unsent messages kept in chats will be lost."];
+        title:SPKL(@"MESSAGES_DELETED_MESSAGES_CONFIRM_INBOX_REFRESH_TITLE")
+        message:SPKL(@"MESSAGES_DMREFRESH_CONFIRM_REFRESHING_INBOX_RELOADS_DIRECT_MESSAGES_SERVER_ANY_UNSENT_MESSAGES_MESSAGE")];
 
     return NO;
 }
@@ -373,8 +374,8 @@ static BOOL replaced_executePullToRefreshFull(id self, SEL _cmd, id params, BOOL
             sSPKDMRefreshAlertVisible = NO;
             SPKDMEndRefreshIfNeeded(self, nil);
         }
-        title:@"Confirm Inbox Refresh"
-        message:@"Refreshing your inbox reloads direct messages from the server. Any unsent messages kept in chats will be lost."];
+        title:SPKL(@"MESSAGES_DELETED_MESSAGES_CONFIRM_INBOX_REFRESH_TITLE")
+        message:SPKL(@"MESSAGES_DMREFRESH_CONFIRM_REFRESHING_INBOX_RELOADS_DIRECT_MESSAGES_SERVER_ANY_UNSENT_MESSAGES_MESSAGE")];
 
     return NO;
 }

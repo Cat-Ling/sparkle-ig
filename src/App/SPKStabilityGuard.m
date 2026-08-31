@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 // SPKStabilityGuard — a launch failsafe.
 //
 // Each launch records a start timestamp. If a launch never reaches the "stable"
@@ -79,22 +80,21 @@ void SPKStabilityGuardPresentSafeModeAlertIfNeeded(void) {
     SPKLog(@"Stability", @"Presenting safe startup alert (reason: %@)", reason);
 
     [SPKIGAlertPresenter presentAlertFromViewController:nil
-                                                 title:@"Sparkle Safe Mode"
-                                               message:@"Instagram closed before finishing launch several times in a row, so Sparkle turned its features off to get you back into the app.\n\n"
-                                                        "Every Sparkle feature is disabled right now. Only Sparkle Settings is reachable. Turn Safe Mode off to enable them again."
+                                                 title:SPKL(@"APP_STABILITY_GUARD_SPARKLE_SAFE_MODE_TEXT")
+                                               message:SPKL(@"APP_STABILITY_GUARD_INSTAGRAM_CLOSED_BEFORE_FINISHING_LAUNCH_SEVERAL_TIMES_ROW_SO_TEXT")
                                                actions:@[
-                                                   [SPKIGAlertAction actionWithTitle:@"Turn Off Safe Mode"
+                                                   [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_TURN_OFF_SAFE_MODE")
                                                                                style:SPKIGAlertActionStyleDefault
                                                                              handler:^{
                                                                                  SPKStabilityGuardReset();
                                                                                  [SPKUtils showRestartConfirmation];
                                                                              }],
-                                                   [SPKIGAlertAction actionWithTitle:@"Open Sparkle Settings"
+                                                   [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_OPEN_SPARKLE_SETTINGS")
                                                                                style:SPKIGAlertActionStyleDefault
                                                                              handler:^{
                                                                                  [SPKUtils showSettingsForTopicTitle:@"Tools"];
                                                                              }],
-                                                   [SPKIGAlertAction actionWithTitle:@"Not Now"
+                                                   [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_NOT_NOW")
                                                                                style:SPKIGAlertActionStyleCancel
                                                                              handler:nil],
                                                ]];

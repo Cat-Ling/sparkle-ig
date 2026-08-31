@@ -38,11 +38,12 @@ UIBarButtonItem *SPKMediaChromeTopBarMenuButtonItem(NSString *resourceName, UIMe
 UIBarButtonItem *SPKMediaChromeTopBarMenuButtonItemWithTint(NSString *resourceName, UIMenu *menu, UIColor *_Nullable tintColor, NSString *_Nullable accessibilityLabel);
 void SPKMediaChromeSetLeadingTopBarItems(UINavigationItem *navigationItem, NSArray<UIBarButtonItem *> *items);
 void SPKMediaChromeSetTrailingTopBarItems(UINavigationItem *navigationItem, NSArray<UIBarButtonItem *> *items);
-/// Like the above, but each inner array becomes its own bar-button group, which
-/// iOS 26 renders as a separate glass bubble. Groups are given in visual order,
-/// leading to trailing: the *last* group sits nearest the trailing edge, so a
-/// prominent "Done" belongs at the end. On iOS 15 the groups are flattened into
-/// a plain item list, reversed to preserve that same visual order.
+/// Like the above, but each inner array becomes its own bar-button group. On
+/// iOS 26, fixed-space groups are inserted between them so UIKit renders
+/// separate Liquid Glass capsules. Groups are given in visual order, leading to
+/// trailing: the *last* group sits nearest the trailing edge, so a prominent
+/// "Done" belongs at the end. On iOS 15 the groups are flattened into a plain
+/// item list, reversed to preserve that same visual order.
 void SPKMediaChromeSetTrailingTopBarItemGroups(UINavigationItem *navigationItem, NSArray<NSArray<UIBarButtonItem *> *> *groups);
 
 // Bottom toolbar. These build a native UIToolbar (driven through the hosting

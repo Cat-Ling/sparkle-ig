@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKTrimEditorViewController.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
@@ -68,7 +69,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     self = [super init];
     if (self) {
         _configuration = configuration;
-        self.title = configuration.title.length > 0 ? configuration.title : @"Trim";
+        self.title = configuration.title.length > 0 ? configuration.title : SPKL(@"ALERT_ACTION_TRIM");
     }
     return self;
 }
@@ -163,23 +164,31 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 
 - (void)setupChrome {
     UIBarButtonItem *cancelItem = SPKMediaChromeTopBarButtonItem(@"close", self, @selector(cancelTapped));
-    cancelItem.accessibilityLabel = @"Cancel";
+    cancelItem.accessibilityLabel = SPKL(@"ALERT_ACTION_CANCEL");
 
     // When the caller supplies destinations, Done is a menu (pick where to save
     // without dismissing first); otherwise it's a plain confirm.
     UIBarButtonItem *doneItem;
     if (_configuration.doneOptions.count > 0) {
-        doneItem = SPKMediaChromeTopBarMenuButtonItem(@"check", [self buildDoneMenu], @"Save");
+        // Keep this as a native menu-backed bar item so it participates in the
+        // navigation bar's iOS 26 group and fixed-space separator layout.
+        doneItem = [[UIBarButtonItem alloc] initWithImage:SPKMediaChromeTopBarIcon(@"check")
+                                                    menu:[self buildDoneMenu]];
+        doneItem.tintColor = [SPKUtils SPKColor_InstagramPrimaryText];
+        doneItem.accessibilityLabel = SPKL(@"GALLERY_GALLERY_FILE_DETAILS_SAVE_TEXT");
+        if (@available(iOS 16.0, *)) {
+            doneItem.preferredMenuElementOrder = UIContextMenuConfigurationElementOrderFixed;
+        }
         self.doneMenuItem = doneItem;
     } else {
-        doneItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check", self, @selector(doneTapped), UIBarButtonItemStyleDone, [SPKUtils SPKColor_InstagramBlue], @"Save");
+        doneItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check", self, @selector(doneTapped), UIBarButtonItemStyleDone, [SPKUtils SPKColor_InstagramBlue], SPKL(@"GALLERY_GALLERY_FILE_DETAILS_SAVE_TEXT"));
     }
     self.doneItem = doneItem;
     if (_configuration.mediaKind == SPKTrimMediaKindVideo && _configuration.allowsCrop) {
         // Framing lives on its own screen (like Frame Only's editor) so the trim
         // controls keep the whole bottom of the display.
         self.cropItem = SPKMediaChromeTopBarButtonItem(@"crop", self, @selector(cropTapped));
-        self.cropItem.accessibilityLabel = @"Crop";
+        self.cropItem.accessibilityLabel = SPKL(@"MEDIA_TRIM_TRIM_EDITOR_CROP_TEXT");
     }
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ cancelItem ]);
     [self refreshTrailingTopBarItems];
@@ -212,7 +221,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     [SPKVideoCropViewController presentForVideoURL:self.configuration.sourceURL
                                  lockedAspectRatio:self.configuration.lockedCropAspectRatio
                                        initialCrop:self.pendingCrop
-                                             title:@"Crop"
+                                             title:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_CROP_TEXT")
                                               from:self
                                         completion:^(SPKTrimCrop *crop) {
                                             [weakSelf applyCrop:crop];
@@ -378,7 +387,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     _playPauseButton.tintColor = [SPKUtils SPKColor_InstagramPrimaryText] ?: [UIColor whiteColor];
     [_playPauseButton setImage:SPKTrimPlayerIcon(@"video_play", 36.0) forState:UIControlStateNormal];
     [_playPauseButton addTarget:self action:@selector(togglePlayback) forControlEvents:UIControlEventTouchUpInside];
-    _playPauseButton.accessibilityLabel = @"Play";
+    _playPauseButton.accessibilityLabel = SPKL(@"MEDIA_TRIM_TRIM_EDITOR_PLAY_TEXT");
     [_bottomContent addSubview:_playPauseButton];
 
     // In Frame Only mode playback is meaningless, so the play/pause slot becomes
@@ -388,7 +397,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     _editFrameButton.tintColor = [SPKUtils SPKColor_InstagramPrimaryText] ?: [UIColor whiteColor];
     [_editFrameButton setImage:SPKTrimPlayerIcon(@"crop", 24.0) forState:UIControlStateNormal];
     [_editFrameButton addTarget:self action:@selector(editFrameTapped) forControlEvents:UIControlEventTouchUpInside];
-    _editFrameButton.accessibilityLabel = @"Edit Frame";
+    _editFrameButton.accessibilityLabel = SPKL(@"MEDIA_TRIM_TRIM_EDITOR_EDIT_FRAME_TEXT");
     _editFrameButton.hidden = YES;
     [_bottomContent addSubview:_editFrameButton];
 
@@ -399,7 +408,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     _revertFrameButton.tintColor = [SPKUtils SPKColor_InstagramPrimaryText] ?: [UIColor whiteColor];
     [_revertFrameButton setImage:SPKTrimPlayerIcon(@"arrow_ccw", 24.0) forState:UIControlStateNormal];
     [_revertFrameButton addTarget:self action:@selector(revertFrameTapped) forControlEvents:UIControlEventTouchUpInside];
-    _revertFrameButton.accessibilityLabel = @"Revert Edit";
+    _revertFrameButton.accessibilityLabel = SPKL(@"MEDIA_TRIM_TRIM_EDITOR_REVERT_EDIT_TEXT");
     _revertFrameButton.hidden = YES;
     [_bottomContent addSubview:_revertFrameButton];
 
@@ -482,15 +491,15 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     for (NSNumber *modeNum in self.availableModes) {
         SPKTrimResultMode mode = modeNum.integerValue;
         if (mode == SPKTrimResultModeTrimmedVideo) {
-            [titles addObject:@"Trim Video"];
+            [titles addObject:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_TRIM_VIDEO_TEXT")];
             [symbols addObject:@"video"];
             [selectedSymbols addObject:@"video_filled"];
         } else if (mode == SPKTrimResultModeFrameOnly) {
-            [titles addObject:@"Frame Only"];
+            [titles addObject:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_FRAME_ONLY_TEXT")];
             [symbols addObject:@"photo"];
             [selectedSymbols addObject:@"photo_filled"];
         } else if (mode == SPKTrimResultModeTrimmedAudio) {
-            [titles addObject:@"Audio Only"];
+            [titles addObject:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_AUDIO_ONLY_TEXT")];
             [symbols addObject:@"audio"];
             [selectedSymbols addObject:@"audio_filled"];
         }
@@ -538,7 +547,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
                                  NSError *err = nil;
                                  AVKeyValueStatus status = [asset statusOfValueForKey:@"duration" error:&err];
                                  if (status != AVKeyValueStatusLoaded) {
-                                     [strongSelf failWithMessage:@"This file could not be opened for trimming."];
+                                     [strongSelf failWithMessage:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_FILE_COULD_NOT_OPENED_TRIMMING_TEXT")];
                                      return;
                                  }
                                  [strongSelf configurePlayerAndScrubber];
@@ -549,7 +558,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 - (void)configurePlayerAndScrubber {
     NSTimeInterval duration = CMTimeGetSeconds(self.asset.duration);
     if (duration <= 0.0 || !isfinite(duration)) {
-        [self failWithMessage:@"This file has no playable duration."];
+        [self failWithMessage:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_FILE_NO_PLAYABLE_DURATION_TEXT")];
         return;
     }
 
@@ -698,7 +707,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
     BOOL canPlay = self.playerReady && !frameOnly;
     [self.playPauseButton setImage:SPKTrimPlayerIcon(self.isPlaying ? @"video_pause" : @"video_play", 36.0)
                           forState:UIControlStateNormal];
-    self.playPauseButton.accessibilityLabel = self.isPlaying ? @"Pause" : @"Play";
+    self.playPauseButton.accessibilityLabel = self.isPlaying ? SPKL(@"MEDIA_TRIM_TRIM_EDITOR_PAUSE_TEXT") : SPKL(@"MEDIA_TRIM_TRIM_EDITOR_PLAY_TEXT");
     self.playPauseButton.enabled = canPlay;
     self.playPauseButton.alpha = canPlay ? 1.0 : 0.35;
     [self updateFrameEditingUI];
@@ -731,7 +740,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
                          ? [UIImage imageWithContentsOfFile:self.pendingEditedFrameURL.path]
                          : [self extractFrameAtSeconds:self.scrubber.frameTime];
     if (!frame) {
-        [self failWithMessage:@"Couldn't read this frame."];
+        [self failWithMessage:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_COULDN_T_READ_FRAME_TEXT")];
         return;
     }
     __weak typeof(self) weakSelf = self;
@@ -836,13 +845,13 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 
 - (void)updateTimeLabel {
     if (self.scrubber.isFrameOnlyMode) {
-        NSString *suffix = self.pendingEditedFrameURL ? @"  •  edited" : @"";
-        self.timeLabel.text = [NSString stringWithFormat:@"Frame • %@%@",
+        NSString *suffix = self.pendingEditedFrameURL ? SPKL(@"MEDIA_TRIM_TRIM_EDITOR_EDITED_TEXT") : @"";
+        self.timeLabel.text = [NSString stringWithFormat:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_FRAME_VALUE_VALUE_FORMAT"),
                                                          SPKTrimFormatTime(self.scrubber.frameTime), suffix];
         return;
     }
     NSTimeInterval dur = self.scrubber.endTime - self.scrubber.startTime;
-    self.timeLabel.text = [NSString stringWithFormat:@"%@ – %@  •  %.1fs",
+    self.timeLabel.text = [NSString stringWithFormat:SPKL(@"MEDIA_TRIM_TRIM_EDITOR_VALUE_VALUE_VALUE_S_FORMAT"),
                                                      SPKTrimFormatTime(self.scrubber.startTime),
                                                      SPKTrimFormatTime(self.scrubber.endTime),
                                                      dur];
@@ -902,15 +911,15 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
         NSString *iconName = option.iconName;
         if (audioMode) {
             if ([identifier isEqualToString:@"photos"] || [identifier isEqualToString:@"files"]) {
-                title = @"Save Audio to Files";
+                title = SPKL(@"ALERT_ACTION_SAVE_AUDIO_FILES");
                 identifier = @"files";
                 iconName = @"audio_download";
             } else if ([identifier isEqualToString:@"share"]) {
-                title = @"Share Audio";
+                title = SPKL(@"ALERT_ACTION_SHARE_AUDIO");
             } else if ([identifier isEqualToString:@"clipboard"]) {
-                title = @"Copy Audio";
+                title = SPKL(@"MEDIA_PREVIEW_FULL_SCREEN_MEDIA_PLAYER_COPY_AUDIO_TEXT");
             } else if ([identifier isEqualToString:@"gallery"]) {
-                title = @"Save Audio to Gallery";
+                title = SPKL(@"ALERT_ACTION_SAVE_AUDIO_GALLERY");
             }
         }
         UIImage *image = iconName.length > 0
@@ -945,10 +954,8 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 // Reassigns the Done menu's button so it reflects the current mode (see
 // buildDoneMenu's Photos→Files swap). No-op when Done is a plain confirm button.
 - (void)refreshDoneMenu {
-    UIView *custom = self.doneMenuItem.customView;
-    if ([custom isKindOfClass:[UIButton class]]) {
-        ((UIButton *)custom).menu = [self buildDoneMenu];
-    }
+    if (self.doneMenuItem)
+        self.doneMenuItem.menu = [self buildDoneMenu];
 }
 
 - (void)doneTapped {
@@ -993,7 +1000,7 @@ static NSString *SPKTrimFormatTime(NSTimeInterval seconds) {
 #pragma mark - Finish
 
 - (void)failWithMessage:(NSString *)message {
-    SPKNotify(@"spk.trim.editor", @"Trim failed", message, @"error_filled", SPKNotificationToneError);
+    SPKNotify(@"spk.trim.editor", SPKL(@"MEDIA_TRIM_TRIM_EDITOR_TRIM_FAILED_TEXT"), message, @"error_filled", SPKNotificationToneError);
 }
 
 - (void)finishWithResult:(SPKTrimResult *)result {

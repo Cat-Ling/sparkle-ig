@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDataSettingsProvider.h"
 #import <UIKit/UIKit.h>
 
@@ -21,7 +22,7 @@
 @implementation SPKSettingsTransferSelectionViewController
 
 - (instancetype)initWithImportMode:(BOOL)importMode {
-    if ((self = [super initWithTitle:(importMode ? @"Import" : @"Export") sections:@[] reduceMargin:NO])) {
+    if ((self = [super initWithTitle:(importMode ? SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_TITLE") : SPKL(@"DATA_BACKUP_TRANSFER_EXPORT_TITLE")) sections:@[] reduceMargin:NO])) {
         _importMode = importMode;
         _includeSettings = YES;
         _includeGallery = YES;
@@ -53,7 +54,7 @@
 }
 
 - (void)rebuildSections {
-    SPKSetting *settingsRow = [SPKSetting buttonCellWithTitle:@"Settings"
+    SPKSetting *settingsRow = [SPKSetting buttonCellWithTitle:SPKL(@"DATA_GENERAL_SETTINGS_TITLE")
                                                      subtitle:@""
                                                          icon:SPKSettingsIcon(@"settings")
                                                        action:^{
@@ -63,7 +64,7 @@
                                                        }];
     settingsRow.userInfo = @{@"checkmarked" : @(self.includeSettings)};
 
-    SPKSetting *galleryRow = [SPKSetting buttonCellWithTitle:@"Gallery"
+    SPKSetting *galleryRow = [SPKSetting buttonCellWithTitle:SPKL(@"DATA_GENERAL_GALLERY_TITLE")
                                                     subtitle:@""
                                                         icon:SPKSettingsIcon(@"sparkle_gallery")
                                                       action:^{
@@ -73,7 +74,7 @@
                                                       }];
     galleryRow.userInfo = @{@"checkmarked" : @(self.includeGallery)};
 
-    SPKSetting *deletedMessagesRow = [SPKSetting buttonCellWithTitle:@"Deleted Messages"
+    SPKSetting *deletedMessagesRow = [SPKSetting buttonCellWithTitle:SPKL(@"ALERT_ACTION_DELETED_MESSAGES")
                                                             subtitle:@""
                                                                 icon:SPKSettingsIcon(@"channels")
                                                               action:^{
@@ -83,7 +84,7 @@
                                                               }];
     deletedMessagesRow.userInfo = @{@"checkmarked" : @(self.includeDeletedMessages)};
 
-    SPKSetting *profileAnalyzerRow = [SPKSetting buttonCellWithTitle:@"Profile Analyzer"
+    SPKSetting *profileAnalyzerRow = [SPKSetting buttonCellWithTitle:SPKL(@"DATA_GENERAL_PROFILE_ANALYZER_TITLE")
                                                             subtitle:@""
                                                                 icon:SPKSettingsIcon(@"profile_analyzer")
                                                               action:^{
@@ -94,9 +95,7 @@
     profileAnalyzerRow.userInfo = @{@"checkmarked" : @(self.includeProfileAnalyzer)};
 
     NSString *footer = self.importMode
-                           ? @"Preferences are restored, replacing your current values for the imported scope. "
-                             @"Gallery, Deleted Messages, and Profile Analyzer data are merged in — existing items are never deleted. "
-                             @"A restart prompt appears only when preferences change."
+                           ? SPKL(@"SETTINGS_DATA_PREFERENCES_RESTORED_REPLACING_CURRENT_VALUES_IMPORTED_SCOPE_GALLERY_DELETED_TEXT")
                            : nil;
     NSArray *sections = @[ SPKTopicSection(@"", @[ settingsRow, galleryRow, deletedMessagesRow, profileAnalyzerRow ], footer) ];
     [self replaceSections:sections];
@@ -141,7 +140,7 @@
 @implementation SPKDataSettingsProvider
 
 + (SPKSetting *)rootSetting {
-    SPKSetting *resetAllSettings = [SPKSetting buttonCellWithTitle:@"Reset All Settings"
+    SPKSetting *resetAllSettings = [SPKSetting buttonCellWithTitle:SPKL(@"DATA_GENERAL_RESET_ALL_SETTINGS_TITLE")
                                                           subtitle:@""
                                                               icon:SPKSettingsIcon(@"arrow_ccw")
                                                             action:^(void) {
@@ -151,37 +150,40 @@
                                                                     presenter = presenter.presentedViewController;
                                                                 [[SPKSettingsTransferManager sharedManager] resetAllSettingsFromController:presenter];
                                                             }];
+    resetAllSettings.helpText = SPKL(@"DATA_RESET_ALL_SETTINGS_HELP");
     resetAllSettings.tintColor = [SPKUtils SPKColor_InstagramDestructive];
     resetAllSettings.iconTintColor = [SPKUtils SPKColor_InstagramDestructive];
 
     NSArray *sections = @[
-        SPKTopicSection(@"Storage", @[
-            [SPKSetting navigationCellWithTitle:@"Storage Usage"
+        SPKTopicSection(SPKL(@"ALERT_ACTION_STORAGE"), @[
+            [SPKSetting navigationCellWithTitle:SPKL(@"DATA_STORAGE_STORAGE_USAGE_TITLE")
                                        subtitle:@""
                                            icon:SPKSettingsIcon(@"info")
                                  viewController:[SPKStorageUsageViewController new]]
         ],
-                        @"See how much on-device space each Sparkle feature uses."),
-        SPKTopicSection(@"Backup & Transfer", @[
-            SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:@"Export"
+                        nil),
+        SPKTopicSection(SPKL(@"DATA_BACKUP_TRANSFER_HEADER"), @[
+            SPKSettingWithHelp(SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:SPKL(@"DATA_BACKUP_TRANSFER_EXPORT_TITLE")
                                                                subtitle:@""
                                                                    icon:SPKSettingsIcon(@"arrow_up")
                                                          viewController:[[SPKSettingsTransferSelectionViewController alloc] initWithImportMode:NO]],
                                     [SPKUtils SPKColor_InstagramPrimaryText]),
-            SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:@"Import"
+                               SPKL(@"DATA_BACKUP_TRANSFER_EXPORT_HELP")),
+            SPKSettingWithHelp(SPKSettingApplyIconTint([SPKSetting navigationCellWithTitle:SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_TITLE")
                                                                subtitle:@""
                                                                    icon:SPKSettingsIcon(@"arrow_down")
                                                          viewController:[[SPKSettingsTransferSelectionViewController alloc] initWithImportMode:YES]],
-                                    [SPKUtils SPKColor_InstagramPrimaryText])
+                                    [SPKUtils SPKColor_InstagramPrimaryText]),
+                               SPKL(@"DATA_BACKUP_TRANSFER_IMPORT_HELP"))
         ],
-                        @"Choose to export or import settings, Gallery media, Deleted Messages, and Profile Analyzer data."),
-        SPKTopicSection(@"Reset", @[
+                        nil),
+        SPKTopicSection(SPKL(@"ALERT_ACTION_RESET"), @[
             resetAllSettings
         ],
-                        @"Restore every preference to its default value.")
+                        nil)
     ];
 
-    return SPKTopicNavigationSetting(@"Data & Settings", @"cloud", 24.0, sections);
+    return SPKTopicNavigationSetting(SPKL(@"DATA_TITLE"), @"cloud", 24.0, sections);
 }
 
 @end

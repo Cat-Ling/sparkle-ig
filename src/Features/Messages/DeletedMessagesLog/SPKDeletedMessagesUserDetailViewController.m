@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessagesUserDetailViewController.h"
 
 #import "../../../AssetUtils.h"
@@ -33,13 +34,16 @@
 @property (nonatomic, assign) BOOL shouldScrollToBottomOnReload;
 @property (nonatomic, strong) NSCache<NSString *, UIImage *> *thumbnailCache;
 @property (nonatomic, strong) dispatch_queue_t thumbnailQueue;
+- (nullable NSString *)localMediaPathForMessage:(SPKDeletedMessage *)message;
+- (BOOL)messageHasLocalMedia:(SPKDeletedMessage *)message;
+- (BOOL)visualMediaIsUnavailable:(SPKDeletedMessage *)message;
 @end
 
 @implementation SPKDeletedMessagesUserDetailViewController
 
 // Chip filter columns — see SPKDeletedMessagesViewController for the rationale.
 static NSArray<NSString *> *SPKDMDetailChipTitles(void) {
-    return @[ @"Text", @"Photo", @"Video", @"Voice", @"GIF", @"Sticker", @"Shares", @"Link", @"Reaction" ];
+    return @[ SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT"), SPKL(@"COMMON_MEDIA_TYPE_PHOTO"), SPKL(@"COMMON_MEDIA_TYPE_VIDEO"), SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT"), SPKL(@"COMMON_MEDIA_TYPE_GIF"), SPKL(@"COMMON_MEDIA_TYPE_STICKER"), SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SHARES_TEXT"), SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_LINK_TEXT"), SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION") ];
 }
 static NSArray<NSString *> *SPKDMDetailChipSymbols(void) {
     return @[ @"message", @"photo", @"video", @"voice", @"gif", @"sticker", @"shares", @"link", @"reactions" ];
@@ -99,8 +103,8 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     // Groups keep the thread title. 1:1 threads use a static title so the
     // sticky profile header can serve as the primary identity anchor.
     self.title = self.group.isGroup
-                     ? (self.group.displayName.length ? self.group.displayName : @"Group Chat")
-                     : @"Deleted Messages";
+                     ? (self.group.displayName.length ? self.group.displayName : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_GROUP_CHAT_TEXT"))
+                     : SPKL(@"DATA_GENERAL_DELETED_MESSAGES_TITLE");
     self.view.backgroundColor = [SPKUtils SPKColor_InstagramBackground];
 
     if (!self.group.isGroup) {
@@ -119,18 +123,18 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
         titleLabel.textColor = [SPKUtils SPKColor_InstagramPrimaryText];
         titleLabel.textAlignment = NSTextAlignmentCenter;
         titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-        titleLabel.text = @"Deleted Messages";
+        titleLabel.text = SPKL(@"ALERT_ACTION_DELETED_MESSAGES");
         self.navigationItem.titleView = titleLabel;
         self.titleLabel = titleLabel;
     }
 
-    UIBarButtonItem *moreItem = SPKMediaChromeTopBarMenuButtonItem(@"more", [self moreMenu], @"More");
+    UIBarButtonItem *moreItem = SPKMediaChromeTopBarMenuButtonItem(@"more", [self moreMenu], SPKL(@"MESSAGES_DELETED_MESSAGES_MORE_TEXT"));
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, @[ moreItem ]);
 
     self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
     self.searchController.searchResultsUpdater = self;
     self.searchController.obscuresBackgroundDuringPresentation = NO;
-    self.searchController.searchBar.placeholder = @"Search Messages";
+    self.searchController.searchBar.placeholder = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SEARCH_MESSAGES_MESSAGE");
     [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                              forSearchBarIcon:UISearchBarIconSearch
                                         state:UIControlStateNormal];
@@ -316,7 +320,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     if (shouldShowIdentity == self.titleShowingIdentity)
         return;
     self.titleShowingIdentity = shouldShowIdentity;
-    NSString *text = shouldShowIdentity ? [self identityTitleText] : @"Deleted Messages";
+    NSString *text = shouldShowIdentity ? [self identityTitleText] : SPKL(@"DATA_GENERAL_DELETED_MESSAGES_TITLE");
     [UIView transitionWithView:self.titleLabel
                       duration:0.2
                        options:UIViewAnimationOptionTransitionCrossDissolve
@@ -331,7 +335,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
         return [@"@" stringByAppendingString:self.group.senderUsername];
     if (self.group.senderFullName.length)
         return self.group.senderFullName;
-    return @"Unknown";
+    return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_TEXT");
 }
 
 - (void)updateEmptyState {
@@ -342,11 +346,11 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
         return;
 
     if (![self.filter isEmpty]) {
-        self.emptyStateTitle.text = @"No matches";
-        self.emptyStateSubtitle.text = @"No messages match the current filters.";
+        self.emptyStateTitle.text = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_NO_MATCHES_TEXT");
+        self.emptyStateSubtitle.text = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_NO_MESSAGES_MATCH_CURRENT_FILTERS_MESSAGE");
     } else {
-        self.emptyStateTitle.text = @"Nothing here yet";
-        self.emptyStateSubtitle.text = @"This sender's unsent messages will show up here.";
+        self.emptyStateTitle.text = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_NOTHING_HERE_YET_TEXT");
+        self.emptyStateSubtitle.text = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SENDER_S_UNSENT_MESSAGES_SHOW_UP_HERE_MESSAGE");
     }
 }
 
@@ -388,9 +392,9 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     __weak typeof(self) weakSelf = self;
 
     BOOL isGroup = self.group.isGroup;
-    NSString *noun = isGroup ? @"Chat" : @"Sender";
+    NSString *noun = isGroup ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_CHAT_TEXT") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SENDER_LABEL");
 
-    UIAction *pinAction = [UIAction actionWithTitle:[NSString stringWithFormat:@"%@ %@", self.group.isPinned ? @"Unpin" : @"Pin", noun]
+    UIAction *pinAction = [UIAction actionWithTitle:[NSString stringWithFormat:@"%@ %@", self.group.isPinned ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNPIN_TEXT") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_PIN_TEXT"), noun]
                                               image:[SPKAssetUtils menuIconNamed:(self.group.isPinned ? @"pin_filled" : @"pin_outline")]
                                          identifier:nil
                                             handler:^(__unused UIAction *a) {
@@ -398,7 +402,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
                                                 weakSelf.group.isPinned = !weakSelf.group.isPinned;
                                             }];
 
-    UIAction *blockAction = [UIAction actionWithTitle:[NSString stringWithFormat:@"%@ %@", self.group.isBlocked ? @"Unblock" : @"Block", noun]
+    UIAction *blockAction = [UIAction actionWithTitle:[NSString stringWithFormat:@"%@ %@", self.group.isBlocked ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNBLOCK_TEXT") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_BLOCK_TEXT"), noun]
                                                 image:[SPKAssetUtils menuIconNamed:self.group.isBlocked ? @"circle" : @"block"]
                                            identifier:nil
                                               handler:^(__unused UIAction *a) {
@@ -406,20 +410,20 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
                                                   weakSelf.group.isBlocked = !weakSelf.group.isBlocked;
                                               }];
 
-    UIAction *deleteAction = [UIAction actionWithTitle:[NSString stringWithFormat:@"Delete %@ Log", noun]
+    UIAction *deleteAction = [UIAction actionWithTitle:[NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_DELETE_VALUE_LOG_FORMAT"), noun]
                                                  image:[SPKAssetUtils menuIconNamed:@"trash"]
                                             identifier:nil
                                                handler:^(__unused UIAction *a) {
                                                    NSString *who = isGroup ? weakSelf.group.displayName
-                                                                           : (weakSelf.group.senderUsername.length ? [@"@" stringByAppendingString:weakSelf.group.senderUsername] : @"this sender");
+                                                                           : (weakSelf.group.senderUsername.length ? [@"@" stringByAppendingString:weakSelf.group.senderUsername] : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_THIS_SENDER_LABEL"));
                                                    [SPKIGAlertPresenter presentAlertFromViewController:weakSelf
-                                                                                                 title:isGroup ? @"Delete group log?" : @"Delete sender log?"
-                                                                                               message:[NSString stringWithFormat:@"This removes all logged messages from %@.", who]
+                                                                                                 title:isGroup ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_DELETE_GROUP_LOG_CONFIRMATION_MESSAGE") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_DELETE_SENDER_LOG_CONFIRMATION_MESSAGE")
+                                                                                               message:[NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_REMOVES_LOGGED_MESSAGES_VALUE_MESSAGE"), who]
                                                                                                actions:@[
-                                                                                                   [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                                                                   [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                                                                style:SPKIGAlertActionStyleCancel
                                                                                                                              handler:nil],
-                                                                                                   [SPKIGAlertAction actionWithTitle:@"Delete"
+                                                                                                   [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_DELETE")
                                                                                                                                style:SPKIGAlertActionStyleDestructive
                                                                                                                              handler:^{
                                                                                                                                  if (weakSelf.group.isGroup)
@@ -435,7 +439,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 
     UIMenu *destructiveSection = [UIMenu menuWithTitle:@"" image:nil identifier:nil options:UIMenuOptionsDisplayInline children:@[ deleteAction ]];
 
-    UIAction *refreshAvatarsAction = [UIAction actionWithTitle:@"Refresh Profile Pictures"
+    UIAction *refreshAvatarsAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_REFRESH_PROFILE_PICTURES")
                                                          image:[SPKAssetUtils menuIconNamed:@"user_circle"]
                                                     identifier:nil
                                                        handler:^(__unused UIAction *a) {
@@ -447,7 +451,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
         NSString *username = self.group.senderUsername;
         // See the header button: passing the pk avoids a lookup round trip.
         NSString *senderPK = self.group.senderPk;
-        UIAction *openProfileAction = [UIAction actionWithTitle:@"Open Profile"
+        UIAction *openProfileAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_OPEN_PROFILE")
                                                           image:[SPKAssetUtils menuIconNamed:@"user"]
                                                      identifier:nil
                                                          handler:^(__unused UIAction *a) {
@@ -482,7 +486,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     nameLabel.textColor = [SPKUtils SPKColor_InstagramPrimaryText];
     nameLabel.numberOfLines = 1;
     NSString *displayName = self.group.senderFullName.length ? self.group.senderFullName
-                                                             : (self.group.senderUsername.length ? self.group.senderUsername : @"Unknown");
+                                                             : (self.group.senderUsername.length ? self.group.senderUsername : SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_TEXT"));
     nameLabel.text = displayName;
 
     // Username label.
@@ -516,7 +520,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
             icon = [UIImage systemImageNamed:@"arrow.up.right"];
         [openBtn setImage:icon forState:UIControlStateNormal];
         openBtn.tintColor = [SPKUtils SPKColor_InstagramSecondaryText];
-        openBtn.accessibilityLabel = @"Open Profile";
+        openBtn.accessibilityLabel = SPKL(@"ALERT_ACTION_OPEN_PROFILE");
         [openBtn addAction:[UIAction actionWithTitle:@""
                                                image:nil
                                           identifier:nil
@@ -582,7 +586,8 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 
     UIImage *cached = message.messageId.length ? [self.thumbnailCache objectForKey:message.messageId] : nil;
     BOOL outgoing = self.ownerPK.length && [message.senderPk isEqualToString:self.ownerPK];
-    [cell configureWithMessage:message thumbnail:cached outgoing:outgoing];
+    BOOL mediaUnavailable = [self visualMediaIsUnavailable:message];
+    [cell configureWithMessage:message thumbnail:cached mediaUnavailable:mediaUnavailable outgoing:outgoing];
 
     // In a group, show sender avatar + name on the first bubble in each run.
     NSString *senderName = nil;
@@ -606,6 +611,33 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 }
 
 #pragma mark - Thumbnails
+
+- (NSString *)localMediaPathForMessage:(SPKDeletedMessage *)message {
+    for (NSString *rel in @[ message.mediaPath ?: @"", message.thumbnailPath ?: @"" ]) {
+        if (!rel.length)
+            continue;
+        NSString *path = [SPKDeletedMessagesStorage absolutePathForRelativePath:rel ownerPK:self.ownerPK];
+        if (path.length && [NSFileManager.defaultManager fileExistsAtPath:path])
+            return path;
+    }
+    return nil;
+}
+
+- (BOOL)messageHasLocalMedia:(SPKDeletedMessage *)message {
+    return [self localMediaPathForMessage:message].length > 0;
+}
+
+- (BOOL)visualMediaIsUnavailable:(SPKDeletedMessage *)message {
+    switch (message.kind) {
+    case SPKDeletedMessageKindPhoto:
+    case SPKDeletedMessageKindVideo:
+    case SPKDeletedMessageKindGif:
+    case SPKDeletedMessageKindSticker:
+        return ![self messageHasLocalMedia:message];
+    default:
+        return NO;
+    }
+}
 
 - (BOOL)messageHasThumbnail:(SPKDeletedMessage *)message {
     NSString *rel = message.thumbnailPath ?: message.mediaPath;
@@ -646,14 +678,18 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 #pragma mark - Bubble delegate
 
 - (void)bubbleCell:(SPKDeletedMessageBubbleCell *)cell didTapMediaForMessage:(SPKDeletedMessage *)message {
-    NSString *rel = message.mediaPath ?: message.thumbnailPath;
-    NSString *path = rel.length ? [SPKDeletedMessagesStorage absolutePathForRelativePath:rel ownerPK:self.ownerPK] : nil;
-    if (path.length && [NSFileManager.defaultManager fileExistsAtPath:path]) {
+    NSString *path = [self localMediaPathForMessage:message];
+    if (path.length) {
         // SPKFullScreenMediaPlayer detects audio/video/image by extension and
         // presents the right player — voice notes play here too.
         [SPKFullScreenMediaPlayer showFileURL:[NSURL fileURLWithPath:path]];
         return;
     }
+    // Visual CDN URLs are short-lived. Once recovery failed, do not send the
+    // user to an expired raw URL in Safari; the compact bubble already reports
+    // that the media is unavailable.
+    if ([self visualMediaIsUnavailable:message])
+        return;
     // Deep-link kinds (share/link) have no local blob — open the URL externally.
     NSString *urlStr = message.mediaURL.length ? message.mediaURL : message.thumbnailURL;
     NSURL *url = urlStr.length ? [NSURL URLWithString:urlStr] : nil;
@@ -687,21 +723,22 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 - (UIMenu *)contextMenuForMessage:(SPKDeletedMessage *)message {
     __weak typeof(self) weakSelf = self;
     NSMutableArray<UIMenuElement *> *children = [NSMutableArray array];
+    NSString *displayBody = SPKDeletedMessageDisplayBody(message);
 
-    if (message.text.length || message.previewText.length) {
-        UIAction *copyAction = [UIAction actionWithTitle:@"Copy Text"
+    if (displayBody.length) {
+        UIAction *copyAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_COPY_TEXT")
                                                    image:[SPKAssetUtils menuIconNamed:@"copy"]
                                               identifier:nil
                                                  handler:^(__unused UIAction *a) {
-                                                     UIPasteboard.generalPasteboard.string = message.text ?: message.previewText;
-                                                     SPKNotify(kSPKNotificationUnsentMessage, @"Copied to clipboard", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+                                                     UIPasteboard.generalPasteboard.string = displayBody;
+                                                     SPKNotify(kSPKNotificationUnsentMessage, SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_COPIED_CLIPBOARD_TEXT"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
                                                  }];
         [children addObject:copyAction];
     }
 
     NSURL *mediaURL = [self localOrRemoteURLForMessage:message];
     if (mediaURL) {
-        UIAction *shareAction = [UIAction actionWithTitle:@"Share"
+        UIAction *shareAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_SHARE")
                                                     image:[SPKAssetUtils menuIconNamed:@"share"]
                                                identifier:nil
                                                   handler:^(__unused UIAction *a) {
@@ -711,18 +748,18 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
         [children addObject:shareAction];
 
         if (![mediaURL isFileURL]) {
-            UIAction *copyLinkAction = [UIAction actionWithTitle:@"Copy Link"
+            UIAction *copyLinkAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_COPY_LINK")
                                                            image:[SPKAssetUtils menuIconNamed:@"link"]
                                                       identifier:nil
                                                          handler:^(__unused UIAction *a) {
                                                              UIPasteboard.generalPasteboard.string = mediaURL.absoluteString;
-                                                             SPKNotify(kSPKNotificationUnsentMessage, @"Copied link", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+                                                             SPKNotify(kSPKNotificationUnsentMessage, SPKL(@"GENERAL_SHARE_LONG_PRESS_COPY_COPIED_LINK_TEXT"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
                                                          }];
             [children addObject:copyLinkAction];
         }
     }
 
-    UIAction *deleteAction = [UIAction actionWithTitle:@"Delete"
+    UIAction *deleteAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_DELETE")
                                                  image:[SPKAssetUtils menuIconNamed:@"trash"]
                                             identifier:nil
                                                handler:^(__unused UIAction *a) {
@@ -738,9 +775,11 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 }
 
 - (NSURL *)localOrRemoteURLForMessage:(SPKDeletedMessage *)message {
-    NSString *path = [SPKDeletedMessagesStorage absolutePathForRelativePath:(message.mediaPath ?: message.thumbnailPath) ownerPK:self.ownerPK];
-    if (path.length && [NSFileManager.defaultManager fileExistsAtPath:path])
+    NSString *path = [self localMediaPathForMessage:message];
+    if (path.length)
         return [NSURL fileURLWithPath:path];
+    if ([self visualMediaIsUnavailable:message])
+        return nil;
     if (message.mediaURL.length)
         return [NSURL URLWithString:message.mediaURL];
     if (message.thumbnailURL.length)
@@ -758,7 +797,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
                                                                              }];
     deleteAction.image = [SPKAssetUtils menuIconNamed:@"trash"];
     deleteAction.backgroundColor = [SPKUtils SPKColor_InstagramDestructive];
-    deleteAction.accessibilityLabel = @"Delete";
+    deleteAction.accessibilityLabel = SPKL(@"ALERT_ACTION_DELETE");
     return [UISwipeActionsConfiguration configurationWithActions:@[ deleteAction ]];
 }
 

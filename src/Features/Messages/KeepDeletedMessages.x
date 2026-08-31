@@ -1,7 +1,9 @@
 #import "../../AssetUtils.h"
+#import "SPKStrings.h"
 #import "../../InstagramHeaders.h"
 #import "../../Shared/Messages/SPKDirectSeenContext.h"
 #import "../../Shared/Messages/SPKDirectUserResolver.h"
+#import "../../Shared/Messages/SPKPresenceTracking.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
 #import "DeletedMessagesLog/SPKDeletedMessagesCapture.h"
@@ -781,14 +783,14 @@ static NSSet<NSString *> *spkProcessCacheUpdate(id cacheUpdate, NSString *ownerP
 static NSString *spkUnsentText(NSString *sender, NSString *deleter) {
     if (sender.length && deleter.length) {
         return [sender isEqualToString:deleter]
-                   ? [NSString stringWithFormat:@"%@ unsent a message", sender]
-                   : [NSString stringWithFormat:@"%@ unsent a message from %@", deleter, sender];
+                   ? [NSString stringWithFormat:SPKL(@"MESSAGE_UNSENT_SENDER_FORMAT"), sender]
+                   : [NSString stringWithFormat:SPKL(@"MESSAGE_UNSENT_FROM_FORMAT"), deleter, sender];
     }
     if (sender.length)
-        return [NSString stringWithFormat:@"Message from %@ was unsent", sender];
+        return [NSString stringWithFormat:SPKL(@"MESSAGE_UNSENT_PASSIVE_FORMAT"), sender];
     if (deleter.length)
-        return [NSString stringWithFormat:@"%@ unsent a message", deleter];
-    return @"A message was unsent";
+        return [NSString stringWithFormat:SPKL(@"MESSAGE_UNSENT_SENDER_FORMAT"), deleter];
+    return SPKL(@"MESSAGE_UNSENT_ANONYMOUS");
 }
 
 static NSString *spkNotificationKindPhrase(SPKDeletedMessageKind kind) {
@@ -798,7 +800,7 @@ static NSString *spkNotificationKindPhrase(SPKDeletedMessageKind kind) {
     case SPKDeletedMessageKindVideo:
         return @"video";
     case SPKDeletedMessageKindVoice:
-        return @"voice message";
+        return SPKL(@"MESSAGES_KEEP_DELETED_MESSAGES_VOICE_MESSAGE");
     case SPKDeletedMessageKindGif:
         return @"GIF";
     case SPKDeletedMessageKindSticker:
@@ -838,7 +840,7 @@ static NSString *spkDisplayNameForPreview(NSDictionary *preview, NSString *fallb
     NSString *fullName = [preview[@"senderFullName"] isKindOfClass:NSString.class] ? preview[@"senderFullName"] : nil;
     if (fullName.length)
         return fullName;
-    return fallback.length ? fallback : @"Someone";
+    return fallback.length ? fallback : SPKL(@"MESSAGE_SENDER_UNKNOWN");
 }
 
 static NSString *spkUnsentToastDedupeComponent(NSString *value) {
@@ -928,8 +930,8 @@ static NSString *spkSenderSummary(NSArray<NSString *> *senders) {
     if (n == 2)
         return [NSString stringWithFormat:@"%@ & %@", senders[0], senders[1]];
     NSUInteger others = n - 2;
-    return [NSString stringWithFormat:@"%@, %@ & %lu other%@",
-                                      senders[0], senders[1], (unsigned long)others, others == 1 ? @"" : @"s"];
+    return [NSString stringWithFormat:SPKL(@"SENDER_LIST_MANY_FORMAT"),
+                                      senders[0], senders[1], SPKLP(@"COMMON_OTHER_COUNT", (NSInteger)others)];
 }
 
 // A debounce buffer that collapses a burst of unsent/reaction toasts into one
@@ -1034,10 +1036,10 @@ static SPKUnsentToastBatcher *spkUnsentMessageBatcher(void) {
         };
         batcher.summaryBuilder = ^NSDictionary *(NSArray<NSString *> *senders, NSUInteger count) {
             if (senders.count == 1) {
-                return @{@"title" : [NSString stringWithFormat:@"%@ unsent %lu messages", senders[0], (unsigned long)count]};
+                return @{@"title" : [NSString stringWithFormat:SPKL(@"BATCH_UNSENT_MESSAGES_FORMAT"), senders[0], (unsigned long)count]};
             }
             return @{
-                @"title" : [NSString stringWithFormat:@"%lu messages unsent", (unsigned long)count],
+                @"title" : [NSString stringWithFormat:SPKL(@"BATCH_UNSENT_COUNT_FORMAT"), (unsigned long)count],
                 @"subtitle" : [@"from " stringByAppendingString:spkSenderSummary(senders) ?: @""],
             };
         };
@@ -1054,10 +1056,10 @@ static SPKUnsentToastBatcher *spkUnsentReactionBatcher(void) {
         batcher.iconResource = @"reactions";
         batcher.summaryBuilder = ^NSDictionary *(NSArray<NSString *> *senders, NSUInteger count) {
             if (senders.count == 1) {
-                return @{@"title" : [NSString stringWithFormat:@"%@ removed %lu reactions", senders[0], (unsigned long)count]};
+                return @{@"title" : [NSString stringWithFormat:SPKL(@"MESSAGES_KEEP_DELETED_MESSAGES_VALUE_REMOVED_VALUE_REACTIONS_ACTION"), senders[0], (unsigned long)count]};
             }
             return @{
-                @"title" : [NSString stringWithFormat:@"%lu reactions removed", (unsigned long)count],
+                @"title" : [NSString stringWithFormat:SPKL(@"BATCH_REACTIONS_REMOVED_FORMAT"), (unsigned long)count],
                 @"subtitle" : [@"from " stringByAppendingString:spkSenderSummary(senders) ?: @""],
             };
         };
@@ -1066,7 +1068,7 @@ static SPKUnsentToastBatcher *spkUnsentReactionBatcher(void) {
 }
 
 static void spkShowUnsentToast(NSDictionary *preview, NSString *fallbackSender, NSString *fallbackSenderPk, NSString *fallbackThreadId, NSString *ownerAccount, NSString *fallbackSid) {
-    NSString *sender = preview ? spkDisplayNameForPreview(preview, fallbackSender) : (fallbackSender.length ? fallbackSender : @"Someone");
+    NSString *sender = preview ? spkDisplayNameForPreview(preview, fallbackSender) : (fallbackSender.length ? fallbackSender : SPKL(@"MESSAGE_SENDER_UNKNOWN"));
     SPKDeletedMessageKind kind = [preview[@"kind"] isKindOfClass:NSNumber.class] ? (SPKDeletedMessageKind)[preview[@"kind"] integerValue] : SPKDeletedMessageKindUnknown;
     NSString *text = spkTrimmedSingleLinePreview(preview[@"previewText"] ?: preview[@"text"]);
     NSArray<NSString *> *dedupeKeys = spkUnsentToastDedupeKeys(preview, fallbackSid, sender, kind, text);
@@ -1078,7 +1080,7 @@ static void spkShowUnsentToast(NSDictionary *preview, NSString *fallbackSender, 
         NSString *subtype = [preview[@"shareSubtype"] isKindOfClass:NSString.class] ? preview[@"shareSubtype"] : nil;
         kindPhrase = [SPKDeletedMessageShareSubtypeName(subtype) lowercaseString];
     }
-    NSString *title = [NSString stringWithFormat:@"%@ unsent a %@", sender, kindPhrase];
+    NSString *title = [NSString stringWithFormat:SPKL(@"MESSAGE_UNSENT_KIND_FORMAT"), sender, kindPhrase];
     NSString *subtitle = text.length ? [NSString stringWithFormat:@"\"%@\"", text] : nil;
     if (ownerAccount.length) {
         subtitle = subtitle.length ? [NSString stringWithFormat:@"%@ • %@", title, subtitle] : title;
@@ -1099,7 +1101,7 @@ static void spkShowUnsentToast(NSDictionary *preview, NSString *fallbackSender, 
 static void spkShowUnsentReactionToast(NSDictionary *preview, NSString *ownerAccount) {
     if (![preview isKindOfClass:NSDictionary.class])
         return;
-    NSString *sender = spkDisplayNameForPreview(preview, @"Someone");
+    NSString *sender = spkDisplayNameForPreview(preview, SPKL(@"MESSAGE_SENDER_UNKNOWN"));
     NSString *emoji = [preview[@"emoji"] isKindOfClass:NSString.class] ? preview[@"emoji"] : nil;
     NSString *targetPreview = spkTrimmedSingleLinePreview(preview[@"targetPreview"]);
 
@@ -1112,9 +1114,9 @@ static void spkShowUnsentReactionToast(NSDictionary *preview, NSString *ownerAcc
         return;
 
     NSString *title = emoji.length
-                          ? [NSString stringWithFormat:@"%@ removed a %@ reaction", sender, emoji]
-                          : [NSString stringWithFormat:@"%@ removed a reaction", sender];
-    NSString *subtitle = targetPreview.length ? [NSString stringWithFormat:@"On \"%@\"", targetPreview] : nil;
+                          ? [NSString stringWithFormat:SPKL(@"MESSAGES_KEEP_DELETED_MESSAGES_VALUE_REMOVED_VALUE_REACTION_ACTION"), sender, emoji]
+                          : [NSString stringWithFormat:SPKL(@"MESSAGES_KEEP_DELETED_MESSAGES_VALUE_REMOVED_REACTION_ACTION"), sender];
+    NSString *subtitle = targetPreview.length ? [NSString stringWithFormat:SPKL(@"REACTION_CONTEXT_FORMAT"), targetPreview] : nil;
     if (ownerAccount.length) {
         subtitle = subtitle.length ? [NSString stringWithFormat:@"%@ • %@", title, subtitle] : title;
         title = ownerAccount;
@@ -1155,7 +1157,8 @@ static void spkHandleApplyUpdates(id self, id updates, void (^invokeOriginal)(vo
     BOOL toastOn = SPKNotificationIsEnabled(kSPKNotificationUnsentMessage);
     BOOL reactionOn = spkReactionLogEnabled() || SPKNotificationIsEnabled(kSPKNotificationUnsentReaction);
 
-    if (!keepOn && !logOn && !toastOn && !reactionOn) {
+    BOOL activityOn = SPKPresenceNotificationsEnabled();
+    if (!keepOn && !logOn && !toastOn && !reactionOn && !activityOn) {
         invokeOriginal();
         return;
     }
@@ -1183,6 +1186,8 @@ static void spkHandleApplyUpdates(id self, id updates, void (^invokeOriginal)(vo
         spkSavePreservedIds();
 
     invokeOriginal();
+    if (activityOn && ownerPk.length)
+        SPKPresenceHandleDirectThreadUpdates(self, updates, ownerPk);
     if (logOn && ownerPk.length)
         spkDMCaptureRetryPendingRemovals(self, ownerPk);
 
@@ -1447,7 +1452,7 @@ static void spkUpdateCellIndicator(id cell) {
     UIView *badge = UIView.new;
     badge.tag = SPK_PRESERVED_TAG;
     badge.backgroundColor = UIColor.clearColor;
-    badge.accessibilityLabel = @"Unsent";
+    badge.accessibilityLabel = SPKL(@"A11Y_BADGE_UNSENT");
     badge.userInteractionEnabled = NO;
     objc_setAssociatedObject(badge, &kSPKPreservedIndicatorOwnMessageKey, @(sentByCurrentUser), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     objc_setAssociatedObject(badge, &kSPKPreservedIndicatorStyleKey, @"undo_filled_secondary_circle_44", OBJC_ASSOCIATION_RETAIN_NONATOMIC);

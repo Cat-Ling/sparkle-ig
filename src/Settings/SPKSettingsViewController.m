@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKSettingsViewController.h"
 #import "../App/SPKStartupHooks.h"
 #import "../AssetUtils.h"
@@ -10,7 +11,9 @@
 #import "../Shared/UI/SPKSwitch.h"
 #import "../App/SPKCore.h"
 #import "SPKOnboardingViewController.h"
+#import "SPKLanguagePicker.h"
 #import "SPKPreferenceAvailability.h"
+#import "SPKSettingsInfoSheetViewController.h"
 #import "SPKWhatsNewViewController.h"
 
 static char rowStaticRef[] = "row";
@@ -62,30 +65,11 @@ static double SPKNormalizedStepperValue(SPKSetting *row, double value) {
 @property (nonatomic) BOOL defersRestartPrompt;
 @property (nonatomic) BOOL hasPendingRestartChanges;
 @property (nonatomic) BOOL didAttemptOnboarding;
+@property (nonatomic) BOOL showsLanguageSelector;
 
 @end
 
 ///
-
-static UIImage *SPKSettingsReorderCompositeImage(UIImage *iconImage, UIColor *tintColor) {
-    UIImageSymbolConfiguration *grabberConfig = [UIImageSymbolConfiguration configurationWithPointSize:12.0 weight:UIImageSymbolWeightSemibold];
-    UIImage *grabber = [[UIImage systemImageNamed:@"line.3.horizontal" withConfiguration:grabberConfig] imageWithTintColor:[SPKUtils SPKColor_InstagramTertiaryText] renderingMode:UIImageRenderingModeAlwaysOriginal];
-    if (!grabber || !iconImage)
-        return iconImage ?: grabber;
-
-    CGFloat spacing = 8.0;
-    CGSize size = CGSizeMake(grabber.size.width + spacing + iconImage.size.width,
-                             MAX(grabber.size.height, iconImage.size.height));
-    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:size];
-    return [renderer imageWithActions:^(UIGraphicsImageRendererContext *_Nonnull context) {
-        CGFloat grabberY = floor((size.height - grabber.size.height) / 2.0);
-        [grabber drawAtPoint:CGPointMake(0.0, grabberY)];
-
-        UIImage *renderedIcon = [iconImage imageWithTintColor:tintColor ?: [SPKUtils SPKColor_InstagramPrimaryText] renderingMode:UIImageRenderingModeAlwaysOriginal];
-        CGFloat iconY = floor((size.height - renderedIcon.size.height) / 2.0);
-        [renderedIcon drawAtPoint:CGPointMake(grabber.size.width + spacing, iconY)];
-    }];
-}
 
 static NSMutableArray *SPKMutableSectionsCopy(NSArray *sections) {
     NSMutableArray *mutableSections = [NSMutableArray array];
@@ -212,6 +196,7 @@ static NSString *SPKSettingsRowSearchHaystack(SPKSetting *row, NSString *path, N
     SPKSettingsAppendSearchString(strings, row.label);
     SPKSettingsAppendSearchString(strings, row.singularLabel);
     SPKSettingsAppendSearchString(strings, row.searchKeywords);
+    SPKSettingsAppendSearchString(strings, row.helpText);
     SPKSettingsAppendSearchString(strings, path);
     SPKSettingsAppendSearchString(strings, sectionTitle);
     SPKSettingsAppendSearchString(strings, sectionFooter);
@@ -260,6 +245,36 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     return image;
 }
 
+// MARK: - Section header info button
+
+static CGFloat const kSPKSectionInfoIconSize = 18.0;
+static CGFloat const kSPKSectionInfoTouchSize = 40.0;
+static NSInteger const kSPKSectionInfoButtonTag = 0x5C1F0;
+static CGFloat const kSPKSectionHeaderTextBottomInset = 7.0;
+
+static UIImage *SPKSettingsInfoGlyph(void) {
+    UIImage *icon = [SPKAssetUtils instagramIconNamed:@"info"
+                                            pointSize:kSPKSectionInfoIconSize
+                                        renderingMode:UIImageRenderingModeAlwaysTemplate];
+    if (!icon) {
+        UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:kSPKSectionInfoIconSize
+                                                                                            weight:UIImageSymbolWeightRegular];
+        icon = [[UIImage systemImageNamed:@"info.circle" withConfiguration:config] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+    }
+    return icon;
+}
+
+/// Vertical centre of a stock grouped header's text, measured from the bottom
+/// of the header box: the title sits on the box's bottom edge with a small pad
+/// under it. Measuring the box (rather than constraining to UIKit's own label,
+/// which is not in the view tree yet when a header is about to be displayed)
+/// keeps the glyph on the title's line without touching private views.
+static CGFloat SPKSettingsHeaderTextCenterOffsetFromBottom(void) {
+    UIListContentConfiguration *reference = [UIListContentConfiguration groupedHeaderConfiguration];
+    UIFont *font = reference.textProperties.font ?: [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
+    return kSPKSectionHeaderTextBottomInset + (font.lineHeight / 2.0);
+}
+
 @implementation SPKSettingsViewController
 
 - (UIView *)selectionBackgroundView {
@@ -304,6 +319,7 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     self = [self initWithTitle:[SPKTweakSettings title] sections:[SPKTweakSettings sections] reduceMargin:YES];
     if (self) {
         self.searchesAllSettings = YES;
+        self.showsLanguageSelector = YES;
     }
     return self;
 }
@@ -411,21 +427,32 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
                                                    : @[];
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, leadingItems);
 
-    NSArray<UIBarButtonItem *> *trailingItems = @[];
+    NSMutableArray<UIBarButtonItem *> *trailingItems = [NSMutableArray array];
+    if (self.showsLanguageSelector) {
+        [trailingItems addObject:SPKMediaChromeTopBarButtonItemWithTint(@"translate",
+                                                                        self,
+                                                                        @selector(showLanguagePicker),
+                                                                        [SPKUtils SPKColor_InstagramPrimaryText],
+                                                                        SPKL(@"LANGUAGE_TITLE"))];
+    }
     if (self.defersRestartPrompt) {
         UIBarButtonItem *applyItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check",
                                                                              self,
                                                                              @selector(applyRestartChanges),
                                                                              UIBarButtonItemStyleDone,
                                                                              [SPKUtils SPKColor_InstagramPrimaryText],
-                                                                             @"Apply Liquid Glass changes");
+                                                                             SPKL(@"SETTINGS_SETTINGS_APPLY_LIQUID_GLASS_CHANGES_TEXT"));
         applyItem.enabled = self.hasPendingRestartChanges;
         self.applyRestartItem = applyItem;
-        trailingItems = @[ applyItem ];
+        [trailingItems addObject:applyItem];
     } else {
         self.applyRestartItem = nil;
     }
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, trailingItems);
+}
+
+- (void)showLanguagePicker {
+    SPKPresentLanguagePicker(self);
 }
 
 - (void)setupSearchController {
@@ -436,7 +463,7 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     [self.searchController.searchBar setImage:[SPKAssetUtils instagramIconNamed:@"search" pointSize:18.0]
                              forSearchBarIcon:UISearchBarIconSearch
                                         state:UIControlStateNormal];
-    self.searchController.searchBar.placeholder = self.searchesAllSettings ? @"Search All Settings" : [NSString stringWithFormat:@"Search %@", self.title ?: @"settings"];
+    self.searchController.searchBar.placeholder = self.searchesAllSettings ? SPKL(@"SETTINGS_SETTINGS_SEARCH_SETTINGS_TEXT") : [NSString stringWithFormat:SPKL(@"SETTINGS_SETTINGS_SEARCH_VALUE_FORMAT"), self.title ?: @"settings"];
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = YES;
     self.definesPresentationContext = YES;
@@ -492,13 +519,6 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
         } else {
             cellContentConfig.imageProperties.tintColor = row.iconTintColor ?: [SPKUtils SPKColor_InstagramPrimaryText];
         }
-    }
-
-    if ([row.userInfo[@"showsReorderGrabber"] boolValue] && rowIcon != nil) {
-        UIColor *iconTintColor = row.iconTintColor ?: [SPKUtils SPKColor_InstagramPrimaryText];
-        cellContentConfig.image = SPKSettingsReorderCompositeImage(rowIcon, iconTintColor);
-        cellContentConfig.imageProperties.tintColor = nil;
-        cellContentConfig.imageToTextPadding = 12.0;
     }
 
     // Self-healing avatar (SPKAvatarCache, keyed by PK)
@@ -821,7 +841,129 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     return UITableViewAutomaticDimension;
 }
 
+// MARK: - Section info sheets
+
+// A named section plus the unnamed sections that continue it form one group:
+// they are split apart purely to break a long list into visual blocks, so their
+// rows are explained together under the one header the reader sees.
+- (NSArray<NSDictionary *> *)spk_infoSheetSourceSections {
+    return [self isSearching] ? self.sections : self.originalSections;
+}
+
+/// Index of the section whose header hosts `section`'s info button, or
+/// NSNotFound while searching, when no row in the group carries help text, or
+/// when the group has no header to hang the button on (a page's leading unnamed
+/// section keeps its plain text footer).
+- (NSInteger)spk_infoSheetAnchorForSection:(NSInteger)section {
+    if ([self isSearching])
+        return NSNotFound;
+
+    NSArray<NSDictionary *> *sections = [self spk_infoSheetSourceSections];
+    if (section < 0 || (NSUInteger)section >= sections.count)
+        return NSNotFound;
+
+    NSInteger anchor = section;
+    while (anchor >= 0 && [sections[anchor][@"header"] length] == 0) {
+        anchor--;
+    }
+    if (anchor < 0)
+        return NSNotFound;
+
+    NSUInteger helpRowCount = [self spk_infoSheetRowsForAnchor:anchor].count;
+    if (helpRowCount == 0)
+        return NSNotFound;
+
+    // A section can say outright which treatment it wants; otherwise one
+    // explained row is not worth a sheet, since a lone sentence about a lone
+    // control reads better sitting under it as a footer.
+    id override = sections[anchor][SPKTopicSectionInfoSheetKey];
+    if ([override isKindOfClass:[NSNumber class]])
+        return [override boolValue] ? anchor : NSNotFound;
+
+    return helpRowCount > 1 ? anchor : NSNotFound;
+}
+
+- (NSArray<SPKSetting *> *)spk_infoSheetRowsForAnchor:(NSInteger)anchor {
+    NSArray<NSDictionary *> *sections = [self spk_infoSheetSourceSections];
+    if (anchor < 0 || (NSUInteger)anchor >= sections.count)
+        return @[];
+
+    NSMutableArray<SPKSetting *> *rows = [NSMutableArray array];
+    for (NSInteger index = anchor; (NSUInteger)index < sections.count; index++) {
+        if (index > anchor && [sections[index][@"header"] length] > 0)
+            break;
+        [rows addObjectsFromArray:SPKSettingsHelpRowsInSection(sections[index])];
+    }
+    return [rows copy];
+}
+
+- (void)spk_presentInfoSheetForAnchor:(NSInteger)anchor {
+    NSArray<NSDictionary *> *sections = [self spk_infoSheetSourceSections];
+    if (anchor < 0 || (NSUInteger)anchor >= sections.count)
+        return;
+
+    // An untitled group borrows the page title.
+    NSString *header = sections[anchor][@"header"];
+    [SPKSettingsInfoSheetViewController presentFromViewController:self
+                                                            title:header.length > 0 ? header : self.title
+                                                             rows:[self spk_infoSheetRowsForAnchor:anchor]];
+}
+
+- (void)tableView:(UITableView *)tableView willDisplayHeaderView:(UIView *)view forSection:(NSInteger)section {
+    if (![view isKindOfClass:[UITableViewHeaderFooterView class]])
+        return;
+
+    UITableViewHeaderFooterView *header = (UITableViewHeaderFooterView *)view;
+    // Header views are reused, so an inherited button has to go before this
+    // section decides whether it wants one.
+    [[header.contentView viewWithTag:kSPKSectionInfoButtonTag] removeFromSuperview];
+
+    if ([self spk_infoSheetAnchorForSection:section] != section)
+        return;
+
+    __weak typeof(self) weakSelf = self;
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeSystem];
+    button.tag = kSPKSectionInfoButtonTag;
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    [button setImage:SPKSettingsInfoGlyph() forState:UIControlStateNormal];
+    button.tintColor = [SPKUtils SPKColor_InstagramSecondaryText];
+    button.accessibilityLabel = SPKL(@"SETTINGS_SECTION_INFO_ACCESSIBILITY_LABEL");
+    [button addAction:[UIAction actionWithHandler:^(__kindof UIAction *action) {
+                 [weakSelf spk_presentInfoSheetForAnchor:section];
+             }]
+     forControlEvents:UIControlEventTouchUpInside];
+    [header.contentView addSubview:button];
+
+    // The button is a full-size touch target with the glyph centred inside it,
+    // so it overhangs the text margin by half its padding to leave the glyph
+    // itself flush with the rows above and below.
+    CGFloat overhang = (kSPKSectionInfoTouchSize - kSPKSectionInfoIconSize) / 2.0;
+    [NSLayoutConstraint activateConstraints:@[
+        [button.trailingAnchor constraintEqualToAnchor:header.contentView.layoutMarginsGuide.trailingAnchor constant:overhang],
+        [button.widthAnchor constraintEqualToConstant:kSPKSectionInfoTouchSize],
+        [button.heightAnchor constraintEqualToConstant:kSPKSectionInfoTouchSize],
+        [button.centerYAnchor constraintEqualToAnchor:header.contentView.bottomAnchor
+                                             constant:-SPKSettingsHeaderTextCenterOffsetFromBottom()]
+    ]];
+}
+
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    if (![self isSearching]) {
+        // The group has an info button, so its explanations live in the sheet.
+        if ([self spk_infoSheetAnchorForSection:section] != NSNotFound)
+            return nil;
+
+        // Too small for a sheet, or with no header to hang a button on: the
+        // help text stays where it has always been, under the rows.
+        NSArray<SPKSetting *> *helpRows = SPKSettingsHelpRowsInSection(self.sections[section]);
+        if (helpRows.count > 0) {
+            NSMutableArray<NSString *> *paragraphs = [NSMutableArray arrayWithCapacity:helpRows.count];
+            for (SPKSetting *row in helpRows) {
+                [paragraphs addObject:row.helpText];
+            }
+            return [paragraphs componentsJoinedByString:@"\n\n"];
+        }
+    }
     return self.sections[section][@"footer"];
 }
 
@@ -1115,7 +1257,7 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     }
 
     SPKLog(@"General", @"Switch changed: %@", sender.isOn ? @"ON" : @"OFF");
-    if (sender.isOn) {
+    if (sender.isOn && !row.requiresRestart) {
         SPKInstallEnabledFeatureHooks();
     }
 
@@ -1124,6 +1266,9 @@ static UIImage *SPKSettingsBreadcrumbChevronImage(void) {
     }
 
     if (row.requiresRestart) {
+        // A restart action may terminate the process before defaults flush on
+        // their own. Persist the new state before presenting that action.
+        [[NSUserDefaults standardUserDefaults] synchronize];
         if (self.defersRestartPrompt) {
             self.hasPendingRestartChanges = YES;
             self.applyRestartItem.enabled = YES;

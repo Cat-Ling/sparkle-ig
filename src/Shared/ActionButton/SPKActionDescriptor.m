@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKActionDescriptor.h"
 #import "ActionButtonCore.h"
 
@@ -19,118 +20,121 @@
     dispatch_once(&onceToken, ^{
         descriptors = @[
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadLibrary
-                                                    title:@"Save to Photos"
+                                                    title:SPKL(@"FEED_COMMENT_ACTIONS_SAVE_PHOTOS_TEXT")
                                                  iconName:@"download"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadShare
-                                                    title:@"Share"
+                                                    title:SPKL(@"ALERT_ACTION_SHARE")
                                                  iconName:@"share"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionCopyDownloadLink
-                                                    title:@"Copy Download URL"
+                                                    title:SPKL(@"FEED_COMMENT_ACTIONS_COPY_DOWNLOAD_URL_TEXT")
                                                  iconName:@"link"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionCopyMedia
-                                                    title:@"Copy Media"
+                                                    title:SPKL(@"ACTION_BUTTON_COPY_MEDIA_TITLE")
                                                  iconName:@"copy"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadGallery
-                                                    title:@"Save to Gallery"
+                                                    title:SPKL(@"FEED_COMMENT_ACTIONS_SAVE_GALLERY_TEXT")
                                                  iconName:@"sparkle_gallery"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionTrimSave
-                                                    title:@"Trim & Save"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_TRIM_SAVE_TEXT")
                                                  iconName:@"trim"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionEditSave
-                                                    title:@"Edit & Save"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_EDIT_SAVE_TEXT")
                                                  iconName:@"crop"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAudio
-                                                    title:@"Save Audio to Files"
+                                                    title:SPKL(@"ALERT_ACTION_SAVE_AUDIO_FILES")
                                                  iconName:@"audio_download"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAudioShare
-                                                    title:@"Share Audio"
+                                                    title:SPKL(@"ALERT_ACTION_SHARE_AUDIO")
                                                  iconName:@"share"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAudioGallery
-                                                    title:@"Save Audio to Gallery"
+                                                    title:SPKL(@"ALERT_ACTION_SAVE_AUDIO_GALLERY")
                                                  iconName:@"sparkle_gallery"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionPlayAudio
-                                                    title:@"Play Audio"
+                                                    title:SPKL(@"ALERT_ACTION_PLAY_AUDIO")
                                                  iconName:@"play"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionCopyAudioURL
-                                                    title:@"Copy Audio Download URL"
+                                                    title:SPKL(@"ALERT_ACTION_COPY_AUDIO_DOWNLOAD_URL")
                                                  iconName:@"link"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAllLibrary
-                                                    title:@"Save All to Photos"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_SAVE_PHOTOS_TEXT")
                                                  iconName:@"download"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAllShare
-                                                    title:@"Share All"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_SHARE_TEXT")
                                                  iconName:@"share"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAllGallery
-                                                    title:@"Save All to Gallery"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_SAVE_GALLERY_TEXT")
                                                  iconName:@"sparkle_gallery"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAllClipboard
-                                                    title:@"Copy All Media"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_MEDIA_TEXT")
                                                  iconName:@"copy"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAllLinks
-                                                    title:@"Copy Download URLs"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_DOWNLOAD_URLS_TEXT")
                                                  iconName:@"link"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDownloadAll
-                                                    title:@"Download All"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_DOWNLOAD_TEXT")
                                                  iconName:@"more"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionExpand
-                                                    title:@"Expand"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_EXPAND_TEXT")
                                                  iconName:@"expand"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionViewThumbnail
-                                                    title:@"View Thumbnail"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_VIEW_THUMBNAIL_TEXT")
                                                  iconName:@"photo_gallery"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionCopyCaption
-                                                    title:@"Copy Caption"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_CAPTION_TEXT")
                                                  iconName:@"caption"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionOpenTopicSettings
-                                                    title:@"Settings"
+                                                    title:SPKL(@"DATA_GENERAL_SETTINGS_TITLE")
                                                  iconName:@"settings"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionDeletedMessagesLog
-                                                    title:@"Deleted Messages"
+                                                    title:SPKL(@"ALERT_ACTION_DELETED_MESSAGES")
                                                  iconName:@"channels"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionRepost
-                                                    title:@"Repost"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_REPOST_TEXT")
                                                  iconName:@"repost"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleStorySeenUserRule
-                                                    title:@"Toggle Story User Rule"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_TOGGLE_STORY_USER_RULE_TEXT")
                                                  iconName:@"eye"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleStoryAutoSaveUserRule
-                                                    title:@"Toggle Story Auto-Save"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_TOGGLE_STORY_AUTO_SAVE_TEXT")
                                                  iconName:@"download"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleDirectAutoSaveThreadRule
-                                                    title:@"Toggle Chat Auto-Save"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_TOGGLE_CHAT_AUTO_SAVE_TEXT")
+                                                 iconName:@"download"],
+            [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleInstantsAutoSaveUserRule
+                                                    title:SPKL(@"INSTANTS_ACTION_TOGGLE_TITLE")
                                                  iconName:@"download"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleProfileStorySeenUserRule
-                                                    title:@"Toggle Story Seen"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_TOGGLE_STORY_SEEN_TEXT")
                                                  iconName:@"eye"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionToggleProfileMessagesSeenUserRule
-                                                    title:@"Toggle Messages Seen"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_TOGGLE_MESSAGES_SEEN_MESSAGE")
                                                  iconName:@"eye"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionStoryMentionsSheet
-                                                    title:@"Story Mentions"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_STORY_MENTIONS_TEXT")
                                                  iconName:@"mention"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionProfileCopyInfo
-                                                    title:@"Copy Info"
+                                                    title:SPKL(@"SETTINGS_PROFILE_COPY_INFO_TEXT")
                                                  iconName:@"info"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionProfileCopyID
-                                                    title:@"Copy ID"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_ID_TEXT")
                                                  iconName:@"key"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionProfileCopyUsername
-                                                    title:@"Copy Username"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_USERNAME_TEXT")
                                                  iconName:@"username"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionProfileCopyName
-                                                    title:@"Copy Name"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_NAME_TEXT")
                                                  iconName:@"text"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionProfileCopyBio
-                                                    title:@"Copy Bio"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_BIO_TEXT")
                                                  iconName:@"caption"],
             [SPKActionDescriptor descriptorWithIdentifier:kSPKActionProfileCopyLink
-                                                    title:@"Copy Profile URL"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_COPY_PROFILE_URL_TEXT")
                                                  iconName:@"link"],
             [SPKActionDescriptor descriptorWithIdentifier:@"more"
-                                                    title:@"More"
+                                                    title:SPKL(@"MESSAGES_DELETED_MESSAGES_MORE_TEXT")
                                                  iconName:@"more"],
             [SPKActionDescriptor descriptorWithIdentifier:@"action"
-                                                    title:@"Actions"
+                                                    title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_ACTIONS_ACTION")
                                                  iconName:@"action"]
         ];
     });
@@ -149,61 +153,61 @@
 + (NSArray<SPKActionDescriptor *> *)availableSectionIconDescriptors {
     return @[
         [SPKActionDescriptor descriptorWithIdentifier:@"action"
-                                                title:@"Actions"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_ACTIONS_ACTION")
                                              iconName:@"action"],
         [SPKActionDescriptor descriptorWithIdentifier:@"copy"
-                                                title:@"Copy"
+                                                title:SPKL(@"FEED_COMMENT_ACTIONS_COPY_TEXT")
                                              iconName:@"copy"],
         [SPKActionDescriptor descriptorWithIdentifier:@"key"
-                                                title:@"Key"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_KEY_TEXT")
                                              iconName:@"key"],
         [SPKActionDescriptor descriptorWithIdentifier:@"caption"
-                                                title:@"Caption"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_CAPTION_TEXT")
                                              iconName:@"caption"],
         [SPKActionDescriptor descriptorWithIdentifier:@"download"
-                                                title:@"Download"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT")
                                              iconName:@"download"],
         [SPKActionDescriptor descriptorWithIdentifier:@"share"
-                                                title:@"Share"
+                                                title:SPKL(@"ALERT_ACTION_SHARE")
                                              iconName:@"share"],
         [SPKActionDescriptor descriptorWithIdentifier:@"link"
-                                                title:@"Link"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_LINK_TEXT")
                                              iconName:@"link"],
         [SPKActionDescriptor descriptorWithIdentifier:@"media"
-                                                title:@"Gallery"
+                                                title:SPKL(@"DATA_GENERAL_GALLERY_TITLE")
                                              iconName:@"sparkle_gallery"],
         [SPKActionDescriptor descriptorWithIdentifier:@"expand"
-                                                title:@"Expand"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_EXPAND_TEXT")
                                              iconName:@"expand"],
         [SPKActionDescriptor descriptorWithIdentifier:@"photo_gallery"
-                                                title:@"Thumbnail"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_THUMBNAIL_TEXT")
                                              iconName:@"photo_gallery"],
         [SPKActionDescriptor descriptorWithIdentifier:@"repost"
-                                                title:@"Repost"
+                                                title:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_REPOST_TEXT")
                                              iconName:@"repost"],
         [SPKActionDescriptor descriptorWithIdentifier:@"mention"
-                                                title:@"Mentions"
+                                                title:SPKL(@"STORIES_STORY_MENTIONS_MENTIONS_TEXT")
                                              iconName:@"mention"],
         [SPKActionDescriptor descriptorWithIdentifier:@"feed"
-                                                title:@"Feed"
+                                                title:SPKL(@"FEED_TITLE")
                                              iconName:@"feed"],
         [SPKActionDescriptor descriptorWithIdentifier:@"reels"
-                                                title:@"Reels"
+                                                title:SPKL(@"REELS_TITLE")
                                              iconName:@"reels"],
         [SPKActionDescriptor descriptorWithIdentifier:@"story"
-                                                title:@"Stories"
+                                                title:SPKL(@"STORIES_OTHER_STORIES_TITLE")
                                              iconName:@"story"],
         [SPKActionDescriptor descriptorWithIdentifier:@"messages"
-                                                title:@"Messages"
+                                                title:SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE")
                                              iconName:@"messages"],
         [SPKActionDescriptor descriptorWithIdentifier:@"profile"
-                                                title:@"Profile"
+                                                title:SPKL(@"PROFILE_TITLE")
                                              iconName:@"user_circle"],
         [SPKActionDescriptor descriptorWithIdentifier:@"settings"
-                                                title:@"Settings"
+                                                title:SPKL(@"DATA_GENERAL_SETTINGS_TITLE")
                                              iconName:@"settings"],
         [SPKActionDescriptor descriptorWithIdentifier:@"more"
-                                                title:@"More"
+                                                title:SPKL(@"MESSAGES_DELETED_MESSAGES_MORE_TEXT")
                                              iconName:@"more"]
     ];
 }
@@ -212,10 +216,10 @@
 
 NSString *SPKActionDescriptorDisplayTitle(NSString *identifier, NSString *topicTitle) {
     if ([identifier isEqualToString:kSPKActionOpenTopicSettings] && topicTitle.length > 0) {
-        return [NSString stringWithFormat:@"%@ Settings", topicTitle];
+        return [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_VALUE_SETTINGS_FORMAT"), topicTitle];
     }
     SPKActionDescriptor *descriptor = [SPKActionDescriptor descriptorForIdentifier:identifier];
-    return descriptor.title ?: @"Action";
+    return descriptor.title ?: SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_ACTION");
 }
 
 NSString *SPKActionDescriptorIconName(NSString *identifier) {

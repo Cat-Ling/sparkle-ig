@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 // Shows whether the current profile user follows you.
 //
 // The badge is rendered from the stat container's own `layoutSubviews` and
@@ -175,7 +176,7 @@ static void SPKRenderFollowBadge(UIViewController *controller, UIView *container
 
     NSString *text = nil;
     if (SPKFollowIndicatorShowsText())
-        text = followsYou ? @"FOLLOWING YOU" : @"NOT FOLLOWING YOU";
+        text = followsYou ? SPKL(@"PROFILE_FOLLOW_INDICATOR_FOLLOWING_TEXT") : SPKL(@"PROFILE_FOLLOW_INDICATOR_NOT_FOLLOWING_TEXT");
 
     if (!icon && text.length == 0)
         return;

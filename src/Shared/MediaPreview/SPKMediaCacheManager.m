@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKMediaCacheManager.h"
 
 #import <AVFoundation/AVFoundation.h>
@@ -175,7 +176,7 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
         if (completion) {
             completion(nil, [NSError errorWithDomain:@"SPKMediaCacheManager"
                                                 code:-1
-                                            userInfo:@{NSLocalizedDescriptionKey : @"Missing media item"}]);
+                                            userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_PREVIEW_MISSING_MEDIA_ITEM_ERROR")}]);
         }
         return;
     }
@@ -192,7 +193,7 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
         if (completion)
             completion(nil, [NSError errorWithDomain:@"SPKMediaCacheManager"
                                                 code:-2
-                                            userInfo:@{NSLocalizedDescriptionKey : @"Missing remote media URL"}]);
+                                            userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_PREVIEW_MEDIA_CACHE_MANAGER_MISSING_REMOTE_MEDIA_URL_TEXT")}]);
         return;
     }
 
@@ -201,7 +202,7 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
         if (completion)
             completion(nil, [NSError errorWithDomain:@"SPKMediaCacheManager"
                                                 code:-3
-                                            userInfo:@{NSLocalizedDescriptionKey : @"Invalid remote media URL"}]);
+                                            userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_PREVIEW_MEDIA_CACHE_MANAGER_INVALID_REMOTE_MEDIA_URL_TEXT")}]);
         return;
     }
 
@@ -277,7 +278,7 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
         if (completion)
             completion(nil, [NSError errorWithDomain:@"SPKMediaCacheManager"
                                                 code:-4
-                                            userInfo:@{NSLocalizedDescriptionKey : @"Missing media item"}]);
+                                            userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_PREVIEW_MISSING_MEDIA_ITEM_ERROR")}]);
         return;
     }
 
@@ -324,7 +325,7 @@ static NSString *SPKFileKeyForURL(NSURL *url) {
                 } else if (completion) {
                     completion(nil, [NSError errorWithDomain:@"SPKMediaCacheManager"
                                                         code:-5
-                                                    userInfo:@{NSLocalizedDescriptionKey : @"Failed to decode image"}]);
+                                                    userInfo:@{NSLocalizedDescriptionKey : SPKL(@"MEDIA_PREVIEW_MEDIA_CACHE_MANAGER_FAILED_DECODE_IMAGE_TEXT")}]);
                 }
             });
         });

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKMediaDMUploadCoordinator.h"
 
 #import <objc/message.h>
@@ -83,14 +84,14 @@ static SPKMediaDMUploadCoordinator *sSPKMediaActiveDMUploadCoordinator;
                                         presenter:(UIViewController *)presenter
                                        sourceView:(UIView *)sourceView {
     if (![self senderTargetSupportsMediaUpload:senderTarget] || !presenter) {
-        SPKMediaDMNotify(@"Media upload unavailable", @"This Instagram build does not expose the direct media sender.", NO);
+        SPKMediaDMNotify(SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_MEDIA_UPLOAD_UNAVAILABLE_TEXT"), SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_INSTAGRAM_BUILD_NOT_EXPOSE_DIRECT_MEDIA_SENDER_TEXT"), NO);
         SPKWarnLog(@"MediaUpload", @"Missing direct media sender on target: %@", senderTarget);
         return;
     }
 
     NSSet<NSNumber *> *mediaTypes = [NSSet setWithObject:@(SPKGalleryMediaTypeImage)];
     if (![SPKGalleryPickerViewController hasSelectableFilesForAllowedMediaTypes:mediaTypes]) {
-        SPKMediaDMNotify(@"No Gallery photos", @"Save a photo to Gallery first.", NO);
+        SPKMediaDMNotify(SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_NO_GALLERY_PHOTOS_TEXT"), SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_SAVE_PHOTO_GALLERY_FIRST_TEXT"), NO);
         return;
     }
 
@@ -100,7 +101,7 @@ static SPKMediaDMUploadCoordinator *sSPKMediaActiveDMUploadCoordinator;
 
     __weak typeof(coordinator) weakCoordinator = coordinator;
     [SPKGalleryPickerViewController presentFromViewController:presenter
-                                                        title:@"Gallery"
+                                                        title:SPKL(@"DATA_GENERAL_GALLERY_TITLE")
                                             allowedMediaTypes:mediaTypes
                                       allowsMultipleSelection:NO
                                                    completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {
@@ -118,7 +119,7 @@ static SPKMediaDMUploadCoordinator *sSPKMediaActiveDMUploadCoordinator;
 - (void)sendImageFromURL:(NSURL *)url {
     UIImage *image = [UIImage imageWithContentsOfFile:url.path];
     if (!image) {
-        SPKMediaDMNotify(@"Media upload failed", @"Could not read the selected photo.", NO);
+        SPKMediaDMNotify(SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_MEDIA_UPLOAD_FAILED_TEXT"), SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_COULD_NOT_READ_SELECTED_PHOTO_TEXT"), NO);
         if (sSPKMediaActiveDMUploadCoordinator == self)
             sSPKMediaActiveDMUploadCoordinator = nil;
         return;
@@ -126,7 +127,7 @@ static SPKMediaDMUploadCoordinator *sSPKMediaActiveDMUploadCoordinator;
 
     id sender = SPKMediaDMMessageSenderFromTarget(self.senderTarget) ?: self.senderTarget;
     if (![sender respondsToSelector:SPKMediaDMSendImageSelector()]) {
-        SPKMediaDMNotify(@"Media upload unavailable", @"The direct media sender disappeared before sending.", NO);
+        SPKMediaDMNotify(SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_MEDIA_UPLOAD_UNAVAILABLE_TEXT"), SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_DIRECT_MEDIA_SENDER_DISAPPEARED_BEFORE_SENDING_TEXT"), NO);
         if (sSPKMediaActiveDMUploadCoordinator == self)
             sSPKMediaActiveDMUploadCoordinator = nil;
         return;
@@ -134,9 +135,9 @@ static SPKMediaDMUploadCoordinator *sSPKMediaActiveDMUploadCoordinator;
 
     @try {
         ((void (*)(id, SEL, id))objc_msgSend)(sender, SPKMediaDMSendImageSelector(), image);
-        SPKMediaDMNotify(@"Photo sent", @"Sent the selected photo to this chat.", YES);
+        SPKMediaDMNotify(SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_PHOTO_SENT_TEXT"), SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_SENT_SELECTED_PHOTO_CHAT_TEXT"), YES);
     } @catch (__unused NSException *exception) {
-        SPKMediaDMNotify(@"Media upload failed", @"Instagram rejected the selected photo.", NO);
+        SPKMediaDMNotify(SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_MEDIA_UPLOAD_FAILED_TEXT"), SPKL(@"MEDIA_UPLOAD_MEDIA_DMUPLOAD_COORDINATOR_INSTAGRAM_REJECTED_SELECTED_PHOTO_TEXT"), NO);
     }
     if (sSPKMediaActiveDMUploadCoordinator == self)
         sSPKMediaActiveDMUploadCoordinator = nil;

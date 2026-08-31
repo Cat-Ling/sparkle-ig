@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryFilterViewController.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
@@ -174,7 +175,7 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
 }
 
 - (void)setupNavigationBar {
-    self.title = @"Filter";
+    self.title = SPKL(@"GALLERY_GALLERY_FILTER_FILTER_TEXT");
     self.navigationItem.leftBarButtonItem = nil;
     self.navigationItem.rightBarButtonItem = nil;
 }
@@ -212,17 +213,17 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
                                                       constant:-32],
     ]];
 
-    [self.contentStack addArrangedSubview:[self sectionTitle:@"Type"]];
+    [self.contentStack addArrangedSubview:[self sectionTitle:SPKL(@"GALLERY_GALLERY_FILE_DETAILS_TYPE_TEXT")]];
     [self.contentStack addArrangedSubview:[self createTypeRow]];
-    [self.contentStack addArrangedSubview:[self sectionTitle:@"Source"]];
+    [self.contentStack addArrangedSubview:[self sectionTitle:SPKL(@"GALLERY_GALLERY_FILTER_SOURCE_TEXT")]];
     [self.contentStack addArrangedSubview:[self createSourceGrid]];
     if (self.availableUsernames.count > 0) {
-        self.usernameSectionTitle = [self sectionTitle:@"Username"];
+        self.usernameSectionTitle = [self sectionTitle:SPKL(@"SETTINGS_PROFILE_USERNAME_TEXT")];
         [self updateUsernameSectionTitle];
         [self.contentStack addArrangedSubview:self.usernameSectionTitle];
         [self.contentStack addArrangedSubview:[self createUsernameRow]];
     }
-    [self.contentStack addArrangedSubview:[self sectionTitle:@"Options"]];
+    [self.contentStack addArrangedSubview:[self sectionTitle:SPKL(@"PROFILE_PROFILE_ANALYZER_OPTIONS_TEXT")]];
     [self.contentStack addArrangedSubview:[self createOptionsRow]];
 }
 
@@ -265,9 +266,9 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
     row.distribution = UIStackViewDistributionFillEqually;
 
     NSArray *defs = @[
-        @{@"label" : @"Images", @"resource" : @"photo", @"tag" : @(SPKGalleryMediaTypeImage)},
-        @{@"label" : @"Videos", @"resource" : @"video", @"tag" : @(SPKGalleryMediaTypeVideo)},
-        @{@"label" : @"Audio", @"resource" : @"audio", @"tag" : @(SPKGalleryMediaTypeAudio)},
+        @{@"label" : SPKL(@"GALLERY_GALLERY_FILTER_IMAGES_TITLE"), @"resource" : @"photo", @"tag" : @(SPKGalleryMediaTypeImage)},
+        @{@"label" : SPKL(@"GALLERY_GALLERY_FILTER_VIDEOS_TITLE"), @"resource" : @"video", @"tag" : @(SPKGalleryMediaTypeVideo)},
+        @{@"label" : SPKL(@"COMMON_MEDIA_TYPE_AUDIO"), @"resource" : @"audio", @"tag" : @(SPKGalleryMediaTypeAudio)},
     ];
     for (NSDictionary *d in defs) {
         NSInteger tag = [d[@"tag"] integerValue];
@@ -389,8 +390,8 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
 - (void)updateUsernameRowLabel {
     NSUInteger count = self.filterUsernames.count;
     self.usernameRowLabel.text = count > 0
-                                     ? [NSString stringWithFormat:@"%lu user%@ selected", (unsigned long)count, count == 1 ? @"" : @"s"]
-                                     : @"All users";
+                                     ? [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_FILTER_VALUE_USER_VALUE_SELECTED_FORMAT"), SPKLP(@"COMMON_USER_COUNT", (NSInteger)count)]
+                                     : SPKL(@"GALLERY_GALLERY_FILTER_USERS_TEXT");
     self.usernameRowLabel.textColor = count > 0
                                           ? [SPKUtils SPKColor_InstagramPrimaryText]
                                           : [SPKUtils SPKColor_InstagramSecondaryText];
@@ -433,7 +434,7 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
     [row addSubview:icon];
 
     UILabel *label = [[UILabel alloc] init];
-    label.text = @"Favorites";
+    label.text = SPKL(@"GALLERY_GALLERY_FILTER_FAVORITES_TEXT");
     label.font = [UIFont systemFontOfSize:kSPKGalleryFilterChipLabelPointSize weight:UIFontWeightMedium];
     label.adjustsFontSizeToFitWidth = YES;
     label.minimumScaleFactor = 0.78;
@@ -484,7 +485,7 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
     [row addSubview:icon];
 
     UILabel *label = [[UILabel alloc] init];
-    label.text = @"Clear filters";
+    label.text = SPKL(@"GALLERY_GALLERY_FILTER_CLEAR_FILTERS_TEXT");
     label.font = [UIFont systemFontOfSize:kSPKGalleryFilterChipLabelPointSize weight:UIFontWeightMedium];
     label.adjustsFontSizeToFitWidth = YES;
     label.minimumScaleFactor = 0.78;
@@ -542,7 +543,7 @@ static CGFloat const kSPKGalleryFilterChipIconPointSize = 14.0;
     // itself, so don't duplicate it here.
     if (!self.usernameSectionTitle)
         return;
-    self.usernameSectionTitle.text = @"Username";
+    self.usernameSectionTitle.text = SPKL(@"SETTINGS_PROFILE_USERNAME_TEXT");
 }
 
 - (void)favoritesRowTapped {

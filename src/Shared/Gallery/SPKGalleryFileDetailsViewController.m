@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryFileDetailsViewController.h"
 #import "../../Utils.h"
 #import "../Account/SPKAccountManager.h"
@@ -42,12 +43,12 @@ typedef NS_ENUM(NSInteger, SPKDetailsEditRow) {
 - (void)buildControls {
     _nameField = [self editableField];
     _nameField.text = self.file.customName;
-    _nameField.placeholder = @"Display name";
+    _nameField.placeholder = SPKL(@"GALLERY_GALLERY_FILE_DETAILS_DISPLAY_NAME_TEXT");
     _nameField.autocapitalizationType = UITextAutocapitalizationTypeNone;
 
     _usernameField = [self editableField];
     _usernameField.text = self.file.sourceUsername;
-    _usernameField.placeholder = @"Username";
+    _usernameField.placeholder = SPKL(@"SETTINGS_PROFILE_USERNAME_TEXT");
     _usernameField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     _usernameField.autocorrectionType = UITextAutocorrectionTypeNo;
 
@@ -75,33 +76,33 @@ typedef NS_ENUM(NSInteger, SPKDetailsEditRow) {
         typeName = @"Video";
     else if (self.file.mediaType == SPKGalleryMediaTypeAudio)
         typeName = @"Audio";
-    [rows addObject:@[ @"Type", typeName ]];
+    [rows addObject:@[ SPKL(@"GALLERY_GALLERY_FILE_DETAILS_TYPE_TEXT"), typeName ]];
     if (self.file.pixelWidth > 0 && self.file.pixelHeight > 0) {
-        [rows addObject:@[ @"Dimensions", [NSString stringWithFormat:@"%d × %d", self.file.pixelWidth, self.file.pixelHeight] ]];
+        [rows addObject:@[ SPKL(@"GALLERY_GALLERY_FILE_DETAILS_DIMENSIONS_TEXT"), [NSString stringWithFormat:@"%d × %d", self.file.pixelWidth, self.file.pixelHeight] ]];
     }
     if (self.file.mediaType == SPKGalleryMediaTypeVideo && self.file.durationSeconds > 0) {
         NSInteger total = (NSInteger)llround(self.file.durationSeconds);
-        [rows addObject:@[ @"Duration", [NSString stringWithFormat:@"%ld:%02ld", (long)(total / 60), (long)(total % 60)] ]];
+        [rows addObject:@[ SPKL(@"NOTIFICATION_APPEARANCE_DURATION_TITLE"), [NSString stringWithFormat:@"%ld:%02ld", (long)(total / 60), (long)(total % 60)] ]];
     }
     if (self.file.fileSize > 0) {
-        [rows addObject:@[ @"Size", [NSByteCountFormatter stringFromByteCount:self.file.fileSize countStyle:NSByteCountFormatterCountStyleFile] ]];
+        [rows addObject:@[ SPKL(@"GALLERY_GALLERY_FILE_DETAILS_SIZE_TEXT"), [NSByteCountFormatter stringFromByteCount:self.file.fileSize countStyle:NSByteCountFormatterCountStyleFile] ]];
     }
-    NSString *folder = self.file.folderPath.length > 0 ? [self.file.folderPath lastPathComponent] : @"Gallery";
-    [rows addObject:@[ @"Folder", folder ]];
+    NSString *folder = self.file.folderPath.length > 0 ? [self.file.folderPath lastPathComponent] : SPKL(@"GALLERY_TITLE");
+    [rows addObject:@[ SPKL(@"GALLERY_GALLERY_FILE_DETAILS_FOLDER_TEXT"), folder ]];
     if (self.file.sourceMediaCode.length > 0) {
-        [rows addObject:@[ @"Media code", self.file.sourceMediaCode ]];
+        [rows addObject:@[ SPKL(@"GALLERY_GALLERY_FILE_DETAILS_MEDIA_CODE_TEXT"), self.file.sourceMediaCode ]];
     }
     self.infoRows = rows;
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"Edit Details";
+    self.title = SPKL(@"ALERT_ACTION_EDIT_DETAILS");
     self.view.backgroundColor = [SPKUtils SPKColor_InstagramBackground];
 
     UIBarButtonItem *cancelItem = SPKMediaChromeTopBarButtonItem(@"xmark", self, @selector(cancel));
-    cancelItem.accessibilityLabel = @"Cancel";
-    UIBarButtonItem *saveItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check", self, @selector(save), UIBarButtonItemStyleDone, [SPKUtils SPKColor_InstagramBlue], @"Save");
+    cancelItem.accessibilityLabel = SPKL(@"ALERT_ACTION_CANCEL");
+    UIBarButtonItem *saveItem = SPKMediaChromeTopBarButtonItemWithStyle(@"check", self, @selector(save), UIBarButtonItemStyleDone, [SPKUtils SPKColor_InstagramBlue], SPKL(@"GALLERY_GALLERY_FILE_DETAILS_SAVE_TEXT"));
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ cancelItem ]);
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, @[ saveItem ]);
 }
@@ -133,7 +134,7 @@ typedef NS_ENUM(NSInteger, SPKDetailsEditRow) {
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return section == 0 ? @"Details" : @"Info";
+    return section == 0 ? SPKL(@"GALLERY_GALLERY_FILE_DETAILS_DETAILS_TEXT") : SPKL(@"GALLERY_GALLERY_FILE_DETAILS_INFO_TEXT");
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
@@ -150,15 +151,15 @@ typedef NS_ENUM(NSInteger, SPKDetailsEditRow) {
     if (indexPath.section == 0) {
         switch ((SPKDetailsEditRow)indexPath.row) {
         case SPKDetailsEditRowName:
-            cell.textLabel.text = @"Name";
+            cell.textLabel.text = SPKL(@"SETTINGS_PROFILE_NAME_TEXT");
             [self embedAccessory:self.nameField inCell:cell];
             break;
         case SPKDetailsEditRowUsername:
-            cell.textLabel.text = @"Username";
+            cell.textLabel.text = SPKL(@"SETTINGS_PROFILE_USERNAME_TEXT");
             [self embedAccessory:self.usernameField inCell:cell];
             break;
         case SPKDetailsEditRowAccount: {
-            cell.textLabel.text = @"Account";
+            cell.textLabel.text = SPKL(@"GALLERY_GALLERY_FILE_DETAILS_ACCOUNT_TEXT");
             cell.detailTextLabel.text = [self ownerDisplayText];
             cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
             cell.selectionStyle = UITableViewCellSelectionStyleDefault;
@@ -168,7 +169,7 @@ typedef NS_ENUM(NSInteger, SPKDetailsEditRow) {
             break;
         }
         case SPKDetailsEditRowDate:
-            cell.textLabel.text = @"Date";
+            cell.textLabel.text = SPKL(@"GALLERY_GALLERY_FILE_DETAILS_DATE_TEXT");
             [self embedAccessory:self.datePicker inCell:cell];
             break;
         default:
@@ -184,7 +185,7 @@ typedef NS_ENUM(NSInteger, SPKDetailsEditRow) {
 
 - (NSString *)ownerDisplayText {
     if (self.selectedOwnerPK.length == 0)
-        return @"Unassigned";
+        return SPKL(@"ALERT_ACTION_UNASSIGNED");
     NSString *username = self.selectedOwnerUsername.length > 0
                              ? self.selectedOwnerUsername
                              : [SPKAccountManager usernameForPK:self.selectedOwnerPK];
@@ -226,18 +227,18 @@ typedef NS_ENUM(NSInteger, SPKDetailsEditRow) {
                                                          [weakSelf.tableView reloadData];
                                                      }]];
     }
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Unassigned"
+    [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_UNASSIGNED")
                                                    style:SPKIGAlertActionStyleDestructive
                                                  handler:^{
                                                      weakSelf.selectedOwnerPK = nil;
                                                      weakSelf.selectedOwnerUsername = nil;
                                                      [weakSelf.tableView reloadData];
                                                  }]];
-    [actions addObject:[SPKIGAlertAction actionWithTitle:@"Cancel" style:SPKIGAlertActionStyleCancel handler:nil]];
+    [actions addObject:[SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL") style:SPKIGAlertActionStyleCancel handler:nil]];
 
     [SPKIGAlertPresenter presentActionSheetFromViewController:self
-                                                        title:@"Change File Owner"
-                                                      message:@"Which account does this file belong to?"
+                                                        title:SPKL(@"GALLERY_GALLERY_FILE_DETAILS_CHANGE_FILE_OWNER_TEXT")
+                                                      message:SPKL(@"GALLERY_GALLERY_FILE_DETAILS_ACCOUNT_FILE_BELONG_QUESTION")
                                                       actions:actions];
 }
 

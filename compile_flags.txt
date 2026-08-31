@@ -1,0 +1,2 @@
+-Isrc
+-Isrc/Shared/i18n

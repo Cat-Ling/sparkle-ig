@@ -1,4 +1,5 @@
 #import "SPKVideoCropViewController.h"
+#import "SPKStrings.h"
 
 #import "../../Utils.h"
 #import "../Crop/SPKCropCanvasView.h"
@@ -54,7 +55,7 @@ static const CGFloat kSPKVideoCropControlsRow = 56.0;
     editor.lockedAspectRatio = lockedAspectRatio;
     editor.initialCrop = initialCrop;
     editor.completion = completion;
-    editor.title = title.length > 0 ? title : @"Crop";
+    editor.title = title.length > 0 ? title : SPKL(@"MEDIA_TRIM_TRIM_EDITOR_CROP_TEXT");
     // Same chrome as the trim and photo editors: native bars (Liquid Glass on
     // iOS 26), always dark so the black canvas and light controls read correctly.
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:editor];
@@ -93,11 +94,11 @@ static const CGFloat kSPKVideoCropControlsRow = 56.0;
 
 - (void)setupChrome {
     UIBarButtonItem *cancelItem = SPKMediaChromeTopBarButtonItem(@"close", self, @selector(cancelTapped));
-    cancelItem.accessibilityLabel = @"Cancel";
+    cancelItem.accessibilityLabel = SPKL(@"ALERT_ACTION_CANCEL");
     // Plain and untinted: confirming here returns the framing to the trim
     // editor, whose own Done is the one that commits the edit.
     UIBarButtonItem *doneItem = SPKMediaChromeTopBarButtonItem(@"check", self, @selector(confirmTapped));
-    doneItem.accessibilityLabel = @"Done";
+    doneItem.accessibilityLabel = SPKL(@"SETTINGS_WHATS_NEW_DONE_TEXT");
     SPKMediaChromeSetLeadingTopBarItems(self.navigationItem, @[ cancelItem ]);
     SPKMediaChromeSetTrailingTopBarItems(self.navigationItem, @[ doneItem ]);
 }

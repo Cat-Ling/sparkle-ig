@@ -12,9 +12,9 @@
 // snap when it opens, and each tap advances to the next one. Those are the only two
 // moments the displayed snap changes, so those are the only two moments worth looking.
 //
-// Resolution is view-only (SPKInstantsResolveActiveSnapInView). The snap store is not
-// usable here: IG pops the displayed snap off it, so the store holds what's still
-// queued and never what's on screen.
+// Resolution starts from the live service-removal tracker and uses the view as the
+// initial/fallback identity source. The snap store alone is not usable here: IG pops the
+// displayed snap off it, so the store holds what's still queued and never what's on screen.
 
 // Three things make the answer arrive late: the swap animation has to land before the new
 // snap is frontmost, its image has to finish loading before it resolves, and the store
@@ -155,6 +155,15 @@ static void SPKInstantsAutoSaveScheduleConsider(UIView *viewInHierarchy, BOOL ex
         if (strongView)
             SPKInstantsAutoSaveConsiderDisplayedSnap(strongView, 0, generation, previousKey);
     });
+}
+
+// Re-considers the instant already on screen, for callers outside this file that just
+// changed the rule for its author (the action menu's auto-save toggle). `expectsChange`
+// is NO: no tap happened, so the displayed snap is meant to stay the same one.
+void SPKInstantsAutoSaveConsiderCurrentSnapInView(UIView *viewInHierarchy) {
+    if (!viewInHierarchy)
+        return;
+    SPKInstantsAutoSaveScheduleConsider(viewInHierarchy, NO);
 }
 
 /// The tap controller's own "this press was a hold, not a tap" flag -- a Swift Bool

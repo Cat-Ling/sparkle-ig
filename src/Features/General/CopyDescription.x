@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../InstagramHeaders.h"
 #import "../../Utils.h"
 
@@ -41,7 +42,7 @@ SPKLog(@"General", @"[Sparkle] Copying description");
 UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
 pasteboard.string = result;
 
-SPKNotify(kSPKNotificationCopyDescription, @"Copied text to clipboard", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+SPKNotify(kSPKNotificationCopyDescription, SPKL(@"GENERAL_COPY_DESCRIPTION_COPIED_TEXT_CLIPBOARD_TEXT"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
 }
 %end
 

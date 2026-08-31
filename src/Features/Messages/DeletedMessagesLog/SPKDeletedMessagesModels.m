@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessagesModels.h"
 
 NSString *SPKDeletedMessageKindToString(SPKDeletedMessageKind kind) {
@@ -28,6 +29,27 @@ NSString *SPKDeletedMessageKindToString(SPKDeletedMessageKind kind) {
     default:
         return @"unknown";
     }
+}
+
+NSString *_Nullable SPKDeletedMessageDisplayBody(SPKDeletedMessage *message) {
+    if (!message)
+        return nil;
+    if (message.kind == SPKDeletedMessageKindReaction) {
+        // Composed here rather than read back from `text` so the sentence follows
+        // the reader's language instead of whichever one was active at capture.
+        NSString *emoji = message.reactionEmoji;
+        NSString *target = message.reactionTargetPreview;
+        if (!target.length && message.reactionTargetKind != SPKDeletedMessageKindUnknown)
+            target = [SPKDeletedMessageKindLocalizedName(message.reactionTargetKind) lowercaseString];
+        if (emoji.length && target.length)
+            return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_VALUE_VALUE_FORMAT"), emoji, target];
+        if (emoji.length)
+            return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_REACTION_VALUE_ACTION"), emoji];
+        // Records written before the emoji was captured still carry a stored body.
+        if (!message.text.length && !message.previewText.length)
+            return SPKL(@"MESSAGES_DELETED_MESSAGES_CAPTURE_REMOVED_REACTION_ACTION");
+    }
+    return message.text.length ? message.text : message.previewText;
 }
 
 SPKDeletedMessageKind SPKDeletedMessageKindFromString(NSString *s) {
@@ -61,30 +83,30 @@ SPKDeletedMessageKind SPKDeletedMessageKindFromString(NSString *s) {
 NSString *SPKDeletedMessageKindLocalizedName(SPKDeletedMessageKind kind) {
     switch (kind) {
     case SPKDeletedMessageKindText:
-        return @"Text";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT");
     case SPKDeletedMessageKindPhoto:
-        return @"Photo";
+        return SPKL(@"COMMON_MEDIA_TYPE_PHOTO");
     case SPKDeletedMessageKindVideo:
-        return @"Video";
+        return SPKL(@"COMMON_MEDIA_TYPE_VIDEO");
     case SPKDeletedMessageKindVoice:
-        return @"Voice";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_VOICE_TEXT");
     case SPKDeletedMessageKindGif:
-        return @"GIF";
+        return SPKL(@"COMMON_MEDIA_TYPE_GIF");
     case SPKDeletedMessageKindSticker:
-        return @"Sticker";
+        return SPKL(@"COMMON_MEDIA_TYPE_STICKER");
     case SPKDeletedMessageKindShare:
-        return @"Share";
+        return SPKL(@"ALERT_ACTION_SHARE");
     case SPKDeletedMessageKindLink:
-        return @"Link";
+        return SPKL(@"ACTION_BUTTON_ACTION_DESCRIPTOR_LINK_TEXT");
     case SPKDeletedMessageKindAudioShare:
-        return @"Audio";
+        return SPKL(@"COMMON_MEDIA_TYPE_AUDIO");
     case SPKDeletedMessageKindReaction:
-        return @"Reaction";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_REACTION_ACTION");
     case SPKDeletedMessageKindOther:
-        return @"Other";
+        return SPKL(@"STORIES_OTHER_HEADER");
     case SPKDeletedMessageKindUnknown:
     default:
-        return @"Unknown";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_TEXT");
     }
 }
 
@@ -124,20 +146,20 @@ NSString *SPKDeletedMessageKindSymbolFilled(SPKDeletedMessageKind kind, BOOL fil
 
 NSString *SPKDeletedMessageShareSubtypeName(NSString *subtype) {
     if ([subtype isEqualToString:@"reel"])
-        return @"Reel";
+        return SPKL(@"COMMON_MEDIA_TYPE_REEL");
     if ([subtype isEqualToString:@"post"])
-        return @"Post";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_POST_TEXT");
     if ([subtype isEqualToString:@"story"])
-        return @"Story";
+        return SPKL(@"COMMON_MEDIA_TYPE_STORY");
     if ([subtype isEqualToString:@"profile"])
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     if ([subtype isEqualToString:@"note"])
-        return @"Note";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_NOTE_TEXT");
     if ([subtype isEqualToString:@"location"])
-        return @"Location";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_LOCATION_TEXT");
     if ([subtype isEqualToString:@"audio"])
-        return @"Audio";
-    return @"Shared post";
+        return SPKL(@"COMMON_MEDIA_TYPE_AUDIO");
+    return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_SHARED_POST_TEXT");
 }
 
 NSString *SPKDeletedMessageShareSubtypeSymbol(__unused NSString *subtype) {
@@ -202,6 +224,9 @@ static double spkDouble(id v) {
     m.replyToMessageId = spkStr(dict[@"reply_to_id"]);
     m.reactionEmoji = spkStr(dict[@"reaction_emoji"]);
     m.reactionTargetPreview = spkStr(dict[@"reaction_target"]);
+    // Absent on records written before the field existed, which decode to
+    // Unknown and keep falling back to their stored body.
+    m.reactionTargetKind = SPKDeletedMessageKindFromString(spkStr(dict[@"reaction_target_kind"]));
     m.shareSubtype = spkStr(dict[@"share_subtype"]);
     m.shareAuthor = spkStr(dict[@"share_author"]);
     if (!m.messageId.length || !m.senderPk.length)
@@ -272,6 +297,8 @@ static double spkDouble(id v) {
         d[@"reaction_emoji"] = self.reactionEmoji;
     if (self.reactionTargetPreview.length)
         d[@"reaction_target"] = self.reactionTargetPreview;
+    if (self.reactionTargetKind != SPKDeletedMessageKindUnknown)
+        d[@"reaction_target_kind"] = SPKDeletedMessageKindToString(self.reactionTargetKind);
     if (self.shareSubtype.length)
         d[@"share_subtype"] = self.shareSubtype;
     if (self.shareAuthor.length)
@@ -297,13 +324,13 @@ static double spkDouble(id v) {
     if (self.isGroup) {
         if (self.threadTitle.length)
             return self.threadTitle;
-        return @"Group chat";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_GROUP_CHAT_TEXT");
     }
     if (self.senderUsername.length)
         return [@"@" stringByAppendingString:self.senderUsername];
     if (self.senderFullName.length)
         return self.senderFullName;
-    return @"Unknown user";
+    return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_USER_TEXT");
 }
 
 - (NSString *)flagKey {

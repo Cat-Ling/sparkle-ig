@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessagesDate.h"
 #import "../../../Utils.h"
 
@@ -8,6 +9,7 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateStyle = NSDateFormatterShortStyle;
         f.timeStyle = NSDateFormatterShortStyle;
     });
@@ -19,6 +21,7 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateStyle = NSDateFormatterMediumStyle;
         f.timeStyle = NSDateFormatterShortStyle;
     });
@@ -30,9 +33,10 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateFormat = [NSDateFormatter dateFormatFromTemplate:@"MMMd"
                                                        options:0
-                                                        locale:[NSLocale currentLocale]];
+                                                        locale:f.locale];
     });
     return f;
 }
@@ -42,6 +46,7 @@
     static dispatch_once_t once;
     dispatch_once(&once, ^{
         f = [NSDateFormatter new];
+        f.locale = [SPKUtils spk_activeFormattingLocale];
         f.dateStyle = NSDateFormatterNoStyle;
         f.timeStyle = NSDateFormatterShortStyle;
     });
@@ -59,19 +64,19 @@
     if (delta < 0)
         delta = 0;
     if (delta < 60)
-        return @"now";
+        return SPKL(@"MESSAGES_DELETED_MESSAGES_DATE_NOW_TEXT");
     if (delta < 3600)
-        return [NSString stringWithFormat:@"%dm ago", (int)(delta / 60)];
+        return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_DATE_VALUE_M_AGO_FORMAT"), (int)(delta / 60)];
     if (delta < 86400) {
         NSCalendar *cal = [NSCalendar currentCalendar];
         NSDate *startOfToday = [cal startOfDayForDate:[NSDate date]];
         if ([d compare:startOfToday] != NSOrderedAscending) {
             return [[self timeOnlyFormatter] stringFromDate:d];
         }
-        return [NSString stringWithFormat:@"%dh ago", (int)(delta / 3600)];
+        return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_DATE_VALUE_H_AGO_FORMAT"), (int)(delta / 3600)];
     }
     if (delta < 86400 * 7)
-        return [NSString stringWithFormat:@"%dd ago", (int)(delta / 86400)];
+        return [NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_DATE_VALUE_D_AGO_FORMAT"), (int)(delta / 86400)];
     return [[self dayMonthFormatter] stringFromDate:d];
 }
 

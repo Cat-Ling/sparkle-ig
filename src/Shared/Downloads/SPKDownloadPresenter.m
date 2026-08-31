@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadPresenter.h"
 #import "SPKDownloadService.h"
 
@@ -71,31 +72,25 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
 - (NSString *)progressTitleForJob:(SPKDownloadJob *)job {
     if (job.items.count > 1) {
         NSUInteger current = MIN(job.items.count, [self completedItemCount:job] + 1);
-        return [NSString stringWithFormat:@"Downloads [%lu of %lu]", (unsigned long)current, (unsigned long)job.items.count];
+        return [NSString stringWithFormat:SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADS_VALUE_VALUE_FORMAT"), (unsigned long)current, (unsigned long)job.items.count];
     }
     SPKDownloadItem *item = job.items.firstObject;
     if (item.state == SPKDownloadStateFinalizing) {
-        return [NSString stringWithFormat:@"Saving to %@", SPKDownloadDestinationDisplayName(job.request.destination)];
+        return [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_SAVING_VALUE_FORMAT"), SPKDownloadDestinationDisplayName(job.request.destination)];
     }
-    if (item.detail.length > 0) {
-        if ([item.detail containsString:@"Merging"] || [item.detail containsString:@"Re-encoding"])
-            return item.detail;
-        if ([item.detail containsString:@"Converting"])
-            return @"Converting audio";
-        if ([item.detail containsString:@"Downloading video"])
-            return @"Downloading video";
-        if ([item.detail containsString:@"Downloading audio"])
-            return @"Downloading audio";
-    }
+    // Detail is already localized at the point where the current progress
+    // stage is reported. Never use English text matching as a stage signal.
+    if (item.detail.length > 0)
+        return item.detail;
     switch (item.mediaKind) {
     case SPKDownloadMediaKindVideo:
-        return @"Downloading video";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_VIDEO_TEXT");
     case SPKDownloadMediaKindAudio:
-        return @"Downloading audio";
+        return SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_DOWNLOADING_AUDIO_TEXT");
     case SPKDownloadMediaKindImage:
-        return @"Downloading image";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_IMAGE_TEXT");
     default:
-        return @"Downloading";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOADING_TEXT");
     }
 }
 
@@ -171,7 +166,7 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     }
 
     if (activeCount > 1) {
-        [parts addObject:[NSString stringWithFormat:@"%lu of %lu", (unsigned long)activeIndex, (unsigned long)activeCount]];
+        [parts addObject:[NSString stringWithFormat:SPKL(@"COMMON_PROGRESS_FORMAT"), (unsigned long)activeIndex, (unsigned long)activeCount]];
     }
 
     return [parts componentsJoinedByString:@" • "];
@@ -308,15 +303,15 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     }
 
     if (job.state == SPKDownloadStateFailed || job.state == SPKDownloadStatePartial) {
-        NSString *message = job.items.firstObject.error.localizedDescription ?: @"Download failed";
-        [self.activePill showErrorWithTitle:job.state == SPKDownloadStatePartial ? @"Some downloads failed" : @"Download failed"
+        NSString *message = SPKDownloadErrorDisplayDescription(job.items.firstObject.error) ?: SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
+        [self.activePill showErrorWithTitle:job.state == SPKDownloadStatePartial ? SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SOME_DOWNLOADS_FAILED_TEXT") : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT")
                                    subtitle:message
                                        icon:nil];
         self.activePill.onTapWhenCompleted = openHistory;
         return;
     }
     if (job.state == SPKDownloadStateCancelled) {
-        [self.activePill showInfoWithTitle:@"Download cancelled" subtitle:@"Tap to open Downloads" icon:nil];
+        [self.activePill showInfoWithTitle:SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_CANCELLED_TEXT") subtitle:SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_TAP_OPEN_DOWNLOADS_TEXT") icon:nil];
         self.activePill.onTapWhenCompleted = openHistory;
         return;
     }
@@ -324,15 +319,15 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     // Determine terminal title/subtitle/action based on destination
     switch (job.request.destination) {
     case SPKDownloadDestinationPhotos:
-        title = @"Saved to Photos";
-        subtitle = @"Tap to open Photos";
+        title = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SAVED_PHOTOS_TEXT");
+        subtitle = SPKL(@"AUTO_SAVE_AUTO_SAVE_TAP_OPEN_PHOTOS_TEXT");
         self.activePill.onTapWhenCompleted = ^{
             [SPKUtils openPhotosApp];
         };
         break;
     case SPKDownloadDestinationGallery:
-        title = @"Saved to Gallery";
-        subtitle = @"Tap to open Gallery";
+        title = SPKL(@"SETTINGS_NOTIFICATION_SAVED_GALLERY_TEXT");
+        subtitle = SPKL(@"AUTO_SAVE_AUTO_SAVE_TAP_OPEN_GALLERY_TEXT");
         self.activePill.onTapWhenCompleted = ^{
             [SPKGalleryViewController presentGallery];
         };
@@ -341,12 +336,12 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
         if (job.request.finalizeAsBatchShare) {
             NSUInteger count = [self completedItemCount:job];
             title = count > 1
-                        ? [NSString stringWithFormat:@"Shared %lu items", (unsigned long)count]
-                        : @"Shared";
-            subtitle = @"Tap to open Downloads";
+                        ? [NSString stringWithFormat:SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SHARED_VALUE_ITEMS_FORMAT"), (unsigned long)count]
+                        : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SHARED_TEXT");
+            subtitle = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_TAP_OPEN_DOWNLOADS_TEXT");
             self.activePill.onTapWhenCompleted = openHistory;
         } else {
-            title = @"Ready to share";
+            title = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_READY_SHARE_TEXT");
             subtitle = nil;
             self.activePill.onTapWhenCompleted = nil;
         }
@@ -355,22 +350,22 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
         if (job.request.finalizeAsBatchClipboard) {
             NSUInteger count = [self completedItemCount:job];
             title = count > 1
-                        ? [NSString stringWithFormat:@"Copied %lu items to clipboard", (unsigned long)count]
-                        : @"Copied to clipboard";
+                        ? [NSString stringWithFormat:SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_COPIED_VALUE_ITEMS_CLIPBOARD_FORMAT"), (unsigned long)count]
+                        : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_COPIED_CLIPBOARD_TEXT");
         } else {
             SPKDownloadItem *first = job.items.firstObject;
             switch (first.mediaKind) {
             case SPKDownloadMediaKindVideo:
-                title = @"Copied video to clipboard";
+                title = SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPIED_VIDEO_CLIPBOARD_TEXT");
                 break;
             case SPKDownloadMediaKindAudio:
-                title = @"Copied audio to clipboard";
+                title = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_COPIED_AUDIO_CLIPBOARD_TEXT");
                 break;
             case SPKDownloadMediaKindImage:
-                title = @"Copied photo to clipboard";
+                title = SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_COPIED_PHOTO_CLIPBOARD_TEXT");
                 break;
             default:
-                title = @"Copied to clipboard";
+                title = SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_COPIED_CLIPBOARD_TEXT");
                 break;
             }
         }
@@ -381,12 +376,12 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     default:
         if (job.items.count > 1) {
             NSUInteger count = [self completedItemCount:job];
-            title = [NSString stringWithFormat:@"%lu items saved", (unsigned long)count];
-            subtitle = @"Tap to open Downloads";
+            title = [NSString stringWithFormat:SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_VALUE_ITEMS_SAVED_FORMAT"), (unsigned long)count];
+            subtitle = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_TAP_OPEN_DOWNLOADS_TEXT");
             self.activePill.onTapWhenCompleted = openHistory;
         } else {
-            title = @"Download complete";
-            subtitle = @"Tap to open Downloads";
+            title = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_COMPLETE_TEXT");
+            subtitle = SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_TAP_OPEN_DOWNLOADS_TEXT");
             self.activePill.onTapWhenCompleted = openHistory;
         }
         break;

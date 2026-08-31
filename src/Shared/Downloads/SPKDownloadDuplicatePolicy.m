@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadDuplicatePolicy.h"
 
 #import <Photos/Photos.h>
@@ -60,20 +61,20 @@ static NSString *SPKDuplicateKey(SPKGallerySaveMetadata *metadata, NSInteger med
     return [NSString stringWithFormat:@"%ld|%@", (long)mediaType, identity];
 }
 
-static NSString *SPKMediaTypeLabel(NSInteger mediaType) {
+static NSString *SPKDuplicateMessageFormat(NSInteger mediaType) {
     switch (mediaType) {
     case SPKGalleryMediaTypeVideo:
-        return @"video";
+        return SPKL(@"DOWNLOADS_DUPLICATE_VIDEO_DESTINATION_FORMAT");
     case SPKGalleryMediaTypeAudio:
-        return @"audio";
+        return SPKL(@"DOWNLOADS_DUPLICATE_AUDIO_DESTINATION_FORMAT");
     case SPKGalleryMediaTypeImage:
     default:
-        return @"photo";
+        return SPKL(@"DOWNLOADS_DUPLICATE_PHOTO_DESTINATION_FORMAT");
     }
 }
 
 static NSString *SPKDestinationLabel(SPKDownloadDuplicateDestination destination) {
-    return destination == SPKDownloadDuplicateDestinationPhotos ? @"Photos" : @"Gallery";
+    return destination == SPKDownloadDuplicateDestinationPhotos ? SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_PHOTOS_TEXT") : SPKL(@"GALLERY_TITLE");
 }
 
 static SPKGalleryFile *SPKExistingGalleryFile(SPKGallerySaveMetadata *metadata, NSInteger mediaType) {
@@ -171,26 +172,25 @@ static BOOL SPKPresentSingleDuplicateAlert(SPKDownloadDuplicateDestination desti
                                            void (^continuation)(SPKDownloadDuplicateDecision)) {
     if (!SPKHasDuplicate(destination, metadata, mediaType))
         return NO;
-    NSString *message = [NSString stringWithFormat:@"This %@ has previously been downloaded to %@.",
-                                                   SPKMediaTypeLabel(mediaType),
+    NSString *message = [NSString stringWithFormat:SPKDuplicateMessageFormat(mediaType),
                                                    SPKDestinationLabel(destination)];
     [SPKIGAlertPresenter presentAlertFromViewController:presenter
-                                                  title:@"Duplicate Download Detected"
+                                                  title:SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_DUPLICATE_DOWNLOAD_DETECTED_TEXT")
                                                 message:message
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Download Anyway"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_DOWNLOAD_ANYWAY")
                                                                                 style:SPKIGAlertActionStyleDefault
                                                                               handler:^{
                                                                                   if (continuation)
                                                                                       continuation(SPKDownloadDuplicateDecisionDownloadAgain);
                                                                               }],
-                                                    [SPKIGAlertAction actionWithTitle:@"Delete Existing and Download"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_DELETE_EXISTING_DOWNLOAD")
                                                                                 style:SPKIGAlertActionStyleDestructive
                                                                               handler:^{
                                                                                   if (continuation)
                                                                                       continuation(SPKDownloadDuplicateDecisionDeleteExistingAndDownloadAgain);
                                                                               }],
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:^{
                                                                                   if (continuation)
@@ -206,23 +206,24 @@ static BOOL SPKPresentBulkDuplicateAlert(NSUInteger duplicateCount,
                                          void (^continuation)(SPKDownloadBulkDuplicateDecision)) {
     if (duplicateCount == 0 || !continuation)
         return NO;
-    NSString *message = [NSString stringWithFormat:@"%lu of %lu items were already downloaded.",
-                                                   (unsigned long)duplicateCount, (unsigned long)totalCount];
+    NSString *message = [NSString stringWithFormat:SPKL(@"DOWNLOADS_DUPLICATE_SELECTION_SUMMARY_FORMAT"),
+                                                   SPKLP(@"COMMON_ITEM_COUNT", (NSInteger)duplicateCount),
+                                                   SPKLP(@"COMMON_ITEM_COUNT", (NSInteger)totalCount)];
     [SPKIGAlertPresenter presentAlertFromViewController:presenter ?: topMostController()
-                                                  title:@"Duplicate Downloads"
+                                                  title:SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_DUPLICATE_DOWNLOADS_TEXT")
                                                 message:message
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Skip Existing"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_SKIP_EXISTING")
                                                                                 style:SPKIGAlertActionStyleDefault
                                                                               handler:^{
                                                                                   continuation(SPKDownloadBulkDuplicateDecisionSkipExisting);
                                                                               }],
-                                                    [SPKIGAlertAction actionWithTitle:@"Download All Anyway"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_DOWNLOAD_ALL_ANYWAY")
                                                                                 style:SPKIGAlertActionStyleDefault
                                                                               handler:^{
                                                                                   continuation(SPKDownloadBulkDuplicateDecisionDownloadAllAnyway);
                                                                               }],
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:^{
                                                                                   continuation(SPKDownloadBulkDuplicateDecisionCancel);

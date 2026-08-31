@@ -1,3 +1,5 @@
+#import "SPKSettingsInfoSheetViewController.h"
+#import "SPKStrings.h"
 #import "SPKTopicSettingsSupport.h"
 #import "../Features/Feed/HeaderActionButton.h"
 #import "SPKHeaderButtonDefaultActionPickerViewController.h"
@@ -26,6 +28,15 @@ NSDictionary *SPKTopicSection(NSString *header, NSArray *rows, NSString *footer)
     }
 
     return [section copy];
+}
+
+NSDictionary *SPKTopicSectionWithInfoSheet(NSDictionary *section, BOOL usesInfoSheet) {
+    if (![section isKindOfClass:[NSDictionary class]])
+        return section;
+
+    NSMutableDictionary *overridden = [section mutableCopy];
+    overridden[SPKTopicSectionInfoSheetKey] = @(usesInfoSheet);
+    return [overridden copy];
 }
 
 UIImage *SPKSettingsIcon(NSString *name) {
@@ -67,6 +78,11 @@ UIImage *SPKSettingsSystemIcon(NSString *name, CGFloat pointSize, UIImageSymbolW
         [symbol drawInRect:CGRectIntegral(drawRect)];
     }];
     return [normalized imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
+}
+
+SPKSetting *SPKSettingWithHelp(SPKSetting *setting, NSString *helpText) {
+    setting.helpText = helpText;
+    return setting;
 }
 
 SPKSetting *SPKSettingApplyIconTint(SPKSetting *setting, UIColor *tintColor) {
@@ -128,7 +144,7 @@ SPKSetting *SPKTopicNavigationSetting(NSString *title, NSString *iconName, CGFlo
 }
 
 SPKSetting *SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSource source) {
-    SPKSetting *setting = [SPKSetting navigationCellWithTitle:@"Default Tap Action"
+    SPKSetting *setting = [SPKSetting navigationCellWithTitle:SPKL(@"SPKTOPICSETTINGSSUPPORT_GENERAL_DEFAULT_TAP_ACTION_TITLE")
                                                      subtitle:@""
                                                          icon:SPKSettingsIcon(@"action")
                                                viewController:[[SPKActionButtonDefaultActionPickerViewController alloc] initWithSource:source]];
@@ -171,7 +187,7 @@ SPKSetting *SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSource 
     SPKEditActionsListViewController *controller = [[SPKEditActionsListViewController alloc] initWithSource:source topicTitle:topicTitle];
     (void)supportedActions;
     (void)defaultSections;
-    return [SPKSetting navigationCellWithTitle:@"Configure Actions"
+    return [SPKSetting navigationCellWithTitle:SPKL(@"SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE")
                                       subtitle:@""
                                           icon:SPKSettingsIcon(@"slider")
                                 viewController:controller];
@@ -179,96 +195,50 @@ SPKSetting *SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSource 
 
 UIMenu *SPKReelsTapControlMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"reels_tap_control", @"default", YES),
+        SPKMenuCommand(SPKL(@"MENU_DEFAULT"), nil, nil, @"reels_tap_control", @"default", YES),
         [UIMenu menuWithTitle:@""
                         image:nil
                    identifier:nil
                       options:UIMenuOptionsDisplayInline
                      children:@[
-                         SPKMenuCommand(@"Pause/Play", nil, nil, @"reels_tap_control", @"pause", YES),
-                         SPKMenuCommand(@"Mute/Unmute", nil, nil, @"reels_tap_control", @"mute", YES)
+                         SPKMenuCommand(SPKL(@"MENU_PAUSE_PLAY"), nil, nil, @"reels_tap_control", @"pause", YES),
+                         SPKMenuCommand(SPKL(@"MENU_MUTE_UNMUTE"), nil, nil, @"reels_tap_control", @"mute", YES)
                      ]]
     ]];
 }
 
 UIMenu *SPKMainFeedModeMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"For You", @"heart", nil, @"feed_mode", @"default", YES),
-        SPKMenuCommand(@"Following", @"users", nil, @"feed_mode", @"following", YES)
+        SPKMenuCommand(SPKL(@"MENU_FOR_YOU"), @"heart", nil, @"feed_mode", @"default", YES),
+        SPKMenuCommand(SPKL(@"MENU_FOLLOWING"), @"users", nil, @"feed_mode", @"following", YES)
     ]];
 }
 
 UIMenu *SPKSeenButtonPositionMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Top", @"arrow_up", nil, @"msgs_seen_button_position", @"top", NO),
-        SPKMenuCommand(@"Bottom", @"arrow_down", nil, @"msgs_seen_button_position", @"bottom", NO)
+        SPKMenuCommand(SPKL(@"MENU_TOP"), @"arrow_up", nil, @"msgs_seen_button_position", @"top", NO),
+        SPKMenuCommand(SPKL(@"MENU_BOTTOM"), @"arrow_down", nil, @"msgs_seen_button_position", @"bottom", NO)
     ]];
 }
 
 UIMenu *SPKLastActiveFormatMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Off", nil, nil, @"msgs_last_active_format", @"off", NO),
-        SPKMenuCommand(@"Smart", nil, nil, @"msgs_last_active_format", @"smart", NO),
-        SPKMenuCommand(@"Date & Time", nil, nil, @"msgs_last_active_format", @"datetime", NO)
-    ]];
-}
-
-UIMenu *SPKNavigationIconOrderingMenu(void) {
-    return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"interface_nav_order", @"default", YES),
-        [UIMenu menuWithTitle:@""
-                        image:nil
-                   identifier:nil
-                      options:UIMenuOptionsDisplayInline
-                     children:@[
-                         SPKMenuCommand(@"Classic", nil, nil, @"interface_nav_order", @"classic", YES),
-                         SPKMenuCommand(@"Standard", nil, nil, @"interface_nav_order", @"standard", YES),
-                         SPKMenuCommand(@"Alternate", nil, nil, @"interface_nav_order", @"alternate", YES)
-                     ]]
-    ]];
-}
-
-UIMenu *SPKLaunchTabMenu(void) {
-    return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"interface_launch_tab", @"default", YES),
-        [UIMenu menuWithTitle:@""
-                        image:nil
-                   identifier:nil
-                      options:UIMenuOptionsDisplayInline
-                     children:@[
-                         SPKMenuCommand(@"Feed", @"home", nil, @"interface_launch_tab", @"feed", YES),
-                         SPKMenuCommand(@"Reels", @"reels", nil, @"interface_launch_tab", @"reels", YES),
-                         SPKMenuCommand(@"Messages", @"messages", nil, @"interface_launch_tab", @"inbox", YES),
-                         SPKMenuCommand(@"Explore", @"search", nil, @"interface_launch_tab", @"explore", YES),
-                         SPKMenuCommand(@"Profile", @"user_circle", nil, @"interface_launch_tab", @"profile", YES)
-                     ]]
-    ]];
-}
-
-UIMenu *SPKSwipeBetweenTabsMenu(void) {
-    return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"interface_swipe_tabs", @"default", YES),
-        [UIMenu menuWithTitle:@""
-                        image:nil
-                   identifier:nil
-                      options:UIMenuOptionsDisplayInline
-                     children:@[
-                         SPKMenuCommand(@"Enabled", nil, nil, @"interface_swipe_tabs", @"enabled", YES),
-                         SPKMenuCommand(@"Disabled", nil, nil, @"interface_swipe_tabs", @"disabled", YES)
-                     ]]
+        SPKMenuCommand(SPKL(@"MENU_OFF"), nil, nil, @"msgs_last_active_format", @"off", NO),
+        SPKMenuCommand(SPKL(@"MENU_SMART"), nil, nil, @"msgs_last_active_format", @"smart", NO),
+        SPKMenuCommand(SPKL(@"MENU_DATE_TIME"), nil, nil, @"msgs_last_active_format", @"datetime", NO)
     ]];
 }
 
 UIMenu *SPKLiquidGlassTabBarStateMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, kSPKPrefInterfaceLiquidGlassTabBarMode, @"default", YES),
+        SPKMenuCommand(SPKL(@"MENU_DEFAULT"), nil, nil, kSPKPrefInterfaceLiquidGlassTabBarMode, @"default", YES),
         [UIMenu menuWithTitle:@""
                         image:nil
                    identifier:nil
                       options:UIMenuOptionsDisplayInline
                      children:@[
-                         SPKMenuCommand(@"Fixed", nil, nil, kSPKPrefInterfaceLiquidGlassTabBarMode, @"fixed", YES),
-                         SPKMenuCommand(@"Hide on Scroll", nil, nil, kSPKPrefInterfaceLiquidGlassTabBarMode, @"hide", YES)
+                         SPKMenuCommand(SPKL(@"MENU_FIXED"), nil, nil, kSPKPrefInterfaceLiquidGlassTabBarMode, @"fixed", YES),
+                         SPKMenuCommand(SPKL(@"MENU_HIDE_SCROLL"), nil, nil, kSPKPrefInterfaceLiquidGlassTabBarMode, @"hide", YES)
                      ]]
     ]];
 }
@@ -276,61 +246,61 @@ UIMenu *SPKLiquidGlassTabBarStateMenu(void) {
 UIMenu *SPKSwipeCloseCommentsDirectionMenu(void) {
     static NSString *const kSPKSwipeCloseCommentsDirectionKey = @"general_comments_swipe_close_direction";
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Both", @"left_right", nil, kSPKSwipeCloseCommentsDirectionKey, @"both", NO),
-        SPKMenuCommand(@"Left", @"arrow_left", nil, kSPKSwipeCloseCommentsDirectionKey, @"left", NO),
-        SPKMenuCommand(@"Right", @"arrow_right", nil, kSPKSwipeCloseCommentsDirectionKey, @"right", NO)
+        SPKMenuCommand(SPKL(@"MENU_BOTH"), @"left_right", nil, kSPKSwipeCloseCommentsDirectionKey, @"both", NO),
+        SPKMenuCommand(SPKL(@"MENU_LEFT"), @"arrow_left", nil, kSPKSwipeCloseCommentsDirectionKey, @"left", NO),
+        SPKMenuCommand(SPKL(@"MENU_RIGHT"), @"arrow_right", nil, kSPKSwipeCloseCommentsDirectionKey, @"right", NO)
     ]];
 }
 
 UIMenu *SPKCacheAutoClearMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Never", nil, nil, @"general_cache_auto_clear", @"never", NO),
-        SPKMenuCommand(@"Always", nil, nil, @"general_cache_auto_clear", @"always", NO),
-        SPKMenuCommand(@"Daily", nil, nil, @"general_cache_auto_clear", @"daily", NO),
-        SPKMenuCommand(@"Weekly", nil, nil, @"general_cache_auto_clear", @"weekly", NO),
-        SPKMenuCommand(@"Monthly", nil, nil, @"general_cache_auto_clear", @"monthly", NO)
+        SPKMenuCommand(SPKL(@"MENU_NEVER"), nil, nil, @"general_cache_auto_clear", @"never", NO),
+        SPKMenuCommand(SPKL(@"MENU_ALWAYS"), nil, nil, @"general_cache_auto_clear", @"always", NO),
+        SPKMenuCommand(SPKL(@"MENU_DAILY"), nil, nil, @"general_cache_auto_clear", @"daily", NO),
+        SPKMenuCommand(SPKL(@"MENU_WEEKLY"), nil, nil, @"general_cache_auto_clear", @"weekly", NO),
+        SPKMenuCommand(SPKL(@"MENU_MONTHLY"), nil, nil, @"general_cache_auto_clear", @"monthly", NO)
     ]];
 }
 
 UIMenu *SPKNotificationProgressSubtitleStyleMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Both", nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"both", NO),
-        SPKMenuCommand(@"Percent", nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"percent", NO),
-        SPKMenuCommand(@"Bytes", nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"bytes", NO),
-        SPKMenuCommand(@"Off", nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"off", NO)
+        SPKMenuCommand(SPKL(@"MENU_BOTH"), nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"both", NO),
+        SPKMenuCommand(SPKL(@"MENU_PERCENT"), nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"percent", NO),
+        SPKMenuCommand(SPKL(@"MENU_BYTES"), nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"bytes", NO),
+        SPKMenuCommand(SPKL(@"MENU_OFF"), nil, nil, kSPKNotificationProgressSubtitleStyleKey, @"off", NO)
     ]];
 }
 
 UIMenu *SPKNotificationPillPositionMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Top", nil, nil, kSPKNotificationPillPositionKey, @"top", NO),
-        SPKMenuCommand(@"Bottom", nil, nil, kSPKNotificationPillPositionKey, @"bottom", NO)
+        SPKMenuCommand(SPKL(@"MENU_TOP"), nil, nil, kSPKNotificationPillPositionKey, @"top", NO),
+        SPKMenuCommand(SPKL(@"MENU_BOTTOM"), nil, nil, kSPKNotificationPillPositionKey, @"bottom", NO)
     ]];
 }
 
 UIMenu *SPKMediaVideoQualityMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, @"downloads_video_quality", @"high_ignore_dash", NO),
+        SPKMenuCommand(SPKL(@"MENU_DEFAULT"), nil, nil, @"downloads_video_quality", @"high_ignore_dash", NO),
         [UIMenu menuWithTitle:@""
                         image:nil
                    identifier:nil
                       options:UIMenuOptionsDisplayInline
                      children:@[
-                         SPKMenuCommand(@"Always Ask", nil, nil, @"downloads_video_quality", @"always_ask", NO),
-                         SPKMenuCommand(@"High", nil, nil, @"downloads_video_quality", @"high", NO),
-                         SPKMenuCommand(@"Medium", nil, nil, @"downloads_video_quality", @"medium", NO),
-                         SPKMenuCommand(@"Low", nil, nil, @"downloads_video_quality", @"low", NO)
+                         SPKMenuCommand(SPKL(@"MENU_ALWAYS_ASK"), nil, nil, @"downloads_video_quality", @"always_ask", NO),
+                         SPKMenuCommand(SPKL(@"MENU_HIGH"), nil, nil, @"downloads_video_quality", @"high", NO),
+                         SPKMenuCommand(SPKL(@"MENU_MEDIUM"), nil, nil, @"downloads_video_quality", @"medium", NO),
+                         SPKMenuCommand(SPKL(@"MENU_LOW"), nil, nil, @"downloads_video_quality", @"low", NO)
                      ]]
     ]];
 }
 
 UIMenu *SPKMediaPhotoQualityMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Always Ask", nil, nil, @"downloads_photo_quality", @"always_ask", NO),
-        SPKMenuCommand(@"Max", nil, nil, @"downloads_photo_quality", @"max", NO),
-        SPKMenuCommand(@"High", nil, nil, @"downloads_photo_quality", @"high", NO),
-        SPKMenuCommand(@"Medium", nil, nil, @"downloads_photo_quality", @"medium", NO),
-        SPKMenuCommand(@"Low", nil, nil, @"downloads_photo_quality", @"low", NO)
+        SPKMenuCommand(SPKL(@"MENU_ALWAYS_ASK"), nil, nil, @"downloads_photo_quality", @"always_ask", NO),
+        SPKMenuCommand(SPKL(@"MENU_MAX"), nil, nil, @"downloads_photo_quality", @"max", NO),
+        SPKMenuCommand(SPKL(@"MENU_HIGH"), nil, nil, @"downloads_photo_quality", @"high", NO),
+        SPKMenuCommand(SPKL(@"MENU_MEDIUM"), nil, nil, @"downloads_photo_quality", @"medium", NO),
+        SPKMenuCommand(SPKL(@"MENU_LOW"), nil, nil, @"downloads_photo_quality", @"low", NO)
     ]];
 }
 
@@ -340,30 +310,30 @@ UIMenu *SPKMediaPhotoQualityMenu(void) {
 // every story you happen to watch.
 UIMenu *SPKAutoSaveDestinationMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Sparkle Gallery", nil, nil, kSPKAutoSaveDestinationKey, @"gallery", NO),
-        SPKMenuCommand(@"Photos App", nil, nil, kSPKAutoSaveDestinationKey, @"photos", NO)
+        SPKMenuCommand(SPKL(@"MENU_SPARKLE_GALLERY"), nil, nil, kSPKAutoSaveDestinationKey, @"gallery", NO),
+        SPKMenuCommand(SPKL(@"MENU_PHOTOS_APP"), nil, nil, kSPKAutoSaveDestinationKey, @"photos", NO)
     ]];
 }
 
 UIMenu *SPKAutoSaveVideoQualityMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"Default", nil, nil, kSPKAutoSaveVideoQualityKey, @"high_ignore_dash", NO),
+        SPKMenuCommand(SPKL(@"MENU_DEFAULT"), nil, nil, kSPKAutoSaveVideoQualityKey, @"high_ignore_dash", NO),
         [UIMenu menuWithTitle:@""
                         image:nil
                    identifier:nil
                       options:UIMenuOptionsDisplayInline
                      children:@[
-                         SPKMenuCommand(@"High", nil, nil, kSPKAutoSaveVideoQualityKey, @"high", NO),
-                         SPKMenuCommand(@"Medium", nil, nil, kSPKAutoSaveVideoQualityKey, @"medium", NO),
-                         SPKMenuCommand(@"Low", nil, nil, kSPKAutoSaveVideoQualityKey, @"low", NO)
+                         SPKMenuCommand(SPKL(@"MENU_HIGH"), nil, nil, kSPKAutoSaveVideoQualityKey, @"high", NO),
+                         SPKMenuCommand(SPKL(@"MENU_MEDIUM"), nil, nil, kSPKAutoSaveVideoQualityKey, @"medium", NO),
+                         SPKMenuCommand(SPKL(@"MENU_LOW"), nil, nil, kSPKAutoSaveVideoQualityKey, @"low", NO)
                      ]]
     ]];
 }
 
 UIMenu *SPKAutoSavePhotoQualityMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKMenuCommand(@"High", nil, nil, kSPKAutoSavePhotoQualityKey, @"high", NO),
-        SPKMenuCommand(@"Low", nil, nil, kSPKAutoSavePhotoQualityKey, @"low", NO)
+        SPKMenuCommand(SPKL(@"MENU_HIGH"), nil, nil, kSPKAutoSavePhotoQualityKey, @"high", NO),
+        SPKMenuCommand(SPKL(@"MENU_LOW"), nil, nil, kSPKAutoSavePhotoQualityKey, @"low", NO)
     ]];
 }
 
@@ -372,19 +342,19 @@ UIMenu *SPKAutoSavePhotoQualityMenu(void) {
 UIMenu *SPKAutoSaveFilterModeMenu(NSString *filterModeKey, NSString *subjectPlural) {
     return [UIMenu menuWithChildren:@[
         SPKMenuCommand([NSString stringWithFormat:@"All %@", subjectPlural], nil, nil, filterModeKey, @"all", NO),
-        SPKMenuCommand([NSString stringWithFormat:@"Selected %@", subjectPlural], nil, nil, filterModeKey, @"selected", NO)
+        SPKMenuCommand([NSString stringWithFormat:SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_SELECTED_VALUE_FORMAT"), subjectPlural], nil, nil, filterModeKey, @"selected", NO)
     ]];
 }
 
 UIMenu *SPKStoryAutoSaveFilterModeMenu(void) {
-    return SPKAutoSaveFilterModeMenu(@"stories_auto_save_filter_mode", @"Users");
+    return SPKAutoSaveFilterModeMenu(@"stories_auto_save_filter_mode", SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_USERS_TEXT"));
 }
 
 SPKSetting *SPKFeedHeaderButtonDefaultActionNavigationSetting(void) {
     // A navigation row (like the media action button's Default Tap Action) rather
     // than a menu-button cell: the selected value renders as a full-width subtitle
     // beneath the title instead of squeezing / truncating the title on one line.
-    SPKSetting *setting = [SPKSetting navigationCellWithTitle:@"Default Tap Action"
+    SPKSetting *setting = [SPKSetting navigationCellWithTitle:SPKL(@"SPKTOPICSETTINGSSUPPORT_GENERAL_DEFAULT_TAP_ACTION_TITLE")
                                                      subtitle:@""
                                                          icon:SPKSettingsIcon(@"action")
                                                viewController:[SPKHeaderButtonDefaultActionPickerViewController new]];
@@ -404,18 +374,18 @@ UIMenu *SPKGalleryShortcutTargetMenu(void) {
     NSMutableArray<UIMenuElement *> *commands = [NSMutableArray array];
 
     NSArray<NSDictionary *> *items = @[
-        @{@"title" : @"None", @"value" : kGalleryQuickAccessDisabledValue, @"icon" : @"circle_off"},
-        @{@"title" : @"Home", @"value" : @"mainfeed-tab", @"icon" : @"home"},
-        @{@"title" : @"Reels", @"value" : @"reels-tab", @"icon" : @"reels"}
+        @{@"title" : SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_NONE_TEXT"), @"value" : kGalleryQuickAccessDisabledValue, @"icon" : @"circle_off"},
+        @{@"title" : SPKL(@"SETTINGS_TOPIC_SETTINGS_SUPPORT_HOME_TEXT"), @"value" : @"mainfeed-tab", @"icon" : @"home"},
+        @{@"title" : SPKL(@"REELS_TITLE"), @"value" : @"reels-tab", @"icon" : @"reels"}
     ];
 
     NSMutableArray *allItems = [items mutableCopy];
     if ([SPKUtils tabOrderSetTo:@"classic"]) {
-        [allItems addObject:@{@"title" : @"Create", @"value" : @"camera-tab", @"icon" : @"plus"}];
+        [allItems addObject:@{@"title" : SPKL(@"TAB_CREATE"), @"value" : @"camera-tab", @"icon" : @"plus"}];
     } else {
-        [allItems addObject:@{@"title" : @"Messages", @"value" : @"direct-inbox-tab", @"icon" : @"messages"}];
+        [allItems addObject:@{@"title" : SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE"), @"value" : @"direct-inbox-tab", @"icon" : @"messages"}];
     }
-    [allItems addObject:@{@"title" : @"Profile", @"value" : @"profile-tab", @"icon" : @"user_circle"}];
+    [allItems addObject:@{@"title" : SPKL(@"PROFILE_TITLE"), @"value" : @"profile-tab", @"icon" : @"user_circle"}];
 
     for (NSDictionary *item in allItems) {
         NSString *title = item[@"title"];

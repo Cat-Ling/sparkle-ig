@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKStoryContext.h"
 
 #import <objc/message.h>
@@ -47,7 +48,47 @@ static id SPKStoryFirstObjectForSelectors(id target, NSArray<NSString *> *select
 static NSString *SPKStoryMediaID(id media);
 static NSString *SPKStoryFullNameFromMediaObject(id media);
 
-static id SPKStorySectionControllerFromOverlay(UIView *overlayView) {
+static UIViewController *SPKStoryViewerControllerFromController(UIViewController *controller, Class viewerClass) {
+    for (UIViewController *walker = controller; walker; walker = walker.parentViewController) {
+        if (!viewerClass || [walker isKindOfClass:viewerClass])
+            return walker;
+    }
+    for (UIViewController *walker = controller.presentingViewController; walker; walker = walker.presentingViewController) {
+        if (!viewerClass || [walker isKindOfClass:viewerClass])
+            return walker;
+    }
+    return nil;
+}
+
+static UIViewController *SPKStoryViewerControllerFromOverlay(UIView *overlayView) {
+    if (!overlayView)
+        return nil;
+
+    Class viewerClass = NSClassFromString(@"IGStoryViewerViewController");
+    for (UIResponder *responder = overlayView; responder; responder = responder.nextResponder) {
+        if (viewerClass && [responder isKindOfClass:viewerClass])
+            return (UIViewController *)responder;
+    }
+
+    id ancestor = SPKObjectForSelector(overlayView, @"_viewControllerForAncestor");
+    UIViewController *viewer = [ancestor isKindOfClass:[UIViewController class]]
+                                   ? SPKStoryViewerControllerFromController(ancestor, viewerClass)
+                                   : nil;
+    if (viewer)
+        return viewer;
+
+    UIViewController *nearest = [SPKUtils nearestViewControllerForView:overlayView];
+    viewer = SPKStoryViewerControllerFromController(nearest, viewerClass);
+    return viewer ?: nearest;
+}
+
+static id SPKStorySectionControllerFromOverlay(UIView *overlayView, UIViewController *viewerController) {
+    id sectionController = SPKStoryFirstObjectForSelectors(viewerController, @[ @"currentlyDisplayedSectionController", @"currentSectionController" ]);
+    if (!sectionController)
+        sectionController = [SPKUtils getIvarForObj:viewerController name:"_currentSectionController"];
+    if (sectionController)
+        return sectionController;
+
     if (!overlayView)
         return nil;
     NSArray<NSString *> *delegateSelectors = @[ @"mediaOverlayDelegate", @"retryDelegate", @"tappableOverlayDelegate", @"buttonDelegate" ];
@@ -62,13 +103,6 @@ static id SPKStorySectionControllerFromOverlay(UIView *overlayView) {
             return delegate;
     }
     return nil;
-}
-
-static UIViewController *SPKStoryViewerControllerFromOverlay(UIView *overlayView) {
-    id ancestor = SPKObjectForSelector(overlayView, @"_viewControllerForAncestor");
-    if ([ancestor isKindOfClass:[UIViewController class]])
-        return ancestor;
-    return [SPKUtils nearestViewControllerForView:overlayView];
 }
 
 static id SPKStoryMediaFromAnyObject(id object) {
@@ -194,7 +228,7 @@ SPKStoryContext *SPKStoryContextFromOverlay(UIView *overlayView) {
     SPKStoryContext *context = [[SPKStoryContext alloc] init];
     context.overlayView = overlayView;
     context.viewerController = SPKStoryViewerControllerFromOverlay(overlayView);
-    context.sectionController = SPKStorySectionControllerFromOverlay(overlayView);
+    context.sectionController = SPKStorySectionControllerFromOverlay(overlayView, context.viewerController);
 
     SEL markSelector = NSSelectorFromString(@"fullscreenSectionController:didMarkItemAsSeen:");
     id sectionDelegate = SPKObjectForSelector(context.sectionController, @"delegate");
@@ -209,14 +243,30 @@ SPKStoryContext *SPKStoryContextFromOverlay(UIView *overlayView) {
     }
 
     if (!context.sectionController && context.markSeenTarget) {
-        context.sectionController = SPKStoryFirstObjectForSelectors(context.markSeenTarget, @[ @"currentSectionController" ]) ?: [SPKUtils getIvarForObj:context.markSeenTarget name:"_currentSectionController"];
+        context.sectionController = SPKStoryFirstObjectForSelectors(context.markSeenTarget, @[ @"currentlyDisplayedSectionController", @"currentSectionController" ]) ?: [SPKUtils getIvarForObj:context.markSeenTarget name:"_currentSectionController"];
     }
 
     id media = SPKStoryFirstObjectForSelectors(context.sectionController, @[ @"currentStoryItem", @"currentItem", @"item" ]);
     if (!media)
-        media = SPKStoryFirstObjectForSelectors(context.markSeenTarget, @[ @"currentStoryItem", @"currentItem", @"item" ]);
-    if (!media)
         media = SPKStoryFirstObjectForSelectors(context.viewerController, @[ @"currentStoryItem", @"currentItem", @"item" ]);
+    id currentViewModel = SPKStoryFirstObjectForSelectors(context.viewerController, @[ @"currentViewModel" ]);
+    if (!media && currentViewModel) {
+        SEL currentItemSelector = NSSelectorFromString(@"currentStoryItemForViewModel:");
+        if ([context.viewerController respondsToSelector:currentItemSelector]) {
+            @try {
+                media = ((id (*)(id, SEL, id))objc_msgSend)(context.viewerController, currentItemSelector, currentViewModel);
+            } @catch (__unused NSException *exception) {
+            }
+        }
+    }
+    if (!media) {
+        id itemContext = SPKStoryFirstObjectForSelectors(overlayView, @[ @"currentStoryItemContext", @"_currentStoryItemContext" ]);
+        media = SPKStoryFirstObjectForSelectors(itemContext, @[ @"storyItem", @"item", @"media" ]);
+    }
+    if (!media)
+        media = SPKStoryFirstObjectForSelectors(overlayView, @[ @"currentStoryItem", @"currentItem", @"item" ]);
+    if (!media)
+        media = SPKStoryFirstObjectForSelectors(context.markSeenTarget, @[ @"currentStoryItem", @"currentItem", @"item" ]);
     context.media = SPKStoryMediaFromAnyObject(media);
 
     if (!context.media) {
@@ -236,7 +286,6 @@ SPKStoryContext *SPKStoryContextFromOverlay(UIView *overlayView) {
         return context;
     }
 
-    id currentViewModel = SPKStoryFirstObjectForSelectors(context.viewerController, @[ @"currentViewModel" ]);
     NSMutableArray *resolved = [NSMutableArray array];
     NSString *currentUserPK = SPKStoryUserPKFromMediaObject(context.media);
     for (id candidate in @[ context.sectionController ?: (id)NSNull.null, currentViewModel ?: (id)NSNull.null, context.viewerController ?: (id)NSNull.null ]) {
@@ -291,9 +340,17 @@ SPKStoryContext *SPKStoryContextFromMedia(id media) {
 }
 
 BOOL SPKStoryMarkContextAsSeen(SPKStoryContext *context) {
-    if (!context.markSeenTarget || !context.sectionController || !context.media)
-        return NO;
     SEL markSelector = NSSelectorFromString(@"fullscreenSectionController:didMarkItemAsSeen:");
+    if (!context.markSeenTarget || !context.sectionController || !context.media || ![context.markSeenTarget respondsToSelector:markSelector]) {
+        SPKLog(@"Stories",
+               @"[Sparkle StorySeen] Unable to mark seen viewer=%@ section=%@ target=%@ media=%@ targetResponds=%d",
+               context.viewerController ? NSStringFromClass(context.viewerController.class) : @"nil",
+               context.sectionController ? NSStringFromClass([context.sectionController class]) : @"nil",
+               context.markSeenTarget ? NSStringFromClass([context.markSeenTarget class]) : @"nil",
+               context.media ? NSStringFromClass([context.media class]) : @"nil",
+               context.markSeenTarget ? [context.markSeenTarget respondsToSelector:markSelector] : NO);
+        return NO;
+    }
     SPKForcedStorySeenMediaPK = [SPKStoryMediaIdentifier(context.media) copy];
     SPKForceMarkStoryAsSeen = YES;
     @try {
@@ -655,7 +712,7 @@ void SPKStoryToggleUserForCurrentManualSeenMode(NSString *pk, NSString *username
 }
 
 NSString *SPKStoryManualSeenListTitle(BOOL manualSeenEnabled) {
-    return manualSeenEnabled ? @"Excluded Users" : @"Included Users";
+    return manualSeenEnabled ? SPKL(@"STORIES_STORY_CONTEXT_EXCLUDED_USERS_TEXT") : SPKL(@"STORIES_STORY_CONTEXT_INCLUDED_USERS_TEXT");
 }
 
 static NSString *SPKStoryManualSeenListModeTitle(BOOL manualSeenEnabled) {
@@ -664,8 +721,8 @@ static NSString *SPKStoryManualSeenListModeTitle(BOOL manualSeenEnabled) {
 
 static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
     return manualSeenEnabled
-               ? @"When Manually Mark Seen is enabled, users in this list use Instagram's default seen behavior and do not need the eye button."
-               : @"When Manually Mark Seen is disabled, only users in this list require the eye button or story like/reply to mark seen.";
+               ? SPKL(@"STORIES_STORY_CONTEXT_MANUALLY_MARK_SEEN_ENABLED_USERS_LIST_USE_INSTAGRAM_S_TEXT")
+               : SPKL(@"STORIES_STORY_CONTEXT_MANUALLY_MARK_SEEN_DISABLED_ONLY_USERS_LIST_REQUIRE_EYE_TEXT");
 }
 
 #pragma mark - Manual-seen users list
@@ -682,10 +739,10 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
         self.title = SPKStoryManualSeenListTitle(_manualSeenEnabled);
         self.showsAddButton = YES;
         self.infoText = SPKStoryManualSeenListHelpText(_manualSeenEnabled);
-        self.emptyTitle = @"No users yet";
+        self.emptyTitle = SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_NO_USERS_YET_TEXT");
         self.emptySubtitle = _manualSeenEnabled
-                                 ? @"Add users whose stories should keep Instagram's normal seen behavior."
-                                 : @"Add users whose stories require the eye button to mark seen.";
+                                 ? SPKL(@"STORIES_STORY_CONTEXT_ADD_USERS_WHOSE_STORIES_SHOULD_KEEP_INSTAGRAM_S_NORMAL_TEXT")
+                                 : SPKL(@"STORIES_STORY_CONTEXT_ADD_USERS_WHOSE_STORIES_REQUIRE_EYE_BUTTON_MARK_SEEN_TEXT");
     }
     return self;
 }
@@ -706,7 +763,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
 
         SPKUserListItem *item = [SPKUserListItem new];
         item.pk = pk;
-        item.title = username.length ? [@"@" stringByAppendingString:username] : @"Unknown user";
+        item.title = username.length ? [@"@" stringByAppendingString:username] : SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_UNKNOWN_USER_TEXT");
         item.subtitle = fullName.length ? fullName : nil;
         item.avatarURLString = profilePicUrl;
         item.representedObject = entry;
@@ -735,7 +792,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
     }
     SPKStorySetManualSeenUserList(users, self.manualSeenEnabled);
     SPKNotify(kSPKNotificationStorySeenUserRule,
-              [NSString stringWithFormat:@"Removed @%@", username],
+              [NSString stringWithFormat:SPKL(@"STORIES_STORY_CONTEXT_REMOVED_VALUE_FORMAT"), username],
               SPKStoryManualSeenListTitle(self.manualSeenEnabled),
               @"circle_check_filled",
               SPKNotificationToneSuccess);
@@ -744,21 +801,21 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
 
 - (void)presentError:(NSString *)message {
     [SPKIGAlertPresenter presentAlertFromViewController:self
-                                                  title:@"Unable to Add User"
+                                                  title:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_UNABLE_ADD_USER_TEXT")
                                                 message:message
-                                                actions:@[ [SPKIGAlertAction actionWithTitle:@"OK" style:SPKIGAlertActionStyleCancel handler:nil] ]];
+                                                actions:@[ [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_OK") style:SPKIGAlertActionStyleCancel handler:nil] ]];
 }
 
 - (void)didTapAdd {
     __weak typeof(self) weakSelf = self;
     [SPKIGAlertPresenter presentTextInputAlertFromViewController:self
-                                                           title:@"Add User"
-                                                         message:@"Enter the Instagram username to add."
-                                                     placeholder:@"username"
+                                                           title:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ADD_USER_TEXT")
+                                                         message:SPKL(@"STORIES_STORY_CONTEXT_ENTER_INSTAGRAM_USERNAME_ADD_TEXT")
+                                                     placeholder:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USERNAME_TEXT")
                                                      initialText:nil
                                                  autocapitalized:NO
-                                                    confirmTitle:@"Search"
-                                                     cancelTitle:@"Cancel"
+                                                    confirmTitle:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_SEARCH_TEXT")
+                                                     cancelTitle:SPKL(@"VC_BTN_CANCEL")
                                                     confirmStyle:SPKIGAlertActionStyleDefault
                                                     confirmBlock:^(NSString *text) {
                                                         [weakSelf lookupUsername:text];
@@ -778,7 +835,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
                                       if (!strongSelf)
                                           return;
                                       if (![user isKindOfClass:[NSDictionary class]] || error) {
-                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          [strongSelf presentError:[NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USER_VALUE_NOT_FOUND_FORMAT"), username]];
                                           return;
                                       }
                                       NSString *pk = SPKStringFromValue(user[@"pk"] ?: user[@"id"]);
@@ -786,7 +843,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
                                       NSString *fullName = SPKStringFromValue(user[@"full_name"] ?: user[@"fullName"]) ?: @"";
                                       NSString *profilePicUrl = SPKStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
                                       if (pk.length == 0) {
-                                          [strongSelf presentError:@"Could not resolve this user's Instagram ID."];
+                                          [strongSelf presentError:SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_COULD_NOT_RESOLVE_USER_S_INSTAGRAM_ID_TEXT")];
                                           return;
                                       }
 
@@ -795,13 +852,13 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
                                                               : [@"@" stringByAppendingString:resolvedUsername];
 
                                       [SPKIGAlertPresenter presentAlertFromViewController:strongSelf
-                                                                                    title:@"Add to List?"
+                                                                                    title:SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADD_LIST_QUESTION")
                                                                                   message:message
                                                                                   actions:@[
-                                                                                      [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                                                      [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                                                   style:SPKIGAlertActionStyleCancel
                                                                                                                 handler:nil],
-                                                                                      [SPKIGAlertAction actionWithTitle:@"Add"
+                                                                                      [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_ADD")
                                                                                                                   style:SPKIGAlertActionStyleDefault
                                                                                                                 handler:^{
                                                                                                                     [strongSelf addResolvedUserPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];
@@ -829,7 +886,7 @@ static NSString *SPKStoryManualSeenListHelpText(BOOL manualSeenEnabled) {
     }];
     SPKStorySetManualSeenUserList(users, self.manualSeenEnabled);
     SPKNotify(kSPKNotificationStorySeenUserRule,
-              [NSString stringWithFormat:@"Added @%@", username],
+              [NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_ADDED_VALUE_FORMAT"), username],
               SPKStoryManualSeenListTitle(self.manualSeenEnabled),
               @"circle_check_filled",
               SPKNotificationToneSuccess);
@@ -868,7 +925,7 @@ NSString *SPKStoryCurrentUserRuleActionTitle(SPKStoryContext *context) {
     if (!SPKStoryCurrentUserRuleState(context, &username, NULL, NULL, NULL))
         return nil;
     BOOL applies = SPKStoryManualSeenAppliesToContext(context);
-    return applies ? @"Start Marking Stories as Seen" : @"Stop Marking Stories as Seen";
+    return applies ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_STORIES_SEEN_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_STORIES_SEEN_TEXT");
 }
 
 NSString *SPKStoryCurrentUserRuleConfirmationTitle(SPKStoryContext *context) {
@@ -876,7 +933,7 @@ NSString *SPKStoryCurrentUserRuleConfirmationTitle(SPKStoryContext *context) {
     if (!SPKStoryCurrentUserRuleState(context, &username, NULL, NULL, NULL))
         return nil;
     BOOL applies = SPKStoryManualSeenAppliesToContext(context);
-    return applies ? @"Start Marking Stories as Seen" : @"Stop Marking Stories as Seen";
+    return applies ? SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_STORIES_SEEN_TEXT") : SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_STORIES_SEEN_TEXT");
 }
 
 NSString *SPKStoryCurrentUserRuleConfirmationMessage(SPKStoryContext *context) {
@@ -885,8 +942,8 @@ NSString *SPKStoryCurrentUserRuleConfirmationMessage(SPKStoryContext *context) {
         return nil;
     BOOL applies = SPKStoryManualSeenAppliesToContext(context);
     return applies
-               ? [NSString stringWithFormat:@"Do you want to start marking stories from @%@ as seen?", username]
-               : [NSString stringWithFormat:@"Do you want to stop marking stories from @%@ as seen?", username];
+               ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_START_MARKING_STORIES_VALUE_SEEN_FORMAT"), username]
+               : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_STOP_MARKING_STORIES_VALUE_SEEN_FORMAT"), username];
 }
 
 void SPKStoryToggleUserRuleForPK(NSString *pk, NSString *username, NSString *fullName, NSString *profilePicUrl) {
@@ -931,8 +988,8 @@ BOOL SPKStoryToggleCurrentUserRule(SPKStoryContext *context, NSString **notifica
 
     if (notificationTitle) {
         *notificationTitle = applies
-                                 ? [NSString stringWithFormat:@"Stories seen on for @%@", username]
-                                 : [NSString stringWithFormat:@"Stories seen off for @%@", username];
+                                 ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_STORIES_SEEN_ON_FORMAT"), username]
+                                 : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_STORIES_SEEN_OFF_FORMAT"), username];
     }
     if (notificationSubtitle)
         *notificationSubtitle = listTitle;

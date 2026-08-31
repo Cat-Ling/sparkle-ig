@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
@@ -299,10 +300,10 @@ static BOOL SPKCommentButtonIsDislike(id button) {
         SPKLog(@"General", @"[Sparkle] Confirm feed post %@ triggered", isUnlike ? @"unlike" : @"like"); \
         SPKPresentLikeToggleConfirmation(                                                                \
             isUnlike,                                                                                    \
-            @"Confirm Post Like",                                                                        \
-            @"Are you sure you want to like this post?",                                                 \
-            @"Confirm Post Unlike",                                                                      \
-            @"Are you sure you want to unlike this post?",                                               \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_POST_LIKE_TEXT"),                                                                        \
+            SPKL(@"FEED_LIKE_CONFIRM_LIKE_POST_CONFIRMATION_MESSAGE"),                                                 \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_POST_UNLIKE_TEXT"),                                                                      \
+            SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_POST_CONFIRMATION_MESSAGE"),                                               \
             ^{                                                                                           \
                 SPK_RUN_WITH_FEED_POST_LIKE_CONFIRM_BYPASS(orig);                                        \
             });                                                                                          \
@@ -316,10 +317,10 @@ static BOOL SPKCommentButtonIsDislike(id button) {
         SPKLog(@"General", @"[Sparkle] Confirm feed double-tap %@ triggered", isUnlike ? @"unlike" : @"like"); \
         SPKPresentLikeToggleConfirmation(                                                                      \
             isUnlike,                                                                                          \
-            @"Confirm Post Like",                                                                              \
-            @"Are you sure you want to like this post?",                                                       \
-            @"Confirm Post Unlike",                                                                            \
-            @"Are you sure you want to unlike this post?",                                                     \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_POST_LIKE_TEXT"),                                                                              \
+            SPKL(@"FEED_LIKE_CONFIRM_LIKE_POST_CONFIRMATION_MESSAGE"),                                                       \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_POST_UNLIKE_TEXT"),                                                                            \
+            SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_POST_CONFIRMATION_MESSAGE"),                                                     \
             ^{                                                                                                 \
                 SPK_RUN_WITH_FEED_POST_LIKE_CONFIRM_BYPASS(orig);                                              \
             });                                                                                                \
@@ -336,10 +337,10 @@ static BOOL SPKCommentButtonIsDislike(id button) {
         SPKLog(@"General", @"[Sparkle] Confirm comment %@ triggered", isUnlike ? @"unlike" : @"like"); \
         SPKPresentLikeToggleConfirmation(                                                              \
             isUnlike,                                                                                  \
-            @"Confirm Comment Like",                                                                   \
-            @"Are you sure you want to like this comment?",                                            \
-            @"Confirm Comment Unlike",                                                                 \
-            @"Are you sure you want to unlike this comment?",                                          \
+            SPKL(@"GENERAL_COMMENTS_CONFIRM_COMMENT_LIKE_TITLE"),                                                                   \
+            SPKL(@"FEED_LIKE_CONFIRM_LIKE_COMMENT_CONFIRMATION_MESSAGE"),                                            \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_COMMENT_UNLIKE_TEXT"),                                                                 \
+            SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_COMMENT_CONFIRMATION_MESSAGE"),                                          \
             ^{                                                                                         \
                 SPK_RUN_WITH_COMMENT_LIKE_CONFIRM_BYPASS(orig);                                        \
             });                                                                                        \
@@ -363,10 +364,10 @@ static BOOL SPKCommentButtonIsDislike(id button) {
         SPKLog(@"General", @"[Sparkle] Confirm reels %@ triggered", isUnlike ? @"unlike" : @"like"); \
         SPKPresentLikeToggleConfirmation(                                                            \
             isUnlike,                                                                                \
-            @"Confirm Reel Like",                                                                    \
-            @"Are you sure you want to like this reel?",                                             \
-            @"Confirm Reel Unlike",                                                                  \
-            @"Are you sure you want to unlike this reel?",                                           \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_LIKE_TEXT"),                                                                    \
+            SPKL(@"FEED_LIKE_CONFIRM_LIKE_REEL_CONFIRMATION_MESSAGE"),                                             \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_UNLIKE_TEXT"),                                                                  \
+            SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_REEL_CONFIRMATION_MESSAGE"),                                           \
             ^{                                                                                       \
                 orig;                                                                                \
             });                                                                                      \
@@ -380,10 +381,10 @@ static BOOL SPKCommentButtonIsDislike(id button) {
         SPKLog(@"General", @"[Sparkle] Confirm reels double-tap %@ triggered", isUnlike ? @"unlike" : @"like"); \
         SPKPresentLikeToggleConfirmation(                                                                       \
             isUnlike,                                                                                           \
-            @"Confirm Reel Like",                                                                               \
-            @"Are you sure you want to like this reel?",                                                        \
-            @"Confirm Reel Unlike",                                                                             \
-            @"Are you sure you want to unlike this reel?",                                                      \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_LIKE_TEXT"),                                                                               \
+            SPKL(@"FEED_LIKE_CONFIRM_LIKE_REEL_CONFIRMATION_MESSAGE"),                                                        \
+            SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_UNLIKE_TEXT"),                                                                             \
+            SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_REEL_CONFIRMATION_MESSAGE"),                                                      \
             ^{                                                                                                  \
                 orig;                                                                                           \
             });                                                                                                 \
@@ -552,8 +553,8 @@ static void new_spkStoryLikeTap(id self, SEL _cmd, id button) {
                 SPKStoryMarkSeenForInteractionView((UIView *)button, @"stories_advance_on_like_seen");
             }
         }
-                   title:(isUnlike ? @"Confirm Story Unlike" : @"Confirm Story Like")
-                   message:(isUnlike ? @"Are you sure you want to unlike this story?" : @"Are you sure you want to like this story?")];
+                   title:(isUnlike ? SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_STORY_UNLIKE_TEXT") : SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_STORY_LIKE_TEXT"))
+                   message:(isUnlike ? SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_STORY_CONFIRMATION_MESSAGE") : SPKL(@"FEED_LIKE_CONFIRM_LIKE_STORY_CONFIRMATION_MESSAGE"))];
 
     if (btn) {
         [UIView performWithoutAnimation:^{
@@ -613,8 +614,8 @@ static void SPKInstallStoryLikeConfirmHookIfNeeded(void) {
                 if (SPKActiveStoryOverlayForInteractions())
                     SPKStoryReplySideEffects();
             }
-                       title:@"Confirm Quick Reaction"
-                     message:@"Are you sure you want to send this emoji reaction?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_QUICK_REACTION_TITLE")
+                     message:SPKL(@"FEED_LIKE_CONFIRM_SEND_EMOJI_REACTION_CONFIRMATION_MESSAGE")];
         return;
     }
     if (SPKActiveStoryOverlayForInteractions()) {
@@ -633,8 +634,8 @@ static void SPKInstallStoryLikeConfirmHookIfNeeded(void) {
                 if (SPKActiveStoryOverlayForInteractions())
                     SPKStoryReplySideEffects();
             }
-                       title:@"Confirm Quick Reaction"
-                     message:@"Are you sure you want to send this emoji reaction?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_QUICK_REACTION_TITLE")
+                     message:SPKL(@"FEED_LIKE_CONFIRM_SEND_EMOJI_REACTION_CONFIRMATION_MESSAGE")];
         return;
     }
     if (SPKActiveStoryOverlayForInteractions()) {
@@ -655,8 +656,8 @@ static void SPKHookedStoryFooterEmojiQuick(id self, SEL _cmd, id inputView, id b
                     orig_storyFooterEmojiQuick(self, _cmd, inputView, button);
                 SPKStoryReplySideEffects();
             }
-                       title:@"Confirm Quick Reaction"
-                     message:@"Are you sure you want to send this emoji reaction?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_QUICK_REACTION_TITLE")
+                     message:SPKL(@"FEED_LIKE_CONFIRM_SEND_EMOJI_REACTION_CONFIRMATION_MESSAGE")];
         return;
     }
     if (orig_storyFooterEmojiQuick)
@@ -673,8 +674,8 @@ static void SPKHookedStoryFooterEmojiReaction(id self, SEL _cmd, id inputView, i
                     orig_storyFooterEmojiReaction(self, _cmd, inputView, button);
                 SPKStoryReplySideEffects();
             }
-                       title:@"Confirm Quick Reaction"
-                     message:@"Are you sure you want to send this emoji reaction?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_QUICK_REACTION_TITLE")
+                     message:SPKL(@"FEED_LIKE_CONFIRM_SEND_EMOJI_REACTION_CONFIRMATION_MESSAGE")];
         return;
     }
     if (orig_storyFooterEmojiReaction)
@@ -691,8 +692,8 @@ static void SPKHookedStoryQuickReaction(id self, SEL _cmd, id view, id sourceBut
                     orig_storyQuickReaction(self, _cmd, view, sourceButton, emoji);
                 SPKStoryReplySideEffects();
             }
-                       title:@"Confirm Quick Reaction"
-                     message:@"Are you sure you want to send this emoji reaction?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_QUICK_REACTION_TITLE")
+                     message:SPKL(@"FEED_LIKE_CONFIRM_SEND_EMOJI_REACTION_CONFIRMATION_MESSAGE")];
         return;
     }
     if (orig_storyQuickReaction)
@@ -709,8 +710,8 @@ static void SPKHookedStoryPrivateEmojiQuick(id self, SEL _cmd, id button) {
                     orig_storyPrivateEmojiQuick(self, _cmd, button);
                 SPKStoryReplySideEffects();
             }
-                       title:@"Confirm Quick Reaction"
-                     message:@"Are you sure you want to send this emoji reaction?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_QUICK_REACTION_TITLE")
+                     message:SPKL(@"FEED_LIKE_CONFIRM_SEND_EMOJI_REACTION_CONFIRMATION_MESSAGE")];
         return;
     }
     if (orig_storyPrivateEmojiQuick)
@@ -727,8 +728,8 @@ static void SPKHookedDirectReshareQuickReaction(id self, SEL _cmd, id arg) {
                     orig_directReshareQuickReaction(self, _cmd, arg);
                 SPKStoryReplySideEffects();
             }
-                       title:@"Confirm Quick Reaction"
-                     message:@"Are you sure you want to send this emoji reaction?"];
+                       title:SPKL(@"STORIES_CONFIRMATIONS_CONFIRM_QUICK_REACTION_TITLE")
+                     message:SPKL(@"FEED_LIKE_CONFIRM_SEND_EMOJI_REACTION_CONFIRMATION_MESSAGE")];
         return;
     }
     if (orig_directReshareQuickReaction)
@@ -814,10 +815,10 @@ static void spkReelsLikeHandlerTap(id self, SEL _cmd, id context, id likeButton,
     SPKLog(@"General", @"[Sparkle] Confirm reels %@ triggered", isUnlike ? @"unlike" : @"like");
     SPKPresentLikeToggleConfirmation(
         isUnlike,
-        @"Confirm Reel Like",
-        @"Are you sure you want to like this reel?",
-        @"Confirm Reel Unlike",
-        @"Are you sure you want to unlike this reel?",
+        SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_LIKE_TEXT"),
+        SPKL(@"FEED_LIKE_CONFIRM_LIKE_REEL_CONFIRMATION_MESSAGE"),
+        SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_UNLIKE_TEXT"),
+        SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_REEL_CONFIRMATION_MESSAGE"),
         ^{
             if (orig_spkReelsLikeHandlerTap)
                 orig_spkReelsLikeHandlerTap(self, _cmd, strongContext, strongButton, willAnimate);
@@ -839,10 +840,10 @@ static void spkReelsLikeHandlerTapCompletion(id self, SEL _cmd, id context, id l
     SPKLog(@"General", @"[Sparkle] Confirm reels %@ triggered", isUnlike ? @"unlike" : @"like");
     SPKPresentLikeToggleConfirmation(
         isUnlike,
-        @"Confirm Reel Like",
-        @"Are you sure you want to like this reel?",
-        @"Confirm Reel Unlike",
-        @"Are you sure you want to unlike this reel?",
+        SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_LIKE_TEXT"),
+        SPKL(@"FEED_LIKE_CONFIRM_LIKE_REEL_CONFIRMATION_MESSAGE"),
+        SPKL(@"FEED_LIKE_CONFIRM_CONFIRM_REEL_UNLIKE_TEXT"),
+        SPKL(@"FEED_LIKE_CONFIRM_UNLIKE_REEL_CONFIRMATION_MESSAGE"),
         ^{
             if (orig_spkReelsLikeHandlerTapCompletion)
                 orig_spkReelsLikeHandlerTapCompletion(self, _cmd, strongContext, strongButton, willAnimate, strongCompletion);

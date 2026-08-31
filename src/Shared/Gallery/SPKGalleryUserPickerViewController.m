@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryUserPickerViewController.h"
 #import "../../AssetUtils.h"
 #import "../../Utils.h"
@@ -50,7 +51,7 @@
     self.searchController.obscuresBackgroundDuringPresentation = NO;
     self.searchController.searchResultsUpdater = self;
     self.searchController.searchBar.delegate = self;
-    self.searchController.searchBar.placeholder = @"Search users";
+    self.searchController.searchBar.placeholder = SPKL(@"GALLERY_GALLERY_USER_PICKER_SEARCH_USERS_TEXT");
     self.navigationItem.searchController = self.searchController;
     self.navigationItem.hidesSearchBarWhenScrolling = NO;
     self.definesPresentationContext = YES;
@@ -60,14 +61,14 @@
                                                             target:self
                                                             action:@selector(dismissPicker)];
     done.tintColor = [SPKUtils SPKColor_InstagramBlue];
-    done.accessibilityLabel = @"Done";
+    done.accessibilityLabel = SPKL(@"SETTINGS_WHATS_NEW_DONE_TEXT");
     self.navigationItem.rightBarButtonItem = done;
 
     UIBarButtonItem *clear = [[UIBarButtonItem alloc] initWithImage:[SPKAssetUtils instagramIconNamed:@"backspace" pointSize:24.0]
                                                               style:UIBarButtonItemStylePlain
                                                              target:self
                                                              action:@selector(clearSelection)];
-    clear.accessibilityLabel = @"Clear selection";
+    clear.accessibilityLabel = SPKL(@"GALLERY_GALLERY_USER_PICKER_CLEAR_SELECTION_TEXT");
     self.clearItem = clear;
     self.navigationItem.leftBarButtonItem = clear;
 
@@ -165,7 +166,7 @@
 
 - (void)updateChrome {
     NSUInteger count = self.selected.count;
-    self.title = count > 0 ? [NSString stringWithFormat:@"%lu Selected", (unsigned long)count] : @"Select Users";
+    self.title = count > 0 ? [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_FILTER_VALUE_SELECTED_FORMAT"), (unsigned long)count] : SPKL(@"GALLERY_GALLERY_USER_PICKER_SELECT_USERS_TEXT");
     // Clear stays on the left (checkmark is on the right) but greys out when there
     // is nothing to clear.
     self.clearItem.enabled = count > 0;

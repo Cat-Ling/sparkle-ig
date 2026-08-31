@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessagesCapture.h"
 #import "../../../Shared/MediaDownload/SPKDashParser.h"
 #import "../../../Shared/MediaDownload/SPKMediaFFmpeg.h"
@@ -2336,8 +2337,13 @@ static id spkResolveReactionTargetMessage(NSString *messageId, id applicator, NS
     return msg;
 }
 
-// Best-effort one-line preview of the message a reaction was attached to.
-static NSString *spkReactionTargetPreview(id targetMessage) {
+// Best-effort one-line preview of the message a reaction was attached to. A
+// target without text yields no preview and reports its kind through `kindOut`
+// instead: naming the type here would freeze the capture-time language into the
+// stored record, which is then read back long after the language may have changed.
+static NSString *spkReactionTargetPreview(id targetMessage, SPKDeletedMessageKind *kindOut) {
+    if (kindOut)
+        *kindOut = SPKDeletedMessageKindUnknown;
     if (!targetMessage)
         return nil;
     @try {
@@ -2353,7 +2359,8 @@ static NSString *spkReactionTargetPreview(id targetMessage) {
         if ([kindNum isKindOfClass:[NSNumber class]]) {
             SPKDeletedMessageKind k = (SPKDeletedMessageKind)kindNum.integerValue;
             if (k != SPKDeletedMessageKindUnknown && k != SPKDeletedMessageKindText) {
-                return [SPKDeletedMessageKindLocalizedName(k) lowercaseString];
+                if (kindOut)
+                    *kindOut = k;
             }
         }
     } @catch (__unused id e) {
@@ -2394,7 +2401,8 @@ NSDictionary *spkDMCaptureNoteReactionUnsend(id reaction,
     if (!targetMessage && targetMessageId.length) {
         targetMessage = spkResolveReactionTargetMessage(targetMessageId, applicator, threadId);
     }
-    NSString *targetPreview = spkReactionTargetPreview(targetMessage);
+    SPKDeletedMessageKind targetKind = SPKDeletedMessageKindUnknown;
+    NSString *targetPreview = spkReactionTargetPreview(targetMessage, &targetKind);
 
     NSString *u = nil, *fn = nil, *pic = nil;
     spkResolveSenderInfo(pk, &u, &fn, &pic);
@@ -2429,13 +2437,20 @@ NSDictionary *spkDMCaptureNoteReactionUnsend(id reaction,
         m.kind = SPKDeletedMessageKindReaction;
         m.reactionEmoji = emoji;
         m.reactionTargetPreview = targetPreview;
-        // Human-readable body used by previews / search.
-        if (emoji.length && targetPreview.length) {
-            m.text = [NSString stringWithFormat:@"Removed %@ from \"%@\"", emoji, targetPreview];
+        m.reactionTargetKind = targetKind;
+        // Stored body for exports and copied text. Kept English on purpose: the
+        // record outlives the language it was captured in, so the on-screen
+        // sentence is rebuilt from the fields above by SPKDeletedMessageDisplayBody.
+        NSString *storedTarget = targetPreview.length ? targetPreview
+                                                      : (targetKind != SPKDeletedMessageKindUnknown
+                                                             ? SPKDeletedMessageKindToString(targetKind)
+                                                             : nil);
+        if (emoji.length && storedTarget.length) {
+            m.text = [NSString stringWithFormat:@"Removed %@ from \"%@\"", emoji, storedTarget];
         } else if (emoji.length) {
-            m.text = [NSString stringWithFormat:@"Removed reaction %@", emoji];
+            m.text = [NSString stringWithFormat:@"Removed %@ reaction", emoji];
         } else {
-            m.text = @"Removed a reaction";
+            m.text = @"Removed a reaction"; // SPK_I18N_IGNORE: stable persisted fallback; localized at display time
         }
         m.previewText = m.text;
         m.replyToMessageId = targetMessageId;
@@ -2459,5 +2474,10 @@ NSDictionary *spkDMCaptureNoteReactionUnsend(id reaction,
 
 NSString *spkDMCaptureReactionTargetPreview(NSString *messageId, id applicator, NSString *threadId) {
     id targetMessage = spkResolveReactionTargetMessage(messageId, applicator, threadId);
-    return spkReactionTargetPreview(targetMessage);
+    SPKDeletedMessageKind targetKind = SPKDeletedMessageKindUnknown;
+    NSString *preview = spkReactionTargetPreview(targetMessage, &targetKind);
+    // This one is shown, never stored, so a text-less target can be named here.
+    if (!preview.length && targetKind != SPKDeletedMessageKindUnknown)
+        preview = [SPKDeletedMessageKindLocalizedName(targetKind) lowercaseString];
+    return preview;
 }

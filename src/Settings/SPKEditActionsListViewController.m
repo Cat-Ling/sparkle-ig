@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKEditActionsListViewController.h"
 #include <UIKit/UIKit.h>
 
@@ -38,7 +39,7 @@ static char kSPKActionsListSwitchAssocKey;
                                                                    topicTitle:topicTitle
                                                              supportedActions:SPKActionButtonSupportedActionsForSource(source)
                                                               defaultSections:SPKActionButtonDefaultSectionsForSource(source)];
-        self.title = @"Configure Actions";
+        self.title = SPKL(@"SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE");
     }
     return self;
 }
@@ -102,9 +103,9 @@ static char kSPKActionsListSwitchAssocKey;
 
 - (NSString *)bulkEditorTitleForKind:(NSString *)kind {
     if ([kind isEqualToString:@"copy_info"]) {
-        return @"Configure Copy Info Menu";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_CONFIGURE_COPY_INFO_MENU_TEXT");
     }
-    return @"Configure Menu";
+    return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_CONFIGURE_MENU_TEXT");
 }
 
 - (NSString *)bulkEditorSubtitleForKind:(NSString *)kind {
@@ -114,7 +115,7 @@ static char kSPKActionsListSwitchAssocKey;
 
 - (SPKBulkActionMenuEditViewController *)bulkEditorControllerForKind:(NSString *)kind {
     if ([kind isEqualToString:@"copy_info"]) {
-        return [[SPKBulkActionMenuEditViewController alloc] initWithTitle:@"Copy Info Menu"
+        return [[SPKBulkActionMenuEditViewController alloc] initWithTitle:SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_COPY_INFO_MENU_TEXT")
                                                                    source:self.source
                                                          supportedActions:SPKProfileCopyInfoSupportedActions()
                                                         configuredActions:SPKProfileConfiguredCopyInfoActions()
@@ -144,25 +145,25 @@ static char kSPKActionsListSwitchAssocKey;
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     if (section == 0)
-        return @"Menu Sections";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_MENU_SECTIONS_TEXT");
     if (section == [self bulkEditorSectionIndex])
-        return @"All Menus";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_MENUS_TEXT");
     if (section == [self unassignedSectionIndex])
-        return @"Unassigned Actions";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_UNASSIGNED_ACTIONS_ACTION");
     if (section == [self resetSectionIndex])
         return nil;
-    return @"Available Actions";
+    return SPKL(@"SETTINGS_ACTION_SECTION_EDIT_AVAILABLE_ACTIONS_ACTION");
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == 0)
-        return @"Long press and drag to reorder sections.";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_LONG_PRESS_DRAG_REORDER_SECTIONS_TEXT");
     if (section == [self unassignedSectionIndex])
-        return @"Actions here are supported but do not appear in the runtime menu.";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_ACTIONS_HERE_SUPPORTED_BUT_NOT_APPEAR_RUNTIME_MENU_ACTION");
     if (section == [self availableSectionIndex])
-        return @"Disabled actions are hidden even if they remain assigned to a section.";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_DISABLED_ACTIONS_HIDDEN_EVEN_IF_THEY_REMAIN_ASSIGNED_SECTION_ACTION");
     if (section == [self resetSectionIndex])
-        return @"Restores this surface's menu sections, default action, and bulk menus to their defaults. Other surfaces are unaffected.";
+        return SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_RESTORES_SURFACE_S_MENU_SECTIONS_DEFAULT_ACTION_BULK_MENUS_TEXT");
     return nil;
 }
 
@@ -188,7 +189,7 @@ static char kSPKActionsListSwitchAssocKey;
     if (indexPath.section == 0) {
         SPKActionMenuSection *section = self.configuration.sections[indexPath.row];
         config.text = section.title;
-        NSString *stateText = section.collapsible ? @"Collapsible" : @"Inline";
+        NSString *stateText = section.collapsible ? SPKL(@"SETTINGS_ACTION_SECTION_EDIT_COLLAPSIBLE_TEXT") : SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_INLINE_TEXT");
         if ([self sectionHasDisabledAction:section]) {
             // Prefix the Collapsible/Inline subtitle with an amber warning triangle so
             // it's obvious — while arranging sections — that this section contains an
@@ -225,7 +226,7 @@ static char kSPKActionsListSwitchAssocKey;
         cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
         cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     } else if (indexPath.section == [self resetSectionIndex]) {
-        config.text = @"Reset to Default";
+        config.text = SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_RESET_DEFAULT_TEXT");
         config.textProperties.color = [SPKUtils SPKColor_InstagramDestructive];
         config.image = SPKSettingsIcon(@"arrow_ccw");
         config.imageProperties.tintColor = [SPKUtils SPKColor_InstagramDestructive];
@@ -372,13 +373,13 @@ static char kSPKActionsListSwitchAssocKey;
                                                                              }];
     deleteAction.image = [SPKAssetUtils menuIconNamed:@"trash"];
     deleteAction.backgroundColor = [SPKUtils SPKColor_InstagramDestructive];
-    deleteAction.accessibilityLabel = @"Remove Section";
+    deleteAction.accessibilityLabel = SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_REMOVE_SECTION_TEXT");
     return [UISwipeActionsConfiguration configurationWithActions:@[ deleteAction ]];
 }
 
 - (void)addSectionTapped {
     SPKActionMenuSection *section = [SPKActionMenuSection sectionWithIdentifier:NSUUID.UUID.UUIDString
-                                                                          title:[NSString stringWithFormat:@"Section %lu", (unsigned long)(self.configuration.sections.count + 1)]
+                                                                          title:[NSString stringWithFormat:SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_SECTION_VALUE_FORMAT"), (unsigned long)(self.configuration.sections.count + 1)]
                                                                        iconName:@"more"
                                                                     collapsible:YES
                                                                         actions:@[]];
@@ -417,9 +418,9 @@ static char kSPKActionsListSwitchAssocKey;
     __weak typeof(self) weakSelf = self;
     [[SPKSettingsTransferManager sharedManager]
         resetConfigurationGroupFromController:self
-                                        title:@"Reset to Default"
-                                      message:@"This restores this surface's menu sections, default action, and bulk menus to their defaults. The action button stays enabled and other surfaces are unaffected."
-                                 confirmTitle:@"Reset"
+                                        title:SPKL(@"SETTINGS_EDIT_ACTIONS_LIST_RESET_DEFAULT_TEXT")
+                                      message:SPKL(@"ACTION_BUTTON_EDITOR_RESET_CONFIRMATION_MESSAGE")
+                                 confirmTitle:SPKL(@"DATA_RESET_HEADER")
                                          keys:[self configurationResetKeys]
                                       onReset:^{
                                           typeof(self) strongSelf = weakSelf;

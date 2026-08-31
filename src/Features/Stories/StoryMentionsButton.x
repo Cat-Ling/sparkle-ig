@@ -4,12 +4,12 @@
 
 #import "../../AssetUtils.h"
 #import "../../InstagramHeaders.h"
-#import "../../Shared/Messages/SPKDirectSeenContext.h"
-#import "../../Shared/Stories/SPKStoryContext.h"
 #import "../../Shared/Stories/SPKStoryDynamicRange.h"
+#import "../../Shared/Stories/SPKStoryMentions.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Tweak.h"
 #import "../../Utils.h"
+#import "SPKStrings.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,83 +23,33 @@ static NSString *const kSPKStoryMentionsBarIconResource = @"mention";
 static NSInteger const kSPKActionButtonSourceDirect = 4;
 static NSInteger const kSPKStoryMentionsButtonTag = 926002;
 
-extern void SPKPresentStoryMentionsSheet(UIView *overlayView);
+// Deliberately outside the [921341, 926003] capture-hiding tag range: the badge
+// lives inside the button's own redaction canvas, so the generic tag-based
+// interception must not also claim it.
+static NSInteger const kSPKStoryMentionsBadgeTag = 927001;
+static NSUInteger const kSPKStoryMentionsBadgeMaximum = 99;
+static CGFloat const kSPKStoryMentionsBadgeHeight = 16.0;
+// Pulled in from the button's top-trailing corner so the badge sits on the
+// bubble and overlaps the glyph, rather than floating off the circle's edge.
+static CGFloat const kSPKStoryMentionsBadgeInset = 3.0;
 
-static id SPKKVCObject(id target, NSString *key);
-static id SPKObjectForSelector(id target, NSString *selectorName);
-static id SPKFirstObjectForSelectors(id target, NSArray<NSString *> *selectors);
+static const void *kSPKStoryMentionsBadgeCountKey = &kSPKStoryMentionsBadgeCountKey;
+
+extern void SPKPresentStoryMentionsSheet(UIView *overlayView);
 
 static inline BOOL SPKStoryMentionsButtonEnabled(void) {
     return [SPKUtils getBoolPref:@"stories_mentions_btn"];
 }
-static NSArray *SPKArrayFromCollection(id collection) {
-    if (!collection ||
-        [collection isKindOfClass:[NSDictionary class]] ||
-        [collection isKindOfClass:[NSString class]] ||
-        [collection isKindOfClass:[NSURL class]]) {
-        return nil;
-    }
 
-    if ([collection isKindOfClass:[NSArray class]]) {
-        return collection;
-    }
-
-    if ([collection isKindOfClass:[NSOrderedSet class]]) {
-        return [(NSOrderedSet *)collection array];
-    }
-
-    if ([collection isKindOfClass:[NSSet class]]) {
-        return [(NSSet *)collection allObjects];
-    }
-
-    if ([collection conformsToProtocol:@protocol(NSFastEnumeration)]) {
-        NSMutableArray *array = [NSMutableArray array];
-        for (id item in collection) {
-            [array addObject:item];
-        }
-        return array;
-    }
-
-    return nil;
-}
-
-static id SPKKVCObject(id target, NSString *key) {
-    if (!target || key.length == 0)
-        return nil;
-
-    @try {
-        return [target valueForKey:key];
-    } @catch (__unused NSException *exception) {
-        return nil;
-    }
-}
-
-static id SPKObjectForSelector(id target, NSString *selectorName) {
-    if (!target || selectorName.length == 0)
-        return nil;
-
-    SEL selector = NSSelectorFromString(selectorName);
-    if (![target respondsToSelector:selector])
-        return nil;
-
-    return ((id (*)(id, SEL))objc_msgSend)(target, selector);
-}
-
-static id SPKFirstObjectForSelectors(id target, NSArray<NSString *> *selectors) {
-    if (!target || selectors.count == 0)
-        return nil;
-    for (NSString *selectorName in selectors) {
-        id value = SPKObjectForSelector(target, selectorName);
-        if (value)
-            return value;
-    }
-    return nil;
+static inline BOOL SPKStoryMentionsCountBadgeEnabled(void) {
+    return [SPKUtils getBoolPref:@"stories_mentions_count_badge"];
 }
 
 static void SPKPlayButtonTappedHaptic(void) {
     UISelectionFeedbackGenerator *feedback = [UISelectionFeedbackGenerator new];
     [feedback selectionChanged];
 }
+
 static UIButton *SPKStorySeenButtonWithTag(UIView *container, NSInteger tag) {
     UIView *existing = [container viewWithTag:tag];
     if ([existing isKindOfClass:SPKChromeButton.class]) {
@@ -116,7 +66,7 @@ static UIButton *SPKStorySeenButtonWithTag(UIView *container, NSInteger tag) {
     return button;
 }
 
-static void SPKSetSeenButtonImage(UIButton *button, UIImage *image, NSString *logMessage) {
+static void SPKSetSeenButtonImage(UIButton *button, UIImage *image) {
     UIImage *templatedImage = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
     if ([button isKindOfClass:SPKChromeButton.class]) {
         SPKChromeButton *chromeButton = (SPKChromeButton *)button;
@@ -126,159 +76,86 @@ static void SPKSetSeenButtonImage(UIButton *button, UIImage *image, NSString *lo
     } else {
         [button setImage:templatedImage forState:UIControlStateNormal];
     }
-
-    SPKLog(@"Capture", @"%@ tag=%ld button=%@<%p> subviews=%@ imageView=%@<%p> imageSuperview=%@<%p>",
-           logMessage,
-           (long)button.tag,
-           NSStringFromClass(button.class),
-           button,
-           button.subviews,
-           NSStringFromClass(button.imageView.class),
-           button.imageView,
-           NSStringFromClass(button.imageView.superview.class),
-           button.imageView.superview);
 }
 
-static id SPKStorySectionControllerFromOverlayView(UIView *overlayView) {
-    if (!overlayView)
-        return nil;
+// MARK: - Count badge
 
-    NSArray<NSString *> *delegateSelectors = @[ @"mediaOverlayDelegate", @"retryDelegate", @"tappableOverlayDelegate", @"buttonDelegate" ];
-    Class sectionControllerClass = NSClassFromString(@"IGStoryFullscreenSectionController");
+static NSString *SPKStoryMentionsLocalizedNumber(NSUInteger value) {
+    static NSNumberFormatter *formatter;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [[NSNumberFormatter alloc] init];
+        formatter.numberStyle = NSNumberFormatterDecimalStyle;
+        formatter.usesGroupingSeparator = NO;
+        formatter.locale = [NSLocale localeWithLocaleIdentifier:[SPKStrings activeLanguage]];
+    });
+    return [formatter stringFromNumber:@(value)] ?: [NSString stringWithFormat:@"%lu", (unsigned long)value];
+}
 
-    for (NSString *selectorName in delegateSelectors) {
-        SEL selector = NSSelectorFromString(selectorName);
-        if (![overlayView respondsToSelector:selector])
-            continue;
+static NSString *SPKStoryMentionsBadgeText(NSUInteger count) {
+    NSUInteger displayed = MIN(count, kSPKStoryMentionsBadgeMaximum);
+    NSString *number = SPKStoryMentionsLocalizedNumber(displayed);
+    if (count <= kSPKStoryMentionsBadgeMaximum)
+        return number;
+    return [NSString stringWithFormat:SPKL(@"STORIES_MENTIONS_COUNT_BADGE_OVERFLOW_FORMAT"), number];
+}
 
-        id delegate = ((id (*)(id, SEL))objc_msgSend)(overlayView, selector);
-        if (!delegate)
-            continue;
+/// Places the count badge inside the button's capture canvas so it is redacted
+/// with the glyph when "Hide UI on Capture" is on. Runs from the overlay's
+/// layout pass, so it exits early whenever the rendered count is unchanged.
+static void SPKUpdateStoryMentionsBadge(UIButton *button, NSUInteger count) {
+    if (![button isKindOfClass:SPKChromeButton.class])
+        return;
+    SPKChromeButton *chromeButton = (SPKChromeButton *)button;
 
-        if (!sectionControllerClass || [delegate isKindOfClass:sectionControllerClass]) {
-            return delegate;
+    BOOL showBadge = SPKStoryMentionsCountBadgeEnabled() && count > 0;
+    UILabel *badge = (UILabel *)[chromeButton viewWithTag:kSPKStoryMentionsBadgeTag];
+
+    if (!showBadge) {
+        if (badge) {
+            [badge removeFromSuperview];
+            objc_setAssociatedObject(chromeButton, kSPKStoryMentionsBadgeCountKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         }
+        return;
     }
 
-    return nil;
+    NSNumber *rendered = objc_getAssociatedObject(chromeButton, kSPKStoryMentionsBadgeCountKey);
+    if (badge && rendered && rendered.unsignedIntegerValue == count)
+        return;
+
+    if (!badge) {
+        badge = [UILabel new];
+        badge.tag = kSPKStoryMentionsBadgeTag;
+        badge.translatesAutoresizingMaskIntoConstraints = NO;
+        badge.textAlignment = NSTextAlignmentCenter;
+        badge.font = [UIFont systemFontOfSize:10.0 weight:UIFontWeightBold];
+        badge.textColor = UIColor.whiteColor;
+        badge.backgroundColor = [SPKUtils SPKColor_InstagramBlue];
+        badge.layer.cornerRadius = kSPKStoryMentionsBadgeHeight / 2.0;
+        badge.layer.masksToBounds = YES;
+        badge.adjustsFontSizeToFitWidth = YES;
+        badge.minimumScaleFactor = 0.7;
+        badge.userInteractionEnabled = NO;
+        badge.isAccessibilityElement = NO;
+
+        [chromeButton addChromeSubview:badge];
+
+        // Pinned to the stable anchor rather than the resulting superview: the
+        // canvas re-parents its children once the secure layer materialises.
+        UIView *anchor = chromeButton.chromeAnchorView;
+        [NSLayoutConstraint activateConstraints:@[
+            [badge.topAnchor constraintEqualToAnchor:anchor.topAnchor constant:kSPKStoryMentionsBadgeInset],
+            [badge.trailingAnchor constraintEqualToAnchor:anchor.trailingAnchor constant:-kSPKStoryMentionsBadgeInset],
+            [badge.widthAnchor constraintGreaterThanOrEqualToConstant:kSPKStoryMentionsBadgeHeight],
+            [badge.heightAnchor constraintEqualToConstant:kSPKStoryMentionsBadgeHeight]
+        ]];
+    }
+
+    badge.text = SPKStoryMentionsBadgeText(count);
+    objc_setAssociatedObject(chromeButton, kSPKStoryMentionsBadgeCountKey, @(count), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
-static NSString *SPKStringFromValue(id value) {
-    if (!value || value == (id)kCFNull)
-        return nil;
-    if ([value isKindOfClass:[NSString class]]) {
-        NSString *string = (NSString *)value;
-        return string.length > 0 ? string : nil;
-    }
-    if ([value respondsToSelector:@selector(stringValue)]) {
-        NSString *string = [value stringValue];
-        return string.length > 0 ? string : nil;
-    }
-    return [[value description] length] > 0 ? [value description] : nil;
-}
-
-static id SPKStoryMediaFromAnyObject(id object) {
-    if (!object)
-        return nil;
-    id candidate = SPKFirstObjectForSelectors(object, @[ @"media", @"mediaItem", @"storyItem", @"item", @"model" ]);
-    return candidate ?: object;
-}
-
-static BOOL SPKResolveStoryContextFromOverlay(UIView *overlayView, id *outMarkTarget, id *outSectionController, id *outMedia) {
-    SPKStoryContext *sharedContext = SPKStoryContextFromOverlay(overlayView);
-    if (sharedContext) {
-        if (outMarkTarget)
-            *outMarkTarget = sharedContext.markSeenTarget;
-        if (outSectionController)
-            *outSectionController = sharedContext.sectionController;
-        if (outMedia)
-            *outMedia = sharedContext.media;
-        return (sharedContext.media != nil);
-    }
-
-    if (!overlayView)
-        return NO;
-
-    SEL markSelector = NSSelectorFromString(@"fullscreenSectionController:didMarkItemAsSeen:");
-    UIViewController *viewerController = [SPKUtils nearestViewControllerForView:overlayView];
-
-    id sectionController = SPKStorySectionControllerFromOverlayView(overlayView);
-    id markTarget = nil;
-    id sectionDelegate = SPKObjectForSelector(sectionController, @"delegate");
-    if (sectionDelegate && [sectionDelegate respondsToSelector:markSelector]) {
-        markTarget = sectionDelegate;
-    } else if (viewerController && [viewerController respondsToSelector:markSelector]) {
-        markTarget = viewerController;
-    } else {
-        id overlayAncestor = SPKObjectForSelector(overlayView, @"_viewControllerForAncestor");
-        if (overlayAncestor && [overlayAncestor respondsToSelector:markSelector]) {
-            markTarget = overlayAncestor;
-        }
-    }
-
-    if (!sectionController && markTarget) {
-        sectionController = SPKFirstObjectForSelectors(markTarget, @[ @"currentSectionController" ]);
-        if (!sectionController) {
-            sectionController = [SPKUtils getIvarForObj:markTarget name:"_currentSectionController"];
-        }
-    }
-
-    id media = SPKFirstObjectForSelectors(sectionController, @[ @"currentStoryItem", @"currentItem", @"item" ]);
-    if (!media)
-        media = SPKFirstObjectForSelectors(markTarget, @[ @"currentStoryItem", @"currentItem", @"item" ]);
-    if (!media && viewerController)
-        media = SPKFirstObjectForSelectors(viewerController, @[ @"currentStoryItem", @"currentItem", @"item" ]);
-    media = SPKStoryMediaFromAnyObject(media);
-
-    if (outMarkTarget)
-        *outMarkTarget = markTarget;
-    if (outSectionController)
-        *outSectionController = sectionController;
-    if (outMedia)
-        *outMedia = media;
-
-    return (media != nil);
-}
-
-static NSArray<NSDictionary *> *SPKStoryMentionsForOverlay(UIView *overlayView) {
-    id markTarget = nil;
-    id sectionController = nil;
-    id media = nil;
-    if (!SPKResolveStoryContextFromOverlay(overlayView, &markTarget, &sectionController, &media)) {
-        return @[];
-    }
-
-    id mentionsCollection = SPKObjectForSelector(media, @"reelMentions");
-    NSArray *mentions = SPKArrayFromCollection(mentionsCollection);
-    if (mentions.count == 0)
-        return @[];
-
-    NSMutableArray<NSDictionary *> *userInfos = [NSMutableArray array];
-    for (id mention in mentions) {
-        id user = SPKKVCObject(mention, @"user");
-        if (!user)
-            user = SPKObjectForSelector(mention, @"user");
-        if (!user)
-            continue;
-
-        NSString *username = SPKStringFromValue(SPKKVCObject(user, @"username"));
-        if (!username)
-            username = SPKStringFromValue(SPKObjectForSelector(user, @"username"));
-        NSString *fullName = SPKStringFromValue(SPKKVCObject(user, @"fullName"));
-        if (!fullName)
-            fullName = SPKStringFromValue(SPKKVCObject(user, @"full_name"));
-
-        NSMutableDictionary *entry = [NSMutableDictionary dictionary];
-        if (username.length > 0)
-            entry[@"username"] = username;
-        if (fullName.length > 0)
-            entry[@"fullName"] = fullName;
-        if (entry.count > 0)
-            [userInfos addObject:entry];
-    }
-
-    return userInfos;
-}
+// MARK: - Button
 
 static void SPKApplyStoryMentionsButtonStyle(UIButton *button) {
     if (!button)
@@ -293,8 +170,8 @@ void SPKRemoveStoryMentionsButton(UIView *overlayView) {
 }
 
 void SPKUpdateStoryMentionsButton(UIView *overlayView, CGFloat x, CGFloat y, CGFloat size) {
-    NSArray<NSDictionary *> *storyMentions = SPKStoryMentionsForOverlay(overlayView);
-    BOOL showMentionsButton = SPKStoryMentionsButtonEnabled() && storyMentions.count > 0;
+    NSUInteger mentionCount = SPKStoryMentionCountForOverlay(overlayView);
+    BOOL showMentionsButton = SPKStoryMentionsButtonEnabled() && mentionCount > 0;
     UIButton *mentionsButton = (UIButton *)[overlayView viewWithTag:kSPKStoryMentionsButtonTag];
 
     if (showMentionsButton && !mentionsButton) {
@@ -302,7 +179,7 @@ void SPKUpdateStoryMentionsButton(UIView *overlayView, CGFloat x, CGFloat y, CGF
         [mentionsButton addTarget:overlayView action:@selector(spk_storyMentionsButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
 
         UIImage *mentionsImage = [SPKAssetUtils instagramIconNamed:kSPKStoryMentionsBarIconResource pointSize:24.0];
-        SPKSetSeenButtonImage(mentionsButton, mentionsImage, @"Story mentions custom icon assigned");
+        SPKSetSeenButtonImage(mentionsButton, mentionsImage);
     } else if (!showMentionsButton && mentionsButton) {
         [mentionsButton removeFromSuperview];
         mentionsButton = nil;
@@ -311,6 +188,15 @@ void SPKUpdateStoryMentionsButton(UIView *overlayView, CGFloat x, CGFloat y, CGF
     if (!showMentionsButton || !mentionsButton)
         return;
     SPKApplyStoryMentionsButtonStyle(mentionsButton);
+    SPKUpdateStoryMentionsBadge(mentionsButton, mentionCount);
+
+    // The badge itself is hidden from assistive tech; the count reaches VoiceOver
+    // as the button's value instead, which reads uncapped and without the badge's
+    // overflow marker.
+    mentionsButton.isAccessibilityElement = YES;
+    mentionsButton.accessibilityLabel = SPKL(@"STORIES_STORY_MENTIONS_MENTIONS_TEXT");
+    mentionsButton.accessibilityValue = SPKStoryMentionsLocalizedNumber(mentionCount);
+
     mentionsButton.frame = CGRectMake(x, y, size, size);
     [overlayView bringSubviewToFront:mentionsButton];
 }

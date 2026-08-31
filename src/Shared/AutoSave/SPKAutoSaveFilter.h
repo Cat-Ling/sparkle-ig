@@ -35,6 +35,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy) NSString *subjectPlural;
 /// Identifier for list-change notifications (add/remove/toggle).
 @property (nonatomic, copy) NSString *ruleNotificationIdentifier;
+/// Stores the include/exclude lists under the active account namespace even when
+/// Sparkle's general Per-Account Settings switch is off.
+@property (nonatomic, assign) BOOL alwaysAccountScopedLists;
 
 @end
 

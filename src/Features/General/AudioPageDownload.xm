@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import <substrate.h>
@@ -129,7 +130,7 @@ static SPKAudioItem *SPKAudioPageItem(NSURL *url, SPKGallerySaveMetadata *metada
 
 static void SPKAudioPageRunAction(NSString *action, NSURL *url, UIView *sourceView, SPKGallerySaveMetadata *metadata) {
     if (![SPKUtils getBoolPref:@"downloads_audio_enabled"] && ![action isEqualToString:kSPKAudioPageActionPlay]) {
-        SPKNotify(kSPKNotificationDownloadShare, @"Audio downloads disabled", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationDownloadShare, SPKL(@"GENERAL_AUDIO_PAGE_DOWNLOAD_AUDIO_DOWNLOADS_DISABLED_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return;
     }
     SPKAudioItem *item = SPKAudioPageItem(url, metadata);
@@ -184,7 +185,7 @@ static NSDictionary *SPKAudioPageResolvedPayload(UIView *sourceView) {
                                                                                              : SPKAudioPageReadIvar(vc, "_originalAudio");
     NSURL *url = SPKAudioPageResolveAudioURL(asset);
     if (!url) {
-        SPKNotify(kSPKNotificationDownloadShare, @"Could not find audio URL", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationDownloadShare, SPKL(@"GENERAL_AUDIO_PAGE_DOWNLOAD_COULD_NOT_FIND_AUDIO_URL_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return nil;
     }
 
@@ -216,11 +217,11 @@ static UIMenu *SPKAudioPageMenuForButton(UIButton *button) {
                       identifier:nil
                          options:0
                         children:@[
-                            SPKAudioPageMenuAction(@"Save Audio to Files", kSPKAudioPageActionFiles, kSPKActionDownloadAudio, @"audio_download", button),
-                            SPKAudioPageMenuAction(@"Share Audio", kSPKAudioPageActionShare, kSPKActionDownloadAudioShare, @"share", button),
-                            SPKAudioPageMenuAction(@"Save Audio to Gallery", kSPKAudioPageActionGallery, kSPKActionDownloadAudioGallery, @"sparkle_gallery", button),
-                            SPKAudioPageMenuAction(@"Play Audio", kSPKAudioPageActionPlay, kSPKActionPlayAudio, @"play", button),
-                            SPKAudioPageMenuAction(@"Copy Audio Download URL", kSPKAudioPageActionCopyURL, kSPKActionCopyAudioURL, @"link", button)
+                            SPKAudioPageMenuAction(SPKL(@"ALERT_ACTION_SAVE_AUDIO_FILES"), kSPKAudioPageActionFiles, kSPKActionDownloadAudio, @"audio_download", button),
+                            SPKAudioPageMenuAction(SPKL(@"ALERT_ACTION_SHARE_AUDIO"), kSPKAudioPageActionShare, kSPKActionDownloadAudioShare, @"share", button),
+                            SPKAudioPageMenuAction(SPKL(@"ALERT_ACTION_SAVE_AUDIO_GALLERY"), kSPKAudioPageActionGallery, kSPKActionDownloadAudioGallery, @"sparkle_gallery", button),
+                            SPKAudioPageMenuAction(SPKL(@"ALERT_ACTION_PLAY_AUDIO"), kSPKAudioPageActionPlay, kSPKActionPlayAudio, @"play", button),
+                            SPKAudioPageMenuAction(SPKL(@"ALERT_ACTION_COPY_AUDIO_DOWNLOAD_URL"), kSPKAudioPageActionCopyURL, kSPKActionCopyAudioURL, @"link", button)
                         ]];
 }
 

@@ -1,4 +1,5 @@
 #import <objc/message.h>
+#import "SPKStrings.h"
 #import <objc/runtime.h>
 #import <substrate.h>
 
@@ -6,6 +7,7 @@
 #import "../../InstagramHeaders.h"
 #import "../../Shared/Messages/SPKDirectAutoSave.h"
 #import "../../Shared/Messages/SPKDirectSeenContext.h"
+#import "../../Shared/Messages/SPKPresenceTracking.h"
 #import "../../Shared/Stories/SPKStoryContext.h"
 #import "../../Shared/UI/SPKChrome.h"
 #import "../../Tweak.h"
@@ -391,7 +393,7 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
                                                                   context.threadId ?: @"(unknown)",
                                                                   NSStringFromClass([source class]),
                                                                   source);
-                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, @"Chat not found", nil, @"error_filled", SPKNotificationToneError);
+                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_CHAT_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
                                                            return;
                                                        }
                                                        SPKNotify(kSPKNotificationDirectThreadSeenRule, title, subtitle, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -423,6 +425,20 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
         [children addObject:autoSaveAction];
     }
 
+    // Only offered when activity notifications are on and the thread is a 1:1: presence
+    // is reported per user, so a group has nothing to track.
+    NSString *presenceTitle = SPKPresenceNotificationsEnabled() ? SPKPresenceCurrentChatActionTitle(context) : nil;
+    if (presenceTitle.length > 0) {
+        BOOL isTracked = [presenceTitle isEqualToString:@"Stop Tracking Activity"];
+        UIAction *presenceAction = [UIAction actionWithTitle:presenceTitle
+                                                       image:[SPKAssetUtils menuIconNamed:isTracked ? @"activity_filled" : @"activity"]
+                                                  identifier:nil
+                                                     handler:^(__unused UIAction *action) {
+                                                         SPKPresencePresentChatRuleToggle(context);
+                                                     }];
+        [children addObject:presenceAction];
+    }
+
     UIImage *logImage = [SPKAssetUtils menuIconNamed:@"channels"];
     NSString *partnerPK = nil;
     NSString *partnerName = nil;
@@ -430,7 +446,7 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
     // Pass threadId for groups too — presentForThreadId: resolves a group entry
     // via groupForThreadId:, so a group thread opens scoped to its own log.
     NSString *threadId = context.threadId;
-    UIAction *logAction = [UIAction actionWithTitle:@"Deleted Messages"
+    UIAction *logAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_DELETED_MESSAGES")
                                               image:logImage
                                          identifier:nil
                                             handler:^(__unused UIAction *action) {
@@ -444,11 +460,11 @@ static NSArray<UIMenuElement *> *SPKDirectSeenButtonMenuChildren(id source) {
     [children addObject:logAction];
 
     UIImage *settingsImage = [SPKAssetUtils menuIconNamed:@"settings"];
-    UIAction *settingsAction = [UIAction actionWithTitle:@"Messages Settings"
+    UIAction *settingsAction = [UIAction actionWithTitle:SPKL(@"ALERT_ACTION_MESSAGES_SETTINGS")
                                                    image:settingsImage
                                               identifier:nil
                                                  handler:^(__unused UIAction *action) {
-                                                     SPKNotify(kSPKNotificationOpenTopicSettings, @"Opened settings", nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
+                                                     SPKNotify(kSPKNotificationOpenTopicSettings, SPKL(@"COMMON_OPENED_SETTINGS_TOAST"), nil, @"settings", SPKNotificationToneForIconResource(@"settings"));
                                                      [SPKUtils showSettingsForTopicTitle:@"Messages"];
                                                  }];
     [children addObject:settingsAction];
@@ -526,16 +542,21 @@ static void SPKDirectClearActiveThreadContextForController(id controller, NSStri
     objc_setAssociatedObject(controller, kSPKDirectThreadIdAssocKey, nil, OBJC_ASSOCIATION_ASSIGN);
 }
 
+// Two inbox view controllers implement this delegate callback and which one backs the inbox is
+// decided server side, so both are hooked and each keeps its own original implementation.
 static id (*SPKDirectOrigInboxContextMenuConfiguration)(id, SEL, id);
+static id (*SPKDirectOrigInboxSwiftContextMenuConfiguration)(id, SEL, id);
 
-static id SPKDirectInboxContextMenuConfiguration(id self, SEL _cmd, id indexPath) {
-    id configuration = SPKDirectOrigInboxContextMenuConfiguration(self, _cmd, indexPath);
+static id SPKDirectInboxContextMenuConfigurationCommon(id self, id indexPath, id configuration) {
     if (![configuration isKindOfClass:[UIContextMenuConfiguration class]])
         return configuration;
 
+    // The Swift view controller stores the adapter under an unprefixed ivar name.
     id adapter = SPKKVCObject(self, @"listAdapter");
     if (!adapter)
         adapter = [SPKUtils getIvarForObj:self name:"_listAdapter"];
+    if (!adapter)
+        adapter = [SPKUtils getIvarForObj:self name:"listAdapter"];
     if (!adapter || ![indexPath respondsToSelector:@selector(section)]) {
         SPKLog(@"Messages", @"[Sparkle MessagesSeen] Inbox menu context skipped: missing adapter/indexPath controller=%@<%p>",
                NSStringFromClass([self class]),
@@ -613,7 +634,7 @@ static id SPKDirectInboxContextMenuConfiguration(id self, SEL _cmd, id indexPath
                                                                   context.threadId ?: @"(unknown)",
                                                                   NSStringFromClass([viewModel class]),
                                                                   viewModel);
-                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, @"Chat not found", nil, @"error_filled", SPKNotificationToneError);
+                                                           SPKNotify(kSPKNotificationDirectThreadSeenRule, SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_CHAT_NOT_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
                                                            return;
                                                        }
                                                        SPKNotify(kSPKNotificationDirectThreadSeenRule, notificationTitle, notificationSubtitle, @"circle_check_filled", SPKNotificationToneSuccess);
@@ -628,17 +649,42 @@ static id SPKDirectInboxContextMenuConfiguration(id self, SEL _cmd, id indexPath
                                                     actionProvider:wrappedProvider];
 }
 
+static id SPKDirectInboxContextMenuConfiguration(id self, SEL _cmd, id indexPath) {
+    return SPKDirectInboxContextMenuConfigurationCommon(
+        self, indexPath, SPKDirectOrigInboxContextMenuConfiguration(self, _cmd, indexPath));
+}
+
+static id SPKDirectInboxSwiftContextMenuConfiguration(id self, SEL _cmd, id indexPath) {
+    return SPKDirectInboxContextMenuConfigurationCommon(
+        self, indexPath, SPKDirectOrigInboxSwiftContextMenuConfiguration(self, _cmd, indexPath));
+}
+
+static BOOL SPKHookInboxContextMenuOnClass(NSString *className, SEL selector, IMP replacement, IMP *orig) {
+    Class inboxClass = NSClassFromString(className);
+    if (!inboxClass || !class_getInstanceMethod(inboxClass, selector))
+        return NO;
+
+    MSHookMessageEx(inboxClass, selector, replacement, orig);
+    SPKLog(@"Messages", @"[Sparkle MessagesSeen] Installed inbox seen list context menu hook class=%@", className);
+    return YES;
+}
+
 static void SPKInstallDirectInboxSeenContextMenuHook(void) {
     SEL selector = NSSelectorFromString(@"networkingCoordinator_contextMenuConfigurationForThreadCellAtIndexPath:");
-    for (NSString *className in @[ @"IGDirectInboxViewController", @"IGDirectInboxViewControllerImpl" ]) {
-        Class inboxClass = NSClassFromString(className);
-        if (!inboxClass || !class_getInstanceMethod(inboxClass, selector))
-            continue;
-        MSHookMessageEx(inboxClass, selector, (IMP)SPKDirectInboxContextMenuConfiguration, (IMP *)&SPKDirectOrigInboxContextMenuConfiguration);
-        SPKLog(@"Messages", @"[Sparkle MessagesSeen] Installed inbox seen list context menu hook class=%@", className);
-        return;
-    }
-    SPKLog(@"Messages", @"[Sparkle MessagesSeen] Inbox seen list context menu hook not installed: selector not found");
+
+    BOOL installed = SPKHookInboxContextMenuOnClass(@"IGDirectInboxViewController",
+                                                    selector,
+                                                    (IMP)SPKDirectInboxContextMenuConfiguration,
+                                                    (IMP *)&SPKDirectOrigInboxContextMenuConfiguration);
+
+    // Demangled: IGDirectInboxSwiftViewController.IGDirectInboxSwiftViewController
+    installed |= SPKHookInboxContextMenuOnClass(@"IGDirectInboxSwiftViewController.IGDirectInboxSwiftViewController",
+                                                selector,
+                                                (IMP)SPKDirectInboxSwiftContextMenuConfiguration,
+                                                (IMP *)&SPKDirectOrigInboxSwiftContextMenuConfiguration);
+
+    if (!installed)
+        SPKLog(@"Messages", @"[Sparkle MessagesSeen] Inbox seen list context menu hook not installed: selector not found");
 }
 
 static id SPKKVCObject(id target, NSString *key) {
@@ -1216,9 +1262,9 @@ SPKPlayButtonTappedHaptic();
 UIViewController *nearestVC = [SPKUtils nearestViewControllerForView:self];
 if ([nearestVC isKindOfClass:%c(IGDirectThreadViewController)]) {
     if (SPKMarkDirectThreadMessagesAsSeen(nearestVC)) {
-        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Marked messages as seen", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARKED_MESSAGES_TOAST"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
     } else {
-        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Unable to mark messages as seen", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARK_MESSAGES_FAILED_TOAST"), nil, @"error_filled", SPKNotificationToneError);
     }
 }
 }
@@ -1279,9 +1325,9 @@ if ([nearestVC isKindOfClass:%c(IGDirectThreadViewController)]) {
 (void)sender;
 SPKPlayButtonTappedHaptic();
 if (SPKMarkDirectThreadMessagesAsSeen(self)) {
-    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Marked messages as seen", nil, @"circle_check_filled", SPKNotificationToneSuccess);
+    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARKED_MESSAGES_TOAST"), nil, @"circle_check_filled", SPKNotificationToneSuccess);
 } else {
-    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, @"Unable to mark messages as seen", nil, @"error_filled", SPKNotificationToneError);
+    SPKNotify(kSPKNotificationThreadMessagesMarkSeen, SPKL(@"MESSAGES_SEEN_MARK_MESSAGES_FAILED_TOAST"), nil, @"error_filled", SPKNotificationToneError);
 }
 // The bubble stays put after marking — no seen-state-driven hide/reappear.
 }

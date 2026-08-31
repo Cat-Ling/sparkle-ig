@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKPagedSheetViewController.h"
 #import <QuartzCore/QuartzCore.h>
 #import "../../AssetUtils.h"
@@ -136,8 +137,8 @@
 #pragma mark - Subclass hooks (defaults)
 
 - (NSArray<SPKPagedSheetPage *> *)buildPages { return @[]; }
-- (NSString *)continueButtonTitle { return @"Continue"; }
-- (NSString *)finishButtonTitle { return @"Get Started"; }
+- (NSString *)continueButtonTitle { return SPKL(@"ALERT_ACTION_CONTINUE"); }
+- (NSString *)finishButtonTitle { return SPKL(@"UI_PAGED_SHEET_GET_STARTED_TEXT"); }
 - (BOOL)allowsInteractiveDismiss { return NO; }
 
 #pragma mark - Presentation
@@ -189,7 +190,7 @@
     [self.view addSubview:self.primaryButton];
 
     self.skipButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.skipButton setTitle:@"Skip" forState:UIControlStateNormal];
+    [self.skipButton setTitle:SPKL(@"VC_BTN_SKIP") forState:UIControlStateNormal];
     [self.skipButton setTitleColor:[SPKUtils SPKColor_InstagramSecondaryText] forState:UIControlStateNormal];
     self.skipButton.titleLabel.font = [UIFont systemFontOfSize:15.0 weight:UIFontWeightMedium];
     self.skipButton.translatesAutoresizingMaskIntoConstraints = NO;

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKAutoSaveSurfaceSettingsViewController.h"
 
 #import "../../Settings/SPKSetting.h"
@@ -27,8 +28,9 @@
                                                     icon:SPKSettingsIcon(@"sparkle_gallery")
                                              defaultsKey:filter.enabledKey];
     master.reloadsTableOnSwitchChange = YES; // grey out / re-enable the dependents live
+    master.helpText = descriptor.masterHelp;
 
-    SPKSetting *filterMode = [SPKSetting menuCellWithTitle:@"Filter Mode"
+    SPKSetting *filterMode = [SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SURFACE_SETTINGS_FILTER_MODE_TITLE")
                                                       icon:SPKSettingsIcon(@"filter")
                                                       menu:SPKAutoSaveFilterModeMenu(filter.filterModeKey, filter.subjectPlural)];
     filterMode.enabledProvider = autoSaveEnabled;
@@ -40,9 +42,7 @@
     list.userInfo = @{@"accessoryText" : [NSString stringWithFormat:@"%lu", (unsigned long)SPKAutoSaveFilterList(filter).count]};
     list.enabledProvider = autoSaveEnabled;
 
-    return @[ SPKTopicSection(descriptor.title,
-                              @[ master, filterMode, list ],
-                              descriptor.footerProvider(SPKAutoSaveFilterAllMode(filter))) ];
+    return @[ SPKTopicSection(descriptor.title, @[ master, filterMode, list ], nil) ];
 }
 
 + (NSArray *)searchSections {

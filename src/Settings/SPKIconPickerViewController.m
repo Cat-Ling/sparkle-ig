@@ -1,4 +1,5 @@
 #import "SPKIconPickerViewController.h"
+#import "SPKStrings.h"
 
 #import "../AssetUtils.h"
 #import "../Utils.h"
@@ -262,7 +263,7 @@ static NSString *SPKIconPickerWrappedTitle(NSString *title) {
     return [self cellStyle] == SPKIconPickerCellStyleAppIcon ? 124.0 : 96.0;
 }
 - (NSString *)searchPlaceholder {
-    return @"Search Icons";
+    return SPKL(@"SETTINGS_ACTION_SECTION_ICON_PICKER_SEARCH_ICONS_TEXT");
 }
 - (BOOL)isSelectedItem:(SPKIconPickerItem *)item {
     return self.selectedIdentifier.length > 0 && [item.identifier isEqualToString:self.selectedIdentifier];

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKStorageUsageViewController.h"
 
 #import "../Shared/Avatars/SPKAvatarCache.h"
@@ -13,7 +14,7 @@
 @implementation SPKStorageUsageViewController
 
 - (instancetype)init {
-    return [super initWithTitle:@"Storage" sections:@[] reduceMargin:NO];
+    return [super initWithTitle:SPKL(@"ALERT_ACTION_STORAGE") sections:@[] reduceMargin:NO];
 }
 
 - (void)viewDidLoad {
@@ -39,33 +40,39 @@
 - (void)rebuildSections {
     NSMutableArray *sections = [NSMutableArray array];
 
-    [sections addObject:SPKTopicSection(@"Overview", @[
-                  [SPKSetting valueCellWithTitle:@"Total"
+    [sections addObject:SPKTopicSection(SPKL(@"MESSAGES_DELETED_MESSAGES_STORAGE_OVERVIEW_HEADER"), @[
+                  [SPKSetting valueCellWithTitle:SPKL(@"SETTINGS_STORAGE_USAGE_TOTAL_TITLE")
                                         subtitle:[self formattedKey:@"total"]
                                             icon:SPKSettingsIcon(@"info")],
               ],
-                                        @"On-device storage used by all Sparkle data. Instagram's own cache is not included.")];
+                                        SPKL(@"SETTINGS_STORAGE_USAGE_DEVICE_STORAGE_USED_SPARKLE_DATA_INSTAGRAM_S_OWN_CACHE_FOOTER"))];
 
-    [sections addObject:SPKTopicSection(@"Breakdown", @[
-                  [SPKSetting valueCellWithTitle:@"Gallery"
+    [sections addObject:SPKTopicSection(SPKL(@"SETTINGS_STORAGE_USAGE_BREAKDOWN_HEADER"), @[
+                  [SPKSetting valueCellWithTitle:SPKL(@"DATA_GENERAL_GALLERY_TITLE")
                                         subtitle:[self formattedKey:@"gallery"]
                                             icon:SPKSettingsIcon(@"sparkle_gallery")],
-                  [SPKSetting valueCellWithTitle:@"Downloads"
-                                        subtitle:[self formattedKey:@"downloads"]
+                  [SPKSetting valueCellWithTitle:SPKL(@"DOWNLOADS_GENERAL_DOWNLOADS_TITLE")
+                                        subtitle:[self formattedKey:SPKL(@"SETTINGS_STORAGE_USAGE_DOWNLOADS_TEXT")]
                                             icon:SPKSettingsIcon(@"download")],
-                  [SPKSetting valueCellWithTitle:@"Deleted Messages"
+                  [SPKSetting valueCellWithTitle:SPKL(@"ALERT_ACTION_DELETED_MESSAGES")
                                         subtitle:[self formattedKey:@"deletedMessages"]
                                             icon:SPKSettingsIcon(@"channels")],
-                  [SPKSetting valueCellWithTitle:@"Profile Analyzer"
+                  [SPKSetting valueCellWithTitle:SPKL(@"DATA_GENERAL_PROFILE_ANALYZER_TITLE")
                                         subtitle:[self formattedKey:@"profileAnalyzer"]
                                             icon:SPKSettingsIcon(@"profile_analyzer")],
-                  [SPKSetting valueCellWithTitle:@"Profile Pictures"
+                  [SPKSetting valueCellWithTitle:SPKL(@"SETTINGS_STORAGE_USAGE_PROFILE_PICTURES_TITLE")
                                         subtitle:[self formattedKey:@"avatars"]
                                             icon:SPKSettingsIcon(@"user_circle")],
+                  [SPKSetting valueCellWithTitle:SPKL(@"SETTINGS_STORAGE_USAGE_FONTS_TITLE")
+                                        subtitle:[self formattedKey:@"fonts"]
+                                            icon:SPKSettingsIcon(@"text")],
+                  [SPKSetting valueCellWithTitle:SPKL(@"SETTINGS_STORAGE_USAGE_LANGUAGE_PACKS_TITLE")
+                                        subtitle:[self formattedKey:@"languages"]
+                                            icon:SPKSettingsIcon(@"translate")],
               ],
                                         nil)];
 
-    SPKSetting *clearAvatars = [SPKSetting buttonCellWithTitle:@"Clear Cached Profile Pictures"
+    SPKSetting *clearAvatars = [SPKSetting buttonCellWithTitle:SPKL(@"SETTINGS_STORAGE_USAGE_CLEAR_CACHED_PROFILE_PICTURES_TITLE")
                                                       subtitle:nil
                                                           icon:SPKSettingsIcon(@"user_circle")
                                                         action:^{
@@ -74,21 +81,21 @@
     clearAvatars.tintColor = [SPKUtils SPKColor_InstagramDestructive];
     clearAvatars.iconTintColor = [SPKUtils SPKColor_InstagramDestructive];
 
-    [sections addObject:SPKTopicSection(@"Profile Pictures", @[ clearAvatars ],
-                                        @"Profile pictures are a shared cache reused across Sparkle. Clearing them frees space; they re-download as needed.")];
+    [sections addObject:SPKTopicSection(SPKL(@"SETTINGS_STORAGE_USAGE_PROFILE_PICTURES_TITLE"), @[ clearAvatars ],
+                                        SPKL(@"SETTINGS_STORAGE_USAGE_PROFILE_PICTURES_SHARED_CACHE_REUSED_ACROSS_SPARKLE_CLEARING_FREES_FOOTER"))];
 
     [self replaceSections:sections];
 }
 
 - (void)confirmClearAvatars {
     [SPKIGAlertPresenter presentAlertFromViewController:self
-                                                  title:@"Clear cached profile pictures?"
-                                                message:@"This removes all on-device profile pictures. They will re-download when next shown."
+                                                  title:SPKL(@"SETTINGS_STORAGE_USAGE_CLEAR_CACHED_PROFILE_PICTURES_QUESTION")
+                                                message:SPKL(@"SETTINGS_STORAGE_USAGE_REMOVES_DEVICE_PROFILE_PICTURES_THEY_RE_DOWNLOAD_NEXT_SHOWN_TEXT")
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:nil],
-                                                    [SPKIGAlertAction actionWithTitle:@"Clear"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CLEAR")
                                                                                 style:SPKIGAlertActionStyleDestructive
                                                                               handler:^{
                                                                                   [[SPKAvatarCache shared] purge];

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "Utils.h"
 #import "App/SPKCore.h"
 #import "App/SPKStabilityGuard.h"
@@ -18,6 +19,7 @@
 #import <objc/runtime.h>
 
 NSString *const kSPKPrefPerAccountSettings = @"general_per_account_settings";
+NSNotificationName const SPKHideExploreGridPreferenceDidChangeNotification = @"SPKHideExploreGridPreferenceDidChangeNotification";
 
 // A full screen modal always slides up from the bottom, which reads as "new
 // sheet" rather than "went deeper". This animates it in from the trailing edge
@@ -933,7 +935,7 @@ static NSArray<NSURLQueryItem *> *SPKSanitizedInstagramQueryItems(NSArray<NSURLQ
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         blockedKeys = [NSSet setWithArray:@[
-            @"igsh", @"igshid", @"ig_rid", @"ig_mid",
+            @"igsh", @"igshid", @"igsi", @"ig_rid", @"ig_mid",
             @"utm_source", @"utm_medium", @"utm_campaign", @"utm_term", @"utm_content",
             @"fbclid"
         ]];
@@ -1030,15 +1032,35 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
             @"app_first_run",
             @"app_safe_startup",
             @"app_startup_profiling",
+            // The app font is resolved by the very first view Instagram builds, from
+            // hooks installed in %ctor -- long before any account session exists. A
+            // per-account key would read the global default on every cold launch.
+            @"interface_custom_font",
+            @"interface_language",
             @"interface_liquid_glass",
             @"interface_liquid_glass_tabbar_mode",
             @"interface_progressive_blur",
+            @"interface_hide_ui_on_capture",
             @"downloads_adv_encoding",
             // Tab/launch layout is configured once at launch and can't re-apply
             // on a live account switch, so it stays global (maintainer's call).
             @"interface_nav_order",
+            @"interface_custom_tab_order",
             @"interface_swipe_tabs",
             @"interface_launch_tab",
+            // The rest of the tab bar configuration goes with the layout for the
+            // same reason, and it has to: the bar is assembled during early
+            // launch, so on the launches where the session has not resolved yet a
+            // per-account key silently reads the global value instead. That made
+            // hidden tabs come and go between launches and account switches.
+            @"interface_hide_feed_tab",
+            @"interface_hide_reels_tab",
+            @"interface_hide_msgs_tab",
+            @"interface_hide_explore_tab",
+            @"interface_hide_profile_tab",
+            @"interface_hide_create_tab",
+            @"interface_hide_tab_bar_in_messages_only",
+            @"interface_saved_tab_carrier",
             // The Settings quick-access long-press is attached to tab-bar buttons
             // as they're built during early launch — before the account session
             // resolves — so a per-account effective key resolves against the
@@ -1079,9 +1101,6 @@ static BOOL SPKPrefIsGlobalKey(NSString *key) {
         return YES;
 #endif
     if ([key hasPrefix:@"gallery_"])
-        return YES;
-    // interface_hide_*_tab (tab layout) + interface_hide_ui_on_capture.
-    if ([key hasPrefix:@"interface_hide_"])
         return YES;
     return NO;
 }
@@ -1420,25 +1439,55 @@ static id SPKPrefValueWithMasterOverlay(NSString *key) {
                                           countStyle:NSByteCountFormatterCountStyleFile];
 }
 
-+ (NSString *)spk_localizedTimeComponent {
-    // `j` resolves to whichever hour cycle the locale/device prefers; if the
-    // resolved template keeps the AM/PM designator ("a") we're on a 12-hour
-    // clock, otherwise the device is set to 24-hour time.
-    NSString *resolved = [NSDateFormatter dateFormatFromTemplate:@"jmm"
-                                                         options:0
-                                                          locale:[NSLocale currentLocale]];
-    BOOL is24Hour = !resolved || [resolved rangeOfString:@"a"].location == NSNotFound;
-    return is24Hour ? @"HH:mm" : @"h:mm a";
++ (NSLocale *)spk_activeFormattingLocale {
+    NSString *override = [SPKStrings languageOverride];
+    if (override.length > 0) {
+        return [NSLocale localeWithLocaleIdentifier:[SPKStrings activeLanguage]];
+    }
+
+    NSString *active = [SPKStrings activeLanguage];
+    NSMutableOrderedSet<NSString *> *preferences = [NSMutableOrderedSet orderedSet];
+    [preferences addObjectsFromArray:NSBundle.mainBundle.preferredLocalizations ?: @[]];
+    [preferences addObjectsFromArray:NSLocale.preferredLanguages ?: @[]];
+    for (NSString *identifier in preferences) {
+        NSString *match = [SPKStrings matchAvailable:identifier];
+        if ([match isEqualToString:active]) {
+            return [NSLocale localeWithLocaleIdentifier:identifier];
+        }
+    }
+    return [NSLocale localeWithLocaleIdentifier:active.length > 0 ? active : @"en"];
 }
 
-+ (NSString *)spk_localizedDateComponentIncludingYear:(BOOL)includeYear {
-    NSString *template = includeYear ? @"yMMMd" : @"MMMd";
-    NSString *resolved = [NSDateFormatter dateFormatFromTemplate:template
-                                                         options:0
-                                                          locale:[NSLocale currentLocale]];
-    if (resolved.length)
-        return resolved;
-    return includeYear ? @"MMM d, yyyy" : @"MMM d";  // safe fallback
++ (nullable NSString *)spk_stringFromDate:(nullable NSDate *)date template:(NSString *)template {
+    if (!date || template.length == 0)
+        return nil;
+    NSLocale *locale = [self spk_activeFormattingLocale];
+    NSDateFormatter *formatter = [NSDateFormatter new];
+    formatter.locale = locale;
+    formatter.dateFormat = [NSDateFormatter dateFormatFromTemplate:template options:0 locale:locale];
+    return [formatter stringFromDate:date];
+}
+
++ (NSString *)spk_timeSkeleton {
+    NSString *devicePattern = [NSDateFormatter dateFormatFromTemplate:@"jmm"
+                                                              options:0
+                                                               locale:NSLocale.currentLocale];
+    BOOL uses24HourClock = devicePattern.length == 0 || [devicePattern rangeOfString:@"a"].location == NSNotFound;
+    return uses24HourClock ? @"HHmm" : @"hmm";
+}
+
++ (nullable NSString *)spk_formattedTime:(nullable NSDate *)date {
+    return [self spk_stringFromDate:date template:[self spk_timeSkeleton]];
+}
+
++ (nullable NSString *)spk_formattedDate:(nullable NSDate *)date includingYear:(BOOL)includeYear {
+    return [self spk_stringFromDate:date template:(includeYear ? @"yMMMd" : @"MMMd")];
+}
+
++ (nullable NSString *)spk_formattedDateTime:(nullable NSDate *)date includingYear:(BOOL)includeYear {
+    NSString *dateSkeleton = includeYear ? @"yMMMd" : @"MMMd";
+    return [self spk_stringFromDate:date
+                           template:[dateSkeleton stringByAppendingString:[self spk_timeSkeleton]]];
 }
 
 static double SPKTimestampFromValue(id value) {
@@ -1625,17 +1674,7 @@ static NSDate *SPKScanObjectForPostedDate(id target, NSInteger depth) {
 }
 
 + (nullable NSString *)spk_formattedDateHeader:(nullable NSDate *)date {
-    if (!date)
-        return nil;
-    static NSDateFormatter *fmt;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        fmt = [[NSDateFormatter alloc] init];
-    });
-    fmt.dateFormat = [NSString stringWithFormat:@"%@ 'at' %@",
-                      [SPKUtils spk_localizedDateComponentIncludingYear:YES],
-                      [SPKUtils spk_localizedTimeComponent]];
-    return [fmt stringFromDate:date];
+    return [self spk_formattedDateTime:date includingYear:YES];
 }
 
 
@@ -2192,7 +2231,7 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
     // Nothing changes on screen until this lands, so say that something is
     // happening. Transient, like the 4K candidate fetch: preparatory work before
     // the real flow, cleared on both outcomes.
-    [[SPKNotificationCenter shared] beginTransientProgressWithTitle:@"Opening profile..." onCancel:nil];
+    [[SPKNotificationCenter shared] beginTransientProgressWithTitle:SPKL(@"GENERAL_UTILS_OPENING_PROFILE_TEXT") onCancel:nil];
     [SPKInstagramAPI resolveUserForUsername:clean
                                  completion:^(NSDictionary *userDict, NSError *error) {
                                      NSString *resolvedPK = [userDict[@"pk"] description];
@@ -2615,16 +2654,16 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
 };
 + (BOOL)showConfirmation:(void (^)(void))okHandler cancelHandler:(void (^)(void))cancelHandler title:(NSString *)title message:(NSString *)message {
     [SPKIGAlertPresenter presentAlertFromViewController:topMostController()
-                                                  title:title ?: @"Confirm Action"
-                                                message:message ?: @"Are you sure you want to continue?"
+                                                  title:title ?: SPKL(@"GENERAL_UTILS_CONFIRM_ACTION")
+                                                message:message ?: SPKL(@"GENERAL_UTILS_CONTINUE_CONFIRMATION_MESSAGE")
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:^{
                                                                                   if (cancelHandler)
                                                                                       cancelHandler();
                                                                               }],
-                                                    [SPKIGAlertAction actionWithTitle:@"Confirm"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CONFIRM")
                                                                                 style:SPKIGAlertActionStyleDefault
                                                                               handler:^{
                                                                                   if (okHandler)
@@ -2641,13 +2680,13 @@ static void SPKSetResolvedPKForUsername(NSString *username, NSString *pk) {
 }
 + (void)showRestartConfirmation {
     [SPKIGAlertPresenter presentAlertFromViewController:topMostController()
-                                                  title:@"Restart Required"
-                                                message:@"You must restart the app to apply this change"
+                                                  title:SPKL(@"GENERAL_UTILS_RESTART_REQUIRED_TEXT")
+                                                message:SPKL(@"GENERAL_UTILS_MUST_RESTART_APP_APPLY_CHANGE_TEXT")
                                                 actions:@[
-                                                    [SPKIGAlertAction actionWithTitle:@"Later"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_LATER")
                                                                                 style:SPKIGAlertActionStyleCancel
                                                                               handler:nil],
-                                                    [SPKIGAlertAction actionWithTitle:@"Restart"
+                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_RESTART")
                                                                                 style:SPKIGAlertActionStyleDefault
                                                                               handler:^{
                                                                                   exit(0);

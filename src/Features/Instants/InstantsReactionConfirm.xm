@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <UIKit/UIKit.h>
 
 #import "../../Utils.h"
@@ -61,8 +62,8 @@ static BOOL SPKInstantsLooksLikeEmojiText(NSString *text) {
         showConfirmation:^{
             %orig;
         }
-                   title:@"Confirm Instant Reaction"
-                 message:@"Are you sure you want to react to this Instant?"];
+                   title:SPKL(@"INSTANTS_CONFIRMATION_CONFIRM_INSTANT_REACTION_TITLE")
+                 message:SPKL(@"INSTANTS_INSTANTS_REACTION_CONFIRM_REACT_INSTANT_CONFIRMATION_MESSAGE")];
 }
 %end
 

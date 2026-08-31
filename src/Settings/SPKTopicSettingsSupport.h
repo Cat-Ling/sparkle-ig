@@ -7,10 +7,17 @@
 NS_ASSUME_NONNULL_BEGIN
 
 NSDictionary *SPKTopicSection(NSString *header, NSArray *rows, NSString *_Nullable footer);
+/// Overrides where a section's help text is shown, for the cases the row count
+/// gets wrong. By default a header group with two or more explained rows gets an
+/// info button and a group with one keeps a plain footer; pass YES to force the
+/// button (the group still needs a header to host it) or NO to force the footer.
+NSDictionary *SPKTopicSectionWithInfoSheet(NSDictionary *section, BOOL usesInfoSheet);
 FOUNDATION_EXPORT CGFloat const SPKSettingsCellIconPointSize;
 UIImage *SPKSettingsIcon(NSString *name);
 UIImage *SPKSettingsSystemIcon(NSString *name, CGFloat pointSize, UIImageSymbolWeight weight);
 SPKSetting *SPKSettingApplyIconTint(SPKSetting *setting, UIColor *_Nullable tintColor);
+/// Attaches `helpText` to a row built inline inside a section's row array.
+SPKSetting *SPKSettingWithHelp(SPKSetting *setting, NSString *helpText);
 SPKSetting *SPKSettingApplySelectedMenuIcon(SPKSetting *setting, UIImage *_Nullable fallbackIcon);
 SPKSetting *SPKTopicNavigationSetting(NSString *title, NSString *iconName, CGFloat iconSize, NSArray *sections);
 SPKSetting *SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSource source);
@@ -19,9 +26,6 @@ UIMenu *SPKReelsTapControlMenu(void);
 UIMenu *SPKMainFeedModeMenu(void);
 UIMenu *SPKSeenButtonPositionMenu(void);
 UIMenu *SPKLastActiveFormatMenu(void);
-UIMenu *SPKNavigationIconOrderingMenu(void);
-UIMenu *SPKLaunchTabMenu(void);
-UIMenu *SPKSwipeBetweenTabsMenu(void);
 UIMenu *SPKLiquidGlassTabBarStateMenu(void);
 UIMenu *SPKSwipeCloseCommentsDirectionMenu(void);
 UIMenu *SPKCacheAutoClearMenu(void);

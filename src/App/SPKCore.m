@@ -1,6 +1,7 @@
 #import "SPKCore.h"
 
 #import "../Shared/UI/SPKNotificationCenter.h"
+#import "../Shared/Navigation/SPKTabConfiguration.h"
 #import "../Tweak.h"
 #import "../Utils.h"
 #import "SPKStartupHooks.h"
@@ -16,8 +17,10 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         @"interface_liquid_glass_tabbar_mode" : @"default",
         @"interface_progressive_blur" : @(YES),
         @"interface_nav_order" : @"default",
+        @"interface_custom_tab_order" : @[ @"feed", @"clips", @"direct", @"search", @"profile" ],
         @"interface_swipe_tabs" : @"default",
         @"interface_launch_tab" : @"default",
+        @"interface_saved_tab_carrier" : @"none",
         @"interface_hide_feed_tab" : @(NO),
         @"interface_hide_reels_tab" : @(NO),
         @"interface_hide_msgs_tab" : @(NO),
@@ -27,6 +30,11 @@ static NSDictionary *SPKBootstrapDefaults(void) {
         @"interface_hide_tab_bar_in_messages_only" : @(NO),
         @"interface_show_header_button_in_messages_only" : @(YES),
         @"interface_open_clipboard_link" : @(YES),
+        // Family name of the imported app-wide font; empty means the default face.
+        // Bootstrap rather than feature defaults: the font hooks install in %ctor.
+        @"interface_custom_font" : @"",
+        // Device-global Sparkle language. "auto" follows Instagram, then iOS.
+        @"interface_language" : @"auto",
         @"tools_settings_shortcut" : @(YES),
         @"tools_shortcut_haptics" : @(YES),
         @"gallery_quick_access_tab" : @"direct-inbox-tab",
@@ -98,6 +106,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"reels_action_btn_default_action" : @"none",
         @"stories_action_btn" : @(YES),
         @"stories_action_btn_default_action" : @"none",
+        @"stories_audio_toggle" : @(NO),
         @"msgs_action_btn" : @(YES),
         @"msgs_action_btn_chat_media" : @(NO),
         @"msgs_action_btn_default_action" : @"none",
@@ -106,20 +115,37 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"feed_long_press_expand" : @(NO),
         @"feed_expanded_vid_start_muted" : @(NO),
         @"general_preview_show_metadata" : @(YES),
+        @"general_preview_live_text" : @(YES),
         @"general_action_btn_show_date" : @(NO),
         @"gallery_preview_show_metadata" : @(YES),
         @"stories_allow_video_sticker" : @(NO),
         @"stories_gallery_upload_sticker" : @(NO),
         @"stories_hide_join_trending" : @(NO),
         @"stories_mentions_btn" : @(NO),
+        @"stories_mentions_count_badge" : @(YES),
         @"stories_unlock_preview" : @(NO),
         @"stories_hide_ig_plus_button" : @(NO),
         @"stories_search_viewer_list" : @(NO),
+        @"stories_starred_viewers" : @[],
+        @"stories_hide_recent_highlights" : @(NO),
         @"stories_auto_save" : @(NO),
         @"stories_auto_save_filter_mode" : @"all",
         @"msgs_auto_save" : @(NO),
         @"msgs_unlock_preview" : @(NO),
         @"msgs_auto_save_filter_mode" : @"all",
+        @"msgs_presence_notifications" : @(NO),
+        @"msgs_presence_notify_online" : @(YES),
+        @"msgs_presence_notify_offline" : @(NO),
+        @"msgs_presence_notify_typing" : @(NO),
+        @"msgs_presence_notify_read" : @(YES),
+        @"msgs_presence_mirror_notification_center" : @(YES),
+        // Unlike the auto-save surfaces, this defaults to Selected: "All Users" here
+        // would notify about everyone Instagram streams presence for, not just the
+        // few the user cares about.
+        @"msgs_presence_filter_mode" : @"selected",
+        @"msgs_presence_cooldown" : @(60),
+        @"msgs_presence_accurate_status" : @(NO),
+        @"msgs_presence_refresh_interval" : @(20),
         @"instants_auto_save" : @(NO),
         @"instants_auto_save_filter_mode" : @"all",
         @"downloads_autosave_destination" : @"gallery",
@@ -157,6 +183,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"general_comments_swipe_close_direction" : @"both",
         @"general_comments_copy_text" : @(YES),
         @"general_comments_media_actions" : @(YES),
+        @"general_comments_gif_title" : @(NO),
         @"general_comments_hide_shopping" : @(NO),
         @"general_comments_hide_gifts_button" : @(NO),
         @"general_comments_gallery_upload" : @(NO),
@@ -176,6 +203,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"general_hide_suggested_users_subscriptions" : @(NO),
         @"reels_hide_like_count" : @(NO),
         @"reels_hide_comment_count" : @(NO),
+        @"reels_hide_viewer_comment_bar" : @(NO),
         @"reels_hide_repost_count" : @(NO),
         @"reels_hide_reshare_count" : @(NO),
         @"reels_hide_save_count" : @(NO),
@@ -203,6 +231,7 @@ static NSDictionary *SPKFeatureDefaults(void) {
         @"msgs_upload_audio_messages" : @(NO),
         @"msgs_audio_upload_trim" : @(NO),
         @"msgs_upload_gallery_media" : @(NO),
+        @"msgs_gif_title" : @(NO),
         @"feed_disable_home_refresh" : @(NO),
         @"reels_disable_tab_refresh" : @(NO),
         @"stories_stop_auto_advance" : @(NO),
@@ -266,10 +295,36 @@ static void SPKCoreMigrateInstantsCameraButtonPreference(void) {
     [defaults setBool:YES forKey:migratedKey];
 }
 
+/// One-time terminology rename for Hide Recent Searches. Copy both the global
+/// value and every per-account namespace before removing the legacy key.
+static void SPKCoreMigrateHideRecentSearchesPreference(void) {
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    static NSString *const migratedKey = @"general_hide_recent_searches_migrated";
+    if ([defaults boolForKey:migratedKey])
+        return;
+
+    NSString *legacyKey = @"general_no_recent_searches";
+    NSString *newKey = @"general_hide_recent_searches";
+    for (NSString *key in [defaults dictionaryRepresentation].allKeys) {
+        if (![key isEqualToString:legacyKey] && ![key hasSuffix:[@"_" stringByAppendingString:legacyKey]])
+            continue;
+        id value = [defaults objectForKey:key];
+        if (value != nil) {
+            NSString *target = [[key substringToIndex:key.length - legacyKey.length] stringByAppendingString:newKey];
+            if ([defaults objectForKey:target] == nil)
+                [defaults setObject:value forKey:target];
+        }
+        [defaults removeObjectForKey:key];
+    }
+
+    [defaults setBool:YES forKey:migratedKey];
+}
+
 void SPKCoreRegisterBootstrapDefaults(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         [[NSUserDefaults standardUserDefaults] registerDefaults:SPKBootstrapDefaults()];
+        SPKMigrateTabConfigurationIfNeeded();
         SPKStartupMark(@"bootstrap defaults registered");
     });
 }
@@ -281,6 +336,7 @@ void SPKCoreRegisterDefaults(void) {
     dispatch_once(&onceToken, ^{
         [[NSUserDefaults standardUserDefaults] registerDefaults:SPKFeatureDefaults()];
         SPKCoreMigrateInstantsCameraButtonPreference();
+        SPKCoreMigrateHideRecentSearchesPreference();
         SPKStartupMark(@"feature defaults registered");
     });
 }

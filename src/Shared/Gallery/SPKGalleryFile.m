@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <AVFoundation/AVFoundation.h>
 #import <ImageIO/ImageIO.h>
 #import <ctype.h>
@@ -675,7 +676,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         if (error) {
             *error = [NSError errorWithDomain:@"SPKGallery"
                                          code:1
-                                     userInfo:@{NSLocalizedDescriptionKey : @"Source file does not exist"}];
+                                     userInfo:@{NSLocalizedDescriptionKey : SPKL(@"GALLERY_GALLERY_FILE_SOURCE_FILE_NOT_EXIST_TEXT")}];
         }
         return nil;
     }
@@ -781,7 +782,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         if (error) {
             *error = [NSError errorWithDomain:@"SPKGallery"
                                          code:2
-                                     userInfo:@{NSLocalizedDescriptionKey : @"Replacement file does not exist"}];
+                                     userInfo:@{NSLocalizedDescriptionKey : SPKL(@"GALLERY_GALLERY_FILE_REPLACEMENT_FILE_NOT_EXIST_TEXT")}];
         }
         return NO;
     }
@@ -922,10 +923,6 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
     return [SPKGalleryFile labelForSource:(SPKGallerySource)self.source];
 }
 
-- (NSString *)shortSourceLabel {
-    return [SPKGalleryFile shortLabelForSource:(SPKGallerySource)self.source];
-}
-
 - (NSString *)listPrimaryTitle {
     if (self.sourceUsername.length) {
         return self.sourceUsername;
@@ -984,16 +981,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
 }
 
 - (NSString *)listDownloadDateString {
-    static NSDateFormatter *fmt;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        fmt = [[NSDateFormatter alloc] init];
-        // Date order + time follow the device's regional / 12/24-hour settings.
-        fmt.dateFormat = [NSString stringWithFormat:@"%@ 'at' %@",
-                          [SPKUtils spk_localizedDateComponentIncludingYear:NO],
-                          [SPKUtils spk_localizedTimeComponent]];
-    });
-    return self.dateAdded ? [fmt stringFromDate:self.dateAdded] : @"";
+    return [SPKUtils spk_formattedDateTime:self.dateAdded includingYear:NO] ?: @"";
 }
 
 - (NSURL *)preferredProfileURL {
@@ -1147,66 +1135,40 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
 - (NSString *)openOriginalActionTitle {
     switch ((SPKGallerySource)self.source) {
     case SPKGallerySourceStories:
-        return @"Open Story";
+        return SPKL(@"GALLERY_GALLERY_FILE_OPEN_STORY_TEXT");
     case SPKGallerySourceReels:
-        return @"Open Reel";
+        return SPKL(@"GALLERY_GALLERY_FILE_OPEN_REEL_TEXT");
     case SPKGallerySourceFeed:
     case SPKGallerySourceProfile:
-        return @"Open Post";
+        return SPKL(@"GALLERY_GALLERY_FILE_OPEN_POST_TEXT");
     default:
-        return @"Open Original Post";
+        return SPKL(@"ALERT_ACTION_OPEN_ORIGINAL_POST");
     }
 }
 
 + (NSString *)labelForSource:(SPKGallerySource)source {
     switch (source) {
     case SPKGallerySourceFeed:
-        return @"Feed";
+        return SPKL(@"FEED_TITLE");
     case SPKGallerySourceStories:
-        return @"Stories";
+        return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKGallerySourceReels:
-        return @"Reels";
+        return SPKL(@"REELS_TITLE");
     case SPKGallerySourceProfile:
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     case SPKGallerySourceDMs:
-        return @"DMs";
+        return SPKL(@"GALLERY_FILTER_MESSAGES_LABEL");
     case SPKGallerySourceThumbnail:
-        return @"Thumb";
+        return SPKL(@"GALLERY_GALLERY_FILE_THUMB_TEXT");
     case SPKGallerySourceInstants:
-        return @"Instants";
+        return SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE");
     case SPKGallerySourceAudioPage:
-        return @"Audio Page";
+        return SPKL(@"GALLERY_GALLERY_FILE_AUDIO_PAGE_TEXT");
     case SPKGallerySourceComments:
-        return @"Comments";
+        return SPKL(@"GENERAL_COMMENTS_HEADER");
     case SPKGallerySourceOther:
     default:
-        return @"Other";
-    }
-}
-
-+ (NSString *)shortLabelForSource:(SPKGallerySource)source {
-    switch (source) {
-    case SPKGallerySourceFeed:
-        return @"Feed";
-    case SPKGallerySourceStories:
-        return @"Story";
-    case SPKGallerySourceReels:
-        return @"Reel";
-    case SPKGallerySourceProfile:
-        return @"Profile";
-    case SPKGallerySourceDMs:
-        return @"DMs";
-    case SPKGallerySourceThumbnail:
-        return @"Thumb";
-    case SPKGallerySourceInstants:
-        return @"Instant";
-    case SPKGallerySourceAudioPage:
-        return @"Audio Page";
-    case SPKGallerySourceComments:
-        return @"Comment";
-    case SPKGallerySourceOther:
-    default:
-        return @"Other";
+        return SPKL(@"STORIES_OTHER_HEADER");
     }
 }
 

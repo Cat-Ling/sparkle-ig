@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <objc/runtime.h>
 
 #import "../../Shared/ActionButton/ActionButtonLookupUtils.h"
@@ -432,12 +433,12 @@ static NSURL *SPKShareURLFromView(UIView *view) {
 static NSString *SPKCopiedShareLinkTitleForURL(NSURL *url) {
     NSString *path = url.path.lowercaseString ?: @"";
     if ([path containsString:@"/stories/"])
-        return @"Copied story link";
+        return SPKL(@"GENERAL_SHARE_LONG_PRESS_COPY_COPIED_STORY_LINK_TEXT");
     if ([path containsString:@"/reel/"] || [path containsString:@"/reels/"])
-        return @"Copied reel link";
+        return SPKL(@"GENERAL_SHARE_LONG_PRESS_COPY_COPIED_REEL_LINK_TEXT");
     if ([path containsString:@"/p/"])
-        return @"Copied post link";
-    return @"Copied link";
+        return SPKL(@"GENERAL_SHARE_LONG_PRESS_COPY_COPIED_POST_LINK_TEXT");
+    return SPKL(@"GENERAL_SHARE_LONG_PRESS_COPY_COPIED_LINK_TEXT");
 }
 
 static void SPKCopyShareURLForView(UIView *view) {
@@ -453,7 +454,7 @@ static void SPKCopyShareURLForView(UIView *view) {
     }
     if (url.absoluteString.length == 0) {
         SPKLog(@"General", @"[Sparkle ShareCopy] Copy failed: no link found for view=%@", SPKShareDebugViewName(view));
-        SPKNotify(kSPKNotificationShareLongPressCopyLink, @"No link found", nil, @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationShareLongPressCopyLink, SPKL(@"GENERAL_SHARE_LONG_PRESS_COPY_NO_LINK_FOUND_TEXT"), nil, @"error_filled", SPKNotificationToneError);
         return;
     }
     UIPasteboard.generalPasteboard.string = url.absoluteString;

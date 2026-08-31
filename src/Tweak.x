@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "App/SPKFlexLoader.h"
 #import "InstagramHeaders.h"
 #import "Shared/ActionButton/ActionButtonCore.h"
@@ -17,7 +18,7 @@
 ///////////////////////////////////////////////////////////
 
 // * Tweak version *
-NSString *SPKVersionString = @"v1.2.0";
+NSString *SPKVersionString = @"v1.3.0";
 
 // Variables that work across features
 __weak id SPKPendingDirectVisualMessageToMarkSeen = nil;
@@ -177,7 +178,7 @@ static void SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSource source) {
     if (!feedback)
         return;
     NSString *iconResource = feedback[@"iconResource"] ?: @"ig_icon_reshare_outline_24";
-    SPKNotify(kSPKNotificationRepost, feedback[@"title"] ?: @"Tapped repost button", nil, iconResource, SPKNotificationToneForIconResource(iconResource));
+    SPKNotify(kSPKNotificationRepost, feedback[@"title"] ?: SPKL(@"GENERAL_REPOST_TAPPED_TOAST"), nil, iconResource, SPKNotificationToneForIconResource(iconResource));
 }
 
 @interface _UISheetDetent : NSObject
@@ -713,8 +714,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceFeed);
             }
-            title:@"Confirm Repost"
-            message:@"Are you sure you want to repost this post?"];
+            title:SPKL(@"FEED_CONFIRMATION_CONFIRM_REPOST_TITLE")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_POST_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceFeed);
@@ -756,8 +757,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceReels);
             }
-            title:@"Confirm Reel Repost"
-            message:@"Are you sure you want to repost this reel?"];
+            title:SPKL(@"GENERAL_TWEAK_CONFIRM_REEL_REPOST_TEXT")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_REEL_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceReels);
@@ -777,8 +778,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceReels);
             }
-            title:@"Confirm Reel Repost"
-            message:@"Are you sure you want to repost this reel?"];
+            title:SPKL(@"GENERAL_TWEAK_CONFIRM_REEL_REPOST_TEXT")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_REEL_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceReels);
@@ -798,8 +799,8 @@ BOOL showSearchSectionLabelForTag(NSInteger tag) {
             cancelHandler:^{
                 SPKConsumePendingRepostFeedback(SPKActionButtonSourceReels);
             }
-            title:@"Confirm Reel Repost"
-            message:@"Are you sure you want to repost this reel?"];
+            title:SPKL(@"GENERAL_TWEAK_CONFIRM_REEL_REPOST_TEXT")
+            message:SPKL(@"GENERAL_TWEAK_REPOST_REEL_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
         SPKShowPendingRepostFeedbackIfNeeded(SPKActionButtonSourceReels);

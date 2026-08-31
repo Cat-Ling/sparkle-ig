@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
 
@@ -62,7 +63,7 @@ static void SPKCommentComposerAttachImage(UIView *composerView, UIImage *image) 
     }
     SEL setup = @selector(setupImageBeforeCommentComposingBeginWithSelectedPhoto:);
     if (![controller respondsToSelector:setup]) {
-        SPKNotify(kSPKNotificationDownloadGallery, @"Couldn't attach photo", nil, @"error", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationDownloadGallery, SPKL(@"FEED_COMMENT_COMPOSER_GALLERY_UPLOAD_COULDN_T_ATTACH_PHOTO_TEXT"), nil, @"error", SPKNotificationToneError);
         return;
     }
     @try {
@@ -78,7 +79,7 @@ static void SPKCommentComposerPresentGalleryPicker(UIView *composerView) {
 
     NSSet<NSNumber *> *imageTypes = [NSSet setWithObject:@(SPKGalleryMediaTypeImage)];
     if (![SPKGalleryPickerViewController hasSelectableFilesForAllowedMediaTypes:imageTypes]) {
-        SPKNotify(kSPKNotificationDownloadGallery, @"No photos in Gallery", nil, @"sparkle_gallery", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationDownloadGallery, SPKL(@"FEED_COMMENT_COMPOSER_GALLERY_UPLOAD_NO_PHOTOS_GALLERY_TEXT"), nil, @"sparkle_gallery", SPKNotificationToneError);
         return;
     }
 
@@ -87,7 +88,7 @@ static void SPKCommentComposerPresentGalleryPicker(UIView *composerView) {
 
     __weak UIView *weakComposer = composerView;
     [SPKGalleryPickerViewController presentFromViewController:topMostController()
-                                                        title:@"Choose Photo"
+                                                        title:SPKL(@"FEED_COMMENT_COMPOSER_GALLERY_UPLOAD_CHOOSE_PHOTO_TEXT")
                                             allowedMediaTypes:imageTypes
                                       allowsMultipleSelection:NO
                                                    completion:^(NSArray<SPKGalleryFile *> *selectedFiles) {

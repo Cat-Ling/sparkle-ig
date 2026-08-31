@@ -1,4 +1,5 @@
 #import "SPKSettingsLockManager.h"
+#import "SPKStrings.h"
 
 @implementation SPKSettingsLockManager
 
@@ -20,7 +21,7 @@
 }
 
 - (NSString *)protectedContentName {
-    return @"Settings";
+    return SPKL(@"DATA_GENERAL_SETTINGS_TITLE");
 }
 
 - (void)lockSettings {

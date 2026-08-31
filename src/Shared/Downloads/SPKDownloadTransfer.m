@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadTransfer.h"
 
 #import "../../Utils.h"
@@ -35,12 +36,12 @@
     self.finished = NO;
 
     if (!url) {
-        completion(nil, SPKDownloadError(SPKDownloadErrorInvalidURL, @"Invalid download URL.", nil));
+        completion(nil, SPKDownloadError(SPKDownloadErrorInvalidURL, SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_INVALID_DOWNLOAD_URL_TEXT"), nil));
         return;
     }
     NSString *scheme = url.scheme.lowercaseString;
     if (![scheme isEqualToString:@"http"] && ![scheme isEqualToString:@"https"]) {
-        completion(nil, SPKDownloadError(SPKDownloadErrorUnsupportedScheme, @"Only HTTP and HTTPS URLs are supported.", nil));
+        completion(nil, SPKDownloadError(SPKDownloadErrorUnsupportedScheme, SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_ONLY_HTTP_HTTPS_URLS_SUPPORTED_TEXT"), nil));
         return;
     }
 
@@ -74,11 +75,11 @@
         return YES;
     if (status == 403 || status == 404 || status == 410) {
         if (error)
-            *error = SPKDownloadError(SPKDownloadErrorExpiredURL, @"The media URL expired. Refresh and try again.", nil);
+            *error = SPKDownloadError(SPKDownloadErrorExpiredURL, SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_MEDIA_URL_EXPIRED_REFRESH_TRY_AGAIN_TEXT"), nil);
         return NO;
     }
     if (error)
-        *error = SPKDownloadError(SPKDownloadErrorHTTPFailure, @"Instagram returned a missing media response.", nil);
+        *error = SPKDownloadError(SPKDownloadErrorHTTPFailure, SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_INSTAGRAM_RETURNED_MISSING_MEDIA_RESPONSE_TEXT"), nil);
     return NO;
 }
 
@@ -134,12 +135,12 @@
         mime = ((NSHTTPURLResponse *)downloadTask.response).MIMEType;
     }
     if (![self validateContentType:mime mediaKind:self.mediaKind]) {
-        [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorInvalidContentType, @"Instagram returned an unexpected response.", @"Refresh and try again.")];
+        [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorInvalidContentType, SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_INSTAGRAM_RETURNED_UNEXPECTED_RESPONSE_TEXT"), SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_REFRESH_TRY_AGAIN_TEXT"))];
         return;
     }
     NSDictionary *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:location.path error:nil];
     if ([attrs[NSFileSize] longLongValue] <= 0) {
-        [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorEmptyFile, @"The downloaded file was empty.", nil)];
+        [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorEmptyFile, SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_DOWNLOADED_FILE_EMPTY_TEXT"), nil)];
         return;
     }
     NSString *ext = [self resolvedExtensionForMIME:mime url:downloadTask.originalRequest.URL fallback:self.fileExtension ?: @""];
@@ -147,7 +148,7 @@
     NSError *moveError = nil;
     [[NSFileManager defaultManager] removeItemAtPath:dest error:nil];
     if (![[NSFileManager defaultManager] moveItemAtURL:location toURL:[NSURL fileURLWithPath:dest] error:&moveError]) {
-        [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorFileMoveFailed, @"Could not store the downloaded file.", moveError.localizedDescription)];
+        [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorFileMoveFailed, SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_COULD_NOT_STORE_DOWNLOADED_FILE_TEXT"), moveError.localizedDescription)];
         return;
     }
     [self finishWithPath:dest error:nil];
@@ -159,7 +160,7 @@
         return;
     if (error) {
         if (error.code == NSURLErrorCancelled) {
-            [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorCancelled, @"Download cancelled.", nil)];
+            [self finishWithPath:nil error:SPKDownloadError(SPKDownloadErrorCancelled, SPKL(@"DOWNLOADS_SCHEDULER_DOWNLOAD_CANCELLED_ERROR"), nil)];
         } else {
             [self finishWithPath:nil error:error];
         }

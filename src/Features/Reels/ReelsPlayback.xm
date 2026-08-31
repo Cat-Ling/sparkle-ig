@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 
 %group SPKReelsPlaybackHooks
@@ -57,8 +58,8 @@
                     [self finishPullToRefreshLoading];
                 }
             }
-            title:@"Confirm Reels Refresh"
-            message:@"Are you sure you want to refresh the reels feed?"];
+            title:SPKL(@"REELS_REELS_PLAYBACK_CONFIRM_REELS_REFRESH_TEXT")
+            message:SPKL(@"REELS_REELS_PLAYBACK_REFRESH_REELS_FEED_CONFIRMATION_MESSAGE")];
     } else {
         return %orig(arg1, arg2);
     }
@@ -71,8 +72,8 @@
                 %orig;
             }
                cancelHandler:nil
-                       title:@"Confirm Reels Refresh"
-                     message:@"Are you sure you want to refresh the reels feed?"];
+                       title:SPKL(@"REELS_REELS_PLAYBACK_CONFIRM_REELS_REFRESH_TEXT")
+                     message:SPKL(@"REELS_REELS_PLAYBACK_REFRESH_REELS_FEED_CONFIRMATION_MESSAGE")];
     } else {
         %orig;
     }

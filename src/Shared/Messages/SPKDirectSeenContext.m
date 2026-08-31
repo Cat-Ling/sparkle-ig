@@ -1,6 +1,8 @@
+#import "SPKStrings.h"
 #import "SPKDirectSeenContext.h"
 
 #import <objc/message.h>
+#import <objc/runtime.h>
 
 #import "../../AssetUtils.h"
 #import "../../Networking/SPKInstagramAPI.h"
@@ -112,7 +114,7 @@ static NSString *SPKDirectFirstStringForSelectors(id target, NSArray<NSString *>
 static NSString *SPKDirectThreadIdDirectlyFromObject(id object) {
     if (!object)
         return nil;
-    NSString *threadId = SPKDirectFirstStringForSelectors(object, @[ @"threadId", @"threadID", @"thread_id" ]);
+    NSString *threadId = SPKDirectFirstStringForSelectors(object, @[ @"threadId", @"threadID", @"thread_id", @"threadIdV2ForInboxPaging" ]);
     if (threadId.length == 0 && [object isKindOfClass:[NSDictionary class]]) {
         NSDictionary *dict = (NSDictionary *)object;
         threadId = SPKDirectStringFromValue(dict[@"threadId"] ?: dict[@"thread_id"]);
@@ -196,6 +198,20 @@ static NSArray<NSDictionary *> *SPKDirectUsersFromObject(id object) {
     return users.copy;
 }
 
+static NSString *SPKDirectGroupCustomNameFromTarget(id target) {
+    if (!target)
+        return nil;
+    id groupMetadata = SPKDirectObjectForSelector(target, @"groupMetadata")
+                           ?: SPKDirectKVCObject(target, @"groupMetadata")
+                           ?: [SPKUtils getIvarForObj:target name:"_groupMetadata"];
+    if (!groupMetadata)
+        return nil;
+    NSString *customName = SPKDirectFirstStringForSelectors(groupMetadata, @[ @"customName" ]);
+    if (customName.length == 0)
+        customName = SPKDirectStringFromValue([SPKUtils getIvarForObj:groupMetadata name:"_customName"]);
+    return customName;
+}
+
 // Pulls the group's custom photo URL from a thread / metadata object via
 // groupMetadata → groupPhotoIdentifier → groupImageSpecifier → remoteImageURL.
 // `target` may be the thread, its provider, or the thread metadata itself.
@@ -250,6 +266,69 @@ static NSString *SPKDirectCleanFullName(NSString *fullName, NSString *username) 
 
 static SPKDirectThreadContext *SPKDirectThreadContextFromSourceInternal(id source, NSMutableSet<NSValue *> *visited, BOOL allowActiveFallback);
 
+static id SPKDirectFindThreadMetadata(id object, NSUInteger depth, NSMutableSet<NSValue *> *visited) {
+    if (!object || depth == 0)
+        return nil;
+    // A Class is also an Objective-C object, but it is not an instance of the
+    // class returned by +class. Reading that class's instance ivars from the
+    // Class object makes object_getIvar walk an incompatible layout and can
+    // segfault before Objective-C exception handling has a chance to run.
+    if (object_isClass(object))
+        return nil;
+    Class metadataClass = NSClassFromString(@"IGDirectThreadMetadata");
+    if (metadataClass && [object isKindOfClass:metadataClass])
+        return object;
+    if ([object isKindOfClass:NSString.class] ||
+        [object isKindOfClass:NSNumber.class] ||
+        [object isKindOfClass:NSDate.class] ||
+        [object isKindOfClass:NSURL.class])
+        return nil;
+
+    if ([object isKindOfClass:NSDictionary.class]) {
+        for (id value in [(NSDictionary *)object allValues]) {
+            id metadata = SPKDirectFindThreadMetadata(value, depth - 1, visited);
+            if (metadata)
+                return metadata;
+        }
+        return nil;
+    }
+    if ([object isKindOfClass:NSArray.class] || [object isKindOfClass:NSSet.class]) {
+        for (id value in (id<NSFastEnumeration>)object) {
+            id metadata = SPKDirectFindThreadMetadata(value, depth - 1, visited);
+            if (metadata)
+                return metadata;
+        }
+        return nil;
+    }
+
+    NSValue *identity = [NSValue valueWithNonretainedObject:object];
+    if ([visited containsObject:identity])
+        return nil;
+    [visited addObject:identity];
+
+    for (Class currentClass = [object class]; currentClass && currentClass != NSObject.class; currentClass = class_getSuperclass(currentClass)) {
+        unsigned int count = 0;
+        Ivar *ivars = class_copyIvarList(currentClass, &count);
+        for (unsigned int index = 0; index < count; index++) {
+            const char *type = ivar_getTypeEncoding(ivars[index]);
+            if (!type || type[0] != '@')
+                continue;
+            id value = nil;
+            @try {
+                value = object_getIvar(object, ivars[index]);
+            } @catch (__unused NSException *exception) {
+            }
+            id metadata = SPKDirectFindThreadMetadata(value, depth - 1, visited);
+            if (metadata) {
+                free(ivars);
+                return metadata;
+            }
+        }
+        free(ivars);
+    }
+    return nil;
+}
+
 static SPKDirectThreadContext *SPKDirectContextDirectlyFromObject(id object) {
     if (!object)
         return nil;
@@ -281,14 +360,27 @@ static SPKDirectThreadContext *SPKDirectContextDirectlyFromObject(id object) {
         target = provider;
     }
 
-    id metadata = nil;
-    if ([target respondsToSelector:NSSelectorFromString(@"threadMetadata")]) {
-        id meta = SPKDirectObjectForSelector(target, @"threadMetadata");
-        if (meta) {
-            metadata = meta;
-            target = meta;
-        }
+    id metadata = SPKDirectObjectForSelector(target, @"threadMetadata")
+                      ?: [SPKUtils getIvarForObj:target name:"_threadMetadata"];
+    if (!metadata && target != object) {
+        metadata = SPKDirectObjectForSelector(object, @"threadMetadata")
+                       ?: [SPKUtils getIvarForObj:object name:"_threadMetadata"];
     }
+    // Published IGDirectDjangoUIThread values expose only their paging id in
+    // dumped headers. Their IGDirectThreadMetadata still lives in the inherited
+    // devirtualized field cache, so locate that typed value when direct accessors
+    // are unavailable. Keep raw ivar traversal scoped to that model family;
+    // walking an arbitrary view controller graph is both unnecessary and unsafe.
+    Class djangoThreadClass = NSClassFromString(@"IGDirectDjangoUIThread");
+    id hiddenMetadataRoot = nil;
+    if (djangoThreadClass && [target isKindOfClass:djangoThreadClass])
+        hiddenMetadataRoot = target;
+    else if (djangoThreadClass && target != object && [object isKindOfClass:djangoThreadClass])
+        hiddenMetadataRoot = object;
+    if (!metadata && hiddenMetadataRoot)
+        metadata = SPKDirectFindThreadMetadata(hiddenMetadataRoot, 6, [NSMutableSet set]);
+    if (metadata)
+        target = metadata;
 
     NSString *threadId = SPKDirectThreadIdDirectlyFromObject(target);
     if (threadId.length == 0 && target != object) {
@@ -331,6 +423,12 @@ static SPKDirectThreadContext *SPKDirectContextDirectlyFromObject(id object) {
     }
     if (!isGroupValue && target != object) {
         isGroupValue = SPKDirectFirstNumberForSelectors(object, @[ @"isGroup", @"isGroupThread", @"groupThread" ]);
+    }
+    if (isGroupValue.boolValue) {
+        NSString *customName = SPKDirectGroupCustomNameFromTarget(target)
+                                   ?: SPKDirectGroupCustomNameFromTarget(object);
+        if (customName.length > 0)
+            threadName = customName;
     }
 
     if (SPKDirectSeenDebugPrintEnabled) {
@@ -489,7 +587,7 @@ NSString *SPKDirectParticipantSubtitleForThreadEntry(NSDictionary *entry) {
         if (!includesSelf)
             count += 1;
     }
-    return [NSString stringWithFormat:@"%lu participant%@", (unsigned long)count, count == 1 ? @"" : @"s"];
+    return SPKLP(@"COMMON_PARTICIPANT_COUNT", (NSInteger)count);
 }
 
 void SPKDirectOpenProfileForThreadEntry(NSDictionary *entry) {
@@ -572,9 +670,9 @@ static SPKDirectThreadContext *SPKDirectContextFromShallowInboxObject(id object)
             target = meta;
     }
 
-    NSString *threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(target, @[ @"threadId", @"threadID", @"thread_id" ]));
+    NSString *threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(target, @[ @"threadId", @"threadID", @"thread_id", @"threadIdV2ForInboxPaging" ]));
     if (threadId.length == 0 && target != object) {
-        threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(object, @[ @"threadId", @"threadID", @"thread_id" ]));
+        threadId = SPKDirectStringFromValue(SPKDirectInboxValueForKeys(object, @[ @"threadId", @"threadID", @"thread_id", @"threadIdV2ForInboxPaging" ]));
     }
     if (threadId.length == 0)
         return nil;
@@ -807,7 +905,7 @@ void SPKDirectAddOrUpdateManualSeenThreadEntry(NSDictionary *entry, BOOL manualS
     }
     SPKDirectSetManualSeenThreadList(threads, manualSeenEnabled);
     SPKLog(@"Messages", @"[Sparkle MessagesSeen] %@ manual seen list entry threadId=%@ threadName=%@ list=%@ count=%lu",
-           existingIndex >= 0 ? @"Updated" : @"Added",
+           existingIndex >= 0 ? @"Updated" : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADDED_TEXT"),
            threadId,
            merged[@"threadName"] ?: @"",
            SPKDirectManualSeenListTitle(manualSeenEnabled),
@@ -906,7 +1004,7 @@ static void SPKDirectEnrichManualSeenThreadEntryIfNeeded(NSDictionary *entry, BO
 }
 
 NSString *SPKDirectManualSeenListTitle(BOOL manualSeenEnabled) {
-    return manualSeenEnabled ? @"Excluded Chats" : @"Included Chats";
+    return manualSeenEnabled ? SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_EXCLUDED_CHATS_TEXT") : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_INCLUDED_CHATS_TEXT");
 }
 
 NSUInteger SPKDirectManualSeenThreadCount(BOOL manualSeenEnabled) {
@@ -967,8 +1065,8 @@ static NSString *SPKDirectManualSeenListModeTitle(BOOL manualSeenEnabled) {
 
 static NSString *SPKDirectManualSeenListHelpText(BOOL manualSeenEnabled) {
     return manualSeenEnabled
-               ? @"When Manually Mark Seen is enabled, chats in this list use Instagram's normal seen behavior and do not need the eye button. Add group chats from the open chat or inbox long-press menu."
-               : @"When Manually Mark Seen is disabled, only chats in this list require the eye button or auto seen triggers to mark seen. Add group chats from the open chat or inbox long-press menu.";
+               ? SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_MANUALLY_MARK_SEEN_ENABLED_CHATS_LIST_USE_INSTAGRAM_S_TEXT")
+               : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_MANUALLY_MARK_SEEN_DISABLED_ONLY_CHATS_LIST_REQUIRE_EYE_TEXT");
 }
 
 BOOL SPKDirectManualSeenAppliesToSource(id source) {
@@ -997,7 +1095,7 @@ static BOOL SPKDirectCurrentThreadRuleState(SPKDirectThreadContext *context, NSS
     BOOL manualSeenEnabled = [SPKUtils getBoolPref:@"msgs_manual_seen"];
     BOOL listed = SPKDirectManualSeenListContainsThreadId(threadId, manualSeenEnabled);
     NSString *listTitle = SPKDirectManualSeenListTitle(manualSeenEnabled);
-    NSString *threadName = context.threadName.length > 0 ? context.threadName : @"This chat";
+    NSString *threadName = context.threadName.length > 0 ? context.threadName : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_CHAT_TEXT");
 
     if (outThreadId)
         *outThreadId = threadId;
@@ -1016,14 +1114,14 @@ NSString *SPKDirectCurrentThreadRuleActionTitle(SPKDirectThreadContext *context)
     if (!context)
         return nil;
     BOOL applies = SPKDirectManualSeenAppliesToSource(context);
-    return applies ? @"Start Marking as Seen" : @"Stop Marking as Seen";
+    return applies ? SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_START_MARKING_SEEN_TEXT") : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_STOP_MARKING_SEEN_TEXT");
 }
 
 NSString *SPKDirectCurrentThreadRuleConfirmationTitle(SPKDirectThreadContext *context) {
     if (!context)
         return nil;
     BOOL applies = SPKDirectManualSeenAppliesToSource(context);
-    return applies ? @"Confirm Start Marking as Seen" : @"Confirm Stop Marking as Seen";
+    return applies ? SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_CONFIRM_START_MARKING_SEEN_TEXT") : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_CONFIRM_STOP_MARKING_SEEN_TEXT");
 }
 
 NSString *SPKDirectCurrentThreadRuleConfirmationMessage(SPKDirectThreadContext *context) {
@@ -1032,8 +1130,8 @@ NSString *SPKDirectCurrentThreadRuleConfirmationMessage(SPKDirectThreadContext *
         return nil;
     BOOL applies = SPKDirectManualSeenAppliesToSource(context);
     return applies
-               ? [NSString stringWithFormat:@"Do you want to start marking %@ as seen?", threadName]
-               : [NSString stringWithFormat:@"Do you want to stop marking %@ as seen?", threadName];
+               ? [NSString stringWithFormat:SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_START_MARKING_VALUE_SEEN_FORMAT"), threadName]
+               : [NSString stringWithFormat:SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_STOP_MARKING_VALUE_SEEN_FORMAT"), threadName];
 }
 
 BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString **notificationTitle, NSString **notificationSubtitle) {
@@ -1067,8 +1165,8 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
 
     if (notificationTitle) {
         *notificationTitle = applies
-                                 ? [NSString stringWithFormat:@"Messages seen on for %@", threadName]
-                                 : [NSString stringWithFormat:@"Messages seen off for %@", threadName];
+                                 ? [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MESSAGES_SEEN_ON_FORMAT"), threadName]
+                                 : [NSString stringWithFormat:SPKL(@"ACTION_BUTTON_MESSAGES_SEEN_OFF_FORMAT"), threadName];
     }
     if (notificationSubtitle)
         *notificationSubtitle = listTitle;
@@ -1089,16 +1187,16 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
         self.title = SPKDirectManualSeenListTitle(_manualSeenEnabled);
         self.showsAddButton = YES;
         self.infoText = SPKDirectManualSeenListHelpText(_manualSeenEnabled);
-        self.emptyTitle = @"No chats yet";
+        self.emptyTitle = SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_NO_CHATS_YET_TEXT");
         self.emptySubtitle = _manualSeenEnabled
-                                 ? @"Add chats that should keep Instagram's normal seen behavior."
-                                 : @"Add chats that require the eye button to mark seen.";
+                                 ? SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADD_CHATS_SHOULD_KEEP_INSTAGRAM_S_NORMAL_SEEN_BEHAVIOR_TEXT")
+                                 : SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADD_CHATS_REQUIRE_EYE_BUTTON_MARK_SEEN_TEXT");
     }
     return self;
 }
 
 - (NSString *)displayNameForEntry:(NSDictionary *)entry {
-    return SPKDirectDisplayNameForThreadEntry(entry) ?: @"Unknown Chat";
+    return SPKDirectDisplayNameForThreadEntry(entry) ?: SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_UNKNOWN_CHAT_TEXT");
 }
 
 - (NSString *)subtitleForEntry:(NSDictionary *)entry {
@@ -1185,7 +1283,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
     NSString *threadName = [self displayNameForEntry:entry];
     SPKDirectRemoveManualSeenThreadId(threadId, self.manualSeenEnabled);
     SPKNotify(kSPKNotificationDirectThreadSeenRule,
-              [NSString stringWithFormat:@"Removed %@", threadName],
+              [NSString stringWithFormat:SPKL(@"COMMON_REMOVED_VALUE_FORMAT"), threadName],
               SPKDirectManualSeenListTitle(self.manualSeenEnabled),
               @"circle_check_filled",
               SPKNotificationToneSuccess);
@@ -1194,21 +1292,21 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
 
 - (void)presentError:(NSString *)message {
     [SPKIGAlertPresenter presentAlertFromViewController:self
-                                                  title:@"Unable to Add Chat"
+                                                  title:SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_UNABLE_ADD_CHAT_TEXT")
                                                 message:message
-                                                actions:@[ [SPKIGAlertAction actionWithTitle:@"OK" style:SPKIGAlertActionStyleCancel handler:nil] ]];
+                                                actions:@[ [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_OK") style:SPKIGAlertActionStyleCancel handler:nil] ]];
 }
 
 - (void)didTapAdd {
     __weak typeof(self) weakSelf = self;
     [SPKIGAlertPresenter presentTextInputAlertFromViewController:self
-                                                           title:@"Add Chat"
-                                                         message:@"Enter the Instagram username for a 1:1 DM thread."
-                                                     placeholder:@"username"
+                                                           title:SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_ADD_CHAT_TEXT")
+                                                         message:SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ENTER_INSTAGRAM_USERNAME_DM_THREAD_TEXT")
+                                                     placeholder:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USERNAME_TEXT")
                                                      initialText:nil
                                                  autocapitalized:NO
-                                                    confirmTitle:@"Search"
-                                                     cancelTitle:@"Cancel"
+                                                    confirmTitle:SPKL(@"PROFILE_PROFILE_ANALYZER_LIST_SEARCH_TEXT")
+                                                     cancelTitle:SPKL(@"VC_BTN_CANCEL")
                                                     confirmStyle:SPKIGAlertActionStyleDefault
                                                     confirmBlock:^(NSString *text) {
                                                         [weakSelf lookupUsername:text];
@@ -1232,7 +1330,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
                                           return;
                                       if (![user isKindOfClass:[NSDictionary class]] || error) {
                                           SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup failed username=%@ error=%@", username, error);
-                                          [strongSelf presentError:[NSString stringWithFormat:@"User '%@' was not found.", username]];
+                                          [strongSelf presentError:[NSString stringWithFormat:SPKL(@"INSTANTS_INSTANTS_AUTO_SAVE_USER_VALUE_NOT_FOUND_FORMAT"), username]];
                                           return;
                                       }
                                       NSString *pk = SPKDirectStringFromValue(user[@"pk"] ?: user[@"id"]);
@@ -1241,7 +1339,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
                                       NSString *profilePicUrl = SPKDirectStringFromValue(user[@"profile_pic_url"] ?: user[@"profile_pic_url_hd"]);
                                       if (pk.length == 0) {
                                           SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat user lookup missing pk username=%@ response=%@", username, user);
-                                          [strongSelf presentError:@"Could not resolve this user's Instagram id."];
+                                          [strongSelf presentError:SPKL(@"MESSAGES_DIRECT_SEEN_USER_ID_UNRESOLVED_ERROR")];
                                           return;
                                       }
                                       [strongSelf resolveThreadForPK:pk username:resolvedUsername fullName:fullName profilePicUrl:profilePicUrl];
@@ -1261,13 +1359,13 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
                                     NSDictionary *thread = threadResponse[@"thread"];
                                     if (![thread isKindOfClass:[NSDictionary class]] || threadError) {
                                         SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat thread lookup failed username=%@ pk=%@ error=%@", resolvedUsername, pk, threadError);
-                                        [innerSelf presentError:[NSString stringWithFormat:@"No 1:1 DM thread was found with @%@.", resolvedUsername]];
+                                        [innerSelf presentError:[NSString stringWithFormat:SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_NO_DM_THREAD_FOUND_VALUE_FORMAT"), resolvedUsername]];
                                         return;
                                     }
                                     NSString *threadId = SPKDirectStringFromValue(thread[@"thread_id"] ?: thread[@"threadId"]);
                                     if (threadId.length == 0) {
                                         SPKLog(@"Messages", @"[Sparkle MessagesSeen] Settings add chat thread lookup missing threadId username=%@ pk=%@ response=%@", resolvedUsername, pk, thread);
-                                        [innerSelf presentError:[NSString stringWithFormat:@"No 1:1 DM thread was found with @%@.", resolvedUsername]];
+                                        [innerSelf presentError:[NSString stringWithFormat:SPKL(@"MESSAGES_DIRECT_AUTO_SAVE_NO_DM_THREAD_FOUND_VALUE_FORMAT"), resolvedUsername]];
                                         return;
                                     }
                                     NSString *threadName = SPKDirectStringFromValue(thread[@"thread_title"] ?: thread[@"threadName"]) ?: resolvedUsername;
@@ -1275,13 +1373,13 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
                                                             ? [NSString stringWithFormat:@"@%@ (%@)", resolvedUsername, fullName]
                                                             : [@"@" stringByAppendingString:resolvedUsername];
                                     [SPKIGAlertPresenter presentAlertFromViewController:innerSelf
-                                                                                  title:@"Add to List?"
+                                                                                  title:SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADD_LIST_QUESTION")
                                                                                 message:message
                                                                                 actions:@[
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Cancel"
+                                                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_CANCEL")
                                                                                                                 style:SPKIGAlertActionStyleCancel
                                                                                                               handler:nil],
-                                                                                    [SPKIGAlertAction actionWithTitle:@"Add"
+                                                                                    [SPKIGAlertAction actionWithTitle:SPKL(@"ALERT_ACTION_ADD")
                                                                                                                 style:SPKIGAlertActionStyleDefault
                                                                                                               handler:^{
                                                                                                                   NSMutableDictionary *usersEntry = [@{
@@ -1297,7 +1395,7 @@ BOOL SPKDirectToggleCurrentThreadRule(SPKDirectThreadContext *context, NSString 
                                                                                                                                                               @"users" : @[ usersEntry.copy ] },
                                                                                                                                                             innerSelf.manualSeenEnabled);
                                                                                                                   SPKNotify(kSPKNotificationDirectThreadSeenRule,
-                                                                                                                            [NSString stringWithFormat:@"Added %@", threadName],
+                                                                                                                            [NSString stringWithFormat:SPKL(@"MESSAGES_DIRECT_SEEN_CONTEXT_ADDED_VALUE_FORMAT"), threadName],
                                                                                                                             SPKDirectManualSeenListTitle(innerSelf.manualSeenEnabled),
                                                                                                                             @"circle_check_filled",
                                                                                                                             SPKNotificationToneSuccess);

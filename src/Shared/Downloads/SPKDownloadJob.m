@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadJob.h"
 #import "../Account/SPKAccountManager.h"
 
@@ -40,7 +41,7 @@
     for (SPKDownloadItem *item in self.mutableItems) {
         if (item.state == SPKDownloadStateQueued || item.state == SPKDownloadStateRunning || item.state == SPKDownloadStateFinalizing || item.state == SPKDownloadStateWaitingForPreflight) {
             item.state = SPKDownloadStateInterrupted;
-            item.error = SPKDownloadError(SPKDownloadErrorInterrupted, @"Interrupted when Instagram exited", @"Retry from download history.");
+            item.error = SPKDownloadError(SPKDownloadErrorInterrupted, SPKL(@"DOWNLOADS_DOWNLOAD_JOB_INTERRUPTED_INSTAGRAM_EXITED_TEXT"), SPKL(@"DOWNLOADS_DOWNLOAD_JOB_RETRY_DOWNLOAD_HISTORY_TEXT"));
             item.progress = 1.0;
         }
     }
@@ -106,10 +107,6 @@
     d[@"updatedAt"] = @(self.updatedAt);
     d[@"state"] = @(self.state);
     d[@"aggregateProgress"] = @(self.aggregateProgress);
-    if (self.title)
-        d[@"title"] = self.title;
-    if (self.detail)
-        d[@"detail"] = self.detail;
     if (self.completionAction)
         d[@"completionAction"] = self.completionAction;
     if (self.ownerAccountPK)
@@ -132,8 +129,6 @@
     NSString *jobID = dict[@"jobID"] ?: NSUUID.UUID.UUIDString;
     SPKDownloadJob *job = [[self alloc] initWithRequest:request jobID:jobID];
     job.updatedAt = [dict[@"updatedAt"] doubleValue];
-    job.title = dict[@"title"];
-    job.detail = dict[@"detail"];
     job.completionAction = dict[@"completionAction"];
     job.ownerAccountPK = dict[@"ownerAccountPK"]; // nil for legacy/pre-feature jobs (overrides init stamp)
     NSMutableArray *items = [NSMutableArray array];

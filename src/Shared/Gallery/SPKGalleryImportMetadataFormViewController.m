@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryImportMetadataFormViewController.h"
 
 #import "../../AssetUtils.h"
@@ -112,7 +113,7 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"Source";
+    self.title = SPKL(@"GALLERY_GALLERY_FILTER_SOURCE_TEXT");
     self.tableView.backgroundColor = [SPKUtils SPKColor_InstagramGroupedBackground];
     self.tableView.separatorColor = [SPKUtils SPKColor_InstagramSeparator];
     _sources = @[
@@ -363,9 +364,9 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
     (void)tableView;
     switch ((SPKGalleryImportFormSection)section) {
     case SPKGalleryImportFormSectionIdentity:
-        return @"Identity";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_IDENTITY_TEXT");
     case SPKGalleryImportFormSectionLink:
-        return @"Link It Back";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_LINK_BACK_TEXT");
     default:
         return nil;
     }
@@ -375,18 +376,18 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
     (void)tableView;
     switch ((SPKGalleryImportFormSection)section) {
     case SPKGalleryImportFormSectionIdentity:
-        return @"Username powers Open profile.";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_USERNAME_POWERS_OPEN_PROFILE_TEXT");
     case SPKGalleryImportFormSectionLink: {
         NSString *preview = [self permalinkPreview];
-        return preview.length ? [NSString stringWithFormat:@"Open original → %@", preview]
-                              : @"Paste a post, reel, story, or profile link to fill everything.";
+        return preview.length ? [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_OPEN_ORIGINAL_VALUE_FORMAT"), preview]
+                              : SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_PASTE_POST_REEL_STORY_PROFILE_LINK_FILL_EVERYTHING_TEXT");
     }
     case SPKGalleryImportFormSectionAdvanced:
         if (!self.advancedExpanded) {
             return nil;
         }
         return self.footerStemExplanation.length ? self.footerStemExplanation
-                                                 : @"Manual overrides. Leave blank to auto-detect.";
+                                                 : SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_MANUAL_OVERRIDES_LEAVE_BLANK_AUTO_DETECT_TEXT");
     default:
         return nil;
     }
@@ -413,33 +414,33 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
 - (NSString *)titleForRow:(SPKGalleryImportFormRow)row {
     switch (row) {
     case SPKGalleryImportFormRowDisplayName:
-        return @"Name";
+        return SPKL(@"SETTINGS_PROFILE_NAME_TEXT");
     case SPKGalleryImportFormRowUsername:
-        return @"Username";
+        return SPKL(@"SETTINGS_PROFILE_USERNAME_TEXT");
     case SPKGalleryImportFormRowPasteLink:
         return @"Link";
     case SPKGalleryImportFormRowSource:
-        return @"Source";
+        return SPKL(@"GALLERY_GALLERY_FILTER_SOURCE_TEXT");
     case SPKGalleryImportFormRowFileStem:
-        return @"File key";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_FILE_KEY_TEXT");
     case SPKGalleryImportFormRowUserPK:
-        return @"User ID";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_USER_ID_TEXT");
     case SPKGalleryImportFormRowProfileURL:
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     case SPKGalleryImportFormRowMediaPK:
-        return @"Media ID";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_MEDIA_ID_TEXT");
     case SPKGalleryImportFormRowMediaCode:
-        return @"Shortcode";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_SHORTCODE_TEXT");
     case SPKGalleryImportFormRowMediaURL:
-        return @"Permalink";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_PERMALINK_TEXT");
     case SPKGalleryImportFormRowPixelWidth:
-        return @"Width";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_WIDTH_TEXT");
     case SPKGalleryImportFormRowPixelHeight:
-        return @"Height";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_HEIGHT_TEXT");
     case SPKGalleryImportFormRowDuration:
-        return @"Duration";
+        return SPKL(@"NOTIFICATION_APPEARANCE_DURATION_TITLE");
     case SPKGalleryImportFormRowGallerySortDate:
-        return @"Date";
+        return SPKL(@"GALLERY_GALLERY_FILE_DETAILS_DATE_TEXT");
     default:
         return @"";
     }
@@ -449,16 +450,16 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
     switch (row) {
     case SPKGalleryImportFormRowPixelWidth:
     case SPKGalleryImportFormRowPixelHeight:
-        return @"px";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_PX_TEXT");
     case SPKGalleryImportFormRowDuration:
-        return @"seconds";
+        return SPKL(@"NOTIFICATION_APPEARANCE_DURATION_UNIT");
     case SPKGalleryImportFormRowMediaCode:
         return @"ABCde123";
     case SPKGalleryImportFormRowProfileURL:
     case SPKGalleryImportFormRowMediaURL:
         return @"https://...";
     default:
-        return @"Optional";
+        return SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_OPTIONAL_TEXT");
     }
 }
 
@@ -621,7 +622,7 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
     UITableViewCell *cell = [self chromeCell];
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     UIListContentConfiguration *cfg = cell.defaultContentConfiguration;
-    cfg.text = @"Paste Link to Autofill";
+    cfg.text = SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_PASTE_LINK_AUTOFILL_TEXT");
     cfg.textProperties.color = [SPKUtils SPKColor_InstagramBlue];
     cell.contentConfiguration = cfg;
     return cell;
@@ -635,7 +636,7 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
 
     SPKGallerySource src = (SPKGallerySource)self.metadata.source;
     UIListContentConfiguration *cfg = cell.defaultContentConfiguration;
-    cfg.text = @"Source";
+    cfg.text = SPKL(@"GALLERY_GALLERY_FILTER_SOURCE_TEXT");
     cfg.textProperties.color = [SPKUtils SPKColor_InstagramPrimaryText];
     cfg.secondaryText = [SPKGalleryFile labelForSource:src];
     cfg.prefersSideBySideTextAndSecondaryText = YES;
@@ -652,7 +653,7 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
 - (UITableViewCell *)dateCell {
     UITableViewCell *cell = [self chromeCell];
     UIListContentConfiguration *cfg = cell.defaultContentConfiguration;
-    cfg.text = @"Date";
+    cfg.text = SPKL(@"GALLERY_GALLERY_FILE_DETAILS_DATE_TEXT");
     cfg.textProperties.color = [SPKUtils SPKColor_InstagramPrimaryText];
     cell.contentConfiguration = cfg;
 
@@ -669,7 +670,7 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
 
     if (self.metadata.importCapturedDate != nil) {
         UIButton *clear = [UIButton buttonWithType:UIButtonTypeSystem];
-        [clear setTitle:@"Clear" forState:UIControlStateNormal];
+        [clear setTitle:SPKL(@"ALERT_ACTION_CLEAR") forState:UIControlStateNormal];
         clear.titleLabel.font = [UIFont systemFontOfSize:14.0];
         [clear setTitleColor:[SPKUtils SPKColor_InstagramSecondaryText] forState:UIControlStateNormal];
         [clear addTarget:self action:@selector(clearDate) forControlEvents:UIControlEventTouchUpInside];
@@ -688,9 +689,9 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
     UITableViewCell *cell = [self chromeCell];
     cell.selectionStyle = UITableViewCellSelectionStyleDefault;
     UIListContentConfiguration *cfg = cell.defaultContentConfiguration;
-    cfg.text = @"Advanced";
+    cfg.text = SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_ADVANCED_TEXT");
     cfg.textProperties.color = [SPKUtils SPKColor_InstagramPrimaryText];
-    cfg.secondaryText = @"IDs, shortcode, permalink, size, date";
+    cfg.secondaryText = SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_IDS_SHORTCODE_PERMALINK_SIZE_DATE_TEXT");
     cfg.secondaryTextProperties.color = [SPKUtils SPKColor_InstagramSecondaryText];
     cfg.textToSecondaryTextVerticalPadding = 3.0;
     cell.contentConfiguration = cfg;
@@ -764,7 +765,7 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
 - (void)pasteFromClipboard {
     NSString *clip = [UIPasteboard generalPasteboard].string;
     if (clip.length == 0) {
-        SPKNotify(kSPKNotificationGalleryImport, @"Nothing to paste", @"The clipboard is empty.", @"info_filled", SPKNotificationToneInfo);
+        SPKNotify(kSPKNotificationGalleryImport, SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_NOTHING_PASTE_TEXT"), SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_CLIPBOARD_EMPTY_TEXT"), @"info_filled", SPKNotificationToneInfo);
         return;
     }
     [self applyPastedLink:clip];
@@ -778,8 +779,8 @@ static BOOL SPKParseInstagramLink(NSString *raw, SPKGallerySaveMetadata *m) {
         UINotificationFeedbackGenerator *h = [[UINotificationFeedbackGenerator alloc] init];
         [h notificationOccurred:UINotificationFeedbackTypeSuccess];
     } else {
-        SPKNotify(kSPKNotificationGalleryImport, @"Couldn’t read that link",
-                  @"Paste a post, reel, story, or profile link.", @"error_filled", SPKNotificationToneError);
+        SPKNotify(kSPKNotificationGalleryImport, SPKL(@"GALLERY_IMPORT_LINK_UNREADABLE_TOAST"),
+                  SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_PASTE_POST_REEL_STORY_PROFILE_LINK_TEXT"), @"error_filled", SPKNotificationToneError);
     }
 }
 

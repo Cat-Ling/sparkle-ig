@@ -34,6 +34,13 @@ FOUNDATION_EXPORT NSString *SPKDeletedMessageShareSubtypeName(NSString *_Nullabl
 // Icon glyph for a Share subtype, falling back to the generic share glyph.
 FOUNDATION_EXPORT NSString *SPKDeletedMessageShareSubtypeSymbol(NSString *_Nullable subtype);
 
+// Reader-language body for a message, built at display time. Reaction records
+// are composed from the emoji and the target rather than read back from the
+// stored `text`, which is written in English so the store, exports and copied
+// text do not freeze whichever language was active at capture time.
+@class SPKDeletedMessage;
+FOUNDATION_EXPORT NSString *_Nullable SPKDeletedMessageDisplayBody(SPKDeletedMessage *_Nullable message);
+
 @interface SPKDeletedMessage : NSObject
 
 @property (nonatomic, copy) NSString *messageId;
@@ -80,7 +87,14 @@ FOUNDATION_EXPORT NSString *SPKDeletedMessageShareSubtypeSymbol(NSString *_Nulla
 // Reaction unsends only: the emoji that was removed, and a short preview of the
 // message it was reacting to (when resolvable).
 @property (nonatomic, copy, nullable) NSString *reactionEmoji;
+// Verbatim one-line excerpt of the message the reaction was attached to, or
+// nil when that message carried no text. Never a type name: a non-text target
+// is recorded in `reactionTargetKind` so it can be named in the reader's
+// language at display time rather than frozen at capture time.
 @property (nonatomic, copy, nullable) NSString *reactionTargetPreview;
+// Kind of the message the reaction was attached to. Unknown for records
+// written before this field existed and whenever the target had text.
+@property (nonatomic, assign) SPKDeletedMessageKind reactionTargetKind;
 
 // Share-kind messages only: the shared content's subtype ("reel"/"post"/"story"/
 // "profile"/"note"/"location"/"audio") and the author handle of the shared post,

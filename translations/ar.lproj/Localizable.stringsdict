@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>COMMON_FILE_COUNT</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>few</key>
+			<string>%ld ملفات</string>
+			<key>many</key>
+			<string>%ld ملفًا</string>
+			<key>one</key>
+			<string>%ld ملف</string>
+			<key>other</key>
+			<string>%ld ملفًا</string>
+			<key>two</key>
+			<string>%ld ملفان</string>
+			<key>zero</key>
+			<string>%ld ملفًا</string>
+		</dict>
+	</dict>
+	<key>COMMON_ITEM_COUNT</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>few</key>
+			<string>%ld عناصر</string>
+			<key>many</key>
+			<string>%ld عنصرًا</string>
+			<key>one</key>
+			<string>%ld عنصر</string>
+			<key>other</key>
+			<string>%ld عنصرًا</string>
+			<key>two</key>
+			<string>%ld عنصران</string>
+			<key>zero</key>
+			<string>%ld عنصرًا</string>
+		</dict>
+	</dict>
+	<key>COMMON_MESSAGE_COUNT</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>few</key>
+			<string>%ld رسائل</string>
+			<key>many</key>
+			<string>%ld رسالة</string>
+			<key>one</key>
+			<string>%ld رسالة</string>
+			<key>other</key>
+			<string>%ld رسالة</string>
+			<key>two</key>
+			<string>%ld رسالتان</string>
+			<key>zero</key>
+			<string>%ld رسالة</string>
+		</dict>
+	</dict>
+	<key>COMMON_OTHER_COUNT</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>few</key>
+			<string>%ld آخرين</string>
+			<key>many</key>
+			<string>%ld آخرين</string>
+			<key>one</key>
+			<string>%ld آخر</string>
+			<key>other</key>
+			<string>%ld آخرين</string>
+			<key>two</key>
+			<string>%ld آخران</string>
+			<key>zero</key>
+			<string>%ld آخرين</string>
+		</dict>
+	</dict>
+	<key>COMMON_PARTICIPANT_COUNT</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>few</key>
+			<string>%ld مشاركين</string>
+			<key>many</key>
+			<string>%ld مشاركًا</string>
+			<key>one</key>
+			<string>%ld مشارك</string>
+			<key>other</key>
+			<string>%ld مشاركًا</string>
+			<key>two</key>
+			<string>%ld مشاركان</string>
+			<key>zero</key>
+			<string>%ld مشاركًا</string>
+		</dict>
+	</dict>
+	<key>COMMON_SENDER_COUNT</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>few</key>
+			<string>%ld مرسلين</string>
+			<key>many</key>
+			<string>%ld مرسلًا</string>
+			<key>one</key>
+			<string>%ld مرسل</string>
+			<key>other</key>
+			<string>%ld مرسلًا</string>
+			<key>two</key>
+			<string>%ld مرسلان</string>
+			<key>zero</key>
+			<string>%ld مرسلًا</string>
+		</dict>
+	</dict>
+	<key>COMMON_USER_COUNT</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>ld</string>
+			<key>few</key>
+			<string>%ld مستخدمين</string>
+			<key>many</key>
+			<string>%ld مستخدمًا</string>
+			<key>one</key>
+			<string>%ld مستخدم</string>
+			<key>other</key>
+			<string>%ld مستخدمًا</string>
+			<key>two</key>
+			<string>%ld مستخدمان</string>
+			<key>zero</key>
+			<string>%ld مستخدمًا</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

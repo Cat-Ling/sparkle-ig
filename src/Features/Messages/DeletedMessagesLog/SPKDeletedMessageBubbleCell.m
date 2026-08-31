@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDeletedMessageBubbleCell.h"
 #import "../../../AssetUtils.h"
 #import "../../../Utils.h"
@@ -31,8 +32,11 @@ static NSString *SPKDeletedFormatDuration(double seconds);
 @property (nonatomic, strong) UIView *mediaContainer;
 @property (nonatomic, strong) UIImageView *mediaView;
 @property (nonatomic, strong) UIImageView *playGlyph;
+@property (nonatomic, strong) UIImageView *unavailableGlyph;
+@property (nonatomic, strong) UILabel *unavailableLabel;
 @property (nonatomic, strong) UIView *durationPill;
 @property (nonatomic, strong) UILabel *durationLabel;
+@property (nonatomic, strong) NSLayoutConstraint *mediaHeightConstraint;
 
 // Voice content.
 @property (nonatomic, strong) UIView *voicePill;
@@ -199,6 +203,8 @@ static NSString *SPKDeletedFormatDuration(double seconds);
 
     // Media placeholder backdrop (behind thumbnails / kind glyph).
     self.mediaView.backgroundColor = innerSurface;
+    self.unavailableGlyph.tintColor = secondaryTextColor;
+    self.unavailableLabel.textColor = secondaryTextColor;
 
     // Voice pill.
     self.voicePill.backgroundColor = innerSurface;
@@ -294,6 +300,23 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     _playGlyph.hidden = YES;
     [_mediaContainer addSubview:_playGlyph];
 
+    _unavailableGlyph = [UIImageView new];
+    _unavailableGlyph.translatesAutoresizingMaskIntoConstraints = NO;
+    _unavailableGlyph.contentMode = UIViewContentModeScaleAspectFit;
+    _unavailableGlyph.tintColor = [SPKUtils SPKColor_InstagramSecondaryText];
+    _unavailableGlyph.hidden = YES;
+    [_mediaContainer addSubview:_unavailableGlyph];
+
+    _unavailableLabel = [UILabel new];
+    _unavailableLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    _unavailableLabel.font = [UIFont systemFontOfSize:12.0 weight:UIFontWeightSemibold];
+    _unavailableLabel.textColor = [SPKUtils SPKColor_InstagramSecondaryText];
+    _unavailableLabel.text = SPKL(@"MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_MEDIA_UNAVAILABLE_TEXT");
+    _unavailableLabel.adjustsFontSizeToFitWidth = YES;
+    _unavailableLabel.minimumScaleFactor = 0.75;
+    _unavailableLabel.hidden = YES;
+    [_mediaContainer addSubview:_unavailableLabel];
+
     _durationPill = [UIView new];
     _durationPill.translatesAutoresizingMaskIntoConstraints = NO;
     _durationPill.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.55];
@@ -310,18 +333,27 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleMediaTap)];
     [_mediaView addGestureRecognizer:tap];
 
+    _mediaHeightConstraint = [_mediaView.heightAnchor constraintEqualToConstant:kSPKBubbleMediaSize];
     [NSLayoutConstraint activateConstraints:@[
         [_mediaView.leadingAnchor constraintEqualToAnchor:_mediaContainer.leadingAnchor],
         [_mediaView.trailingAnchor constraintEqualToAnchor:_mediaContainer.trailingAnchor],
         [_mediaView.topAnchor constraintEqualToAnchor:_mediaContainer.topAnchor],
         [_mediaView.bottomAnchor constraintEqualToAnchor:_mediaContainer.bottomAnchor],
         [_mediaView.widthAnchor constraintEqualToConstant:kSPKBubbleMediaSize],
-        [_mediaView.heightAnchor constraintEqualToConstant:kSPKBubbleMediaSize],
+        _mediaHeightConstraint,
 
         [_playGlyph.centerXAnchor constraintEqualToAnchor:_mediaView.centerXAnchor],
         [_playGlyph.centerYAnchor constraintEqualToAnchor:_mediaView.centerYAnchor],
         [_playGlyph.widthAnchor constraintEqualToConstant:40.0],
         [_playGlyph.heightAnchor constraintEqualToConstant:40.0],
+
+        [_unavailableGlyph.leadingAnchor constraintEqualToAnchor:_mediaView.leadingAnchor constant:12.0],
+        [_unavailableGlyph.centerYAnchor constraintEqualToAnchor:_mediaView.centerYAnchor],
+        [_unavailableGlyph.widthAnchor constraintEqualToConstant:18.0],
+        [_unavailableGlyph.heightAnchor constraintEqualToConstant:18.0],
+        [_unavailableLabel.leadingAnchor constraintEqualToAnchor:_unavailableGlyph.trailingAnchor constant:8.0],
+        [_unavailableLabel.trailingAnchor constraintLessThanOrEqualToAnchor:_mediaView.trailingAnchor constant:-12.0],
+        [_unavailableLabel.centerYAnchor constraintEqualToAnchor:_mediaView.centerYAnchor],
 
         [_durationPill.trailingAnchor constraintEqualToAnchor:_mediaView.trailingAnchor
                                                      constant:-8.0],
@@ -519,6 +551,9 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     case SPKDeletedMessageKindGif:
     case SPKDeletedMessageKindSticker:
         self.mediaView.image = thumbnail;
+        self.mediaHeightConstraint.constant = kSPKBubbleMediaSize;
+        self.unavailableGlyph.hidden = YES;
+        self.unavailableLabel.hidden = YES;
         break;
     case SPKDeletedMessageKindShare:
     case SPKDeletedMessageKindLink:
@@ -533,7 +568,10 @@ static NSString *SPKDeletedFormatDuration(double seconds);
 
 #pragma mark - Configure
 
-- (void)configureWithMessage:(SPKDeletedMessage *)message thumbnail:(UIImage *)thumbnail outgoing:(BOOL)outgoing {
+- (void)configureWithMessage:(SPKDeletedMessage *)message
+                   thumbnail:(UIImage *)thumbnail
+            mediaUnavailable:(BOOL)mediaUnavailable
+                    outgoing:(BOOL)outgoing {
     self.message = message;
     self.messageId = message.messageId;
 
@@ -560,7 +598,10 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     self.voicePill.hidden = YES;
     self.cardView.hidden = YES;
     self.playGlyph.hidden = YES;
+    self.unavailableGlyph.hidden = YES;
+    self.unavailableLabel.hidden = YES;
     self.durationPill.hidden = YES;
+    self.mediaHeightConstraint.constant = kSPKBubbleMediaSize;
 
     switch (message.kind) {
     case SPKDeletedMessageKindText:
@@ -573,7 +614,7 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     case SPKDeletedMessageKindVideo:
     case SPKDeletedMessageKindGif:
     case SPKDeletedMessageKindSticker:
-        [self configureMediaWithMessage:message thumbnail:thumbnail];
+        [self configureMediaWithMessage:message thumbnail:thumbnail unavailable:mediaUnavailable];
         break;
     case SPKDeletedMessageKindVoice:
         [self configureVoiceWithMessage:message];
@@ -587,28 +628,44 @@ static NSString *SPKDeletedFormatDuration(double seconds);
 }
 
 - (void)configureTextWithMessage:(SPKDeletedMessage *)message {
-    NSString *body = message.text.length ? message.text : (message.previewText.length ? message.previewText : SPKDeletedMessageKindLocalizedName(message.kind));
+    NSString *body = SPKDeletedMessageDisplayBody(message);
+    if (!body.length)
+        body = SPKDeletedMessageKindLocalizedName(message.kind);
     self.textLabel_.text = body;
     self.textLabel_.hidden = NO;
 }
 
-- (void)configureMediaWithMessage:(SPKDeletedMessage *)message thumbnail:(UIImage *)thumbnail {
+- (void)configureMediaWithMessage:(SPKDeletedMessage *)message thumbnail:(UIImage *)thumbnail unavailable:(BOOL)unavailable {
     self.mediaContainer.hidden = NO;
-    if (thumbnail) {
-        self.mediaView.image = thumbnail;
-    } else {
+    if (unavailable) {
         self.mediaView.image = nil;
-    }
-    self.playGlyph.hidden = (message.kind != SPKDeletedMessageKindVideo);
+        self.mediaHeightConstraint.constant = 48.0;
+        self.unavailableGlyph.image = [SPKAssetUtils instagramIconNamed:@"warning_filled"
+                                                              pointSize:16.0
+                                                          renderingMode:UIImageRenderingModeAlwaysTemplate];
+        self.unavailableGlyph.hidden = NO;
+        self.unavailableLabel.hidden = NO;
+        self.playGlyph.hidden = YES;
+        self.durationPill.hidden = YES;
+    } else {
+        if (thumbnail) {
+            self.mediaView.image = thumbnail;
+        } else {
+            self.mediaView.image = nil;
+        }
+        self.playGlyph.hidden = (message.kind != SPKDeletedMessageKindVideo);
 
-    if (message.kind == SPKDeletedMessageKindVideo && message.durationSeconds > 0) {
-        self.durationLabel.text = SPKDeletedFormatDuration(message.durationSeconds);
-        self.durationPill.hidden = NO;
+        if (message.kind == SPKDeletedMessageKindVideo && message.durationSeconds > 0) {
+            self.durationLabel.text = SPKDeletedFormatDuration(message.durationSeconds);
+            self.durationPill.hidden = NO;
+        }
     }
 
-    // A caption can ride along with media.
-    if (message.text.length) {
-        self.textLabel_.text = message.text;
+    // A caption can ride along with media. Use the display helper so generated
+    // reaction bodies are rebuilt in the reader's current language as well.
+    NSString *body = SPKDeletedMessageDisplayBody(message);
+    if (body.length) {
+        self.textLabel_.text = body;
         self.textLabel_.hidden = NO;
     }
 }
@@ -617,7 +674,7 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     self.voicePill.hidden = NO;
     self.voiceLabel.text = message.durationSeconds > 0
                                ? SPKDeletedFormatDuration(message.durationSeconds)
-                               : @"Tap to play";
+                               : SPKL(@"MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_TAP_PLAY_TEXT");
 }
 
 - (void)configureCardWithMessage:(SPKDeletedMessage *)message thumbnail:(UIImage *)thumbnail {
@@ -638,7 +695,7 @@ static NSString *SPKDeletedFormatDuration(double seconds);
     }
 
     // First line of the caption (if any).
-    NSString *caption = message.text.length ? message.text : message.previewText;
+    NSString *caption = SPKDeletedMessageDisplayBody(message);
     NSRange newline = caption.length ? [caption rangeOfString:@"\n"] : NSMakeRange(NSNotFound, 0);
     if (newline.location != NSNotFound)
         caption = [caption substringToIndex:newline.location];

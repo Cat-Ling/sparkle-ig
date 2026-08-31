@@ -1,4 +1,5 @@
 #import "SPKActionButtonDefaultActionPickerViewController.h"
+#import "SPKStrings.h"
 
 #import "../AssetUtils.h"
 #import "../Shared/ActionButton/SPKActionButtonConfiguration.h"
@@ -45,7 +46,7 @@ NSString *SPKActionButtonDefaultActionIdentifierForSource(SPKActionButtonSource 
 NSString *SPKActionButtonDefaultActionTitleForSource(SPKActionButtonSource source) {
     NSString *identifier = SPKActionButtonDefaultActionIdentifierForSource(source);
     if ([identifier isEqualToString:kSPKActionNone])
-        return @"Open Menu";
+        return SPKL(@"FEED_HEADER_ACTION_BUTTON_OPEN_MENU_TEXT");
     return SPKActionDescriptorDisplayTitle(identifier, SPKActionButtonTopicTitleForSource(source));
 }
 
@@ -57,15 +58,15 @@ NSString *SPKActionButtonDefaultActionIconNameForSource(SPKActionButtonSource so
 static NSArray<NSDictionary *> *SPKActionButtonDefaultActionSections(SPKActionButtonSource source) {
     NSArray<NSString *> *supportedActions = SPKActionButtonSupportedActionsForSource(source);
     NSArray<NSDictionary *> *groups = @[
-        @{@"title" : @"Downloads",
+        @{@"title" : SPKL(@"DOWNLOADS_GENERAL_DOWNLOADS_TITLE"),
           @"actions" : @[ kSPKActionDownloadLibrary, kSPKActionDownloadShare, kSPKActionDownloadGallery ]},
-        @{@"title" : @"Media",
+        @{@"title" : SPKL(@"FEED_MEDIA_HEADER"),
           @"actions" : @[ kSPKActionExpand, kSPKActionViewThumbnail, kSPKActionTrimSave, kSPKActionEditSave ]},
-        @{@"title" : @"Copy",
+        @{@"title" : SPKL(@"FEED_COMMENT_ACTIONS_COPY_TEXT"),
           @"actions" : @[ kSPKActionCopyDownloadLink, kSPKActionCopyMedia, kSPKActionCopyCaption, kSPKActionProfileCopyInfo ]},
-        @{@"title" : @"Audio",
+        @{@"title" : SPKL(@"COMMON_MEDIA_TYPE_AUDIO"),
           @"actions" : @[ kSPKActionDownloadAudio, kSPKActionDownloadAudioShare, kSPKActionDownloadAudioGallery, kSPKActionPlayAudio, kSPKActionCopyAudioURL ]},
-        @{@"title" : @"Other",
+        @{@"title" : SPKL(@"STORIES_OTHER_HEADER"),
           @"actions" : @[ kSPKActionOpenTopicSettings, kSPKActionRepost, kSPKActionStoryMentionsSheet, kSPKActionToggleStorySeenUserRule, kSPKActionDeletedMessagesLog, kSPKActionNone ]}
     ];
 
@@ -105,7 +106,7 @@ static NSArray<NSDictionary *> *SPKActionButtonDefaultActionSections(SPKActionBu
     if (self) {
         _source = source;
         _sections = SPKActionButtonDefaultActionSections(source);
-        self.title = @"Default Tap Action";
+        self.title = SPKL(@"SPKTOPICSETTINGSSUPPORT_GENERAL_DEFAULT_TAP_ACTION_TITLE");
     }
     return self;
 }
@@ -151,7 +152,7 @@ static NSArray<NSDictionary *> *SPKActionButtonDefaultActionSections(SPKActionBu
     cell.backgroundColor = [SPKUtils SPKColor_InstagramSecondaryBackground];
     cell.tintColor = [SPKUtils SPKColor_InstagramBlue];
     cell.selectedBackgroundView = [self selectionBackgroundView];
-    config.text = isNone ? @"Open Menu" : SPKActionDescriptorDisplayTitle(identifier, SPKActionButtonTopicTitleForSource(self.source));
+    config.text = isNone ? SPKL(@"FEED_HEADER_ACTION_BUTTON_OPEN_MENU_TEXT") : SPKActionDescriptorDisplayTitle(identifier, SPKActionButtonTopicTitleForSource(self.source));
     config.textProperties.color = [SPKUtils SPKColor_InstagramPrimaryText];
     config.image = SPKSettingsIcon(isNone ? @"action" : SPKActionDescriptorIconName(identifier));
     config.imageProperties.tintColor = [SPKUtils SPKColor_InstagramPrimaryText];

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKProfileSettingsProvider.h"
 
 #import "../../AssetUtils.h"
@@ -38,12 +39,12 @@ static UICommand *SPKProfileActionDefaultCommand(NSString *title, NSString *reso
 
 static UIMenu *SPKProfileActionDefaultMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKProfileActionDefaultCommand(@"Open Menu", @"action", kSPKProfileActionNone),
-        SPKProfileActionDefaultCommand(@"Copy Info", @"copy", kSPKProfileActionCopyInfo),
-        SPKProfileActionDefaultCommand(@"View Picture", @"photo", kSPKProfileActionViewPicture),
-        SPKProfileActionDefaultCommand(@"Share Picture", @"share", kSPKProfileActionSharePicture),
-        SPKProfileActionDefaultCommand(@"Save to Gallery", @"sparkle_gallery", kSPKProfileActionSavePictureToGallery),
-        SPKProfileActionDefaultCommand(@"Profile Settings", @"settings", kSPKProfileActionOpenSettings)
+        SPKProfileActionDefaultCommand(SPKL(@"FEED_HEADER_ACTION_BUTTON_OPEN_MENU_TEXT"), @"action", kSPKProfileActionNone),
+        SPKProfileActionDefaultCommand(SPKL(@"SETTINGS_PROFILE_COPY_INFO_TEXT"), @"copy", kSPKProfileActionCopyInfo),
+        SPKProfileActionDefaultCommand(SPKL(@"SETTINGS_PROFILE_VIEW_PICTURE_TEXT"), @"photo", kSPKProfileActionViewPicture),
+        SPKProfileActionDefaultCommand(SPKL(@"SETTINGS_PROFILE_SHARE_PICTURE_TEXT"), @"share", kSPKProfileActionSharePicture),
+        SPKProfileActionDefaultCommand(SPKL(@"FEED_COMMENT_ACTIONS_SAVE_GALLERY_TEXT"), @"sparkle_gallery", kSPKProfileActionSavePictureToGallery),
+        SPKProfileActionDefaultCommand(SPKL(@"SETTINGS_PROFILE_PROFILE_SETTINGS_TEXT"), @"settings", kSPKProfileActionOpenSettings)
     ]];
 }
 
@@ -61,11 +62,11 @@ static UICommand *SPKProfileDefaultCopyInfoCommand(NSString *title, NSString *re
 
 static UIMenu *SPKProfileDefaultCopyInfoMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKProfileDefaultCopyInfoCommand(@"ID", @"key", kSPKProfileCopyInfoID),
-        SPKProfileDefaultCopyInfoCommand(@"Username", @"username", kSPKProfileCopyInfoUsername),
-        SPKProfileDefaultCopyInfoCommand(@"Name", @"text", kSPKProfileCopyInfoName),
-        SPKProfileDefaultCopyInfoCommand(@"Bio", @"caption", kSPKProfileCopyInfoBio),
-        SPKProfileDefaultCopyInfoCommand(@"Profile Link", @"link", kSPKProfileCopyInfoLink)
+        SPKProfileDefaultCopyInfoCommand(SPKL(@"SETTINGS_PROFILE_ID_TEXT"), @"key", kSPKProfileCopyInfoID),
+        SPKProfileDefaultCopyInfoCommand(SPKL(@"SETTINGS_PROFILE_USERNAME_TEXT"), @"username", kSPKProfileCopyInfoUsername),
+        SPKProfileDefaultCopyInfoCommand(SPKL(@"SETTINGS_PROFILE_NAME_TEXT"), @"text", kSPKProfileCopyInfoName),
+        SPKProfileDefaultCopyInfoCommand(SPKL(@"SETTINGS_PROFILE_BIO_TEXT"), @"caption", kSPKProfileCopyInfoBio),
+        SPKProfileDefaultCopyInfoCommand(SPKL(@"SETTINGS_PROFILE_PROFILE_LINK_TEXT"), @"link", kSPKProfileCopyInfoLink)
     ]];
 }
 
@@ -110,47 +111,57 @@ static UICommand *SPKFollowIndicatorModeCommand(NSString *title, NSString *value
 
 static UIMenu *SPKFollowIndicatorModeMenu(void) {
     return [UIMenu menuWithChildren:@[
-        SPKFollowIndicatorModeCommand(@"Off", kSPKFollowIndicatorModeOff),
-        SPKFollowIndicatorModeCommand(@"Icon", kSPKFollowIndicatorModeIcon),
-        SPKFollowIndicatorModeCommand(@"Text", kSPKFollowIndicatorModeText),
-        SPKFollowIndicatorModeCommand(@"Icon & Text", kSPKFollowIndicatorModeIconText)
+        SPKFollowIndicatorModeCommand(SPKL(@"MENU_OFF"), kSPKFollowIndicatorModeOff),
+        SPKFollowIndicatorModeCommand(SPKL(@"SETTINGS_PROFILE_ICON_TEXT"), kSPKFollowIndicatorModeIcon),
+        SPKFollowIndicatorModeCommand(SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT"), kSPKFollowIndicatorModeText),
+        SPKFollowIndicatorModeCommand(SPKL(@"PROFILE_FOLLOW_INDICATOR_ICON_AND_TEXT_LABEL"), kSPKFollowIndicatorModeIconText)
     ]];
 }
 
 @implementation SPKProfileSettingsProvider
 
 + (SPKSetting *)rootSetting {
-    return SPKTopicNavigationSetting(@"Profile", @"user_circle", 24.0, @[
-        SPKTopicSection(@"Action Button", @[
-            [SPKSetting switchCellWithTitle:@"Profile Action Button"
-                                       icon:SPKSettingsIcon(@"action")
-                                defaultsKey:@"profile_action_btn"],
-            SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSourceProfile),
-            SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSourceProfile, @"Profile", SPKActionButtonSupportedActionsForSource(SPKActionButtonSourceProfile), SPKActionButtonDefaultSectionsForSource(SPKActionButtonSourceProfile)),
-            SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:@"Copy Info Default" icon:SPKSettingsIcon(@"copy") menu:SPKProfileDefaultCopyInfoMenu()], SPKSettingsIcon(@"copy"))
+    return SPKTopicNavigationSetting(SPKL(@"PROFILE_TITLE"), @"user_circle", 24.0, @[
+        // Two short explanations, each about one control: they read better as
+        // footers under their own rows than behind a shared info button.
+        SPKTopicSectionWithInfoSheet(SPKTopicSection(SPKL(@"FEED_ACTION_BUTTON_HEADER"), @[
+                                         SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"PROFILE_ACTION_BUTTON_PROFILE_ACTION_BUTTON_TITLE")
+                                                                        icon:SPKSettingsIcon(@"action")
+                                                                 defaultsKey:@"profile_action_btn"],
+                                                            SPKL(@"PROFILE_ACTION_BUTTON_ENABLED_HELP")),
+                                         SPKActionButtonDefaultActionNavigationSetting(SPKActionButtonSourceProfile),
+                                         SPKActionButtonConfigurationNavigationSetting(SPKActionButtonSourceProfile, SPKL(@"PROFILE_TITLE"), SPKActionButtonSupportedActionsForSource(SPKActionButtonSourceProfile), SPKActionButtonDefaultSectionsForSource(SPKActionButtonSourceProfile))
+                                     ],
+                                                            nil),
+                                     NO),
+        SPKTopicSection(@"", @[
+            SPKSettingWithHelp(SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"PROFILE_ACTION_BUTTON_COPY_INFO_DEFAULT_TITLE") icon:SPKSettingsIcon(@"copy") menu:SPKProfileDefaultCopyInfoMenu()], SPKSettingsIcon(@"copy")),
+                               SPKL(@"PROFILE_ACTION_BUTTON_COPY_INFO_DEFAULT_HELP"))
         ],
-                        @"Choose what tapping the action button does. Copy Info Default controls what gets copied when Default Tap Action is Copy Info."),
-        SPKTopicSection(@"Profile Picture", @[
-            [SPKSetting switchCellWithTitle:@"Long Press to Expand"
-                                       icon:SPKSettingsIcon(@"expand")
-                                defaultsKey:@"profile_photo_zoom"]
+                        nil),
+        SPKTopicSection(SPKL(@"PROFILE_PROFILE_PICTURE_HEADER"), @[
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"FEED_MEDIA_LONG_PRESS_EXPAND_TITLE")
+                                           icon:SPKSettingsIcon(@"expand")
+                                    defaultsKey:@"profile_photo_zoom"],
+                               SPKL(@"PROFILE_PROFILE_PICTURE_LONG_PRESS_EXPAND_HELP"))
         ],
-                        @"Long press a profile picture to open it expanded."),
-        SPKTopicSection(@"Indicators", @[
+                        nil),
+        SPKTopicSection(SPKL(@"PROFILE_INDICATORS_HEADER"), @[
             ({
-                SPKSetting *mode = [SPKSetting menuCellWithTitle:@"Following Indicator"
+                SPKSetting *mode = [SPKSetting menuCellWithTitle:SPKL(@"PROFILE_INDICATORS_FOLLOWING_INDICATOR_TITLE")
                                                             icon:SPKSettingsIcon(@"user_check")
                                                             menu:SPKFollowIndicatorModeMenu()];
                 mode.accessoryTextProvider = ^NSString * {
                     NSString *value = SPKFollowIndicatorEffectiveMode();
                     if ([value isEqualToString:kSPKFollowIndicatorModeText])
-                        return @"Text";
+                        return SPKL(@"MESSAGES_DELETED_MESSAGES_MODELS_TEXT");
                     if ([value isEqualToString:kSPKFollowIndicatorModeIcon])
-                        return @"Icon";
+                        return SPKL(@"SETTINGS_PROFILE_ICON_TEXT");
                     if ([value isEqualToString:kSPKFollowIndicatorModeIconText])
-                        return @"Icon + Text";
-                    return @"Off";
+                        return SPKL(@"PROFILE_HEADER_BUTTON_ICON_AND_TEXT_LABEL");
+                    return SPKL(@"MENU_OFF");
                 };
+                mode.helpText = SPKL(@"PROFILE_INDICATORS_FOLLOWING_INDICATOR_HELP");
                 mode;
             }),
             ({
@@ -158,7 +169,7 @@ static UIMenu *SPKFollowIndicatorModeMenu(void) {
                 // doesn't stand out as modded. On = the colored green/red. Uses a
                 // custom value provider so the legacy fallback (pre-menu users who
                 // had the indicator on keep colored) is reflected accurately.
-                SPKSetting *colorful = [SPKSetting switchCellWithTitle:@"Colorful Indicator"
+                SPKSetting *colorful = [SPKSetting switchCellWithTitle:SPKL(@"PROFILE_INDICATORS_COLORFUL_INDICATOR_TITLE")
                                                                   icon:SPKSettingsIcon(@"palette")
                                                            defaultsKey:kSPKFollowIndicatorColorfulKey];
                 colorful.switchValueProvider = ^BOOL {
@@ -171,25 +182,30 @@ static UIMenu *SPKFollowIndicatorModeMenu(void) {
                 colorful.hiddenProvider = ^BOOL {
                     return [SPKFollowIndicatorEffectiveMode() isEqualToString:kSPKFollowIndicatorModeOff];
                 };
+                colorful.helpText = SPKL(@"PROFILE_INDICATORS_COLORFUL_INDICATOR_HELP");
                 colorful;
             }),
-            [SPKSetting switchCellWithTitle:@"Hide Notes Bubble"
-                                       icon:SPKSettingsIcon(@"notes")
-                                defaultsKey:@"profile_hide_notes_bubble"],
-            [SPKSetting switchCellWithTitle:@"Hide Threads Button"
-                                       icon:SPKSettingsIcon(@"threads")
-                                defaultsKey:@"profile_hide_threads_btn"]
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"PROFILE_INDICATORS_HIDE_NOTES_BUBBLE_TITLE")
+                                           icon:SPKSettingsIcon(@"notes")
+                                    defaultsKey:@"profile_hide_notes_bubble"],
+                               SPKL(@"PROFILE_INDICATORS_HIDE_NOTES_BUBBLE_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"PROFILE_INDICATORS_HIDE_THREADS_BUTTON_TITLE")
+                                           icon:SPKSettingsIcon(@"threads")
+                                    defaultsKey:@"profile_hide_threads_btn"],
+                               SPKL(@"PROFILE_INDICATORS_HIDE_THREADS_BUTTON_HELP"))
         ],
-                        @"Following Indicator shows whether a profile follows you back, under their stats. Text or Icon; it's Instagram's native gray unless you turn on Colorful Indicator for green/red."),
-        SPKTopicSection(@"Confirmation", @[
-            [SPKSetting switchCellWithTitle:@"Confirm Follow"
-                                       icon:SPKSettingsIcon(@"user_follow")
-                                defaultsKey:@"profile_confirm_follow"],
-            [SPKSetting switchCellWithTitle:@"Confirm Unfollow"
-                                       icon:SPKSettingsIcon(@"user_unfollow")
-                                defaultsKey:@"profile_confirm_unfollow"]
+                        nil),
+        SPKTopicSection(SPKL(@"FEED_CONFIRMATION_HEADER"), @[
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"PROFILE_CONFIRMATION_CONFIRM_FOLLOW_TITLE")
+                                           icon:SPKSettingsIcon(@"user_follow")
+                                    defaultsKey:@"profile_confirm_follow"],
+                               SPKL(@"PROFILE_CONFIRMATION_CONFIRM_FOLLOW_HELP")),
+            SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"PROFILE_CONFIRMATION_CONFIRM_UNFOLLOW_TITLE")
+                                           icon:SPKSettingsIcon(@"user_unfollow")
+                                    defaultsKey:@"profile_confirm_unfollow"],
+                               SPKL(@"PROFILE_CONFIRMATION_CONFIRM_UNFOLLOW_HELP"))
         ],
-                        @"Shows confirmation alerts before the enabled profile actions are performed.")
+                        nil)
     ]);
 }
 

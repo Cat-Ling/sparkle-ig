@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryFolderCell.h"
 #import "../../Utils.h"
 
@@ -103,7 +104,7 @@
 
 - (void)configureWithFolderName:(NSString *)name itemCount:(NSInteger)itemCount {
     _listTitle.text = name;
-    _listSubtitle.text = [NSString stringWithFormat:@"%ld item%@", (long)itemCount, itemCount == 1 ? @"" : @"s"];
+    _listSubtitle.text = SPKLP(@"COMMON_ITEM_COUNT", itemCount);
 }
 
 @end

@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKAutoSave.h"
 
 #import "../../Utils.h"
@@ -82,13 +83,13 @@ static void SPKAutoSaveFlushSummaryIfDrained(void) {
     if (saved == 0 && failed == 0)
         return;
 
-    NSString *title = saved == 1 ? @"Auto-saved 1 item"
-                                 : [NSString stringWithFormat:@"Auto-saved %lu items", (unsigned long)saved];
-    NSString *subtitle = toPhotos ? @"Tap to open Photos" : @"Tap to open Gallery";
+    NSString *title = saved == 1 ? SPKL(@"AUTO_SAVE_AUTO_SAVE_AUTO_SAVED_ITEM_TEXT")
+                                 : [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_AUTO_SAVED_VALUE_ITEMS_FORMAT"), (unsigned long)saved];
+    NSString *subtitle = toPhotos ? SPKL(@"AUTO_SAVE_AUTO_SAVE_TAP_OPEN_PHOTOS_TEXT") : SPKL(@"AUTO_SAVE_AUTO_SAVE_TAP_OPEN_GALLERY_TEXT");
     if (failed > 0) {
-        subtitle = failed == 1 ? @"1 item failed" : [NSString stringWithFormat:@"%lu items failed", (unsigned long)failed];
+        subtitle = failed == 1 ? SPKL(@"AUTO_SAVE_AUTO_SAVE_ITEM_FAILED_TEXT") : [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_VALUE_ITEMS_FAILED_FORMAT"), (unsigned long)failed];
         if (saved == 0)
-            title = @"Auto-save failed";
+            title = SPKL(@"AUTO_SAVE_AUTO_SAVE_AUTO_SAVE_FAILED_TEXT");
     }
 
     // Nothing landed, so there's nothing to go look at -- leave the pill inert.
@@ -121,8 +122,8 @@ static void SPKAutoSaveNoteSubmission(NSString *notificationIdentifier, SPKDownl
     SPKAutoSaveSessionStarted = YES;
     SPKAutoSaveSessionDestination = destination;
 
-    SPKNotify(notificationIdentifier, @"Auto-save started",
-              [NSString stringWithFormat:@"Saving to %@", SPKDownloadDestinationDisplayName(destination)],
+    SPKNotify(notificationIdentifier, SPKL(@"AUTO_SAVE_AUTO_SAVE_AUTO_SAVE_STARTED_TEXT"),
+              [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_SAVING_VALUE_FORMAT"), SPKDownloadDestinationDisplayName(destination)],
               @"info_filled", SPKNotificationToneInfo);
 }
 
@@ -257,9 +258,9 @@ void SPKAutoSaveSessionDidEnd(void) {
     // after dismissal when High quality is muxing DASH video and audio. Say so, rather
     // than leaving the viewer thinking nothing happened.
     NSUInteger pending = SPKAutoSaveSessionPendingCount;
-    SPKNotify(kSPKNotificationAutoSavePending, @"Auto-save still working",
-              pending == 1 ? @"1 item is being processed"
-                           : [NSString stringWithFormat:@"%lu items are being processed", (unsigned long)pending],
+    SPKNotify(kSPKNotificationAutoSavePending, SPKL(@"AUTO_SAVE_AUTO_SAVE_AUTO_SAVE_STILL_WORKING_TEXT"),
+              pending == 1 ? SPKL(@"AUTO_SAVE_AUTO_SAVE_ITEM_BEING_PROCESSED_TEXT")
+                           : [NSString stringWithFormat:SPKL(@"AUTO_SAVE_AUTO_SAVE_VALUE_ITEMS_BEING_PROCESSED_FORMAT"), (unsigned long)pending],
               @"history", SPKNotificationToneInfo);
 
     // Still downloading or merging. The watcher posts the summary the moment the last

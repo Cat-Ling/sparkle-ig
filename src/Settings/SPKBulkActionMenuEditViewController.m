@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKBulkActionMenuEditViewController.h"
 
 #import "../AssetUtils.h"
@@ -81,13 +82,13 @@
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    return section == 0 ? @"Enabled Actions" : @"Available Actions";
+    return section == 0 ? SPKL(@"SETTINGS_BULK_ACTION_MENU_EDIT_ENABLED_ACTIONS_ACTION") : SPKL(@"SETTINGS_ACTION_SECTION_EDIT_AVAILABLE_ACTIONS_ACTION");
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
     if (section == 0)
-        return @"Drag to reorder. Tap to disable an action.";
-    return @"Tap an action to enable it in this submenu.";
+        return SPKL(@"SETTINGS_BULK_ACTION_MENU_EDIT_DRAG_REORDER_TAP_DISABLE_ACTION");
+    return SPKL(@"SETTINGS_BULK_ACTION_MENU_EDIT_TAP_ACTION_ENABLE_SUBMENU_ACTION");
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {

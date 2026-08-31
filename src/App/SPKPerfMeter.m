@@ -1,4 +1,5 @@
 #import "SPKPerfMeter.h"
+#import "SPKStrings.h"
 
 #if SPK_DEV
 
@@ -538,7 +539,7 @@ static NSArray<NSString *> *SPKPerfScopeNamesByCost(NSDictionary *scopeTime) {
 
 NSString *SPKPerfMeterSummary(void) {
     if (!spkPerfEnabled)
-        return @"Off";
+        return SPKL(@"MENU_OFF");
     NSDictionary *snapshot = SPKPerfMeterSnapshot();
     return [NSString stringWithFormat:@"%.1fs blocked over %.0fs (%.1f%%), worst %.0fms",
                                       [snapshot[@"blockedMs"] doubleValue] / 1000.0,

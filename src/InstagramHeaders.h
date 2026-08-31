@@ -8,6 +8,8 @@
 #define _Bool bool
 #endif
 
+@class IGMainAppSurfaceIntent;
+
 @interface NSURL ()
 - (id)normalizedURL; // method provided by Instagram app
 @end
@@ -42,6 +44,11 @@
 @end
 
 @interface IGExploreGridViewController : IGViewController
+- (void)spk_updateExploreGridVisibility;
+@end
+
+@interface IGExploreViewController : IGViewController
+- (void)spk_updateExploreShimmerVisibility;
 @end
 
 @interface UIImage ()
@@ -88,12 +95,53 @@
 - (void)setImmersiveConfig:(id)config;
 @end
 
+@interface IGTabBarControllerSwipeCoordinator : NSObject
+@end
+
+// Mirrors Instagram's IGTabBarViewRepresentable. Every bar implementation (the
+// classic IGTabBar, IGNativeTabBar and the iOS 26 Liquid Glass bar) conforms to
+// it, so the tab bar view can be driven without caring which one is installed.
+@protocol SPKTabBarViewRepresentable <NSObject>
+@property (readonly, nonatomic) NSArray *buttons;
+- (void)addTabButton:(id)button;
+- (void)clearTabButtons;
+- (void)setSelectedTabBarItemIndex:(NSInteger)index;
+@end
+
 @interface IGTabBarController : UIViewController
 @property (readonly, nonatomic) UIView *tabBar;
+- (id)_buttonForTabBarSurface:(id)surface;
+- (IGMainAppSurfaceIntent *)selectedTabBarSurface;
 @property (readonly, nonatomic) UIViewController *selectedViewController;
 - (NSInteger)tabBarStyle;
+- (void)_createAndConfigureReelsButtonIfNeeded;
+- (void)_timelineButtonPressed;
+- (void)_discoverVideoButtonPressed;
+- (void)_directInboxButtonPressed;
+- (void)_exploreButtonPressed;
+- (void)_profileButtonPressed;
+- (UINavigationController *)discoverVideoNavigationController;
+- (UINavigationController *)navigationViewControllerForAppSurfaceIntent:(IGMainAppSurfaceIntent *)intent;
+- (void)setSelectedTabBarSurface:(IGMainAppSurfaceIntent *)surface animated:(BOOL)animated;
 - (void)_exploreButtonLongPressed:(id)gesture;
 - (void)_updateTabBarVisibilityForController:(id)controller;
+@end
+
+@interface IGTabBarViewControllerManager : NSObject
+@property (readonly, nonatomic) UINavigationController *savedCollectionsNavigationController;
+@end
+
+@interface IGSaveHomeIntentTarget : NSObject
+- (instancetype)initWithEntryModule:(NSString *)entryModule;
+- (instancetype)initWithEntryModule:(NSString *)entryModule selectedTab:(nullable NSString *)selectedTab;
+@end
+
+@protocol FBIntentHandler <NSObject>
+- (void)handleIntent:(id)intent;
+@end
+
+@interface UIViewController (FBIntentNavigation)
+- (id<FBIntentHandler>)fb_intentHandler;
 @end
 
 @interface IGMainAppScrollingContainerViewController : UIViewController
@@ -119,6 +167,29 @@
 @interface UIView (RCTViewUnmounting)
 @property (retain, nonatomic) UIViewController *viewController;
 - (UIView *)_rootView;
+@end
+
+// Instagram's design-system font entry points. Every label in the app resolves its
+// typeface through one of these rather than through UIKit directly, which makes them
+// the seam for replacing the app-wide font. Present on 410 through 442; the branded,
+// script, and monospaced-digit members of the category are deliberately omitted here
+// because replacing those would corrupt the logo, the story text tool, and any
+// column-aligned numerals.
+@interface UIFont (Instagram)
++ (UIFont *)ig_systemFontOfSize:(CGFloat)size weight:(CGFloat)weight;
++ (UIFont *)ig_systemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_lightSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_mediumSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_semiboldSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_boldSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_heavySystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_italicSystemFontOfSize:(CGFloat)size;
++ (UIFont *)ig_systemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_systemDynamicFontOfSize:(CGFloat)size weight:(CGFloat)weight;
++ (UIFont *)ig_lightSystemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_semiboldSystemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_boldSystemDynamicFontOfSize:(CGFloat)size;
++ (UIFont *)ig_heavySystemDynamicFontOfSize:(CGFloat)size;
 @end
 
 @interface IGImageSpecifier : NSObject
@@ -228,6 +299,11 @@
 
 @interface IGStoryFullscreenSectionController : NSObject
 @property (nonatomic, strong, readwrite) IGMedia *currentStoryItem;
+- (BOOL)audioEnabled;
+- (void)setAudioEnabled:(BOOL)enabled reason:(long long)reason;
+- (void)didUpdateToObject:(id)object;
+- (void)didSelectItemAtIndex:(long long)index;
+- (id)overlayView;
 @end
 
 @interface IGStoriesMidcardsController : NSObject
@@ -238,6 +314,7 @@
 
 @interface IGStoryVideoView : UIView
 @property (nonatomic, weak, readwrite) IGStoryFullscreenSectionController *captionDelegate;
+@property (nonatomic, readonly) BOOL isAudioAvailable;
 @end
 
 @interface IGStoryModernVideoView : UIView
@@ -252,6 +329,12 @@
 // Real superclass is IGViewController; UIViewController is enough for the
 // appearance callbacks Sparkle hooks here.
 @interface IGStoryViewerViewController : UIViewController
+@end
+
+@interface IGAudioStatusAnnouncer : NSObject
++ (instancetype)sharedInstance;
+- (BOOL)isAudioEnabledForSoundBehavior:(long long)behavior;
+- (void)_announceForDeviceStateChangesIfNeededForAudioEnabled:(BOOL)enabled reason:(long long)reason;
 @end
 
 @interface IGDirectVisualMessageViewerController : UIViewController
@@ -270,6 +353,73 @@
 - (id)rawVideo;
 @end
 
+// Receives every realtime presence update for users IG tracks. The selector is
+// unchanged across 410.1.0 through 438.0.0; only the owning framework moved.
+//
+// Note this is only the realtime *push* path. IG also populates presence by
+// fetching (see the periodic scheduler and inbox fetch), and those updates never
+// reach this callback, so it is not a complete view of what IG knows.
+@interface IGPresenceManager : NSObject
+- (void)presenceRealtimeDataProvider:(id)provider
+             didReceiveUpdateForUserPk:(id)pk
+                              isActive:(BOOL)isActive
+                      lastActivityAtMs:(double)lastActivityAtMs
+                          capabilities:(unsigned long long)capabilities
+                         correlationId:(id)correlationId
+                         isCloseFriend:(BOOL)isCloseFriend;
+// The store IG itself reads to draw activity dots, regardless of how the state
+// got there. Values are IGPresenceState, an opaque value object.
+- (id)presenceStatesByUserPk;
+- (id)presenceStateForUser:(id)user;
+@end
+
+// Presence poll timer owned by IGPresenceManager. IG picks the interval at
+// session setup; Sparkle updates the stored interval and restarts this timer
+// when the active account's accuracy settings change.
+@interface IGPresencePeriodicScheduler : NSObject
+- (id)initWithIntervalInSeconds:(unsigned long long)seconds block:(id)block;
+- (void)stop;
+- (void)start;
+@end
+
+// Server-driven gating values for Direct. `activeNowGracePeriod` is how long IG
+// keeps drawing someone as active after their last activity, which is why the
+// green dot outlives the actual session. Absent before 411, where the grace
+// period is not exposed as a gate at all.
+@interface IGDirectGatingService : NSObject
+- (long long)activeNowGracePeriod;
+// Some builds synthesize this cached getter at runtime even though it is omitted
+// from their dumped declaration. The selector is probed before its hook group
+// is installed.
+- (NSNumber *)activeNowGracePeriodCacheValue;
+@end
+
+// One typing event. Carries the sender pk directly, so typing does not have to be
+// resolved through the thread it arrived on. Identical across 410.1.0 and 443.0.0.
+@interface IGDirectTypingStatus : NSObject
+@property (readonly, nonatomic) NSString *threadId;
+@property (readonly, nonatomic) NSString *userPk;
+@property (readonly, nonatomic) NSDate *sentDate;
+@property (readonly, nonatomic) BOOL isActive;
+@property (readonly, nonatomic) double lifetime;
+@end
+
+// Instagram's UNUserNotificationCenterDelegate. Decides what happens to a
+// notification that arrives while the app is in the foreground; it recognizes only
+// its own, so anything else is presented as nothing at all.
+@interface IGAppCoordinator : NSObject
+- (void)userNotificationCenter:(id)center willPresentNotification:(id)notification withCompletionHandler:(id)handler;
+@end
+
+// Holds the live typing state for every thread. The dictionary is replaced
+// wholesale on each change, so its setter is the one funnel every incoming typing
+// update passes through. Value shape is not contractual, hence the defensive walk
+// in the hook.
+@interface IGDirectTypingStatusService : NSObject
+@property (copy) NSDictionary *threadIdToTypingStatuses;
+- (id)updatedTypingStatusesForThreadId:(id)threadId;
+@end
+
 @interface IGUser : NSObject
 @property NSInteger followStatus;
 @property (copy) NSString *username;
@@ -280,6 +430,15 @@
 @property IGUser *user;
 @end
 
+// The follow controller ships as an Objective-C class on older builds and as a Swift class on newer
+// ones. Both expose this, so Sparkle asks whichever is present through a shared shape.
+@protocol SPKFollowControlling <NSObject>
+@property (nonatomic, readonly) BOOL canShowRelationshipSheetWhenFollowing;
+// Set by the surfaces whose follow control turns into a Message button once the account is
+// followed. Only newer builds expose it to the Objective-C runtime.
+@property (nonatomic, readonly) BOOL showMessageButtonWhenFollowing;
+@end
+
 @interface IGCoreTextView : UIView
 @property (nonatomic, strong) NSString *text;
 - (void)addHandleLongPress;                                     // new
@@ -288,6 +447,9 @@
 
 @interface IGUserSession : NSObject
 @property (readonly, nonatomic) IGUser *user;
+// Category on IGUserSession in IG, so it is only present once the presence
+// subsystem is linked in; always respondsToSelector: before calling.
+- (id)presenceManager;
 @end
 
 @interface IGWindow : UIWindow
@@ -368,6 +530,12 @@
 // presence line rendered into the cell's social-context label (Full Last Active).
 @interface IGDSSegmentedPillBarView : UIView
 - (id)delegate;
+- (CGSize)sizeThatFits:(CGSize)size expanded:(BOOL)expanded;
+@end
+
+@interface IGExploreChipBarView : UIView
+- (void)configureWith:(id)topics;
+- (CGSize)sizeThatFits:(CGSize)size expanded:(BOOL)expanded;
 @end
 
 @interface IGImageWithAccessoryButton : IGTapButton
@@ -531,8 +699,40 @@
 - (void)didTapLikeButton;
 @end
 
+// Reels viewer footer. IG 443+ uses the Swift feed-footer implementation and
+// represents the fake comment composer with a dedicated config/content pair.
+@interface _TtC19IGSundialFeedFooter30IGSundialViewerBottomBarConfig : NSObject
+@end
+
+@interface _TtC19IGSundialFeedFooter37IGSundialViewerBottomBarCommentConfig : _TtC19IGSundialFeedFooter30IGSundialViewerBottomBarConfig
+@end
+
+@interface _TtC19IGSundialFeedFooter24IGSundialViewerBottomBar : UIView
+@property (nonatomic, retain) _TtC19IGSundialFeedFooter30IGSundialViewerBottomBarConfig *config;
+@end
+
+@interface _TtC19IGSundialFeedFooter42IGSundialViewerBottomBarCommentContentView : UIView
+@end
+
+// IG 410 uses one Objective-C bottom bar. Its initializer already exposes the
+// native switch that removes only the fake comment composer while preserving a
+// CTA when one is present.
+@interface IGSundialViewerBottomBar : UIView
+- (instancetype)initWithCTAButtonType:(NSInteger)type
+                   fakeComposerEnabled:(BOOL)enabled
+                      commentBarDisabled:(BOOL)disabled;
+@end
+
 @interface IGMainAppSurfaceIntent : NSObject
 - (id)tabStringFromSurfaceIntent;
+@end
+
+@protocol IGSundialFeedSource <NSObject>
+@property (readonly, nonatomic) BOOL isReelsHomeOrTab;
+@end
+
+@interface IGSundialFeedDataSource : NSObject
+- (NSArray *)objectsForListAdapter:(id)adapter;
 @end
 
 @interface IGSundialFeedViewController : UIViewController
@@ -559,6 +759,22 @@
 @interface IGStoryTrayViewModel : NSObject
 @property (nonatomic, readonly) NSString *pk;
 @property (nonatomic, readonly) BOOL isUnseenNux;
+- (id)diffIdentifier;
+@end
+
+// One reel inside the story viewer. Resurfaced highlights carry a reelPK of the
+// form "highlightRewind:<id>".
+@interface IGStoryViewerViewModel : NSObject
+@property (nonatomic, readonly, copy) NSString *reelPK;
+@end
+
+// Backing store for the reel list the story viewer pages through. The view
+// controller keeps its own copy for tap-forward navigation, while horizontal
+// swipes are driven by the list adapter reading this store.
+@interface IGStoryViewerDataStore : NSObject
+- (id)modelItems;
+- (void)replaceModelItems:(id)items;
+- (void)replaceModelItems:(id)items maxCount:(long long)count;
 @end
 
 @interface _TtC32IGSundialOrganicCTAContainerView32IGSundialOrganicCTAContainerView : UIView
@@ -789,4 +1005,26 @@ typedef FLEXAlertAction *_Nonnull (^FLEXAlertActionHandler)(void (^handler)(NSAr
 @interface IGAccountSwitcher : NSObject
 - (long long)switchToUser:(id)user destinationAppSurface:(id)surface destinationURL:(id)url entryPoint:(long long)point loggingData:(id)data;
 - (long long)switchToUserWithPK:(id)pk destinationAppSurface:(id)surface destinationURL:(id)url entryPoint:(long long)point loggingData:(id)data;
+@end
+
+// Instagram's follow control. Declared as a protocol because the class itself is
+// plain Objective-C on older builds and a Swift class on newer ones, so it is
+// resolved by name at runtime and messaged through this contract. Mirrors
+// IGFollowButtonConforming; the control is a UIControl, not a UIButton, and it
+// renders its own attributed title, so setTitle:forState: does not exist on it.
+@protocol SPKIGFollowButtonConforming <NSObject>
+- (instancetype)initWithViewConfiguration:(id)configuration;
+- (void)setViewConfiguration:(id)configuration;
+@property (nonatomic) long long buttonState;
+@property (nonatomic, readonly) UILabel *titleLabel;
+@property (nonatomic) double minimumWidth;
+@property (nonatomic) double maximumWidth;
+- (void)setIsShimmering:(BOOL)shimmering;
+@end
+
+// Value object describing the follow control's appearance. Stays Objective-C on
+// every supported build; the category carrying the default factory was renamed
+// between versions but the selector itself did not change.
+@interface IGFollowButtonViewConfiguration : NSObject
++ (instancetype)defaultButtonConfiguration;
 @end

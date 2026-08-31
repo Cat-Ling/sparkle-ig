@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKHeaderButtonDefaultActionPickerViewController.h"
 
 #import "../AssetUtils.h"
@@ -29,7 +30,7 @@ static NSString *const kSPKHeaderPickerCellIdentifier = @"SPKHeaderDefaultPicker
 
     SPKHeaderPickerRow *menuRow = [SPKHeaderPickerRow new];
     menuRow.identifier = @"menu";
-    menuRow.title = @"Open Menu";
+    menuRow.title = SPKL(@"FEED_HEADER_ACTION_BUTTON_OPEN_MENU_TEXT");
     menuRow.iconName = @"action";
     [rows addObject:menuRow];
 
@@ -51,7 +52,7 @@ static NSString *const kSPKHeaderPickerCellIdentifier = @"SPKHeaderDefaultPicker
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"Default Tap Action";
+    self.title = SPKL(@"SPKTOPICSETTINGSSUPPORT_GENERAL_DEFAULT_TAP_ACTION_TITLE");
     self.navigationController.navigationBar.prefersLargeTitles = NO;
     self.view.backgroundColor = [SPKUtils SPKColor_InstagramGroupedBackground];
     self.rows = [self buildRows];
@@ -80,7 +81,7 @@ static NSString *const kSPKHeaderPickerCellIdentifier = @"SPKHeaderDefaultPicker
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
-    return @"Choose what a single tap does. Long press always opens the menu of enabled destinations.";
+    return SPKL(@"SETTINGS_HEADER_BUTTON_DEFAULT_ACTION_PICKER_CHOOSE_WHAT_SINGLE_TAP_LONG_PRESS_ALWAYS_OPENS_MENU_TEXT");
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {

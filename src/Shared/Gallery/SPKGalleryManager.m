@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKGalleryManager.h"
 #import <CommonCrypto/CommonKeyDerivation.h>
 #import <LocalAuthentication/LocalAuthentication.h>
@@ -62,7 +63,7 @@ static size_t const kPBKDF2KeyLength = 32;
 }
 
 - (NSString *)protectedContentName {
-    return @"Gallery";
+    return SPKL(@"GALLERY_TITLE");
 }
 
 - (void)lockContent {
@@ -298,7 +299,7 @@ static size_t const kPBKDF2KeyLength = 32;
     self.activeBiometricContext = ctx;
     __weak typeof(self) weakSelf = self;
     [ctx evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
-        localizedReason:[NSString stringWithFormat:@"Unlock %@", [self protectedContentName]]
+        localizedReason:[NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_MANAGER_UNLOCK_VALUE_FORMAT"), [self protectedContentName]]
                   reply:^(BOOL success, NSError *evalErr) {
                       dispatch_async(dispatch_get_main_queue(), ^{
                           typeof(self) strongSelf = weakSelf;

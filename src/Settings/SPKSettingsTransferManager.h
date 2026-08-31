@@ -16,6 +16,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// Runs synchronously — call off the main thread.
 + (nullable NSString *)expandZipArchiveAtURL:(NSURL *)archiveURL error:(NSError **)error;
 
+/// Writes every file under `directory` into a STORED `.zip` at `zipPath`. The
+/// counterpart of `expandZipArchiveAtURL:error:`, exposed for the same reason:
+/// small exports (a language pack, say) should not carry a second zip writer.
+/// Runs synchronously — call off the main thread.
++ (BOOL)writeZipArchiveFromDirectory:(NSString *)directory toPath:(NSString *)zipPath error:(NSError **)error;
+
 // Restores a single grouped, multi-key configuration (e.g. Advanced Encoding, a
 // surface's Action Button layout) to its built-in defaults for the active account,
 // leaving all other preferences — and other accounts' overrides — untouched. Confirms

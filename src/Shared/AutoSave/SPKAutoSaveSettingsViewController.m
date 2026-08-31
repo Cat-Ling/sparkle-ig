@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKAutoSaveSettingsViewController.h"
 
 #import "../../Settings/SPKSetting.h"
@@ -14,45 +15,42 @@
 
 + (NSDictionary *)destinationSection {
     BOOL toPhotos = SPKAutoSaveDestination() == SPKDownloadDestinationPhotos;
-    SPKSetting *destination = [SPKSetting menuCellWithTitle:@"Save To"
+    SPKSetting *destination = [SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_SAVE_TITLE")
                                                        icon:SPKSettingsIcon(toPhotos ? @"photo_gallery" : @"sparkle_gallery")
                                                        menu:SPKAutoSaveDestinationMenu()];
 
-    return SPKTopicSection(@"Destination", @[ destination ],
-                           @"Where auto-saved media lands, for every surface. Sparkle Gallery keeps it inside the tweak. "
-                           @"Photos App saves it to your photo library, which iOS asks permission for the first time. "
-                           @"Each destination is tracked separately, so switching saves items the other one already has.");
+    destination.helpText = SPKL(@"AUTO_SAVE_DESTINATION_HELP");
+
+    return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_DESTINATION_HEADER"), @[ destination ], nil);
 }
 
 + (NSDictionary *)qualitySection {
     BOOL ffmpegAvailable = [SPKMediaFFmpeg isAvailable];
 
-    SPKSetting *videoQuality = [SPKSetting menuCellWithTitle:@"Video Quality"
-                                                    subtitle:(ffmpegAvailable ? @"" : @"Requires FFmpegKit")
+    SPKSetting *videoQuality = [SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_VIDEO_QUALITY_TITLE")
+                                                    subtitle:(ffmpegAvailable ? @"" : SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_REQUIRES_FFMPEGKIT_TEXT"))
                                                         icon:SPKSettingsIcon(@"video")
                                                         menu:SPKAutoSaveVideoQualityMenu()];
     videoQuality.userInfo = @{@"enabled" : @(ffmpegAvailable)};
+    videoQuality.helpText = SPKL(@"AUTO_SAVE_VIDEO_QUALITY_HELP");
 
-    return SPKTopicSection(@"Quality", @[
-        [SPKSetting menuCellWithTitle:@"Photo Quality"
-                                 icon:SPKSettingsIcon(@"photo")
-                                 menu:SPKAutoSavePhotoQualityMenu()],
+    return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"), @[
+        [SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_PHOTO_QUALITY_TITLE")
+                                  icon:SPKSettingsIcon(@"photo")
+                                  menu:SPKAutoSavePhotoQualityMenu()],
         videoQuality,
     ],
-                           @"1. Preferred quality for auto-saved photos.\n"
-                           @"2. \"Default\" takes Instagram's ready-to-play file, which is fastest and re-encodes nothing. "
-                           @"\"High\" merges DASH video and audio for the best quality, at the cost of an FFmpeg pass for "
-                           @"every item saved. Auto-save never prompts, so there is no \"Always Ask\".");
+                           nil);
 }
 
 + (NSDictionary *)feedbackSection {
-    return SPKTopicSection(@"History", @[
-        [SPKSetting switchCellWithTitle:@"Keep in Download History"
-                                   icon:SPKSettingsIcon(@"history")
-                            defaultsKey:kSPKAutoSaveKeepHistoryKey],
+    return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_HISTORY_HEADER"), @[
+        SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_KEEP_DOWNLOAD_HISTORY_TITLE")
+                                       icon:SPKSettingsIcon(@"history")
+                                defaultsKey:kSPKAutoSaveKeepHistoryKey],
+                           SPKL(@"AUTO_SAVE_KEEP_HISTORY_HELP")),
     ],
-                           @"Auto-saves are removed from the download history once saved. Enable to keep them listed. "
-                           @"Every auto-save toast is configured under Notifications, in its own Auto-Save section.");
+                           nil);
 }
 
 + (SPKSetting *)surfaceRowWithTitle:(NSString *)title
@@ -67,20 +65,21 @@
     row.searchSectionsProvider = ^NSArray * {
         return [surfaceClass searchSections];
     };
+    row.helpText = SPKL(@"AUTO_SAVE_SURFACE_ROW_HELP");
     return row;
 }
 
 + (NSDictionary *)surfacesSection {
-    return SPKTopicSection(@"Surfaces", @[
-        [self surfaceRowWithTitle:@"Stories"
+    return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_SURFACES_HEADER"), @[
+        [self surfaceRowWithTitle:SPKL(@"STORIES_OTHER_STORIES_TITLE")
                              icon:@"story"
                           summary:SPKStoryAutoSaveSettingsSummary()
                      surfaceClass:[SPKAutoSaveStoriesSettingsViewController class]],
-        [self surfaceRowWithTitle:@"Messages"
+        [self surfaceRowWithTitle:SPKL(@"MESSAGES_CONFIRMATION_MESSAGES_TITLE")
                              icon:@"messages"
                           summary:SPKDirectAutoSaveSettingsSummary()
                      surfaceClass:[SPKAutoSaveMessagesSettingsViewController class]],
-        [self surfaceRowWithTitle:@"Instants"
+        [self surfaceRowWithTitle:SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE")
                              icon:@"instants"
                           summary:SPKInstantsAutoSaveSettingsSummary()
                      surfaceClass:[SPKAutoSaveInstantsSettingsViewController class]],
@@ -102,7 +101,7 @@
 }
 
 - (instancetype)init {
-    return [super initWithTitle:@"Auto-Save" sections:[[self class] contentSections] reduceMargin:NO];
+    return [super initWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_AUTO_SAVE_HEADER") sections:[[self class] contentSections] reduceMargin:NO];
 }
 
 - (void)viewWillAppear:(BOOL)animated {

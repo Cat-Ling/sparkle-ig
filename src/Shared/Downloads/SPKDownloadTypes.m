@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "SPKDownloadTypes.h"
 
 NSErrorDomain const SPKDownloadErrorDomain = @"com.sparkle.download";
@@ -22,6 +23,54 @@ NSError *SPKDownloadError(SPKDownloadErrorCode code, NSString *description, NSSt
     if (recovery.length > 0)
         info[NSLocalizedRecoverySuggestionErrorKey] = recovery;
     return [NSError errorWithDomain:SPKDownloadErrorDomain code:code userInfo:info];
+}
+
+NSString *SPKDownloadErrorDisplayDescription(NSError *error) {
+    if (!error)
+        return nil;
+
+    NSString *liveDescription = error.userInfo[NSLocalizedDescriptionKey];
+    if (liveDescription.length > 0)
+        return liveDescription;
+
+    if ([error.domain isEqualToString:SPKDownloadErrorDomain]) {
+        switch ((SPKDownloadErrorCode)error.code) {
+        case SPKDownloadErrorInvalidURL:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_INVALID_DOWNLOAD_URL_TEXT");
+        case SPKDownloadErrorUnsupportedScheme:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_ONLY_HTTP_HTTPS_URLS_SUPPORTED_TEXT");
+        case SPKDownloadErrorExpiredURL:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_MEDIA_URL_EXPIRED_REFRESH_TRY_AGAIN_TEXT");
+        case SPKDownloadErrorHTTPFailure:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_SCHEDULER_DOWNLOAD_FAILED_TEXT");
+        case SPKDownloadErrorEmptyFile:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_DOWNLOADED_FILE_EMPTY_TEXT");
+        case SPKDownloadErrorInvalidContentType:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_INSTAGRAM_RETURNED_UNEXPECTED_RESPONSE_TEXT");
+        case SPKDownloadErrorFileMoveFailed:
+        case SPKDownloadErrorDiskFull:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_TRANSFER_COULD_NOT_STORE_DOWNLOADED_FILE_TEXT");
+        case SPKDownloadErrorPhotosPermissionDenied:
+        case SPKDownloadErrorPhotosSaveFailed:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_DESTINATION_WRITER_COULD_NOT_SAVE_PHOTOS_CHECK_PHOTO_LIBRARY_PERMISSION_TEXT");
+        case SPKDownloadErrorGallerySaveFailed:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_DESTINATION_WRITER_COULD_NOT_SAVE_GALLERY_TEXT");
+        case SPKDownloadErrorSharePresentationFailed:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_DESTINATION_WRITER_COULD_NOT_PRESENT_SHARE_SHEET_TEXT");
+        case SPKDownloadErrorClipboardTooLarge:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_DESTINATION_WRITER_FILE_TOO_LARGE_COPY_CLIPBOARD_TEXT");
+        case SPKDownloadErrorDuplicateSkipped:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_SCHEDULER_SKIPPED_DUPLICATE_TEXT");
+        case SPKDownloadErrorCancelled:
+            return SPKL(@"DOWNLOADS_SCHEDULER_DOWNLOAD_CANCELLED_ERROR");
+        case SPKDownloadErrorInterrupted:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_JOB_INTERRUPTED_INSTAGRAM_EXITED_TEXT");
+        case SPKDownloadErrorAudioPhotosUnsupported:
+            return SPKL(@"DOWNLOADS_DOWNLOAD_DESTINATION_WRITER_AUDIO_CANNOT_SAVED_PHOTOS_TEXT");
+        }
+    }
+
+    return SPKL(@"DOWNLOADS_DOWNLOADS_HISTORY_UNKNOWN_ERROR_OCCURRED_TEXT");
 }
 
 BOOL SPKDownloadStateIsTerminal(SPKDownloadState state) {
@@ -115,42 +164,42 @@ SPKDownloadState SPKDownloadDerivedJobState(NSArray<NSNumber *> *itemStates) {
 NSString *SPKDownloadDestinationDisplayName(SPKDownloadDestination destination) {
     switch (destination) {
     case SPKDownloadDestinationPhotos:
-        return @"Photos";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_PHOTOS_TEXT");
     case SPKDownloadDestinationGallery:
-        return @"Gallery";
+        return SPKL(@"GALLERY_TITLE");
     case SPKDownloadDestinationShare:
-        return @"Share";
+        return SPKL(@"ALERT_ACTION_SHARE");
     case SPKDownloadDestinationClipboard:
-        return @"Clipboard";
+        return SPKL(@"DOWNLOADS_DOWNLOAD_TYPES_CLIPBOARD_TEXT");
     case SPKDownloadDestinationCacheOnly:
-        return @"Download";
+        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT");
     }
-    return @"Download";
+    return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CONFIGURATION_DOWNLOAD_TEXT");
 }
 
 NSString *SPKDownloadSourceSurfaceDisplayName(SPKDownloadSourceSurface surface) {
     switch (surface) {
     case SPKDownloadSourceSurfaceFeed:
-        return @"Feed";
+        return SPKL(@"FEED_TITLE");
     case SPKDownloadSourceSurfaceReels:
-        return @"Reels";
+        return SPKL(@"REELS_TITLE");
     case SPKDownloadSourceSurfaceStories:
-        return @"Stories";
+        return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKDownloadSourceSurfaceDirect:
-        return @"Direct";
+        return SPKL(@"GALLERY_FILTER_MESSAGES_LABEL");
     case SPKDownloadSourceSurfaceAudioPage:
-        return @"Audio";
+        return SPKL(@"GALLERY_GALLERY_FILE_AUDIO_PAGE_TEXT");
     case SPKDownloadSourceSurfaceMediaPreview:
-        return @"Preview";
+        return SPKL(@"NOTIFICATION_PREVIEW_HEADER");
     case SPKDownloadSourceSurfaceGallery:
-        return @"Gallery";
+        return SPKL(@"GALLERY_TITLE");
     case SPKDownloadSourceSurfaceProfile:
-        return @"Profile";
+        return SPKL(@"PROFILE_TITLE");
     case SPKDownloadSourceSurfaceInstants:
-        return @"Instants";
+        return SPKL(@"INSTANTS_CONFIRMATION_INSTANTS_TITLE");
     case SPKDownloadSourceSurfaceComments:
-        return @"Comments";
+        return SPKL(@"GENERAL_COMMENTS_HEADER");
     default:
-        return @"Other";
+        return SPKL(@"STORIES_OTHER_HEADER");
     }
 }

@@ -6,6 +6,7 @@
 #import "SPKPerfMeter.h"
 #import "SPKStabilityGuard.h"
 #import "SPKStartupProfiler.h"
+#import "../Shared/Navigation/SPKTabConfiguration.h"
 
 static BOOL sSPKAppDidBecomeActive = NO;
 static BOOL sSPKStagedHooksFinished = NO;
@@ -50,16 +51,7 @@ static void SPKScheduleHookPhase(NSTimeInterval delay, NSString *name, dispatch_
 }
 
 static BOOL SPKIsMessagesOnlyMode(void) {
-    BOOL msgsVisible = ![SPKUtils getBoolPref:@"interface_hide_msgs_tab"];
-    BOOL feedHidden = [SPKUtils getBoolPref:@"interface_hide_feed_tab"];
-    BOOL exploreHidden = [SPKUtils getBoolPref:@"interface_hide_explore_tab"];
-    BOOL reelsHidden = [SPKUtils getBoolPref:@"interface_hide_reels_tab"];
-    BOOL profileHidden = [SPKUtils getBoolPref:@"interface_hide_profile_tab"];
-    
-    BOOL usesClassic = [[SPKUtils getStringPref:@"interface_nav_order"] isEqualToString:@"classic"];
-    BOOL createHidden = !usesClassic || [SPKUtils getBoolPref:@"interface_hide_create_tab"];
-    
-    return msgsVisible && feedHidden && exploreHidden && reelsHidden && profileHidden && createHidden;
+    return [SPKSingleVisibleTabIdentifierFromPreferences() isEqualToString:SPKTabIdentifierDirect];
 }
 
 static void SPKScheduleStagedFeatureHooks(void) {

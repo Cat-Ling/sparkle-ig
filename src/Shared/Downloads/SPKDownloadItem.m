@@ -50,14 +50,11 @@
     if (self.error) {
         d[@"errorDomain"] = self.error.domain;
         d[@"errorCode"] = @(self.error.code);
-        d[@"errorDescription"] = self.error.localizedDescription;
     }
     d[@"mediaKind"] = @(self.mediaKind);
     if (self.linkString)
         d[@"linkString"] = self.linkString;
     d[@"retryable"] = @(self.retryable);
-    if (self.detail)
-        d[@"detail"] = self.detail;
     d[@"request"] = [self.request dictionaryRepresentation];
     return d;
 }
@@ -76,14 +73,13 @@
     item.stagedPath = dict[@"stagedPath"];
     item.finalPath = dict[@"finalPath"];
     item.photosAssetIdentifier = dict[@"photosAssetIdentifier"];
-    if (dict[@"errorDescription"]) {
+    if (dict[@"errorDomain"] || dict[@"errorCode"] || dict[@"errorDescription"]) {
         NSString *domain = dict[@"errorDomain"] ?: SPKDownloadErrorDomain;
-        item.error = [NSError errorWithDomain:domain code:[dict[@"errorCode"] integerValue] userInfo:@{NSLocalizedDescriptionKey : dict[@"errorDescription"]}];
+        item.error = [NSError errorWithDomain:domain code:[dict[@"errorCode"] integerValue] userInfo:@{}];
     }
     item.mediaKind = [dict[@"mediaKind"] integerValue];
     item.linkString = dict[@"linkString"];
     item.retryable = [dict[@"retryable"] boolValue];
-    item.detail = dict[@"detail"];
     return item;
 }
 

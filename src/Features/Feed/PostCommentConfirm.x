@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import "../../Utils.h"
 
 %group SPKPostCommentConfirmHooks
@@ -11,8 +12,8 @@
             showConfirmation:^(void) {
                 %orig;
             }
-                       title:@"Confirm Comment Post"
-                     message:@"Are you sure you want to post this comment?"];
+                       title:SPKL(@"FEED_POST_COMMENT_CONFIRM_CONFIRM_COMMENT_POST_TEXT")
+                     message:SPKL(@"FEED_POST_COMMENT_CONFIRM_POST_COMMENT_CONFIRMATION_MESSAGE")];
     } else {
         return %orig;
     }

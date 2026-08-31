@@ -1,3 +1,4 @@
+#import "SPKStrings.h"
 #import <objc/message.h>
 #import <objc/runtime.h>
 #import <substrate.h>
@@ -7,11 +8,13 @@
 #import "../../Shared/Gallery/SPKGalleryFile.h"
 #import "../../Shared/Gallery/SPKGalleryOriginController.h"
 #import "../../Shared/Gallery/SPKGallerySaveMetadata.h"
+#import "../../Shared/Giphy/SPKGiphyMetadata.h"
 #import "../../Shared/UI/SPKNotificationCenter.h"
 #import "../../Utils.h"
 
 static NSString *const kSPKCommentCopyTextPref = @"general_comments_copy_text";
 static NSString *const kSPKCommentMediaActionsPref = @"general_comments_media_actions";
+static NSString *const kSPKCommentGIFTitlePref = @"general_comments_gif_title";
 
 static id SPKCommentObjectForSelector(id object, NSString *selectorName) {
     if (!object || selectorName.length == 0)
@@ -163,6 +166,47 @@ static UIAction *SPKCommentAction(NSString *title, NSString *iconName, void (^ha
                              }];
 }
 
+/// Row shown once the Giphy lookup resolves: the GIF's name, the channel that
+/// uploaded it as a subtitle, and a tap that copies the name.
+static UIAction *SPKCommentGIFTitleAction(SPKGiphyMetadata *metadata) {
+    UIAction *action = SPKCommentAction(metadata.title, @"info", ^{
+        UIPasteboard.generalPasteboard.string = metadata.title;
+        SPKNotify(kSPKNotificationCopyGIFTitle, SPKL(@"FEED_COMMENT_ACTIONS_GIF_TITLE_COPIED_TITLE"), nil, @"copy_filled", SPKNotificationToneSuccess);
+    });
+    if (metadata.author.length > 0) {
+        action.subtitle = [NSString stringWithFormat:SPKL(@"FEED_COMMENT_ACTIONS_VALUE_FORMAT"), metadata.author];
+    }
+    return action;
+}
+
+static UIAction *SPKCommentGIFTitleUnavailableAction(void) {
+    UIAction *action = SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_TITLE_UNAVAILABLE_TITLE"), @"info", nil);
+    action.attributes = UIMenuElementAttributesDisabled;
+    return action;
+}
+
+/// Inline section that resolves the GIF's title only once the menu is actually
+/// opened. The lookup is a request to giphy.com, so it must stay tied to this
+/// deliberate user action rather than running while GIFs scroll past.
+static NSArray<UIMenuElement *> *SPKCommentGIFTitleElements(NSString *gifID) {
+    if (gifID.length == 0 || ![SPKUtils getBoolPref:kSPKCommentGIFTitlePref])
+        return @[];
+
+    SPKGiphyMetadata *cached = [SPKGiphyMetadataResolver cachedMetadataForGifMediaId:gifID];
+    if (cached)
+        return @[ SPKCommentGIFTitleAction(cached) ];
+
+    UIDeferredMenuElement *element = [UIDeferredMenuElement
+        elementWithUncachedProvider:^(void (^completion)(NSArray<UIMenuElement *> *elements)) {
+            [SPKGiphyMetadataResolver resolveMetadataForGifMediaId:gifID
+                                                        completion:^(SPKGiphyMetadata *metadata) {
+                                                            completion(@[ metadata ? SPKCommentGIFTitleAction(metadata)
+                                                                                   : SPKCommentGIFTitleUnavailableAction() ]);
+                                                        }];
+        }];
+    return @[ element ];
+}
+
 static NSArray<UIMenuElement *> *SPKCommentMediaActionItems(id comment, NSURL *url, NSString *extension, UIImage *localImage, NSString *mediaID, NSString *copyLinkTitle, NSString *linkURLString, NSString *copyLinkToastMessage) {
     SPKGallerySaveMetadata *metadata = SPKCommentMediaMetadata(comment, mediaID, url.absoluteString);
     void (^performDownload)(SPKDownloadDestination) = ^(SPKDownloadDestination destination) {
@@ -174,16 +218,16 @@ static NSArray<UIMenuElement *> *SPKCommentMediaActionItems(id comment, NSURL *u
     };
 
     NSMutableArray<UIMenuElement *> *actions = [NSMutableArray array];
-    [actions addObject:SPKCommentAction(@"Save to Photos", @"download", ^{
+    [actions addObject:SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_SAVE_PHOTOS_TEXT"), @"download", ^{
                  performDownload(SPKDownloadDestinationPhotos);
              })];
     [actions addObject:SPKCommentAction(@"Share", @"share", ^{
                  performDownload(SPKDownloadDestinationShare);
              })];
-    [actions addObject:SPKCommentAction(@"Save to Gallery", @"sparkle_gallery", ^{
+    [actions addObject:SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_SAVE_GALLERY_TEXT"), @"sparkle_gallery", ^{
                  performDownload(SPKDownloadDestinationGallery);
              })];
-    [actions addObject:SPKCommentAction(@"Copy", @"copy", ^{
+    [actions addObject:SPKCommentAction(SPKL(@"FEED_COMMENT_ACTIONS_COPY_TEXT"), @"copy", ^{
                  performDownload(SPKDownloadDestinationClipboard);
              })];
 
@@ -224,8 +268,12 @@ static id SPKCommentContextMenu(id self, SEL _cmd, id collectionView, id indexPa
         offersPhotoActions = mediaActionsEnabled && (isPhotoComment || photoURLString.length > 0 || photoLocalImage != nil);
     }
 
+    // Independent of the media actions toggle: the title is useful even when the
+    // download actions are switched off.
+    NSArray<UIMenuElement *> *gifTitleElements = SPKCommentGIFTitleElements(gifID);
+
     BOOL offersCopyText = text.length > 0 && [SPKUtils getBoolPref:kSPKCommentCopyTextPref];
-    if (!offersCopyText && !offersGIFActions && !offersPhotoActions)
+    if (!offersCopyText && !offersGIFActions && !offersPhotoActions && gifTitleElements.count == 0)
         return configuration;
 
     UIContextMenuActionProvider originalProvider = [configuration valueForKey:@"actionProvider"];
@@ -235,18 +283,20 @@ static id SPKCommentContextMenu(id self, SEL _cmd, id collectionView, id indexPa
         UIMenu *baseMenu = originalProvider ? originalProvider(suggestedActions) : [UIMenu menuWithChildren:suggestedActions];
         NSMutableArray<UIMenuElement *> *extraActions = [NSMutableArray array];
 
+        [extraActions addObjectsFromArray:gifTitleElements];
+
         if (offersCopyText) {
-            [extraActions addObject:SPKCommentAction(@"Copy Comment", @"copy", ^{
+            [extraActions addObject:SPKCommentAction(SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_TITLE"), @"copy", ^{
                               UIPasteboard.generalPasteboard.string = text;
-                              SPKNotify(kSPKNotificationCopyComment, @"Comment copied", nil, @"copy_filled", SPKNotificationToneSuccess);
+                              SPKNotify(kSPKNotificationCopyComment, SPKL(@"FEED_COMMENT_ACTIONS_COMMENT_COPIED_TEXT"), nil, @"copy_filled", SPKNotificationToneSuccess);
                           })];
         }
 
         if (offersGIFActions) {
             NSURL *gifURL = [NSURL URLWithString:gifURLString];
             NSString *pageURLString = gifID.length > 0 ? [NSString stringWithFormat:@"https://giphy.com/gifs/%@", gifID] : gifURLString;
-            NSArray<UIMenuElement *> *gifActions = SPKCommentMediaActionItems(comment, gifURL, @"gif", nil, gifID, @"Copy GIF Link", pageURLString, @"GIF link copied");
-            [extraActions addObject:[UIMenu menuWithTitle:@"GIF Actions"
+            NSArray<UIMenuElement *> *gifActions = SPKCommentMediaActionItems(comment, gifURL, @"gif", nil, gifID, SPKL(@"FEED_COMMENT_ACTIONS_COPY_GIF_LINK_TEXT"), pageURLString, SPKL(@"FEED_COMMENT_ACTIONS_GIF_LINK_COPIED_TEXT"));
+            [extraActions addObject:[UIMenu menuWithTitle:SPKL(@"MENU_GIF_ACTIONS")
                                                     image:SPKCommentIcon(@"action")
                                                identifier:nil
                                                   options:0
@@ -254,8 +304,8 @@ static id SPKCommentContextMenu(id self, SEL _cmd, id collectionView, id indexPa
         } else if (offersPhotoActions) {
             NSURL *photoURL = photoURLString.length > 0 ? [NSURL URLWithString:photoURLString] : nil;
             NSString *extension = photoURL.pathExtension.length > 0 ? photoURL.pathExtension : @"jpg";
-            NSArray<UIMenuElement *> *photoActions = SPKCommentMediaActionItems(comment, photoURL, extension, photoLocalImage, nil, @"Copy Download URL", photoURLString, @"Download URL copied");
-            [extraActions addObject:[UIMenu menuWithTitle:@"Photo Actions"
+            NSArray<UIMenuElement *> *photoActions = SPKCommentMediaActionItems(comment, photoURL, extension, photoLocalImage, nil, SPKL(@"FEED_COMMENT_ACTIONS_COPY_DOWNLOAD_URL_TEXT"), photoURLString, SPKL(@"FEED_COMMENT_ACTIONS_DOWNLOAD_URL_COPIED_TEXT"));
+            [extraActions addObject:[UIMenu menuWithTitle:SPKL(@"MENU_PHOTO_ACTIONS")
                                                     image:SPKCommentIcon(@"action")
                                                identifier:nil
                                                   options:0
@@ -282,7 +332,8 @@ static id SPKCommentContextMenu(id self, SEL _cmd, id collectionView, id indexPa
 
 extern "C" void SPKInstallCommentActionsHooksIfEnabled(void) {
     if (![SPKUtils getBoolPref:kSPKCommentCopyTextPref] &&
-        ![SPKUtils getBoolPref:kSPKCommentMediaActionsPref]) {
+        ![SPKUtils getBoolPref:kSPKCommentMediaActionsPref] &&
+        ![SPKUtils getBoolPref:kSPKCommentGIFTitlePref]) {
         return;
     }
 

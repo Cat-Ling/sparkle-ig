@@ -1,5 +1,21 @@
 #import "SPKDownloadRequest.h"
 #import "../Gallery/SPKGallerySaveMetadata.h"
+#import "../i18n/SPKStrings.h"
+
+static BOOL SPKDownloadRequestIsLegacyAudioFallbackTitle(NSString *title) {
+    if (title.length == 0)
+        return NO;
+    NSString *currentLanguageTitle = SPKL(@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_AUDIO_DOWNLOAD_TEXT");
+    if ([title isEqualToString:currentLanguageTitle])
+        return YES;
+    for (NSString *language in [SPKStrings supportedLanguages]) {
+        if ([title isEqualToString:[SPKStrings localized:@"AUDIO_AUDIO_DOWNLOAD_COORDINATOR_AUDIO_DOWNLOAD_TEXT"
+                                             forLanguage:language]]) {
+            return YES;
+        }
+    }
+    return NO;
+}
 
 static NSDictionary *SPKDownloadMetadataDict(SPKGallerySaveMetadata *metadata) {
     if (!metadata)
@@ -229,7 +245,11 @@ static SPKGallerySaveMetadata *SPKDownloadMetadataFromDict(NSDictionary *d) {
     request.notificationIdentifier = dict[@"notificationIdentifier"];
     request.duplicatePolicy = [dict[@"duplicatePolicy"] integerValue];
     request.qualityPolicy = [dict[@"qualityPolicy"] integerValue];
-    request.titleOverride = dict[@"titleOverride"];
+    NSString *titleOverride = [dict[@"titleOverride"] isKindOfClass:[NSString class]] ? dict[@"titleOverride"] : nil;
+    request.titleOverride = request.sourceSurface == SPKDownloadSourceSurfaceAudioPage &&
+                                    SPKDownloadRequestIsLegacyAudioFallbackTitle(titleOverride)
+                                ? nil
+                                : titleOverride;
     request.finalizeAsBatchShare = [dict[@"finalizeAsBatchShare"] boolValue];
     request.finalizeAsBatchClipboard = [dict[@"finalizeAsBatchClipboard"] boolValue];
     NSMutableArray *items = [NSMutableArray array];

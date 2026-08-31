@@ -22,6 +22,7 @@ extern NSString *const SPKDeletedMessageBubbleCellReuseID;
 
 - (void)configureWithMessage:(SPKDeletedMessage *)message
                    thumbnail:(nullable UIImage *)thumbnail
+            mediaUnavailable:(BOOL)mediaUnavailable
                     outgoing:(BOOL)outgoing;
 
 // Show a sender avatar + name above the bubble (group detail, incoming messages).
