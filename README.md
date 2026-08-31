@@ -68,8 +68,8 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
   - Build a custom tab bar with a live preview: reorder or hide destinations, choose launch and swipe behavior, trade a hidden tab for one-tap access to Saved collections in the custom layout, and drop the bar entirely when a single tab is left.
 - **Custom app font**:
   - Import your own `.otf`/`.ttf` font and use it across Instagram and Sparkle, matched per weight and previewed face by face before you pick it.
-- **17 languages**:
-  - Sparkle follows Instagram's language by default. The Translate button in Sparkle Settings opens a full language sheet with a device-wide override and a shortcut for suggesting or correcting translations. Dates use the selected language's ordering, punctuation, and month names while respecting the device's 12/24-hour clock. Built-in Action Button section names follow the selected language; names you customize remain exactly as entered. Unsupported languages fall back to English. English is the only language written by hand: every other catalog was machine translated and has not been checked by a native speaker, so some wording reads awkwardly or does not say quite what the English says. Corrections are welcome and easy to send.
+- **Language packs**:
+  - Sparkle ships in English. Other languages are community translations you install from the Translate button in Sparkle Settings, as a language pack, and remove again with a swipe. Anything a pack does not translate falls back to English. Dates use the selected language's ordering, punctuation, and month names while respecting the device's 12/24-hour clock. Built-in Action Button section names follow the selected language; names you customize remain exactly as entered. A language ships with Sparkle, no pack needed, once a native speaker has reviewed it. See [Help translate](#help-translate).
 - **Confirmations**:
   - Optional "are you sure?" guards for accidental likes, follows, reposts, calls, comments, and more.
 - **Liquid Glass (iOS 26+)**:
@@ -123,7 +123,7 @@ You can build from source locally, or fork the repo and run the **Build and Pack
 
 By default, **long-press the Home tab** or the **Profile settings button** to open Sparkle Settings. You can also enable *Show Settings on App Launch*. If you hide the Home tab, the long-press automatically moves to another visible tab so Settings is always reachable.
 
-Tap the **Translate** button in the top-right of Sparkle Settings to follow Instagram or choose Arabic, Chinese (Simplified), English, French, German, Greek, Hindi, Italian, Japanese, Korean, Portuguese (Brazil), Romanian, Russian, Spanish, Turkish, Ukrainian, or Vietnamese. System Default is selected initially. A restart applies the choice across every Instagram account. Missing translations always fall back to English.
+Tap the **Translate** button in the top-right of Sparkle Settings for the language sheet. English is the only language Sparkle ships; the same sheet imports community language packs from zip archives, exports the English strings a translation starts from, and removes an installed pack with a swipe. Importing only makes a language available; switching to it is a separate tap. A System Default row that follows Instagram appears once a pack is installed. A restart applies the choice across every Instagram account. Anything untranslated falls back to English.
 
 ## Screenshots
 
@@ -224,16 +224,18 @@ Contributions are greatly appreciated! Feel free to open a pull request.
 - New hooked IG classes/methods go in `src/InstagramHeaders.h`
 - Prefix all custom symbols with `spk_` / `SPK`.
 - Break new features into `src/Features/<Surface>/` rather than bloating `Tweak.x`.
-- Put every user-facing string behind `SPKL`, `SPKLC`, or `SPKLP`, use semantic keys, and update all 17 locale catalogs.
-- Run `tools/lint-i18n.py` before submitting any UI copy or translation change.
+- Put every user-facing string behind `SPKL`, `SPKLC`, or `SPKLP`, use semantic keys, and add the English string to `resources/Sparkle.bundle/en.lproj`.
+- Run `tools/sync-catalog-keys.py` afterwards so the community catalogs in `translations/` keep every key, then `tools/lint-i18n.py` before submitting any UI copy or translation change.
 
-### Help translate or correct a translation
+### Help translate
 
-The 16 non-English catalogs were produced by machine translation and no native speaker has reviewed them. Expect occasional unnatural phrasing, terms that should have stayed in English, and help text that describes the wrong thing. If you read one of these languages, corrections are the single most useful contribution you can make, and no coding is required.
+Sparkle ships English only. The 16 catalogs in `translations/` were produced by machine translation and no native speaker has reviewed them, which is why they are a starting point rather than something users are given by default. Expect unnatural phrasing, terms that should have stayed in English, and help text that describes the wrong setting.
 
-Tap the Translate button in Sparkle Settings and choose **Help Translate Sparkle** at the bottom of the language sheet, or [start a translation issue](https://github.com/efibalogh/sparkle-ig/issues/new?title=Translation%3A%20) directly. Include the language, the current text, the corrected text, and where it appears.
+If you read one of these languages, correcting it is the single most useful contribution you can make, and it needs no build: edit `translations/<locale>.lproj/Localizable.strings`, run `tools/lint-i18n.py --locale <locale>`, open a pull request. **A reviewed language ships with Sparkle.** Until then, anyone can install it from the language sheet with **Import Language Pack**, and you can test your own work the same way.
 
-To contribute a complete new language or edit the catalog files directly, follow [TRANSLATING.md](TRANSLATING.md). It covers locale naming, required files and registration points, placeholders, plurals, validation, and device testing.
+For a single correction, no checkout is needed: tap the Translate button in Sparkle Settings, choose **Report a Translation Issue** at the bottom of the language sheet, or [start one](https://github.com/efibalogh/sparkle-ig/issues/new?template=3-translation.yaml) directly. The form asks for the language, where the text appears, what it says now, and what it should say.
+
+Full details, including starting a language that has no catalog yet, are in [TRANSLATING.md](TRANSLATING.md).
 
 Not a coder? Documentation improvements are always appreciated too.
 
@@ -253,7 +255,7 @@ Sparkle takes a lot of time to develop and maintain as Instagram changes constan
 - [**@n3d1117** • InstaSane](https://github.com/n3d1117/InstaSane): the Following-feed mode.
 - [**@asdfzxcvbn** • zxPluginsInject / ipapatch / cyan](https://github.com/asdfzxcvbn): tooling and fixes for sideloaded installs.
 - [**@BillyCurtis** • OpenInstagramSafariExtension](https://github.com/BillyCurtis/OpenInstagramSafariExtension): open Instagram links in Safari in the sideloaded IPA.
-- **USER**: Sparkle internationalization and the initial 17-language catalog.
+- **@grxphxnx**: helped quickstart Sparkle's multi-language support.
 
 ## Official builds
 

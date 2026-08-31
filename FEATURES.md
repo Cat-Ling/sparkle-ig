@@ -9,12 +9,15 @@ marked **(restart)** and prompt for a relaunch when changed.
 
 ## Localization
 
-- **Language** *(restart)*: Use the Translate button in the top-right of Sparkle Settings to open the language sheet. System Default initially follows Instagram, or you can choose Arabic, Chinese (Simplified), English, French, German, Greek, Hindi, Italian, Japanese, Korean, Portuguese (Brazil), Romanian, Russian, Spanish, Turkish, Ukrainian, or Vietnamese.
-- The choice is device-wide, applies to every Instagram account after restart, and falls back to English when a language or individual translation is unavailable.
+- **Language** *(restart)*: Use the Translate button in the top-right of Sparkle Settings to open the language sheet. Sparkle ships English, and with nothing else installed English is the selection. Installing a language pack adds it to the same list, with how much of it is translated, and brings back a System Default row that follows Instagram first, then the device language, then English.
+- The choice is device-wide, applies to every Instagram account after restart, and falls back to English when a language or individual string is unavailable.
 - Sparkle-owned dates use the selected language's ordering, punctuation, and month names while retaining the device's 12/24-hour clock preference across Action Button menus, Gallery, Downloads, media details, logs, and diagnostics.
 - Built-in collapsible Action Button section names follow the selected language. A section name explicitly customized by the user remains verbatim.
-- **Help Translate Sparkle**: The bottom of the language sheet opens a prefilled translation issue for suggesting a translation or reporting incorrect copy.
-- Translation quality: English is the only hand-written catalog. The other 16 languages were machine translated and have not been reviewed by native speakers, so some strings may read unnaturally or describe a setting inaccurately. Reports through Help Translate Sparkle are welcome.
+- **Import Language Pack**: Installs community translations from `.zip` archives, each containing a `<code>.lproj` folder. Several archives can be picked at once. Importing makes a language available without selecting it; the new entries appear in the list above, and switching is an explicit tap. Re-importing replaces the pack for that language, and swiping a language left removes it. An imported pack takes precedence over a shipped catalog of the same language, so a translator can preview corrections in place.
+- **Export English Strings**: Shares the English catalog as a `.zip`, the file a new translation starts from.
+- **Report a Translation Issue**: Opens the translation issue form, with the language prefilled when Sparkle is running in an imported one.
+- **Contribute a Translation**: Opens the translation guide, for correcting a language or starting a new one.
+- Translation quality: English is the only hand-written catalog and the only one Sparkle ships. The 16 community catalogs live in the repository as installable packs rather than in the app. They were machine translated and have not been reviewed by native speakers, so some strings read unnaturally or describe a setting inaccurately. A language ships with Sparkle once a native speaker has reviewed it.
 
 ---
 
