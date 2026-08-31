@@ -935,7 +935,7 @@ static NSArray<NSURLQueryItem *> *SPKSanitizedInstagramQueryItems(NSArray<NSURLQ
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         blockedKeys = [NSSet setWithArray:@[
-            @"igsh", @"igshid", @"ig_rid", @"ig_mid",
+            @"igsh", @"igshid", @"igsi", @"ig_rid", @"ig_mid",
             @"utm_source", @"utm_medium", @"utm_campaign", @"utm_term", @"utm_content",
             @"fbclid"
         ]];
