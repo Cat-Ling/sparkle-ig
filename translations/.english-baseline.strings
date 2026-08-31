@@ -1021,7 +1021,7 @@
 "INTERFACE_TITLE" = "Interface";
 "LANGUAGE_CONTRIBUTE_SUBTITLE" = "Correct a language or start a new one";
 "LANGUAGE_CONTRIBUTE_TITLE" = "Contribute a Translation";
-"LANGUAGE_HELP_FOOTER" = "A language ships with Sparkle once a native speaker has reviewed it.";
+"LANGUAGE_HELP_FOOTER" = "Neither one needs a build or a checkout. A language ships with Sparkle once a native speaker has reviewed it.";
 "LANGUAGE_LIST_FOOTER" = "Sparkle is written in English. Other languages come from community language packs you install here, and anything a pack does not translate stays in English.";
 "LANGUAGE_PACKS_HEADER" = "Language Packs";
 "LANGUAGE_PACK_COVERAGE_SUBTITLE_FORMAT" = "Language pack, %ld%% translated";

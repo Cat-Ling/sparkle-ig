@@ -62,6 +62,10 @@ static NSString *SPKStorageFeatureDirectory(NSString *featureName) {
     return SPKStorageFeatureDirectory(@"Fonts");
 }
 
++ (NSString *)languagePacksDirectory {
+    return SPKStorageFeatureDirectory(@"Languages");
+}
+
 + (unsigned long long)sizeOfDirectory:(NSString *)path {
     if (path.length == 0)
         return 0;
@@ -93,7 +97,8 @@ static NSString *SPKStorageFeatureDirectory(NSString *featureName) {
     unsigned long long profileAnalyzer = [self sizeOfDirectory:[self profileAnalyzerDirectory]];
     unsigned long long avatars = [self sizeOfDirectory:[self avatarCacheDirectory]];
     unsigned long long fonts = [self sizeOfDirectory:[self fontsDirectory]];
-    unsigned long long total = gallery + downloads + deletedMessages + profileAnalyzer + avatars + fonts;
+    unsigned long long languages = [self sizeOfDirectory:[self languagePacksDirectory]];
+    unsigned long long total = gallery + downloads + deletedMessages + profileAnalyzer + avatars + fonts + languages;
 
     return @{
         @"gallery" : @(gallery),
@@ -102,6 +107,7 @@ static NSString *SPKStorageFeatureDirectory(NSString *featureName) {
         @"profileAnalyzer" : @(profileAnalyzer),
         @"avatars" : @(avatars),
         @"fonts" : @(fonts),
+        @"languages" : @(languages),
         @"total" : @(total),
     };
 }

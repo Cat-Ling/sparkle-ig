@@ -15,9 +15,10 @@ NS_ASSUME_NONNULL_BEGIN
 /// Keys are SEMANTIC (e.g. `FEED_LAYOUT_HIDE_STORIES_TRAY_TITLE`), matching the
 /// a stable-key convention — stable when English copy is reworded, no paragraph-
 /// length footer keys, no homograph collisions. `en.lproj` is the source of truth
-/// for English and is kept complete by CI, so lookup falls back active → English;
-/// the raw key is only ever returned if `en.lproj` itself is missing the key (a bug
-/// the completeness linter catches).
+/// for English and is the only catalog Sparkle ships; every other language is a
+/// community pack the user imports. Lookup falls back active → English, so the raw
+/// key is only ever returned if `en.lproj` itself is missing it, which
+/// `tools/lint-i18n.py` exists to catch.
 FOUNDATION_EXPORT NSString *SPKLocalizedString(NSString *key, NSString *_Nullable comment);
 FOUNDATION_EXPORT NSString *SPKLocalizedPlural(NSString *key, NSInteger count);
 
@@ -32,24 +33,35 @@ FOUNDATION_EXPORT NSString *SPKLocalizedPlural(NSString *key, NSInteger count);
 /// Look up `key` in the active language, falling back active → English → key.
 + (NSString *)localized:(NSString *)key;
 
-/// Look up `key` in one shipped language. Intended for migrations which need
+/// Look up `key` in one specific language. Intended for migrations which need
 /// to recognize previously persisted localized defaults.
 + (NSString *)localized:(NSString *)key forLanguage:(NSString *)language;
 
-/// nil = follow the system/Instagram language. Otherwise a shipped code
-/// (e.g. @"de", @"pt-BR"). Persisted in Sparkle's prefs; refreshes the cache.
+/// nil = follow the system/Instagram language. Otherwise an available code
+/// (e.g. @"de", @"pt-BR"), shipped or imported. Persisted in Sparkle's prefs;
+/// refreshes the cache. An override naming a language that is no longer
+/// installed resolves back to English until its pack is imported again.
 @property (class, nonatomic, copy, nullable) NSString *languageOverride;
 
-/// Language codes Sparkle actually ships an `<code>.lproj` for (always includes @"en").
+/// Every language that can currently be selected: the catalogs Sparkle ships
+/// (always including @"en") plus the community packs the user has imported.
 + (NSArray<NSString *> *)availableLanguages;
 
-/// Stable, explicitly ordered list used by the language picker.
+/// The same set, ordered for the language picker: English first, then the rest
+/// alphabetically.
 + (NSArray<NSString *> *)supportedLanguages;
 
-/// Resolve a requested language identifier to a shipped localization.
+/// YES when `language` comes from an imported pack rather than the shipped bundle.
++ (BOOL)isImportedLanguage:(NSString *)language;
+
+/// Call after installing or deleting a language pack. Drops the cached language
+/// list and catalog bundles so the next lookup reads what is now on disk.
++ (void)languagePacksDidChange;
+
+/// Resolve a requested language identifier to an available localization.
 + (nullable NSString *)matchAvailable:(NSString *)requested;
 
-/// Effective shipped language after applying the explicit override, Instagram's
+/// Effective language after applying the explicit override, Instagram's
 /// preferred localization, the system language, and the English fallback.
 + (NSString *)activeLanguage;
 

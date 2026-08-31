@@ -66,6 +66,9 @@
                   [SPKSetting valueCellWithTitle:SPKL(@"SETTINGS_STORAGE_USAGE_FONTS_TITLE")
                                         subtitle:[self formattedKey:@"fonts"]
                                             icon:SPKSettingsIcon(@"text")],
+                  [SPKSetting valueCellWithTitle:SPKL(@"SETTINGS_STORAGE_USAGE_LANGUAGE_PACKS_TITLE")
+                                        subtitle:[self formattedKey:@"languages"]
+                                            icon:SPKSettingsIcon(@"translate")],
               ],
                                         nil)];
 

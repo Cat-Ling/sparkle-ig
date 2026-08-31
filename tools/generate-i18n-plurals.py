@@ -8,6 +8,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = ROOT / "resources" / "Sparkle.bundle"
+TRANSLATIONS = ROOT / "translations"
+
+
+def catalog_dir(language: str) -> Path:
+    """Shipped catalogs live in the bundle; community catalogs in translations/."""
+    shipped = BUNDLE / f"{language}.lproj"
+    return shipped if shipped.is_dir() else TRANSLATIONS / f"{language}.lproj"
 
 FORMS = {
     "en": {"FILE": ("%ld file", "%ld files"), "ITEM": ("%ld item", "%ld items"), "USER": ("%ld user", "%ld users"), "PARTICIPANT": ("%ld participant", "%ld participants"), "MESSAGE": ("%ld message", "%ld messages"), "SENDER": ("%ld sender", "%ld senders")},
@@ -71,7 +78,7 @@ def main() -> None:
             one, many = other
             other_forms = {"one": one, "other": many}
         output["COMMON_OTHER_COUNT"] = plural_entry(other_forms)
-        path = BUNDLE / f"{language}.lproj" / "Localizable.stringsdict"
+        path = catalog_dir(language) / "Localizable.stringsdict"
         with path.open("wb") as stream:
             plistlib.dump(output, stream, fmt=plistlib.FMT_XML, sort_keys=True)
     print(f"generated shared plural rules for {len(languages)} locales")

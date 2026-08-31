@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 import plistlib
 import re
 import sys
@@ -12,14 +13,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "src"
 BUNDLE = ROOT / "resources" / "Sparkle.bundle"
-LOCALES = ("en", "ar", "de", "el", "es-ES", "fr", "hi", "it", "ja", "ko", "pt-BR", "ro", "ru", "tr", "uk", "vi", "zh-Hans")
+TRANSLATIONS = ROOT / "translations"
+# Sparkle ships only catalogs a native speaker has reviewed. Everything else lives
+# in translations/ as a starting point for contributors and as an importable
+# language pack, and is held to a looser standard so an unfinished review still
+# passes: an incomplete catalog warns, a broken one still fails. Promoting a
+# reviewed language is a directory move, so the split is discovered, not listed.
 SOURCE_SUFFIXES = {".m", ".mm", ".x", ".xm"}
 STRING_RE = re.compile(r'^"((?:\\.|[^"\\])*)"\s*=\s*"((?:\\.|[^"\\])*)";\s*$')
 NORMAL_CALL_RE = re.compile(r'\bSPKL\(@"([A-Z][A-Z0-9_]*)"\)|\bSPKLC\(@"([A-Z][A-Z0-9_]*)"')
 PLURAL_CALL_RE = re.compile(r'\bSPKLP\(@"([A-Z][A-Z0-9_]*)"')
 PLACEHOLDER_RE = re.compile(r'%(?!%)(?:\d+\$)?[-+ #0\']*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l|j|z|t|L)?[@diuoxXfFeEgGaAcCsSp]')
 BAD_KEY_RE = re.compile(r'^(?:FEAT_)|VIEWCONTROLLER|(?:^|_)SPK[A-Z0-9_]*CONTROLLER|_[0-9]+$|CONTEXT_[A-F0-9]+$')
-UNSAFE_LINE_RE = re.compile(r'(?:isEqualToString|hasPrefix|hasSuffix|imageNamed|instagramIconNamed|menuIconNamed|menuSizedIcon|URLWithString|get(?:Bool|String|Double)Pref|forKey)\s*:\s*SPKL')
+UNSAFE_LINE_RE = re.compile(r'(?:isEqualToString|hasPrefix|hasSuffix|imageNamed|instagramIconNamed|menuIconNamed|menuSizedIcon|URLWithString|get(?:Bool|String|Double)Pref|forKey)\s*:\s*SPKL[CP]?\s*\(')
 RAW_UI_RE = re.compile(r'(?:\.title|\.text|\.placeholder|\.accessibilityLabel|\.accessibilityHint|\.emptyTitle|\.emptySubtitle|\.infoText|\.successTitle|\.pickerTitle|\.masterTitle|\.finishTitleOverride|\btitle|\bmessage|\bsubtitle|\bheader|\bfooter)\s*[:=]\s*@"[^"\\]*[A-Za-z][^"\\]*"')
 RAW_CHROME_RE = re.compile(
     r'SPKMediaChromeBottomBarButtonItem\(\s*@"[^"]+"\s*,\s*@"[^"\\]*[A-Za-z]'
@@ -206,8 +212,129 @@ def ignored_at_offset(text: str, offset: int) -> bool:
     return "SPK_I18N_IGNORE" in text[line_start:line_end]
 
 
-def main() -> int:
+
+def discover_catalogs(only_locale: str | None = None):
+    """Yield (locale, directory, shipped) for every catalog in the repository."""
+    found = []
+    for root, shipped in ((BUNDLE, True), (TRANSLATIONS, False)):
+        if not root.is_dir():
+            continue
+        for directory in sorted(root.glob("*.lproj")):
+            locale = directory.name[: -len(".lproj")]
+            if only_locale and locale != only_locale:
+                continue
+            found.append((locale, directory, shipped))
+    return found
+
+
+def load_catalog(locale: str, directory: Path, errors: list[str]):
+    """Parse one locale's .strings/.stringsdict pair, or None when unusable."""
+    strings_path = directory / "Localizable.strings"
+    plural_path = directory / "Localizable.stringsdict"
+    if not strings_path.exists() or not plural_path.exists():
+        errors.append(f"{locale}: missing Localizable.strings or Localizable.stringsdict")
+        return None
+    values, parse_errors = parse_strings(strings_path)
+    errors.extend(parse_errors)
+    key_order = list(values)
+    if key_order != sorted(key_order):
+        first_mismatch = next(
+            (key for key, expected in zip(key_order, sorted(key_order)) if key != expected),
+            "unknown",
+        )
+        errors.append(f"{locale}: catalog keys are not sorted near {first_mismatch}")
+    try:
+        with plural_path.open("rb") as stream:
+            plurals = plistlib.load(stream)
+    except Exception as exc:
+        errors.append(f"{plural_path.relative_to(ROOT)}: invalid plist: {exc}")
+        return None
+    return values, plurals
+
+
+def is_language_neutral(value: str) -> bool:
+    """A value no translation would change: brand names, tokens, pure punctuation."""
+    # A value with no whitespace is a single token - a brand name, an API symbol,
+    # an aspect ratio, a unit - not a phrase somebody forgot to translate.
+    if value and not any(character.isspace() for character in value):
+        return True
+    words = carryover_words(value)
+    return not words or all(word.lower() in UNTRANSLATED_TOKENS for word in words)
+
+
+def check_catalog(locale, values, plurals, english, english_plurals, shipped):
+    """Validate one catalog against English.
+
+    Returns (errors, warnings, translated key count).
+    """
     errors: list[str] = []
+    warnings: list[str] = []
+    # Key parity is required of every catalog, shipped or not: a community catalog
+    # is distributed as a language pack, so a key it lacks is a string that pack
+    # can never translate. Run tools/sync-catalog-keys.py to seed new keys from
+    # English. What is downgraded to a warning is only how much has actually been
+    # translated, which is a community catalog's normal state of being unfinished.
+    incomplete = warnings if not shipped else errors
+
+    translated = 0
+    if locale != "en":
+        # A key left verbatim in English is untranslated even though it parses, so
+        # a freshly seeded catalog must not read as complete. Brand names and
+        # technical tokens that no language changes do not count against it.
+        untouched = sorted(
+            key for key in set(english) & set(values)
+            if values[key] == english[key] and not is_language_neutral(english[key])
+        )
+        translated = len(set(english) & set(values)) - len(untouched)
+        if untouched:
+            incomplete.append(f"{locale}: {len(untouched)} keys still in English, e.g. {untouched[:5]}")
+        missing = sorted(set(english) - set(values))
+        stray = sorted(set(values) - set(english))
+        if missing:
+            plural_suffix = "" if len(missing) == 1 else "s"
+            errors.append(f"{locale}: {len(missing)} key{plural_suffix} missing from the catalog, "
+                          f"e.g. {missing[:5]}; run tools/sync-catalog-keys.py")
+        if stray:
+            errors.append(f"{locale}: keys not present in English: {stray[:5]}")
+        missing_plural = sorted(set(english_plurals) - set(plurals))
+        stray_plural = sorted(set(plurals) - set(english_plurals))
+        if missing_plural:
+            errors.append(f"{locale}: missing plural keys {missing_plural[:5]}; "
+                          f"run tools/generate-i18n-plurals.py")
+        if stray_plural:
+            errors.append(f"{locale}: plural keys not present in English: {stray_plural[:5]}")
+
+    for key, value in values.items():
+        if BAD_KEY_RE.search(key):
+            errors.append(f"{locale}: non-semantic key {key}")
+        shorthand = FORBIDDEN_UI_SHORTHAND_RE.search(value)
+        if shorthand:
+            errors.append(f"{locale}: forbidden user-facing shorthand {shorthand.group(0)!r} in {key}")
+        if key in english and placeholders(value) != placeholders(english[key]):
+            errors.append(f"{locale}: placeholder mismatch for {key}: {placeholders(value)} != {placeholders(english[key])}")
+        if locale != "en" and key in english and value != english[key]:
+            carried = english_carryover(value, english[key])
+            if carried:
+                incomplete.append(f"{locale}: untranslated English carried into {key}: \"{carried}...\"")
+
+    for key, entry in plurals.items():
+        rule = entry.get("count", {}) if isinstance(entry, dict) else {}
+        if entry.get("NSStringLocalizedFormatKey") != "%#@count@" or rule.get("NSStringFormatSpecTypeKey") != "NSStringPluralRuleType":
+            errors.append(f"{locale}: invalid plural definition for {key}")
+        if "other" not in rule:
+            errors.append(f"{locale}: plural {key} lacks an other form")
+        for category, value in rule.items():
+            if category.startswith("NSString"):
+                continue
+            if len(placeholders(str(value))) != 1:
+                errors.append(f"{locale}: plural {key}/{category} must contain exactly one numeric placeholder")
+
+    return errors, warnings, translated
+
+
+def main(only_locale: str | None = None, emit_table: bool = False) -> int:
+    errors: list[str] = []
+    warnings: list[str] = []
     normal_uses: Counter[str] = Counter()
     plural_uses: Counter[str] = Counter()
 
@@ -242,66 +369,26 @@ def main() -> int:
             if RAW_UI_RE.search(line) and "SPK_I18N_IGNORE" not in line and '@"\\u' not in line:
                 errors.append(f"{path.relative_to(ROOT)}:{line_number}: raw user-facing UI string")
 
-    english: dict[str, str] | None = None
-    english_plurals: dict[str, object] | None = None
-    for locale in LOCALES:
-        strings_path = BUNDLE / f"{locale}.lproj" / "Localizable.strings"
-        plural_path = BUNDLE / f"{locale}.lproj" / "Localizable.stringsdict"
-        if not strings_path.exists() or not plural_path.exists():
-            errors.append(f"{locale}: missing Localizable.strings or Localizable.stringsdict")
-            continue
-        values, parse_errors = parse_strings(strings_path)
-        errors.extend(parse_errors)
-        key_order = list(values)
-        if key_order != sorted(key_order):
-            first_mismatch = next(
-                (key for key, expected in zip(key_order, sorted(key_order)) if key != expected),
-                "unknown",
-            )
-            errors.append(f"{locale}: catalog keys are not sorted near {first_mismatch}")
-        try:
-            with plural_path.open("rb") as stream:
-                plurals = plistlib.load(stream)
-        except Exception as exc:
-            errors.append(f"{plural_path.relative_to(ROOT)}: invalid plist: {exc}")
-            continue
+    english_directory = BUNDLE / "en.lproj"
+    loaded = load_catalog("en", english_directory, errors)
+    english, english_plurals = loaded if loaded else ({}, {})
+    errors.extend(check_catalog("en", english, english_plurals, english, english_plurals, shipped=True)[0])
 
-        if english is None:
-            english = values
-            english_plurals = plurals
-        else:
-            missing = sorted(set(english) - set(values))
-            stray = sorted(set(values) - set(english))
-            if missing or stray:
-                errors.append(f"{locale}: catalog parity failure; missing={missing[:5]} stray={stray[:5]}")
-            missing_plural = sorted(set(english_plurals or {}) - set(plurals))
-            stray_plural = sorted(set(plurals) - set(english_plurals or {}))
-            if missing_plural or stray_plural:
-                errors.append(f"{locale}: plural parity failure; missing={missing_plural[:5]} stray={stray_plural[:5]}")
-
-        for key, value in values.items():
-            if BAD_KEY_RE.search(key):
-                errors.append(f"{locale}: non-semantic key {key}")
-            shorthand = FORBIDDEN_UI_SHORTHAND_RE.search(value)
-            if shorthand:
-                errors.append(f"{locale}: forbidden user-facing shorthand {shorthand.group(0)!r} in {key}")
-            if english is not None and key in english and placeholders(value) != placeholders(english[key]):
-                errors.append(f"{locale}: placeholder mismatch for {key}: {placeholders(value)} != {placeholders(english[key])}")
-            if english is not None and locale != "en" and key in english and value != english[key]:
-                carried = english_carryover(value, english[key])
-                if carried:
-                    errors.append(f"{locale}: untranslated English carried into {key}: \"{carried}...\"")
-        for key, entry in plurals.items():
-            rule = entry.get("count", {}) if isinstance(entry, dict) else {}
-            if entry.get("NSStringLocalizedFormatKey") != "%#@count@" or rule.get("NSStringFormatSpecTypeKey") != "NSStringPluralRuleType":
-                errors.append(f"{locale}: invalid plural definition for {key}")
-            if "other" not in rule:
-                errors.append(f"{locale}: plural {key} lacks an other form")
-            for category, value in rule.items():
-                if category.startswith("NSString"):
-                    continue
-                if len(placeholders(str(value))) != 1:
-                    errors.append(f"{locale}: plural {key}/{category} must contain exactly one numeric placeholder")
+    coverage: list[tuple[str, int]] = []
+    for locale, directory, shipped in discover_catalogs(only_locale):
+        if locale == "en":
+            continue
+        loaded = load_catalog(locale, directory, errors)
+        if not loaded:
+            continue
+        values, plurals = loaded
+        catalog_errors, catalog_warnings, translated = check_catalog(
+            locale, values, plurals, english, english_plurals, shipped=shipped
+        )
+        errors.extend(catalog_errors)
+        warnings.extend(catalog_warnings)
+        if english:
+            coverage.append((locale, math.floor(100 * translated / len(english))))
 
     english = english or {}
     english_plurals = english_plurals or {}
@@ -318,14 +405,38 @@ def main() -> int:
     if unused_plural:
         errors.append(f"unused plural keys: {unused_plural}")
 
+    if warnings:
+        print("i18n lint warnings:", file=sys.stderr)
+        for warning in warnings:
+            print(f"  - {warning}", file=sys.stderr)
     if errors:
         print("i18n lint failed:", file=sys.stderr)
         for error in errors:
             print(f"  - {error}", file=sys.stderr)
         return 1
-    print(f"i18n lint passed: {len(english)} strings, {len(english_plurals)} plural keys, {len(LOCALES)} locales")
+    shipped = ", ".join(locale for locale, _, is_shipped in discover_catalogs() if is_shipped)
+    print(f"i18n lint passed: {len(english)} strings, {len(english_plurals)} plural keys; shipped: {shipped}")
+    if coverage:
+        print("community catalogs: " + ", ".join(f"{locale} {percent}%" for locale, percent in coverage))
+    if emit_table:
+        print()
+        print("| Language | Coverage | Ships in Sparkle |")
+        print("| --- | --- | --- |")
+        print(f"| en | 100% | yes |")
+        for locale, percent in coverage:
+            ships = "yes" if any(l == locale and s for l, _, s in discover_catalogs()) else "not yet"
+            print(f"| {locale} | {percent}% | {ships} |")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    arguments = sys.argv[1:]
+    table = "--table" in arguments
+    arguments = [argument for argument in arguments if argument != "--table"]
+    locale_only = None
+    if arguments and arguments[0] == "--locale":
+        if len(arguments) < 2:
+            print("usage: lint-i18n.py [--locale <code>] [--table]", file=sys.stderr)
+            raise SystemExit(2)
+        locale_only = arguments[1]
+    raise SystemExit(main(locale_only, table))

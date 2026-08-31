@@ -15,6 +15,9 @@ NS_ASSUME_NONNULL_BEGIN
 // User-imported .otf/.ttf files backing the app-wide font. Not regenerable:
 // deleting these loses the user's fonts.
 + (NSString *)fontsDirectory;
+// User-imported community language packs, one <code>.lproj per language.
+// Re-importable from the file the user installed, but not regenerable here.
++ (NSString *)languagePacksDirectory;
 
 // Total bytes of regular files under `path` (recursive). 0 if missing.
 + (unsigned long long)sizeOfDirectory:(NSString *)path;

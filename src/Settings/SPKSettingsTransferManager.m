@@ -1097,6 +1097,12 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
     });
 }
 
++ (BOOL)writeZipArchiveFromDirectory:(NSString *)directory toPath:(NSString *)zipPath error:(NSError **)error {
+    if (directory.length == 0 || zipPath.length == 0)
+        return NO;
+    return SPKWriteStoredZipFromDirectory(directory, zipPath, error);
+}
+
 + (NSString *)expandZipArchiveAtURL:(NSURL *)archiveURL error:(NSError **)error {
     if (!archiveURL) {
         return nil;

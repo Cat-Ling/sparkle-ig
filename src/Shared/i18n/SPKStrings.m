@@ -1,4 +1,5 @@
 #import "SPKStrings.h"
+#import "SPKLanguagePack.h"
 #import "../../Utils.h"
 #import "../SPKResourceBundle.h"
 
@@ -6,6 +7,8 @@
 // unlike Sparkle's account-scoped feature preferences.
 static NSString *const kSPKLanguageOverrideKey = @"interface_language";
 static NSString *const kSPKStringsTable = @"Localizable";
+
+static NSArray<NSString *> *spk_cachedAvailableLanguages = nil;
 
 @implementation SPKStrings
 
@@ -15,7 +18,10 @@ static NSString *const kSPKStringsTable = @"Localizable";
 
 #pragma mark - Language resolution
 
-+ (NSArray<NSString *> *)availableLanguages {
+/// Codes shipped inside Sparkle.bundle. Only English ships today, but the split
+/// is read from the bundle so promoting a reviewed community catalog stays a
+/// matter of moving its directory in, with no code change.
++ (NSArray<NSString *> *)shippedLanguages {
     static NSArray<NSString *> *langs = nil;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
@@ -36,8 +42,34 @@ static NSString *const kSPKStringsTable = @"Localizable";
     return langs;
 }
 
++ (BOOL)isImportedLanguage:(NSString *)language {
+    return language.length > 0 && ![[self shippedLanguages] containsObject:language] &&
+           SPKLanguagePackPathForCode(language) != nil;
+}
+
+// Recomputed rather than cached for the lifetime of the process: a pack can be
+// installed or deleted at any time, and the list feeds both the picker and every
+// lookup's language resolution.
++ (NSArray<NSString *> *)availableLanguages {
+    @synchronized (self) {
+        if (!spk_cachedAvailableLanguages) {
+            NSMutableArray<NSString *> *found = [[self shippedLanguages] mutableCopy];
+            for (NSString *code in SPKInstalledLanguagePackCodes()) {
+                if (![found containsObject:code])
+                    [found addObject:code];
+            }
+            spk_cachedAvailableLanguages = [found copy];
+        }
+        return spk_cachedAvailableLanguages;
+    }
+}
+
 + (NSArray<NSString *> *)supportedLanguages {
-    return @[ @"en", @"ar", @"de", @"el", @"es-ES", @"fr", @"hi", @"it", @"ja", @"ko", @"pt-BR", @"ro", @"ru", @"tr", @"uk", @"vi", @"zh-Hans" ];
+    NSMutableArray<NSString *> *ordered = [[self availableLanguages] mutableCopy];
+    [ordered removeObject:@"en"];
+    [ordered sortUsingSelector:@selector(caseInsensitiveCompare:)];
+    [ordered insertObject:@"en" atIndex:0];
+    return ordered;
 }
 
 /// Best shipped code for a requested locale id, e.g. "de-DE"→"de", "pt"→"pt-BR",
@@ -112,13 +144,23 @@ static NSString *const kSPKStringsTable = @"Localizable";
     @synchronized (self) { [[self lprojCache] removeAllObjects]; }
 }
 
++ (void)languagePacksDidChange {
+    @synchronized (self) { spk_cachedAvailableLanguages = nil; }
+    [self flushCaches];
+}
+
 + (nullable NSBundle *)lprojBundleForLanguage:(NSString *)lang {
     if (lang.length == 0) return nil;
     @synchronized (self) {
         NSBundle *cached = [self lprojCache][lang];
         if (cached) return cached;
-        NSBundle *root = [self resourceBundle];
-        NSString *path = [root pathForResource:lang ofType:@"lproj"];
+        // An imported pack wins over a shipped catalog of the same language, so a
+        // reviewer can preview their corrections against the build that ships it.
+        NSString *path = SPKLanguagePackPathForCode(lang);
+        if (!path) {
+            NSBundle *root = [self resourceBundle];
+            path = [root pathForResource:lang ofType:@"lproj"];
+        }
         NSBundle *b = path ? [NSBundle bundleWithPath:path] : nil;
         if (b) [self lprojCache][lang] = b;
         return b;
