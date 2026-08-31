@@ -434,6 +434,9 @@
 // ones. Both expose this, so Sparkle asks whichever is present through a shared shape.
 @protocol SPKFollowControlling <NSObject>
 @property (nonatomic, readonly) BOOL canShowRelationshipSheetWhenFollowing;
+// Set by the surfaces whose follow control turns into a Message button once the account is
+// followed. Only newer builds expose it to the Objective-C runtime.
+@property (nonatomic, readonly) BOOL showMessageButtonWhenFollowing;
 @end
 
 @interface IGCoreTextView : UIView

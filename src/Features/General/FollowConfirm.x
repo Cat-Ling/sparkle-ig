@@ -127,6 +127,23 @@ static BOOL SPKFollowControllerOpensRelationshipSheet(id controller) {
     return ((id<SPKFollowControlling>)controller).canShowRelationshipSheetWhenFollowing;
 }
 
+// A few surfaces, notifications among them, configure the follow control to turn into a Message
+// button once the account is already followed. The control keeps its follow identity there, down to
+// its accessibility identifier, and only its title changes, so a tap still arrives at the handlers
+// below even though it opens a thread instead of ending the follow. Confirming an unfollow there
+// asks about something the tap will never do. The title itself is localized and cannot be matched,
+// so the surface is read from the flag that put the button in that mode: newer builds expose it on
+// the controller, and older ones keep it inside an opaque view configuration, where the direct
+// reply presenter stands in for it because it is only wired up on the surfaces that can open a
+// thread from this button.
+static BOOL SPKFollowControllerTapOpensMessage(id controller) {
+    if ([controller respondsToSelector:@selector(showMessageButtonWhenFollowing)])
+        return ((id<SPKFollowControlling>)controller).showMessageButtonWhenFollowing;
+
+    return [SPKUtils getIvarForObj:controller name:"_directReplyToAuthorPresenter"] != nil ||
+           [SPKUtils getIvarForObj:controller name:"directReplyToAuthorPresenter"] != nil;
+}
+
 // The Swift controller reaches performUnfollow through internal Swift dispatch, which never goes
 // through objc_msgSend, so a swizzle on it cannot see a tap-driven unfollow. The tap handlers are
 // target-action entry points from UIKit and therefore still dispatch normally, so both prompts are
@@ -137,7 +154,8 @@ static BOOL SPKFollowControllerOpensRelationshipSheet(id controller) {
                                                                                             \
         if (status == 2) {                                                                  \
             CONFIRMFOLLOW(orig);                                                            \
-        } else if (status >= 0 && !SPKFollowControllerOpensRelationshipSheet(self)) {       \
+        } else if (status >= 0 && !SPKFollowControllerOpensRelationshipSheet(self) &&       \
+                   !SPKFollowControllerTapOpensMessage(self)) {                             \
             SPKConfirmUnfollow(^(void) {                                                    \
                 orig;                                                                       \
             });                                                                             \
