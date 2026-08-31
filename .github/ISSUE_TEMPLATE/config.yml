@@ -1,1 +1,8 @@
 blank_issues_enabled: false
+contact_links:
+  - name: 🌍 Translating Sparkle
+    url: https://github.com/efibalogh/sparkle-ig/blob/main/TRANSLATING.md
+    about: How to correct a language, finish one, or start a new one. No build needed.
+  - name: 💬 Chat & Support
+    url: https://t.me/+f-Xo21HnfCY3NmE0
+    about: Questions about installing or using Sparkle.
