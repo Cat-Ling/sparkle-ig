@@ -240,7 +240,7 @@ static NSArray<SPKSetting *> *SPKGeneralMediaPreviewRows(void) {
                                                    defaultsKey:@"general_comments_media_actions"],
                                SPKL(@"GENERAL_COMMENTS_COMMENT_MEDIA_ACTIONS_HELP")),
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_SHOW_GIF_TITLE_TITLE")
-                                                          icon:SPKSettingsIcon(@"info")
+                                                          icon:SPKSettingsIcon(@"gif")
                                                    defaultsKey:@"general_comments_gif_title"],
                                SPKL(@"GENERAL_COMMENTS_SHOW_GIF_TITLE_HELP")),
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_UPLOAD_PHOTO_GALLERY_TITLE")

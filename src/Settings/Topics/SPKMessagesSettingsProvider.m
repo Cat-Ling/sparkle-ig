@@ -406,7 +406,7 @@ static NSArray *SPKMessagesSettingsSections(void) {
                                     defaultsKey:@"msgs_upload_gallery_media"],
                                SPKL(@"MESSAGES_MEDIA_UPLOAD_PHOTO_GALLERY_HELP")),
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"GENERAL_COMMENTS_SHOW_GIF_TITLE_TITLE")
-                                           icon:SPKSettingsIcon(@"info")
+                                           icon:SPKSettingsIcon(@"gif")
                                     defaultsKey:@"msgs_gif_title"],
                                SPKL(@"MESSAGES_MEDIA_SHOW_GIF_TITLE_HELP"))
         ],

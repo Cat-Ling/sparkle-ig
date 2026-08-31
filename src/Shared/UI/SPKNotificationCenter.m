@@ -254,7 +254,7 @@ NSArray<NSDictionary *> *SPKNotificationPreferenceSections(void) {
           @"items" : @[
               SPKNotificationItem(kSPKNotificationCopyComment, SPKL(@"GENERAL_COMMENTS_COPY_COMMENT_TITLE"), @"copy"),
               SPKNotificationItem(kSPKNotificationCopyGIFLink, SPKL(@"UI_NOTIFICATION_CENTER_COPY_MEDIA_LINK_TEXT"), @"link"),
-              SPKNotificationItem(kSPKNotificationCopyGIFTitle, SPKL(@"UI_NOTIFICATION_CENTER_COPY_GIF_TITLE"), @"info"),
+              SPKNotificationItem(kSPKNotificationCopyGIFTitle, SPKL(@"UI_NOTIFICATION_CENTER_COPY_GIF_TITLE"), @"gif"),
           ]},
         @{@"title" : SPKL(@"FEED_MEDIA_HEADER"),
           @"items" : @[
