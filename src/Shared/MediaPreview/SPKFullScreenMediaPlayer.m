@@ -722,7 +722,7 @@ static CGPoint SPKCenterForBounds(CGRect bounds) {
         // subtitle "Posted <date> · Saved <date>".
         SPKGalleryFile *file = item.galleryFile;
         NSString *sourceLabel =
-            [SPKGalleryFile shortLabelForSource:(SPKGallerySource)meta.source];
+            [SPKGalleryFile labelForSource:(SPKGallerySource)meta.source];
         if (handle.length > 0 && sourceLabel.length > 0) {
             title = [NSString stringWithFormat:@"%@ · %@", handle, sourceLabel];
         } else {

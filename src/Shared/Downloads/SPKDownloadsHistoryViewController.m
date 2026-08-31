@@ -627,8 +627,8 @@ typedef NS_ENUM(NSUInteger, SPKDownloadsHistoryRowKind) {
 - (void)clearFinished {
     BOOL scopedToAccount = SPKPerAccountModeActive();
     NSString *message = scopedToAccount
-                            ? @"Removes this account's finished entries and any legacy unassigned entries, including their staged preview copies.\n\nActive and queued downloads are kept. Media saved to Photos or the Gallery is not affected."
-                            : @"Removes finished entries and their staged preview copies.\n\nActive and queued downloads are kept. Media saved to Photos or the Gallery is not affected.";
+                            ? SPKL(@"DOWNLOADS_HISTORY_CLEAR_FINISHED_ACCOUNT_MESSAGE")
+                            : SPKL(@"DOWNLOADS_HISTORY_CLEAR_FINISHED_ALL_MESSAGE");
     [SPKIGAlertPresenter presentAlertFromViewController:self
                                                   title:SPKL(@"DOWNLOADS_DOWNLOADS_HISTORY_CLEAR_FINISHED_DOWNLOADS_TEXT")
                                                 message:message

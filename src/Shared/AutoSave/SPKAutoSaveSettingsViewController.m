@@ -35,10 +35,9 @@
     videoQuality.helpText = SPKL(@"AUTO_SAVE_VIDEO_QUALITY_HELP");
 
     return SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"), @[
-        SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_PHOTO_QUALITY_TITLE")
-                                     icon:SPKSettingsIcon(@"photo")
-                                     menu:SPKAutoSavePhotoQualityMenu()],
-                           SPKL(@"AUTO_SAVE_PHOTO_QUALITY_HELP")),
+        [SPKSetting menuCellWithTitle:SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_PHOTO_QUALITY_TITLE")
+                                  icon:SPKSettingsIcon(@"photo")
+                                  menu:SPKAutoSavePhotoQualityMenu()],
         videoQuality,
     ],
                            nil);

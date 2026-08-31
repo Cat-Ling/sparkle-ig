@@ -14,7 +14,6 @@
                                                              subtitle:nil
                                                                  icon:SPKSettingsIcon(@"settings")
                                                        viewController:[[SPKGallerySettingsViewController alloc] init]];
-    gallerySettings.helpText = SPKL(@"GALLERY_SETTINGS_ROW_HELP");
     gallerySettings.searchSectionsProvider = ^NSArray * {
         return [SPKGallerySettingsViewController searchSections];
     };

@@ -502,7 +502,7 @@ static SPKDeletedMessageKind SPKDMChipKindForIndex(NSInteger index) {
     if (isGroup ? !group.threadId.length : !group.senderPk.length)
         return;
     NSString *who = isGroup ? group.displayName
-                            : (group.senderUsername.length ? [@"@" stringByAppendingString:group.senderUsername] : @"this sender");
+                            : (group.senderUsername.length ? [@"@" stringByAppendingString:group.senderUsername] : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_THIS_SENDER_LABEL"));
     [SPKIGAlertPresenter presentAlertFromViewController:self
                                                   title:isGroup ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_DELETE_GROUP_LOG_CONFIRMATION_MESSAGE") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_DELETE_SENDER_LOG_CONFIRMATION_MESSAGE")
                                                 message:[NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_REMOVES_LOGGED_MESSAGES_VALUE_MESSAGE"), who]

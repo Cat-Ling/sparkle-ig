@@ -301,7 +301,7 @@
     self.file = file;
     self.titleLabel.text = [file listPrimaryTitle];
     self.technicalLabel.text = [file listTechnicalLine];
-    self.pillLabel.text = [file shortSourceLabel];
+    self.pillLabel.text = [file sourceLabel];
     [self setFolderContextName:nil];
     self.dateLabel.text = [file listDownloadDateString];
 

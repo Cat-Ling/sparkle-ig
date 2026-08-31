@@ -206,8 +206,9 @@ static BOOL SPKPresentBulkDuplicateAlert(NSUInteger duplicateCount,
                                          void (^continuation)(SPKDownloadBulkDuplicateDecision)) {
     if (duplicateCount == 0 || !continuation)
         return NO;
-    NSString *message = [NSString stringWithFormat:SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_VALUE_VALUE_ITEMS_ALREADY_DOWNLOADED_FORMAT"),
-                                                   (unsigned long)duplicateCount, (unsigned long)totalCount];
+    NSString *message = [NSString stringWithFormat:SPKL(@"DOWNLOADS_DUPLICATE_SELECTION_SUMMARY_FORMAT"),
+                                                   SPKLP(@"COMMON_ITEM_COUNT", (NSInteger)duplicateCount),
+                                                   SPKLP(@"COMMON_ITEM_COUNT", (NSInteger)totalCount)];
     [SPKIGAlertPresenter presentAlertFromViewController:presenter ?: topMostController()
                                                   title:SPKL(@"DOWNLOADS_DOWNLOAD_DUPLICATE_POLICY_DUPLICATE_DOWNLOADS_TEXT")
                                                 message:message

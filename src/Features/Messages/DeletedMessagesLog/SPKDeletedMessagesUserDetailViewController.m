@@ -389,7 +389,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
     __weak typeof(self) weakSelf = self;
 
     BOOL isGroup = self.group.isGroup;
-    NSString *noun = isGroup ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_CHAT_TEXT") : @"Sender";
+    NSString *noun = isGroup ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_CHAT_TEXT") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_SENDER_LABEL");
 
     UIAction *pinAction = [UIAction actionWithTitle:[NSString stringWithFormat:@"%@ %@", self.group.isPinned ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNPIN_TEXT") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_PIN_TEXT"), noun]
                                               image:[SPKAssetUtils menuIconNamed:(self.group.isPinned ? @"pin_filled" : @"pin_outline")]
@@ -412,7 +412,7 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
                                             identifier:nil
                                                handler:^(__unused UIAction *a) {
                                                    NSString *who = isGroup ? weakSelf.group.displayName
-                                                                           : (weakSelf.group.senderUsername.length ? [@"@" stringByAppendingString:weakSelf.group.senderUsername] : @"this sender");
+                                                                           : (weakSelf.group.senderUsername.length ? [@"@" stringByAppendingString:weakSelf.group.senderUsername] : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_THIS_SENDER_LABEL"));
                                                    [SPKIGAlertPresenter presentAlertFromViewController:weakSelf
                                                                                                  title:isGroup ? SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_DELETE_GROUP_LOG_CONFIRMATION_MESSAGE") : SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_DELETE_SENDER_LOG_CONFIRMATION_MESSAGE")
                                                                                                message:[NSString stringWithFormat:SPKL(@"MESSAGES_DELETED_MESSAGES_USER_DETAIL_REMOVES_LOGGED_MESSAGES_VALUE_MESSAGE"), who]

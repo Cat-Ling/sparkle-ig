@@ -42,6 +42,49 @@ RAW_FORMATTED_SELECTOR_UI_RE = re.compile(
     r'(?:WithTitle|updateProgressTitle|\btitle|\bmessage|\bsubtitle|\bplaceholder|\bfooter|\bheader|accessibilityLabel|accessibilityHint)'
     r'\s*:\s*\[NSString\s+stringWithFormat\s*:\s*@"[^"\\]*(?<![%A-Za-z])[A-Za-z]{3,}[^"\\]*"'
 )
+# Brand names, product surfaces and technical tokens that stay in English in every
+# locale, so a run made only of these is not evidence of an untranslated string.
+UNTRANSLATED_TOKENS = frozenset("""
+instagram sparkle ffmpeg ffmpegkit gif gifs reels reel meta ai ios url urls
+id ok live story stories http https png jpg jpeg mp4 mp3 m4a hdr sdr qr flex json
+zip pdf regram giphy plus app apps api cdn ui hd fps kbps mbps threads igtv boomerang
+liquid glass theos core data gallery settings analyzer profile testflight beta home
+vault mediavault otf ttf ttc crf explorer hook hooks push
+""".split())
+# Hyphenated compounds count as one token: German glues "Instagram-Plus-Button"
+# into a single legitimate word, and feature names like "view-once" are kept
+# verbatim on purpose, so splitting on the hyphen invents English runs that are
+# not there.
+CARRYOVER_WORD_RE = re.compile(r"[A-Za-z][A-Za-z'\u2019-]*[A-Za-z]|[A-Za-z]")
+# "\n" and friends survive as literal backslash escapes in .strings, so strip them
+# before tokenizing or the escape letter is counted as an English word.
+CARRYOVER_ESCAPE_RE = re.compile(r"\\.")
+FORBIDDEN_UI_SHORTHAND_RE = re.compile(r"(?<!%)\bDMs?\b", re.IGNORECASE)
+
+
+def carryover_words(text):
+    return CARRYOVER_WORD_RE.findall(CARRYOVER_ESCAPE_RE.sub(" ", text))
+# A translated value must not repeat a long verbatim run of the English source. That
+# is the signature of a templated pass that swapped only the leading verb phrase and
+# left the rest of the sentence in English.
+CARRYOVER_RUN_LENGTH = 4
+
+
+def english_carryover(value, english_value):
+    """Longest verbatim English word-run from english_value present in value, if any."""
+    source = carryover_words(english_value)
+    if len(source) < CARRYOVER_RUN_LENGTH:
+        return None
+    haystack = " " + " ".join(word.lower() for word in carryover_words(value)) + " "
+    for start in range(len(source) - CARRYOVER_RUN_LENGTH + 1):
+        run = source[start:start + CARRYOVER_RUN_LENGTH]
+        if all(word.lower() in UNTRANSLATED_TOKENS for word in run):
+            continue
+        if " " + " ".join(word.lower() for word in run) + " " in haystack:
+            return " ".join(run)
+    return None
+
+
 LOCALIZED_CALL_RE = re.compile(r'\bSPKL(?:C|P)?\(\s*@"[A-Z][A-Z0-9_]*"[^)]*\)')
 RAW_LITERAL_RE = re.compile(r'@"((?:\\.|[^"\\])*)"')
 C_UI_SINKS = {
@@ -239,8 +282,15 @@ def main() -> int:
         for key, value in values.items():
             if BAD_KEY_RE.search(key):
                 errors.append(f"{locale}: non-semantic key {key}")
+            shorthand = FORBIDDEN_UI_SHORTHAND_RE.search(value)
+            if shorthand:
+                errors.append(f"{locale}: forbidden user-facing shorthand {shorthand.group(0)!r} in {key}")
             if english is not None and key in english and placeholders(value) != placeholders(english[key]):
                 errors.append(f"{locale}: placeholder mismatch for {key}: {placeholders(value)} != {placeholders(english[key])}")
+            if english is not None and locale != "en" and key in english and value != english[key]:
+                carried = english_carryover(value, english[key])
+                if carried:
+                    errors.append(f"{locale}: untranslated English carried into {key}: \"{carried}...\"")
         for key, entry in plurals.items():
             rule = entry.get("count", {}) if isinstance(entry, dict) else {}
             if entry.get("NSStringLocalizedFormatKey") != "%#@count@" or rule.get("NSStringFormatSpecTypeKey") != "NSStringPluralRuleType":

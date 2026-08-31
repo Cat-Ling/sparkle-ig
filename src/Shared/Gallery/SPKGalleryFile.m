@@ -923,10 +923,6 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
     return [SPKGalleryFile labelForSource:(SPKGallerySource)self.source];
 }
 
-- (NSString *)shortSourceLabel {
-    return [SPKGalleryFile shortLabelForSource:(SPKGallerySource)self.source];
-}
-
 - (NSString *)listPrimaryTitle {
     if (self.sourceUsername.length) {
         return self.sourceUsername;
@@ -1161,7 +1157,7 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
     case SPKGallerySourceProfile:
         return SPKL(@"PROFILE_TITLE");
     case SPKGallerySourceDMs:
-        return SPKL(@"GALLERY_GALLERY_FILE_DMS_TEXT");
+        return SPKL(@"GALLERY_FILTER_MESSAGES_LABEL");
     case SPKGallerySourceThumbnail:
         return SPKL(@"GALLERY_GALLERY_FILE_THUMB_TEXT");
     case SPKGallerySourceInstants:
@@ -1170,32 +1166,6 @@ NSString *SPKFileNameForMedia(NSURL *fileURL,
         return SPKL(@"GALLERY_GALLERY_FILE_AUDIO_PAGE_TEXT");
     case SPKGallerySourceComments:
         return SPKL(@"GENERAL_COMMENTS_HEADER");
-    case SPKGallerySourceOther:
-    default:
-        return SPKL(@"STORIES_OTHER_HEADER");
-    }
-}
-
-+ (NSString *)shortLabelForSource:(SPKGallerySource)source {
-    switch (source) {
-    case SPKGallerySourceFeed:
-        return SPKL(@"FEED_TITLE");
-    case SPKGallerySourceStories:
-        return @"Story";
-    case SPKGallerySourceReels:
-        return @"Reel";
-    case SPKGallerySourceProfile:
-        return SPKL(@"PROFILE_TITLE");
-    case SPKGallerySourceDMs:
-        return SPKL(@"GALLERY_GALLERY_FILE_DMS_TEXT");
-    case SPKGallerySourceThumbnail:
-        return SPKL(@"GALLERY_GALLERY_FILE_THUMB_TEXT");
-    case SPKGallerySourceInstants:
-        return SPKL(@"ACTION_BUTTON_ACTION_BUTTON_CORE_INSTANT_TEXT");
-    case SPKGallerySourceAudioPage:
-        return SPKL(@"GALLERY_GALLERY_FILE_AUDIO_PAGE_TEXT");
-    case SPKGallerySourceComments:
-        return SPKL(@"GALLERY_GALLERY_FILE_COMMENT_TEXT");
     case SPKGallerySourceOther:
     default:
         return SPKL(@"STORIES_OTHER_HEADER");

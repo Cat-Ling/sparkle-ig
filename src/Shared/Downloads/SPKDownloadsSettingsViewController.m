@@ -181,7 +181,6 @@
     master.helpText = SPKL(@"DOWNLOADS_AUDIO_MASTER_HELP");
 
     SPKSetting *pageButton = [SPKSetting switchCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUDIO_PAGE_BUTTON_TITLE") icon:SPKSettingsIcon(@"audio_page") defaultsKey:@"downloads_audio_page_button"];
-    pageButton.helpText = SPKL(@"DOWNLOADS_AUDIO_PAGE_BUTTON_HELP");
     pageButton.enabledProvider = audioEnabled;
 
     SPKSetting *pageDefault = SPKSettingApplySelectedMenuIcon([SPKSetting menuCellWithTitle:SPKL(@"DOWNLOADS_DOWNLOADS_SETTINGS_AUDIO_PAGE_DEFAULT_ACTION_TITLE") icon:SPKSettingsIcon(@"action") menu:[self audioPageDefaultActionMenu]], SPKSettingsIcon(@"action"));

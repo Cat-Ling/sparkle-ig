@@ -873,7 +873,7 @@ static UIColor *SPKImportAmberColor(void) {
     if ((SPKGallerySource)item.metadata.source == SPKGallerySourceOther) {
         return nil;
     }
-    return [SPKGalleryFile shortLabelForSource:(SPKGallerySource)item.metadata.source];
+    return [SPKGalleryFile labelForSource:(SPKGallerySource)item.metadata.source];
 }
 
 // "Needs details" is a targeted nudge, not a blanket warning: it only fires when a post-bearing

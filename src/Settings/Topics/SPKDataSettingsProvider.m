@@ -156,11 +156,10 @@
 
     NSArray *sections = @[
         SPKTopicSection(SPKL(@"ALERT_ACTION_STORAGE"), @[
-            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"DATA_STORAGE_STORAGE_USAGE_TITLE")
-                                           subtitle:@""
-                                               icon:SPKSettingsIcon(@"info")
-                                     viewController:[SPKStorageUsageViewController new]],
-                               SPKL(@"DATA_STORAGE_USAGE_HELP"))
+            [SPKSetting navigationCellWithTitle:SPKL(@"DATA_STORAGE_STORAGE_USAGE_TITLE")
+                                       subtitle:@""
+                                           icon:SPKSettingsIcon(@"info")
+                                 viewController:[SPKStorageUsageViewController new]]
         ],
                         nil),
         SPKTopicSection(SPKL(@"DATA_BACKUP_TRANSFER_HEADER"), @[

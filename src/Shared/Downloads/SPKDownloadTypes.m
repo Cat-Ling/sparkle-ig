@@ -186,9 +186,9 @@ NSString *SPKDownloadSourceSurfaceDisplayName(SPKDownloadSourceSurface surface) 
     case SPKDownloadSourceSurfaceStories:
         return SPKL(@"STORIES_OTHER_STORIES_TITLE");
     case SPKDownloadSourceSurfaceDirect:
-        return SPKL(@"DOWNLOADS_DOWNLOAD_TYPES_DIRECT_TEXT");
+        return SPKL(@"GALLERY_FILTER_MESSAGES_LABEL");
     case SPKDownloadSourceSurfaceAudioPage:
-        return SPKL(@"COMMON_MEDIA_TYPE_AUDIO");
+        return SPKL(@"GALLERY_GALLERY_FILE_AUDIO_PAGE_TEXT");
     case SPKDownloadSourceSurfaceMediaPreview:
         return SPKL(@"NOTIFICATION_PREVIEW_HEADER");
     case SPKDownloadSourceSurfaceGallery:

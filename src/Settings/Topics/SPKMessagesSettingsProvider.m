@@ -307,11 +307,10 @@ static NSArray *SPKMessagesSettingsSections(void) {
                                            icon:SPKSettingsIcon(@"eye")
                                     defaultsKey:@"msgs_deleted_log_respect_seen_list"],
                                SPKL(@"MESSAGES_DELETED_MESSAGES_RESPECT_SEEN_CHAT_LIST_HELP")),
-            SPKSettingWithHelp([SPKSetting navigationCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_VIEW_DELETED_MESSAGES_TITLE")
-                                                          subtitle:@""
-                                                              icon:SPKSettingsIcon(@"channels")
-                                                    viewController:[SPKDeletedMessagesViewController new]],
-                               SPKL(@"MESSAGES_DELETED_MESSAGES_VIEW_DELETED_MESSAGES_HELP")),
+            [SPKSetting navigationCellWithTitle:SPKL(@"MESSAGES_DELETED_MESSAGES_VIEW_DELETED_MESSAGES_TITLE")
+                                        subtitle:@""
+                                            icon:SPKSettingsIcon(@"channels")
+                                  viewController:[SPKDeletedMessagesViewController new]],
         ],
                         nil),
         SPKTopicSection(SPKL(@"INTERFACE_TITLE"), @[
@@ -356,7 +355,7 @@ static NSArray *SPKMessagesSettingsSections(void) {
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_VANISH_MODE_DISABLE_SCREENSHOT_DETECTION_TITLE")
                                            icon:SPKSettingsIcon(@"warning")
                                     defaultsKey:@"msgs_disable_screenshot_detection"],
-                               SPKL(@"MESSAGES_SCREENSHOT_DETECTION_HELP"))
+                               SPKL(@"MESSAGES_VISUAL_MESSAGES_SCREEN_CAPTURE_HELP"))
         ],
                         nil),
         SPKTopicSection(SPKL(@"MESSAGES_VANISH_MODE_HEADER"), @[
@@ -367,7 +366,7 @@ static NSArray *SPKMessagesSettingsSections(void) {
             SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"MESSAGES_VANISH_MODE_DISABLE_SCREENSHOT_DETECTION_TITLE")
                                            icon:SPKSettingsIcon(@"warning")
                                     defaultsKey:@"msgs_hide_vanish_screenshot"],
-                               SPKL(@"MESSAGES_SCREENSHOT_DETECTION_HELP")),
+                               SPKL(@"MESSAGES_VANISH_MODE_SCREEN_CAPTURE_HELP")),
         ],
                         nil),
         SPKTopicSection(SPKL(@"MESSAGES_NOTES_HEADER"), @[

@@ -1991,7 +1991,8 @@ typedef NS_ENUM(NSInteger, SPKGalleryViewMode) {
 
     NSString *msg = count == 0
                         ? SPKL(@"GALLERY_GALLERY_FOLDER_EMPTY_TEXT")
-                        : [NSString stringWithFormat:SPKL(@"GALLERY_GALLERY_FOLDER_CONTAINS_VALUE_FILE_S_THEY_MOVED_PARENT_FOLDER_FORMAT"), (long)count];
+                        : [NSString stringWithFormat:SPKL(@"GALLERY_FOLDER_DELETE_CONTENTS_MOVE_MESSAGE_FORMAT"),
+                                                       SPKLP(@"COMMON_FILE_COUNT", count)];
 
     [SPKIGAlertPresenter presentAlertFromViewController:self
                                                   title:SPKL(@"GALLERY_GALLERY_DELETE_FOLDER_CONFIRMATION_MESSAGE")
