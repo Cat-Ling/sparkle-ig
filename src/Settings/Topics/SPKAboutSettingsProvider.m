@@ -76,7 +76,7 @@
         SPKTopicSection(@"", @[
             [SPKSetting staticCellWithTitle:@"@grxphxnx" // SPK_I18N_IGNORE: contributor name
                                    subtitle:SPKL(@"ABOUT_CREDITS_LOCALIZATION_SUBTITLE")
-                                       icon:[SPKAssetUtils instagramIconNamed:@"user"]],
+                                   imageUrl:@"https://avatars.githubusercontent.com/u/26267688?v=4"]
         ],
                         nil)
     ]);

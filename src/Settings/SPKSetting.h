@@ -91,6 +91,12 @@ typedef NS_ENUM(NSInteger, SPKTableCell) {
                            subtitle:(NSString *)subtitle
                                icon:(nullable UIImage *)icon;
 
+/// Leading image loaded from `imageUrl` and cached, circular unless the row's
+/// `userInfo` carries `@{@"remoteImageCircular": @NO}`.
++ (instancetype)staticCellWithTitle:(NSString *)title
+                           subtitle:(NSString *)subtitle
+                           imageUrl:(NSString *)imageUrl;
+
 + (instancetype)linkCellWithTitle:(NSString *)title
                          subtitle:(NSString *)subtitle
                              icon:(nullable UIImage *)icon
