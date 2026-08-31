@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Bundles every community catalog into per-language packs plus one combined
-# archive, for attaching to a GitHub release. Each pack is what Sparkle's
+# Bundles every community catalog into one pack per language, for attaching to a
+# GitHub release. Each pack holds a single <code>.lproj, which is what Sparkle's
 # Import Language Pack accepts.
+#
+# There is deliberately no combined archive: the importer installs the first
+# .lproj it finds, so an archive holding every catalog would silently install
+# one language.
 
 set -euo pipefail
 
@@ -21,5 +25,4 @@ for catalog in "$ROOT_DIR"/translations/*.lproj; do
     echo "Packaged $code"
 done
 
-(cd "$ROOT_DIR" && zip -q -r -X "$OUTPUT_DIR/Sparkle-translations.zip" translations -x '*/.*')
-echo "Wrote $(ls -1 "$OUTPUT_DIR" | wc -l | tr -d ' ') archives to $OUTPUT_DIR"
+echo "Wrote $(ls -1 "$OUTPUT_DIR" | wc -l | tr -d ' ') language packs to $OUTPUT_DIR"
