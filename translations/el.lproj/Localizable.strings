@@ -1466,6 +1466,7 @@
 "MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNBLOCK_TEXT" = "Άρση αποκλεισμού";
 "MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNPIN_TEXT" = "Αφαίρεση από καρφίτσα";
 "MESSAGES_DELETED_MESSAGES_VIEW_DELETED_MESSAGES_TITLE" = "Προβολή Διαγραμμένων Μηνυμάτων";
+"MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_MEDIA_UNAVAILABLE_TEXT" = "Μη διαθέσιμα πολυμέσα";
 "MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_TAP_PLAY_TEXT" = "Αγγίξτε για αναπαραγωγή";
 "MESSAGES_DIRECT_AUTO_SAVE_ADD_CHATS_WHOSE_VIEW_ONCE_MEDIA_SHOULD_NEVER_AUTO_TEXT" = "Προσθήκη συνομιλιών των οποίων τα μέσα προβολής μίας φοράς δεν πρέπει ποτέ να αποθηκεύονται αυτόματα.";
 "MESSAGES_DIRECT_AUTO_SAVE_ADD_CHATS_WHOSE_VIEW_ONCE_MEDIA_SHOULD_SAVED_AUTOMATICALLY_TEXT" = "Προσθήκη συνομιλιών των οποίων τα μέσα προβολής μίας φοράς θα πρέπει να αποθηκεύονται αυτόματα όταν τα ανοίγετε.";

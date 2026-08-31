@@ -34,6 +34,9 @@
 @property (nonatomic, assign) BOOL shouldScrollToBottomOnReload;
 @property (nonatomic, strong) NSCache<NSString *, UIImage *> *thumbnailCache;
 @property (nonatomic, strong) dispatch_queue_t thumbnailQueue;
+- (nullable NSString *)localMediaPathForMessage:(SPKDeletedMessage *)message;
+- (BOOL)messageHasLocalMedia:(SPKDeletedMessage *)message;
+- (BOOL)visualMediaIsUnavailable:(SPKDeletedMessage *)message;
 @end
 
 @implementation SPKDeletedMessagesUserDetailViewController
@@ -583,7 +586,8 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 
     UIImage *cached = message.messageId.length ? [self.thumbnailCache objectForKey:message.messageId] : nil;
     BOOL outgoing = self.ownerPK.length && [message.senderPk isEqualToString:self.ownerPK];
-    [cell configureWithMessage:message thumbnail:cached outgoing:outgoing];
+    BOOL mediaUnavailable = [self visualMediaIsUnavailable:message];
+    [cell configureWithMessage:message thumbnail:cached mediaUnavailable:mediaUnavailable outgoing:outgoing];
 
     // In a group, show sender avatar + name on the first bubble in each run.
     NSString *senderName = nil;
@@ -607,6 +611,33 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 }
 
 #pragma mark - Thumbnails
+
+- (NSString *)localMediaPathForMessage:(SPKDeletedMessage *)message {
+    for (NSString *rel in @[ message.mediaPath ?: @"", message.thumbnailPath ?: @"" ]) {
+        if (!rel.length)
+            continue;
+        NSString *path = [SPKDeletedMessagesStorage absolutePathForRelativePath:rel ownerPK:self.ownerPK];
+        if (path.length && [NSFileManager.defaultManager fileExistsAtPath:path])
+            return path;
+    }
+    return nil;
+}
+
+- (BOOL)messageHasLocalMedia:(SPKDeletedMessage *)message {
+    return [self localMediaPathForMessage:message].length > 0;
+}
+
+- (BOOL)visualMediaIsUnavailable:(SPKDeletedMessage *)message {
+    switch (message.kind) {
+    case SPKDeletedMessageKindPhoto:
+    case SPKDeletedMessageKindVideo:
+    case SPKDeletedMessageKindGif:
+    case SPKDeletedMessageKindSticker:
+        return ![self messageHasLocalMedia:message];
+    default:
+        return NO;
+    }
+}
 
 - (BOOL)messageHasThumbnail:(SPKDeletedMessage *)message {
     NSString *rel = message.thumbnailPath ?: message.mediaPath;
@@ -647,14 +678,18 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 #pragma mark - Bubble delegate
 
 - (void)bubbleCell:(SPKDeletedMessageBubbleCell *)cell didTapMediaForMessage:(SPKDeletedMessage *)message {
-    NSString *rel = message.mediaPath ?: message.thumbnailPath;
-    NSString *path = rel.length ? [SPKDeletedMessagesStorage absolutePathForRelativePath:rel ownerPK:self.ownerPK] : nil;
-    if (path.length && [NSFileManager.defaultManager fileExistsAtPath:path]) {
+    NSString *path = [self localMediaPathForMessage:message];
+    if (path.length) {
         // SPKFullScreenMediaPlayer detects audio/video/image by extension and
         // presents the right player — voice notes play here too.
         [SPKFullScreenMediaPlayer showFileURL:[NSURL fileURLWithPath:path]];
         return;
     }
+    // Visual CDN URLs are short-lived. Once recovery failed, do not send the
+    // user to an expired raw URL in Safari; the compact bubble already reports
+    // that the media is unavailable.
+    if ([self visualMediaIsUnavailable:message])
+        return;
     // Deep-link kinds (share/link) have no local blob — open the URL externally.
     NSString *urlStr = message.mediaURL.length ? message.mediaURL : message.thumbnailURL;
     NSURL *url = urlStr.length ? [NSURL URLWithString:urlStr] : nil;
@@ -740,9 +775,11 @@ static SPKDeletedMessageKind SPKDMDetailChipKindForIndex(NSInteger index) {
 }
 
 - (NSURL *)localOrRemoteURLForMessage:(SPKDeletedMessage *)message {
-    NSString *path = [SPKDeletedMessagesStorage absolutePathForRelativePath:(message.mediaPath ?: message.thumbnailPath) ownerPK:self.ownerPK];
-    if (path.length && [NSFileManager.defaultManager fileExistsAtPath:path])
+    NSString *path = [self localMediaPathForMessage:message];
+    if (path.length)
         return [NSURL fileURLWithPath:path];
+    if ([self visualMediaIsUnavailable:message])
+        return nil;
     if (message.mediaURL.length)
         return [NSURL URLWithString:message.mediaURL];
     if (message.thumbnailURL.length)

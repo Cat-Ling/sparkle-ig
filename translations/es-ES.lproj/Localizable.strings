@@ -1466,6 +1466,7 @@
 "MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNBLOCK_TEXT" = "Desbloquear";
 "MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNPIN_TEXT" = "Desfijar";
 "MESSAGES_DELETED_MESSAGES_VIEW_DELETED_MESSAGES_TITLE" = "Ver mensajes eliminados";
+"MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_MEDIA_UNAVAILABLE_TEXT" = "Contenido multimedia no disponible";
 "MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_TAP_PLAY_TEXT" = "Toca para reproducir";
 "MESSAGES_DIRECT_AUTO_SAVE_ADD_CHATS_WHOSE_VIEW_ONCE_MEDIA_SHOULD_NEVER_AUTO_TEXT" = "Agregar chats cuyos medios de vista única nunca se deben guardar automáticamente.";
 "MESSAGES_DIRECT_AUTO_SAVE_ADD_CHATS_WHOSE_VIEW_ONCE_MEDIA_SHOULD_SAVED_AUTOMATICALLY_TEXT" = "Agregar chats cuyos medios de vista única se deben guardar automáticamente al abrirlos.";

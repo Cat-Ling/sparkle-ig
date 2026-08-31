@@ -1466,6 +1466,7 @@
 "MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNBLOCK_TEXT" = "Розблокувати";
 "MESSAGES_DELETED_MESSAGES_USER_DETAIL_UNPIN_TEXT" = "Знята закріпленням";
 "MESSAGES_DELETED_MESSAGES_VIEW_DELETED_MESSAGES_TITLE" = "Переглянути видалені повідомлення";
+"MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_MEDIA_UNAVAILABLE_TEXT" = "Медіафайл недоступний";
 "MESSAGES_DELETED_MESSAGE_BUBBLE_CELL_TAP_PLAY_TEXT" = "Торкніться, щоб відтворити";
 "MESSAGES_DIRECT_AUTO_SAVE_ADD_CHATS_WHOSE_VIEW_ONCE_MEDIA_SHOULD_NEVER_AUTO_TEXT" = "Додайте чати, медіа один раз яких ніколи не повинні автоматично зберігатися.";
 "MESSAGES_DIRECT_AUTO_SAVE_ADD_CHATS_WHOSE_VIEW_ONCE_MEDIA_SHOULD_SAVED_AUTOMATICALLY_TEXT" = "Додайте чати, медіа один раз яких мають автоматично зберігатися при відкритті.";
