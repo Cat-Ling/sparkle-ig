@@ -85,7 +85,7 @@ For the full list of features, check out [`FEATURES.md`](FEATURES.md).
 
 1. Grab the latest **pre-injected IPA** from the [Telegram channel](https://t.me/sparkle_ig).
 2. Install the IPA with your sideloading tool of choice.
-   - Use the **`_sidestore`** build for **AltStore / SideStore / LiveContainer** (or if you don't want to have app extensions).
+   - Use the **`_no-ext`** build for **AltStore / SideStore / LiveContainer** (or if you don't want to have app extensions).
 
 > [!NOTE]
 > Sparkle uses Instagram's bundled image assets everywhere. The distributed IPA is a full (un-thinned) build (it contains icons for all screen sizes), so the higher-quality in-app icons render crisply on every device. If you build your own from an IPA that was already thinned to a smaller device, some icon scales may be missing. See [Building from source](#building-from-source).
@@ -173,15 +173,14 @@ The `ipa` command takes composable flags:
 | Flag | Effect |
 |------|--------|
 | `--release` | Shorthand for `--inject --patch` |
-| `--inject` | Build Sparkle, then pass `Sparkle.dylib` and the complete `Sparkle.bundle` to Cyan as separate inputs. The bundle always travels with the tweak, so `--bundle` is not needed alongside this. A standard rootless `.deb` is also produced for jailbreak use. |
-| `--bundle` | Pass only the complete `Sparkle.bundle` to Cyan, without injecting the tweak. `--ffmpeg` is kept as an alias. |
+| `--inject` | Build Sparkle's rootless `.deb` and pass it to Cyan as a single input. The bundle and FFmpeg frameworks travel inside the deb, so `--bundle` is not needed alongside this. The same deb is usable for jailbreak installs. |
+| `--bundle` | Pass `Sparkle.bundle` and the FFmpeg frameworks to Cyan, without injecting the tweak. |
 | `--no-ffmpeg` | Stage `Sparkle.bundle` with the localization catalogs but without the FFmpeg frameworks. Media encoding is unavailable in the result. |
 | `--flex` | Bundle `libFLEX.dylib` (in-app debugging) |
 | `--patch` | Run `ipapatch` |
 | `--no-ext` | Strip all `.appex` bundles before injection |
-| `--sidestore` | Shorthand for `--release --no-ext` (for SideStore) |
 | `--dev` | `DEV=1` build (also enables the developer diagnostics: performance meter and hook bisect, under Settings → Tools → Diagnostics) |
-| `--buildonly` | Build dylibs only, skip IPA packaging |
+| `--buildonly` | Build the deb and dylibs only, skip IPA packaging |
 | `--bundle-id <id>` | Override the bundle ID |
 
 Outputs are named with the Sparkle version (and, for IPAs, the bundled Instagram version) so builds are easy to tell apart:
@@ -191,9 +190,9 @@ Outputs are named with the Sparkle version (and, for IPAs, the bundled Instagram
 
 Run `./build.sh` with no arguments for the full usage reference.
 
-The jailbreak `.deb` contains `Sparkle.dylib` plus the same `Sparkle.bundle` used by sideload builds. Its FFmpeg frameworks retain their original names, resolve sibling frameworks through bundle-relative `@loader_path` dependencies, and are ad-hoc signed for jailbroken devices.
+The jailbreak `.deb` contains `Sparkle.dylib` plus `Sparkle.bundle`. Its FFmpeg frameworks are staged under Sparkle's own `spk.*` names, resolve their siblings through `@loader_path` dependencies, and are ad-hoc signed for jailbroken devices.
 
-For sideload builds, do not give the `.deb` to Cyan. `./build.sh ipa --release --flex` passes `Sparkle.dylib`, FLEX, and the complete resource bundle as separate inputs. Cyan copies `Sparkle.bundle` to the app root without injecting its FFmpeg frameworks as launch dependencies; the final IPA signer can then sign the frameworks normally.
+Sideload builds hand the same `.deb` to Cyan. Cyan hoists every framework inside it into `App.app/Frameworks`, which is the only place a sideload signer re-signs code: signers in the ldid family only re-sign frameworks one level below the app bundle, so anything left deeper keeps its ad-hoc signature and fails to load on a device without a jailbreak. The frameworks use Sparkle's own `spk.*` names so they never replace Instagram's existing `libavcodec` and `libavutil` frameworks, and the duplicate copies Cyan leaves inside `Sparkle.bundle` are pruned afterwards.
 
 ```sh
 ./build.sh ipa --release --flex

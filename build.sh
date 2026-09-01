@@ -42,17 +42,13 @@ stage_sparkle_resource_bundle() {
     fi
 }
 
-sparkle_dylib_path() {
-    local path
-    for path in \
-        "$ROOT_DIR/.theos/obj/Sparkle.dylib" \
-        "$ROOT_DIR/.theos/obj/arm64/Sparkle.dylib"; do
-        if [ -f "$path" ]; then
-            echo "$path"
-            return 0
-        fi
-    done
-    return 1
+newest_sparkle_deb() {
+    local newest
+    newest="$(ls -t "$ROOT_DIR/packages/"com.sparkle.sparkle_*.deb 2>/dev/null | head -n 1)"
+    if [ -z "$newest" ]; then
+        return 1
+    fi
+    echo "$newest"
 }
 
 
@@ -161,6 +157,36 @@ copy_flex_library_into_ipa() {
 
     mkdir -p "$app_dir/Frameworks"
     ditto "$libflex_path" "$app_dir/Frameworks/libFLEX.dylib"
+
+    rm -f "$output_ipa"
+    (
+        cd "$temp_dir"
+        zip -qry "$output_ipa" Payload
+    )
+    rm -rf "$temp_dir"
+}
+
+# Cyan copies an injected .deb twice: the resource bundle lands in the app root
+# with its contents intact, and every framework inside it is also hoisted into
+# Frameworks/. Only the hoisted copies sit where a sideload signer will re-sign
+# them, so the ones left in the bundle are dead weight that the loader must
+# never reach for.
+prune_bundled_ffmpeg_frameworks_from_ipa() {
+    local input_ipa="$1"
+    local output_ipa="$2"
+    local temp_dir
+    local app_dir
+    temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/sparkle-ffmpeg-prune.XXXXXX")"
+
+    unzip -q "$input_ipa" -d "$temp_dir"
+    app_dir="$(find "$temp_dir/Payload" -maxdepth 1 -type d -name "*.app" | head -n 1)"
+    if [ -z "$app_dir" ]; then
+        echo -e '\033[1m\033[0;31mCould not find Payload/*.app in IPA.\033[0m'
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+
+    find "$app_dir/Sparkle.bundle" -mindepth 1 -maxdepth 1 -type d -name 'spk.*.framework' -exec rm -rf {} + 2>/dev/null || true
 
     rm -f "$output_ipa"
     (
@@ -349,24 +375,14 @@ sparkle_flag_token() {
         [ "${OPT_DEV:-0}" -eq 1 ] && parts+=(dev)
         [ "${OPT_NO_FFMPEG:-0}" -eq 1 ] && parts+=(no-ffmpeg)
         [ "${OPT_FLEX:-0}" -eq 0 ] && parts+=(no-flex)
-        if [ "${OPT_SIDESTORE:-0}" -eq 1 ]; then
-            parts+=(sidestore)
-        elif [ "${OPT_STRIP_EXTENSIONS:-0}" -eq 1 ]; then
-            parts+=(no-ext)
-        fi
+        [ "${OPT_STRIP_EXTENSIONS:-0}" -eq 1 ] && parts+=(no-ext)
     else
         # Partial / à la carte build: spell out every included component.
         [ "${OPT_INJECT:-0}" -eq 1 ] && parts+=(inject)
-        if [ "${OPT_BUNDLE:-0}" -eq 1 ]; then
-            [ "${OPT_NO_FFMPEG:-0}" -eq 1 ] && parts+=(bundle) || parts+=(ffmpeg)
-        fi
+        [ "${OPT_BUNDLE:-0}" -eq 1 ] && parts+=(bundle)
         [ "${OPT_FLEX:-0}" -eq 1 ] && parts+=(flex)
         [ "${OPT_PATCH:-0}" -eq 1 ] && parts+=(patch)
-        if [ "${OPT_SIDESTORE:-0}" -eq 1 ]; then
-            parts+=(sidestore)
-        elif [ "${OPT_STRIP_EXTENSIONS:-0}" -eq 1 ]; then
-            parts+=(no-ext)
-        fi
+        [ "${OPT_STRIP_EXTENSIONS:-0}" -eq 1 ] && parts+=(no-ext)
         [ "${OPT_DEV:-0}" -eq 1 ] && parts+=(dev)
     fi
     local IFS=_
@@ -396,7 +412,6 @@ then
     OPT_FLEX=0
     OPT_PATCH=0
     OPT_STRIP_EXTENSIONS=0
-    OPT_SIDESTORE=0
     OPT_DEV=0
     OPT_BUILDONLY=0
     OPT_BUNDLE_ID=""
@@ -408,17 +423,11 @@ then
                 OPT_PATCH=1
                 ;;
             --inject) OPT_INJECT=1 ;;
-            --bundle|--ffmpeg) OPT_BUNDLE=1 ;;
+            --bundle) OPT_BUNDLE=1 ;;
             --no-ffmpeg) OPT_NO_FFMPEG=1 ;;
             --flex) OPT_FLEX=1 ;;
             --patch) OPT_PATCH=1 ;;
             --no-ext) OPT_STRIP_EXTENSIONS=1 ;;
-            --sidestore)
-                OPT_INJECT=1
-                OPT_PATCH=1
-                OPT_STRIP_EXTENSIONS=1
-                OPT_SIDESTORE=1
-                ;;
             --dev) OPT_DEV=1 ;;
             --buildonly) OPT_BUILDONLY=1 ;;
             --bundle-id)
@@ -427,7 +436,7 @@ then
                 ;;
             *)
                 echo -e "\033[1m\033[0;31mUnknown ipa flag: $1\033[0m"
-                echo "Use: ./build.sh ipa [--release|--inject|--bundle|--no-ffmpeg|--flex|--patch|--no-ext|--sidestore|--dev|--buildonly|--bundle-id <id>] ..."
+                echo "Use: ./build.sh ipa [--release|--inject|--bundle|--no-ffmpeg|--flex|--patch|--no-ext|--dev|--buildonly|--bundle-id <id>] ..."
                 exit 1
                 ;;
         esac
@@ -435,7 +444,7 @@ then
     done
 
     if [ "$OPT_INJECT" -eq 0 ] && [ "$OPT_BUNDLE" -eq 0 ] && [ "$OPT_FLEX" -eq 0 ] && [ "$OPT_STRIP_EXTENSIONS" -eq 0 ]; then
-        echo -e '\033[1m\033[0;31msideload: specify at least one of --release, --inject, --bundle, --flex, --no-ext, --sidestore\033[0m'
+        echo -e '\033[1m\033[0;31msideload: specify at least one of --release, --inject, --bundle, --flex, --no-ext\033[0m'
         exit 1
     fi
 
@@ -502,14 +511,15 @@ then
         exit 0
     fi
 
-    SPARKLE_DYLIB=""
+    SPARKLE_DEB=""
     SPARKLE_BUNDLE_STAGE_ROOT=""
     SPARKLE_BUNDLE_PATH=""
+    BUNDLE_FFMPEG_PATH=""
     LIBFLEXPATH=""
     SIDELOADFIXPATH=""
     if [ "$OPT_INJECT" -eq 1 ]; then
-        SPARKLE_DYLIB="$(sparkle_dylib_path)" || {
-            echo -e '\033[1m\033[0;31mCould not find the built Sparkle dylib.\033[0m'
+        SPARKLE_DEB="$(newest_sparkle_deb)" || {
+            echo -e '\033[1m\033[0;31mCould not find the built Sparkle deb.\033[0m'
             exit 1
         }
     fi
@@ -525,18 +535,22 @@ then
             exit 1
         }
     fi
-    # Injecting Sparkle always brings its resource bundle, so --bundle only adds
-    # anything on its own: resources without the tweak.
-    if [ "$OPT_INJECT" -eq 1 ] || [ "$OPT_BUNDLE" -eq 1 ]; then
+    # Injecting Sparkle hands Cyan the deb, which already carries the dylib, the
+    # resource bundle and the FFmpeg frameworks. So --bundle only does anything
+    # on its own: resources without the tweak. Cyan globs a deb for nested
+    # frameworks but never a plain directory, so that path stages and passes
+    # each framework itself, otherwise they would land somewhere no sideload
+    # signer reaches and fail to load.
+    if [ "$OPT_INJECT" -eq 0 ] && [ "$OPT_BUNDLE" -eq 1 ]; then
         SPARKLE_BUNDLE_STAGE_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/sparkle-cyan-bundle.XXXXXX")"
         SPARKLE_BUNDLE_PATH="$SPARKLE_BUNDLE_STAGE_ROOT/Sparkle.bundle"
-        if [ "$OPT_NO_FFMPEG" -eq 1 ]; then
-            echo -e '\033[1m\033[32mBuilding Sparkle.bundle for Cyan (localizations only)...\033[0m'
-            stage_sparkle_resource_bundle "$SPARKLE_BUNDLE_PATH" --localizations-only
-        else
+        echo -e '\033[1m\033[32mBuilding Sparkle.bundle for Cyan (localizations only)...\033[0m'
+        stage_sparkle_resource_bundle "$SPARKLE_BUNDLE_PATH" --localizations-only
+        if [ "$OPT_NO_FFMPEG" -eq 0 ]; then
             ensure_ffmpeg_frameworks
-            echo -e '\033[1m\033[32mBuilding Sparkle.bundle for Cyan...\033[0m'
-            stage_sparkle_resource_bundle "$SPARKLE_BUNDLE_PATH"
+            echo -e '\033[1m\033[32mStaging FFmpeg frameworks for Cyan...\033[0m'
+            BUNDLE_FFMPEG_PATH="$SPARKLE_BUNDLE_STAGE_ROOT/Frameworks"
+            stage_sparkle_resource_bundle "$BUNDLE_FFMPEG_PATH" --frameworks-only
         fi
     fi
 
@@ -547,7 +561,8 @@ then
     ipa_flex_tmp="$ROOT_DIR/packages/.sparkle-build-tmp-flex.ipa"
     ipa_strip_tmp="$ROOT_DIR/packages/.sparkle-build-tmp-strip.ipa"
     ipa_icons_tmp="$ROOT_DIR/packages/.sparkle-build-tmp-icons.ipa"
-    rm -f "$ipa_out" "$ipa_stage_input" "$ipa_flex_tmp" "$ipa_strip_tmp" "$ipa_icons_tmp"
+    ipa_ffmpeg_tmp="$ROOT_DIR/packages/.sparkle-build-tmp-ffmpeg.ipa"
+    rm -f "$ipa_out" "$ipa_stage_input" "$ipa_flex_tmp" "$ipa_strip_tmp" "$ipa_icons_tmp" "$ipa_ffmpeg_tmp"
 
     cp "packages/${ipaFile}" "$ipa_stage_input"
 
@@ -575,10 +590,15 @@ then
     echo -e '\033[1m\033[32mCreating the IPA file...\033[0m'
     CYAN_FILES=()
     if [ "$OPT_INJECT" -eq 1 ]; then
-        CYAN_FILES+=("$SPARKLE_DYLIB")
+        CYAN_FILES+=("$SPARKLE_DEB")
     fi
     if [ -n "$SPARKLE_BUNDLE_PATH" ]; then
         CYAN_FILES+=("$SPARKLE_BUNDLE_PATH")
+    fi
+    if [ -n "$BUNDLE_FFMPEG_PATH" ]; then
+        for staged_framework in "$BUNDLE_FFMPEG_PATH"/spk.*.framework; do
+            CYAN_FILES+=("$staged_framework")
+        done
     fi
     if [ "$OPT_PATCH" -eq 1 ] && [ "$OPT_STRIP_EXTENSIONS" -eq 1 ]; then
         CYAN_FILES+=("$SIDELOADFIXPATH")
@@ -592,6 +612,12 @@ then
         fi
     else
         cp "$ipa_stage_input" "$ipa_out"
+    fi
+
+    if [ "$OPT_INJECT" -eq 1 ] && [ "$OPT_NO_FFMPEG" -eq 0 ]; then
+        echo -e '\033[1m\033[32mPruning duplicate FFmpeg frameworks...\033[0m'
+        prune_bundled_ffmpeg_frameworks_from_ipa "$ipa_out" "$ipa_ffmpeg_tmp"
+        mv -f "$ipa_ffmpeg_tmp" "$ipa_out"
     fi
 
     rm -f "$ipa_stage_input"
@@ -659,21 +685,20 @@ else
     echo
     echo 'When building an IPA, use at least one of the following flags:'
     echo '  --release         equivalent to --inject --patch'
-    echo '  --inject          build Sparkle and pass its dylib + resource bundle to Cyan'
-    echo '  --bundle          pass only Sparkle.bundle to Cyan, without the tweak (alias: --ffmpeg)'
+    echo '  --inject          build Sparkle and pass its .deb to Cyan'
+    echo '  --bundle          pass Sparkle.bundle + FFmpeg frameworks to Cyan, without the tweak'
     echo '  --no-ffmpeg       stage Sparkle.bundle without the FFmpeg frameworks'
     echo '  --flex            include libFLEX.dylib'
     echo '  --patch           run ipapatch'
     echo '  --no-ext          remove all .appex bundles before final injection'
-    echo '  --sidestore       equivalent to --release --no-ext'
     echo '  --dev             DEV=1 build'
-    echo '  --buildonly       build dylibs only, skip IPA'
+    echo '  --buildonly       build the deb and dylibs only, skip IPA'
     echo '  --bundle-id <id>  override bundle ID'
     echo
     echo 'Examples:'
     echo '    ./build.sh ipa --release'
     echo '    ./build.sh ipa --release --flex'
-    echo '    ./build.sh ipa --sidestore'
+    echo '    ./build.sh ipa --release --no-ext'
     echo '    ./build.sh ipa --bundle --flex --no-ext   (base IPA for LiveContainer dev)'
     echo '    ./build.sh ipa --bundle    (resource-only base IPA, no load commands)'
     echo
