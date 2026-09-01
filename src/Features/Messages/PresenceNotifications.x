@@ -44,6 +44,9 @@ static NSNumber *SPKPresenceSamplePriorState(NSString *userPk) {
 //
 // Grouped and installed by selector probe because it does not exist on older builds,
 // where the delegate callback is still the only writer.
+//
+// The selector for it was renamed once already, so both spellings are carried and
+// probed independently rather than assumed to be the same build's.
 %group SPKPresenceUPC
 
 %hook IGPresenceManager
@@ -57,6 +60,27 @@ static NSNumber *SPKPresenceSamplePriorState(NSString *userPk) {
     NSNumber *prior = SPKPresenceSamplePriorState(userPk);
     %orig;
     SPKLog(@"Presence", @"[Sparkle Presence] raw upc update pk=%@ isActive=%d lastActivityAtMs=%f igPrior=%@",
+           userPk, isActive, lastActivityAtMs, prior ?: @"unknown");
+    SPKPresenceHandleUpdate(userPk, isActive, lastActivityAtMs, prior);
+}
+
+%end
+
+%end
+
+%group SPKPresenceUnified
+
+%hook IGPresenceManager
+
+- (void)_unifiedPresenceDidReceiveRealtimeUpdateForUserPk:(id)pk
+                                                 isActive:(BOOL)isActive
+                                         lastActivityAtMs:(double)lastActivityAtMs
+                                             capabilities:(unsigned long long)capabilities
+                                            correlationId:(id)correlationId {
+    NSString *userPk = SPKStringFromValue(pk);
+    NSNumber *prior = SPKPresenceSamplePriorState(userPk);
+    %orig;
+    SPKLog(@"Presence", @"[Sparkle Presence] raw unified update pk=%@ isActive=%d lastActivityAtMs=%f igPrior=%@",
            userPk, isActive, lastActivityAtMs, prior ?: @"unknown");
     SPKPresenceHandleUpdate(userPk, isActive, lastActivityAtMs, prior);
 }
@@ -198,6 +222,11 @@ void SPKInstallPresenceNotificationsHooksIfEnabled(void) {
         if ([%c(IGPresenceManager) instancesRespondToSelector:upcSelector]) {
             %init(SPKPresenceUPC);
             SPKLog(@"Presence", @"[Sparkle Presence] UPC realtime path present, hooked");
+        }
+        SEL unifiedSelector = @selector(_unifiedPresenceDidReceiveRealtimeUpdateForUserPk:isActive:lastActivityAtMs:capabilities:correlationId:);
+        if ([%c(IGPresenceManager) instancesRespondToSelector:unifiedSelector]) {
+            %init(SPKPresenceUnified);
+            SPKLog(@"Presence", @"[Sparkle Presence] Unified realtime path present, hooked");
         }
         if (!%c(IGDirectTypingStatusService)) {
             SPKLog(@"Presence", @"[Sparkle Presence] IGDirectTypingStatusService unavailable, typing notifications inactive");
