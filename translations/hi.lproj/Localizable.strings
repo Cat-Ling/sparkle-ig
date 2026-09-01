@@ -1910,7 +1910,7 @@
 "SETTINGS_WHATS_NEW_DONE_TEXT" = "पूर्ण";
 "SETTINGS_WHATS_NEW_FIXES_IMPROVEMENTS_TEXT" = "ठीक किए गए और सुधार";
 "SETTINGS_WHATS_NEW_FIX_BUNDLE_ID_DISPLAY_TEXT" = "अबाउट अब ऐप की असली बंडल ID दिखाता है";
-"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Instagram 445.0.0 के साथ संगतता";
+"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Instagram v445.0.0 के साथ संगतता";
 "SETTINGS_WHATS_NEW_FIX_SIDELOAD_MEDIA_TOOLS_TEXT" = "AltStore और SideStore के साथ मीडिया डाउनलोड, कन्वर्ट और ट्रिम करना फिर से काम करता है";
 "SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT" = "%@ में क्या नया है";
 "SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE" = "क्रियाएँ कॉन्फ़िगर करें";

@@ -1910,7 +1910,7 @@
 "SETTINGS_WHATS_NEW_DONE_TEXT" = "Bitti";
 "SETTINGS_WHATS_NEW_FIXES_IMPROVEMENTS_TEXT" = "Düzeltmeler ve İyileştirmeler";
 "SETTINGS_WHATS_NEW_FIX_BUNDLE_ID_DISPLAY_TEXT" = "Hakkında bölümü artık uygulamanın gerçek bundle ID'sini gösteriyor";
-"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Instagram 445.0.0 ile uyumluluk";
+"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Instagram v445.0.0 ile uyumluluk";
 "SETTINGS_WHATS_NEW_FIX_SIDELOAD_MEDIA_TOOLS_TEXT" = "Medya indirme, dönüştürme ve kırpma AltStore ve SideStore ile yeniden çalışıyor";
 "SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT" = "%@ içindeki yenilikler";
 "SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE" = "Eylemleri Yapılandır";

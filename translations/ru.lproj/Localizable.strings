@@ -1910,7 +1910,7 @@
 "SETTINGS_WHATS_NEW_DONE_TEXT" = "Готово";
 "SETTINGS_WHATS_NEW_FIXES_IMPROVEMENTS_TEXT" = "Исправления и улучшения";
 "SETTINGS_WHATS_NEW_FIX_BUNDLE_ID_DISPLAY_TEXT" = "В разделе «О программе» теперь отображается настоящий bundle ID приложения";
-"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Совместимость с Instagram 445.0.0";
+"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Совместимость с Instagram v445.0.0";
 "SETTINGS_WHATS_NEW_FIX_SIDELOAD_MEDIA_TOOLS_TEXT" = "Скачивание, конвертация и обрезка медиа снова работают с AltStore и SideStore";
 "SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT" = "Что нового в %@";
 "SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE" = "Настроить действия";

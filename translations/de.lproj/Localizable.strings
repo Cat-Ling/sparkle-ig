@@ -1910,7 +1910,7 @@
 "SETTINGS_WHATS_NEW_DONE_TEXT" = "Fertig";
 "SETTINGS_WHATS_NEW_FIXES_IMPROVEMENTS_TEXT" = "Korrektionen und Verbesserungen";
 "SETTINGS_WHATS_NEW_FIX_BUNDLE_ID_DISPLAY_TEXT" = "Unter „Info“ wird jetzt die echte Bundle-ID der App angezeigt";
-"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Kompatibilität mit Instagram 445.0.0";
+"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Kompatibilität mit Instagram v445.0.0";
 "SETTINGS_WHATS_NEW_FIX_SIDELOAD_MEDIA_TOOLS_TEXT" = "Herunterladen, Konvertieren und Zuschneiden von Medien funktionieren mit AltStore und SideStore wieder";
 "SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT" = "Neue Funktionen in %@";
 "SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE" = "Aktionen konfigurieren";

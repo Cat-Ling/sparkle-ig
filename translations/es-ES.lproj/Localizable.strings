@@ -1910,7 +1910,7 @@
 "SETTINGS_WHATS_NEW_DONE_TEXT" = "Hecho";
 "SETTINGS_WHATS_NEW_FIXES_IMPROVEMENTS_TEXT" = "Correcciones y mejoras";
 "SETTINGS_WHATS_NEW_FIX_BUNDLE_ID_DISPLAY_TEXT" = "Información ahora muestra el ID de paquete real de la app";
-"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Compatibilidad con Instagram 445.0.0";
+"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "Compatibilidad con Instagram v445.0.0";
 "SETTINGS_WHATS_NEW_FIX_SIDELOAD_MEDIA_TOOLS_TEXT" = "Descargar, convertir y recortar contenido vuelve a funcionar con AltStore y SideStore";
 "SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT" = "Novedades en %@";
 "SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE" = "Configurar acciones";

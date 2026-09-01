@@ -1910,7 +1910,7 @@
 "SETTINGS_WHATS_NEW_DONE_TEXT" = "تم";
 "SETTINGS_WHATS_NEW_FIXES_IMPROVEMENTS_TEXT" = "التصحيحات والتحسينات";
 "SETTINGS_WHATS_NEW_FIX_BUNDLE_ID_DISPLAY_TEXT" = "يعرض قسم «حول» الآن معرّف الحزمة الحقيقي للتطبيق";
-"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "التوافق مع إنستغرام 445.0.0";
+"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_445_COMPATIBILITY_TEXT" = "التوافق مع إنستغرام v445.0.0";
 "SETTINGS_WHATS_NEW_FIX_SIDELOAD_MEDIA_TOOLS_TEXT" = "عادت وظائف تنزيل الوسائط وتحويلها وقصّها للعمل مع AltStore و SideStore";
 "SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT" = "ما الجديد في %@";
 "SPKTOPICSETTINGSSUPPORT_GENERAL_CONFIGURE_ACTIONS_TITLE" = "تكوين الإجراءات";
