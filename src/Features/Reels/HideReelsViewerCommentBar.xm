@@ -1,14 +1,56 @@
+#import <objc/runtime.h>
+
 #import "../../InstagramHeaders.h"
 #import "../../Utils.h"
 
+// Both values below are Swift stored properties with no @objc accessor, so
+// valueForKey: raises for every one of them and silently leaves the caller with
+// zero. Reading the ivar storage directly is the only way to see them.
+static BOOL SPKReelsBarFloatIvar(id obj, const char *name, CGFloat *out) {
+    if (!obj || !name || !out)
+        return NO;
+
+    Ivar ivar = class_getInstanceVariable(object_getClass(obj), name);
+    if (!ivar)
+        return NO;
+
+    const char *encoding = ivar_getTypeEncoding(ivar);
+    if (!encoding)
+        return NO;
+
+    const void *base = (__bridge const void *)obj;
+    const void *slot = (const char *)base + ivar_getOffset(ivar);
+    if (encoding[0] == 'd') {
+        double value = 0.0;
+        memcpy(&value, slot, sizeof(value));
+        *out = (CGFloat)value;
+        return YES;
+    }
+    if (encoding[0] == 'f') {
+        float value = 0.0f;
+        memcpy(&value, slot, sizeof(value));
+        *out = (CGFloat)value;
+        return YES;
+    }
+    return NO;
+}
+
+static UIView *SPKReelsBarViewIvar(id obj, const char *name) {
+    if (!obj || !name)
+        return nil;
+
+    Ivar ivar = class_getInstanceVariable(object_getClass(obj), name);
+    if (!ivar)
+        return nil;
+
+    id value = object_getIvar(obj, ivar);
+    return [value isKindOfClass:UIView.class] ? (UIView *)value : nil;
+}
+
 static CGFloat SPKCommentContentViewTabBarInset(UIView *view) {
     CGFloat inset = 0.0;
-    @try {
-        id val = [view valueForKey:@"cachedTabBarBottomInset"];
-        if ([val respondsToSelector:@selector(doubleValue)]) {
-            inset = [val doubleValue];
-        }
-    } @catch (__unused NSException *e) {}
+    if (!SPKReelsBarFloatIvar(view, "cachedTabBarBottomInset", &inset))
+        return 0.0;
     return MAX(0.0, inset);
 }
 
@@ -23,10 +65,7 @@ static BOOL SPKModernReelsViewerBarIsCommentBar(_TtC19IGSundialFeedFooter24IGSun
 
 - (CGSize)sizeThatFits:(CGSize)size {
     if (SPKModernReelsViewerBarIsCommentBar(self)) {
-        UIView *cv = nil;
-        @try {
-            cv = [self valueForKey:@"contentView"];
-        } @catch (__unused NSException *e) {}
+        UIView *cv = SPKReelsBarViewIvar(self, "contentView");
         if (cv) {
             return [cv sizeThatFits:size];
         }
