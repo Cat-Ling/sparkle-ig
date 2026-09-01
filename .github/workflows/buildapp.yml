@@ -24,7 +24,7 @@ on:
                 required: false
                 type: boolean
             for_sidestore:
-                description: "Build for SideStore (Strips Extensions)"
+                description: "Strip app extensions (for AltStore/SideStore free accounts)"
                 default: false
                 required: false
                 type: boolean
@@ -138,7 +138,7 @@ jobs:
 
                 FLAGS="--release"
                 if [ "${{ inputs.for_sidestore }}" = "true" ]; then
-                  FLAGS="--sidestore"
+                  FLAGS="$FLAGS --no-ext"
                 fi
                 if [ "${{ inputs.with_flex }}" = "true" ]; then
                   FLAGS="$FLAGS --flex"
