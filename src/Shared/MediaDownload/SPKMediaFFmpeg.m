@@ -162,39 +162,58 @@ static void SPKFFmpegPersistLoaderFailure(NSArray<NSString *> *details) {
     SPKFFmpegPersistErrorLog(@"loader", @"dlopen ffmpegkit", sSPKFFmpegLoadFailureSummary);
 }
 
-static NSArray<NSString *> *SPKFFmpegCandidateBinaryPaths(void) {
-    NSMutableArray<NSString *> *paths = [NSMutableArray array];
-    NSString *bundled = SPKResourcePath(@"ffmpegkit.framework/ffmpegkit");
-    if (bundled.length > 0)
-        [paths addObject:bundled];
-    return paths;
+// The FFmpeg frameworks are staged under Sparkle's own names because Instagram
+// vendors its own libavutil and libavcodec, and anything sharing those names in
+// the app's Frameworks directory would replace them. Dependency order matters:
+// each library is opened before the ones that link against it.
+static NSArray<NSString *> *SPKFFmpegLibraryNames(void) {
+    return @[
+        @"spk.avutil",
+        @"spk.swresample",
+        @"spk.swscale",
+        @"spk.avcodec",
+        @"spk.avformat",
+        @"spk.avfilter",
+        @"spk.avdevice"
+    ];
 }
 
-static NSArray<NSString *> *SPKFFmpegPreloadSiblingLibraries(NSString *ffmpegBinaryPath) {
-    NSMutableArray<NSString *> *errors = [NSMutableArray array];
-    NSString *libraryRoot = [[ffmpegBinaryPath stringByDeletingLastPathComponent] stringByDeletingLastPathComponent];
-    NSArray<NSString *> *libraries = @[
-        @"libavutil",
-        @"libswresample",
-        @"libswscale",
-        @"libavcodec",
-        @"libavformat",
-        @"libavfilter",
-        @"libavdevice"
-    ];
+// Sideload packages keep the frameworks in the app's Frameworks directory,
+// which is the only location a sideload signer re-signs. Jailbreak packages
+// keep them beside the tweak's resources. Both layouts hold the frameworks as
+// siblings, so only the containing directory differs.
+static NSArray<NSString *> *SPKFFmpegCandidateRoots(void) {
+    NSMutableArray<NSString *> *roots = [NSMutableArray array];
+    NSString *appFrameworks = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"Frameworks"];
+    if (appFrameworks.length > 0) {
+        [roots addObject:appFrameworks];
+    }
+    NSString *bundled = SPKResourcePath(@"");
+    if (bundled.length > 0 && ![roots containsObject:bundled]) {
+        [roots addObject:bundled];
+    }
+    return roots;
+}
 
+static NSString *SPKFFmpegBinaryPathInRoot(NSString *root, NSString *library) {
+    NSString *framework = [library stringByAppendingPathExtension:@"framework"];
+    return [[root stringByAppendingPathComponent:framework] stringByAppendingPathComponent:library];
+}
+
+static NSArray<NSString *> *SPKFFmpegPreloadSiblingLibraries(NSString *root) {
+    NSMutableArray<NSString *> *errors = [NSMutableArray array];
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    for (NSString *library in libraries) {
-        NSString *framework = [library stringByAppendingPathExtension:@"framework"];
-        NSString *path = [[libraryRoot stringByAppendingPathComponent:framework] stringByAppendingPathComponent:library];
-        if ([fileManager fileExistsAtPath:path]) {
-            void *handle = dlopen(path.UTF8String, RTLD_NOW | RTLD_GLOBAL);
-            if (!handle) {
-                const char *dlError = dlerror();
-                [errors addObject:[NSString stringWithFormat:@"dlopen failed for sibling %@\n%s", library, dlError ?: "unknown"]];
-            }
-        } else {
+
+    for (NSString *library in SPKFFmpegLibraryNames()) {
+        NSString *path = SPKFFmpegBinaryPathInRoot(root, library);
+        if (![fileManager fileExistsAtPath:path]) {
             [errors addObject:[NSString stringWithFormat:@"Missing sibling: %@", path]];
+            continue;
+        }
+        void *handle = dlopen(path.UTF8String, RTLD_NOW | RTLD_GLOBAL);
+        if (!handle) {
+            const char *dlError = dlerror();
+            [errors addObject:[NSString stringWithFormat:@"dlopen failed for sibling %@\n%s", library, dlError ?: "unknown"]];
         }
     }
     return errors;
@@ -208,16 +227,17 @@ static void SPKFFmpegEnsureLoaded(void) {
 
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSMutableArray<NSString *> *errors = [NSMutableArray array];
-    for (NSString *candidate in SPKFFmpegCandidateBinaryPaths()) {
+    for (NSString *root in SPKFFmpegCandidateRoots()) {
+        NSString *candidate = SPKFFmpegBinaryPathInRoot(root, @"spk.ffmpegkit");
         if (![fileManager fileExistsAtPath:candidate]) {
             [errors addObject:[NSString stringWithFormat:@"Missing: %@", candidate]];
             continue;
         }
 
-        NSArray<NSString *> *siblingErrors = SPKFFmpegPreloadSiblingLibraries(candidate);
+        NSArray<NSString *> *siblingErrors = SPKFFmpegPreloadSiblingLibraries(root);
         if (siblingErrors.count > 0) {
             [errors addObjectsFromArray:siblingErrors];
-            continue; // Stop trying this candidate if its siblings fail
+            continue; // Stop trying this root if its siblings fail
         }
         void *handle = dlopen(candidate.UTF8String, RTLD_NOW | RTLD_GLOBAL);
         if (!handle) {

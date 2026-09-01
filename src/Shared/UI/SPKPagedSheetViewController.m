@@ -181,6 +181,7 @@
     self.pageControl.currentPageIndicatorTintColor = [SPKUtils SPKColor_InstagramBlue];
     self.pageControl.pageIndicatorTintColor = [SPKUtils SPKColor_InstagramSeparator];
     self.pageControl.userInteractionEnabled = NO;
+    self.pageControl.hidesForSinglePage = YES;
     self.pageControl.translatesAutoresizingMaskIntoConstraints = NO;
     [self.view addSubview:self.pageControl];
 
@@ -222,6 +223,13 @@
         [self.skipButton.bottomAnchor constraintEqualToAnchor:safe.bottomAnchor constant:-10.0],
         [self.skipButton.heightAnchor constraintEqualToConstant:32.0],
     ]];
+
+    // hidesForSinglePage only stops the dots being drawn; the control still
+    // reserves its intrinsic height in Auto Layout, leaving an empty strip above
+    // the button. A single-page sheet has nothing to page through, so collapse it.
+    if (self.pages.count <= 1) {
+        [self.pageControl.heightAnchor constraintEqualToConstant:0.0].active = YES;
+    }
 
     [self layoutPages];
     [self updateControlsForPage:0];

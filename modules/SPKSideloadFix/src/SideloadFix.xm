@@ -1,38 +1,5 @@
 #import "Header.h"
 
-static NSString * const SPKOriginalInstagramBundleIdentifier = @"com.burbn.instagram";
-
-static BOOL SPKIsMainBundle(NSBundle *bundle) {
-	// Never in an app extension. Inside an appex process the appex's own bundle
-	// IS the main bundle, so this used to spoof the extension's identifier too --
-	// and ExtensionFoundation derives its XPC listener name from it. The
-	// notification extension ended up listening on
-	// "com.burbn.instagram.apple-extension-service" (Operation not permitted)
-	// while SpringBoard connected to
-	// "com.burbn.instagram.notificationextension.apple-extension-service", so
-	// nothing ever answered and the extension was killed after burning its full
-	// 30 second budget:
-	//
-	//     Extension will be killed because it used its runtime in starting up
-	//     Did not mutate content ... runtime: 30.013551
-	//
-	// which meant no lock-screen previews and no Instagram-side notification
-	// dedupe (hence duplicate banners).
-	if (isAppExtensionProcess()) {
-		return NO;
-	}
-	return bundle != nil && bundle == [NSBundle mainBundle];
-}
-
-static void SPKLogBundleIdentitySpoofOnce(NSString *runtimeIdentifier) {
-	static dispatch_once_t onceToken;
-	dispatch_once(&onceToken, ^{
-		SPKSideloadLog(@"Normalizing duplicate-app runtime bundle identity original=%@ runtime=%@",
-			SPKOriginalInstagramBundleIdentifier,
-			runtimeIdentifier.length > 0 ? runtimeIdentifier : @"unavailable");
-	});
-}
-
 static NSURL *redirectedAppGroupURL(NSString *groupIdentifier) {
 	if (![groupIdentifier hasPrefix:@"group"]) return nil;
 
@@ -100,31 +67,5 @@ BOOL isAppExtensionProcess(void) {
 
 	SPKSideloadLog(@"Unable to construct app group container for suite=%@; using original container", suiteName);
 	return %orig(suiteName, container);
-}
-%end
-
-// Keep the install-time identifier on disk, but present Instagram's original
-// identifier to code querying the main bundle. Restrict this to the main bundle
-// so embedded frameworks and resources retain their real identities.
-%hook NSBundle
-- (NSString *)bundleIdentifier {
-	NSString *runtimeIdentifier = %orig;
-	if (SPKIsMainBundle(self) &&
-		![runtimeIdentifier isEqualToString:SPKOriginalInstagramBundleIdentifier]) {
-		SPKLogBundleIdentitySpoofOnce(runtimeIdentifier);
-		return SPKOriginalInstagramBundleIdentifier;
-	}
-	return runtimeIdentifier;
-}
-
-- (id)objectForInfoDictionaryKey:(NSString *)key {
-	id value = %orig(key);
-	if (SPKIsMainBundle(self) &&
-		[key isEqualToString:@"CFBundleIdentifier"] &&
-		![value isEqual:SPKOriginalInstagramBundleIdentifier]) {
-		SPKLogBundleIdentitySpoofOnce([value isKindOfClass:[NSString class]] ? value : nil);
-		return SPKOriginalInstagramBundleIdentifier;
-	}
-	return value;
 }
 %end

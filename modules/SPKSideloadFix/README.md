@@ -34,31 +34,18 @@ Keychain diagnostics report only the operation, result status, timing, and
 whether a group was found/replaced/injected. Access-group strings, Keychain
 values, cookies, and credentials are never logged.
 
-For duplicate-app sideloads, main-bundle runtime queries are normalized to
-Instagram's original `com.burbn.instagram` identifier through both
-`bundleIdentifier` and `objectForInfoDictionaryKey:`. The packaged identifier
-is not changed, and non-main bundles keep their actual identities. This matches
-Instagram's original runtime namespace for code that derives persisted-state
-identifiers while still allowing a distinct identifier at install time.
+Main-bundle identity is left untouched. Runtime `NSBundle` queries therefore
+match the identifier in the installed app's `Info.plist`, including identifiers
+rewritten by SideStore or another signer. Keeping those identities consistent
+also avoids confusing UIKit/CoreUI when it registers the main app's asset
+catalog. App-group and Keychain compatibility are handled by their dedicated
+hooks instead of by changing the bundle identity seen by the entire process.
 
-The spoof is scoped to the app process and never applies inside an app
-extension. In an appex the extension's own bundle *is* the main bundle, so an
-unscoped spoof rewrites the extension's identifier too, and
-`ExtensionFoundation` derives its XPC listener name from it. The notification
-extension then listened on `com.burbn.instagram.apple-extension-service`
-(`Operation not permitted`) while SpringBoard connected to
-`com.burbn.instagram.notificationextension.apple-extension-service`. Nothing
-answered, so the extension burned its full startup budget and was killed:
-
-    Extension will be killed because it used its runtime in starting up
-    Did not mutate content for notification request, will deliver original
-    content; runtime: 30.013551
-
-That single condition produced three separate-looking symptoms: empty
-lock-screen previews (content was never mutated), duplicate banners
-(Instagram's own notification dedupe runs in that extension and never
-executed), and pushes arriving around a minute late (the 30 second timeout,
-across retries).
+Do not add a global main-bundle identity spoof. In an app extension the
+extension's own bundle is the main bundle, and `ExtensionFoundation` derives its
+XPC listener name from that identity. Rewriting it prevents SpringBoard from
+connecting to the notification extension, causing startup timeouts, unchanged
+notification content, and duplicate or delayed banners.
 
 Build with:
 
