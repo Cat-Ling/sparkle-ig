@@ -41,6 +41,8 @@ BUILD_ARGS=(
   --enable-gpl
   --enable-dav1d
   --enable-x264
+  --enable-x265
+  --enable-libaom
   --enable-ios-videotoolbox
   --enable-ios-audiotoolbox
   --enable-ios-avfoundation
