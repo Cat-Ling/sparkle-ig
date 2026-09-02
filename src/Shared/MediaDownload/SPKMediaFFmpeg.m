@@ -533,6 +533,7 @@ static NSArray<NSString *> *SPKFFmpegAdvancedMergeArguments(NSURL *videoFileURL,
         [args addObjectsFromArray:@[ @"-c:v", selectedCodec ]];
         if ([selectedCodec isEqualToString:@"libx265"]) {
             [args addObjectsFromArray:@[ @"-preset", SPKFFmpegPresetForSpeed(preset) ]];
+            [args addObjectsFromArray:@[ @"-tag:v", @"hvc1" ]];
         }
         
         if (crf.length > 0 && crf.integerValue > 0) {
@@ -544,6 +545,8 @@ static NSArray<NSString *> *SPKFFmpegAdvancedMergeArguments(NSURL *videoFileURL,
         [args addObjectsFromArray:@[
             @"-c:v",
             @"hevc_videotoolbox",
+            @"-tag:v",
+            @"hvc1",
             @"-b:v",
             [NSString stringWithFormat:@"%ldk", (long)targetBitrate],
         ]];
@@ -768,6 +771,7 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
         [args addObjectsFromArray:@[ @"-c:v", selectedCodec ]];
         if ([selectedCodec isEqualToString:@"libx265"]) {
             [args addObjectsFromArray:@[ @"-preset", SPKFFmpegPresetForSpeed(preset) ]];
+            [args addObjectsFromArray:@[ @"-tag:v", @"hvc1" ]];
         }
         
         if (crf.length > 0 && crf.integerValue > 0) {
@@ -776,7 +780,7 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
             [args addObjectsFromArray:@[ @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
         }
     } else if ([selectedCodec isEqualToString:@"hevc_videotoolbox"]) {
-        [args addObjectsFromArray:@[ @"-c:v", @"hevc_videotoolbox", @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
+        [args addObjectsFromArray:@[ @"-c:v", @"hevc_videotoolbox", @"-tag:v", @"hvc1", @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
         if (SPKFFmpegDashSpeedTierUsesRealtime()) {
             [args addObjectsFromArray:@[ @"-realtime", @"1" ]];
         }
