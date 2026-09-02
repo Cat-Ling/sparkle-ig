@@ -86,6 +86,14 @@ jobs:
                 chmod +x ./fetch-ffmpegkit.sh
                 ./fetch-ffmpegkit.sh
             
+            - name: Upload build logs on failure
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                name: ffmpegkit-build-logs-tweak
+                path: main/.cache/ffmpegkit/src/**/build.log
+                if-no-files-found: ignore
+            
             - name: Build Sparkle tweak for Rootless
               run: |                
                 cd main

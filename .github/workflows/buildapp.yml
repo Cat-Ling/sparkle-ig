@@ -126,6 +126,14 @@ jobs:
                 chmod +x ./fetch-ffmpegkit.sh
                 ./fetch-ffmpegkit.sh
             
+            - name: Upload build logs on failure
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                name: ffmpegkit-build-logs-app
+                path: main/.cache/ffmpegkit/src/**/build.log
+                if-no-files-found: ignore
+            
             - name: Build Sparkle tweak for sideloading (as IPA)
               run: |
                 pip install --force-reinstall https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
