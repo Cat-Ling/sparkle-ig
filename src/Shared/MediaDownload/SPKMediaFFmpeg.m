@@ -526,6 +526,33 @@ static NSArray<NSString *> *SPKFFmpegAdvancedMergeArguments(NSURL *videoFileURL,
         if (level.length > 0 && ![level isEqualToString:@"auto"]) {
             [args addObjectsFromArray:@[ @"-level", level ]];
         }
+    } else if ([selectedCodec isEqualToString:@"libx265"] || [selectedCodec isEqualToString:@"libaom-av1"]) {
+        NSString *preset = SPKFFmpegStringPref(@"downloads_encoding_preset", @"medium");
+        NSString *crf = SPKFFmpegStringPref(@"downloads_encoding_crf", @"");
+
+        [args addObjectsFromArray:@[ @"-c:v", selectedCodec ]];
+        if ([selectedCodec isEqualToString:@"libx265"]) {
+            [args addObjectsFromArray:@[ @"-preset", SPKFFmpegPresetForSpeed(preset) ]];
+        }
+        
+        if (crf.length > 0 && crf.integerValue > 0) {
+            [args addObjectsFromArray:@[ @"-crf", crf ]];
+        } else {
+            [args addObjectsFromArray:@[ @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
+        }
+    } else if ([selectedCodec isEqualToString:@"hevc_videotoolbox"]) {
+        [args addObjectsFromArray:@[
+            @"-c:v",
+            @"hevc_videotoolbox",
+            @"-b:v",
+            [NSString stringWithFormat:@"%ldk", (long)targetBitrate],
+        ]];
+        if (SPKFFmpegDashSpeedTierUsesRealtime()) {
+            [args addObjectsFromArray:@[ @"-realtime", @"1" ]];
+        }
+        if (maxQualityTier) {
+            [args addObjectsFromArray:@[ @"-profile:v", @"main10" ]];
+        }
     } else {
         [args addObjectsFromArray:@[
             @"-c:v",
@@ -733,6 +760,28 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
         }
         if (level.length > 0 && ![level isEqualToString:@"auto"]) {
             [args addObjectsFromArray:@[ @"-level", level ]];
+        }
+    } else if ([selectedCodec isEqualToString:@"libx265"] || [selectedCodec isEqualToString:@"libaom-av1"]) {
+        NSString *preset = SPKFFmpegStringPref(@"downloads_encoding_preset", @"medium");
+        NSString *crf = SPKFFmpegStringPref(@"downloads_encoding_crf", @"");
+
+        [args addObjectsFromArray:@[ @"-c:v", selectedCodec ]];
+        if ([selectedCodec isEqualToString:@"libx265"]) {
+            [args addObjectsFromArray:@[ @"-preset", SPKFFmpegPresetForSpeed(preset) ]];
+        }
+        
+        if (crf.length > 0 && crf.integerValue > 0) {
+            [args addObjectsFromArray:@[ @"-crf", crf ]];
+        } else {
+            [args addObjectsFromArray:@[ @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
+        }
+    } else if ([selectedCodec isEqualToString:@"hevc_videotoolbox"]) {
+        [args addObjectsFromArray:@[ @"-c:v", @"hevc_videotoolbox", @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
+        if (SPKFFmpegDashSpeedTierUsesRealtime()) {
+            [args addObjectsFromArray:@[ @"-realtime", @"1" ]];
+        }
+        if (SPKFFmpegDashSpeedTierIsMaxQuality()) {
+            [args addObjectsFromArray:@[ @"-profile:v", @"main10" ]];
         }
     } else {
         [args addObjectsFromArray:@[ @"-c:v", @"h264_videotoolbox", @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];

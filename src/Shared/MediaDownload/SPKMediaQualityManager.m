@@ -1789,11 +1789,11 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                                 SPKL(@"COMMON_MEDIA_TYPE_VIDEO"),
                                 @[
                                     SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_CODEC_TEXT")
-                                                             subtitle:nil
+                                                             subtitle:@"Hardware (VideoToolbox) or Software (x264/x265/AV1)"
                                                                  menu:[self codecMenu]],
                                                        SPKL(@"MEDIA_ENCODING_VIDEO_CODEC_HELP")),
                                     SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PRESET_TEXT")
-                                                             subtitle:nil
+                                                             subtitle:@"Slower speeds yield better compression"
                                                                  menu:[self presetMenu]],
                                                        SPKL(@"MEDIA_ENCODING_PRESET_HELP")),
                                     [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_H_PROFILE_TEXT")
@@ -1853,7 +1853,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                     SPKL(@"GALLERY_GALLERY_IMPORT_METADATA_FORM_ADVANCED_TEXT"),
                     @[
                         [SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PIXEL_FORMAT")
-                                             subtitle:nil
+                                             subtitle:@"yuv420p10le required for proper 10-bit HDR processing"
                                                  menu:[self pixelFormatMenu]],
                         SPKSettingWithHelp([SPKSetting
                                                switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_FAST_START_TEXT")
@@ -2016,7 +2016,10 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
         buildMenuForPref:@"downloads_encoding_vid_codec"
                    items:@[
                        @{@"value" : @"videotoolbox", @"label" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEOTOOLBOX_TEXT")},
-                       @{@"value" : @"libx264", @"label" : @"libx264"} // SPK_I18N_IGNORE: codec identifier
+                       @{@"value" : @"hevc_videotoolbox", @"label" : @"HEVC (VideoToolbox)"}, // SPK_I18N_IGNORE: codec identifier
+                       @{@"value" : @"libx264", @"label" : @"libx264"}, // SPK_I18N_IGNORE: codec identifier
+                       @{@"value" : @"libx265", @"label" : @"libx265 (HEVC)"}, // SPK_I18N_IGNORE: codec identifier
+                       @{@"value" : @"libaom-av1", @"label" : @"AV1 (libaom)"} // SPK_I18N_IGNORE: codec identifier
                    ]];
 }
 
@@ -2078,7 +2081,8 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
     return [self buildMenuForPref:@"downloads_encoding_pixel_format"
                             items:@[
                                 @{@"value" : @"default", @"label" : SPKL(@"MEDIA_DOWNLOAD_QUALITY_PIXEL_FORMAT_DEFAULT_LABEL")},
-                                @{@"value" : @"yuv420p", @"label" : @"yuv420p"}, // SPK_I18N_IGNORE: pixel-format identifier
+                                @{@"value" : @"yuv420p", @"label" : @"yuv420p (8-bit)"}, // SPK_I18N_IGNORE: pixel-format identifier
+                                @{@"value" : @"yuv420p10le", @"label" : @"yuv420p10le (10-bit HDR)"}, // SPK_I18N_IGNORE: pixel-format identifier
                                 @{@"value" : @"nv12", @"label" : @"nv12"} // SPK_I18N_IGNORE: pixel-format identifier
                             ]];
 }
