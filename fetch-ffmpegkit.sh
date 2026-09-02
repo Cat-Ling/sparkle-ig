@@ -258,6 +258,12 @@ if [[ -z "$src_dir" || ! -d "$src_dir" ]]; then
 fi
 
 if [[ "$force" -eq 1 ]] || ! build_output_ready "$src_dir"; then
+  echo "[Sparkle] Patching CMake files to support newer CMake versions..."
+  find "$src_dir/scripts" -type f -name "x265.sh" -exec sed -i.bak 's/cmake -Wno-dev \\/cmake -Wno-dev -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \\/g' {} +
+  find "$src_dir" -type f -name "CMakeLists.txt" -exec sed -i.bak -E 's/cmake_minimum_required\([^)]+\)/cmake_minimum_required(VERSION 3.5)/g' {} +
+  find "$src_dir" -type f -name "CMakeLists.txt" -exec sed -i.bak -E 's/cmake_policy\(SET CMP0025 OLD\)/cmake_policy(SET CMP0025 NEW)/g' {} +
+  find "$src_dir" -type f -name "CMakeLists.txt" -exec sed -i.bak -E 's/cmake_policy\(SET CMP0054 OLD\)/cmake_policy(SET CMP0054 NEW)/g' {} +
+
   echo "[Sparkle] Building FFmpegKit from source..."
   build_from_source "$src_dir"
 fi
