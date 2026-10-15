@@ -2507,8 +2507,28 @@ SPKMediaShouldSkipDuplicateStart(SPKMediaOption *option,
     return shouldSkip;
 }
 
+// DASH pair to merge if the CDN can't serve the ready-to-play file: the merged
+// option closest in height, so the fallback matches what the user picked.
+static SPKMediaOption *SPKMediaDashFallbackForProgressive(SPKMediaOption *option,
+                                                          SPKMediaAnalysis *analysis) {
+    if (option.kind != SPKMediaOptionKindVideoProgressive || !analysis.ffmpegAvailable)
+        return nil;
+    SPKMediaOption *best = nil;
+    NSInteger bestDistance = NSIntegerMax;
+    for (SPKMediaOption *candidate in analysis.mergedDashOptions) {
+        if (!candidate.primaryURL || !candidate.selectable)
+            continue;
+        NSInteger distance = option.height > 0 ? labs(candidate.height - option.height) : 0;
+        if (distance < bestDistance) {
+            best = candidate;
+            bestDistance = distance;
+        }
+    }
+    return best;
+}
+
 static void SPKMediaPerformOptionDownload(
-    SPKMediaOption *option, id mediaObject,
+    SPKMediaOption *option, SPKMediaAnalysis *analysis, id mediaObject,
     SPKGallerySaveMetadata *galleryMetadata, SPKDownloadDestination destination,
     BOOL copyToClipboard, NSString *notificationIdentifier, BOOL showProgress,
     UIViewController *presenter, SPKDownloadSourceSurface sourceSurface) {
@@ -2520,6 +2540,7 @@ static void SPKMediaPerformOptionDownload(
 
     if (option.kind == SPKMediaOptionKindPhotoProgressive ||
         option.kind == SPKMediaOptionKindVideoProgressive) {
+        SPKMediaOption *dashFallback = SPKMediaDashFallbackForProgressive(option, analysis);
         [SPKDownloadHelpers submitRemoteURL:option.primaryURL
                                   extension:SPKMediaExtensionForOption(option)
                                 destination:destination
@@ -2528,7 +2549,18 @@ static void SPKMediaPerformOptionDownload(
                                   presenter:presenter
                                  anchorView:nil
                               sourceSurface:sourceSurface
-                               showProgress:showProgress];
+                               showProgress:showProgress
+                              configureItem:^(SPKDownloadItemRequest *item) {
+                                  if (!dashFallback)
+                                      return;
+                                  item.dashFallbackURLString = dashFallback.primaryURL.absoluteString;
+                                  item.dashSecondaryURLString = dashFallback.secondaryURL.absoluteString;
+                                  item.dashOptionKind = dashFallback.kind;
+                                  item.dashDuration = dashFallback.duration;
+                                  item.dashWidth = dashFallback.width;
+                                  item.dashHeight = dashFallback.height;
+                                  item.dashBandwidth = dashFallback.bandwidth;
+                              }];
         return;
     }
 
@@ -2878,7 +2910,7 @@ static void SPKMediaPerformOptionDownload(
     if (qualityOverride.length > 0) {
         if (!resolvedOption)
             return NO;
-        SPKMediaPerformOptionDownload(resolvedOption, mediaObject, galleryMetadata,
+        SPKMediaPerformOptionDownload(resolvedOption, analysis, mediaObject, galleryMetadata,
                                       destination, NO, identifier, showProgress,
                                       presenter,
                                       (SPKDownloadSourceSurface)sourceSurface);
@@ -2891,7 +2923,7 @@ static void SPKMediaPerformOptionDownload(
     }
 
     if (resolvedOption) {
-        SPKMediaPerformOptionDownload(resolvedOption, mediaObject, galleryMetadata,
+        SPKMediaPerformOptionDownload(resolvedOption, analysis, mediaObject, galleryMetadata,
                                       destination, NO, identifier, showProgress,
                                       resolvedPresenter,
                                       (SPKDownloadSourceSurface)sourceSurface);
@@ -2901,7 +2933,7 @@ static void SPKMediaPerformOptionDownload(
     SPKMediaPresentOptionsSheet(
         resolvedPresenter, sourceView, analysis, destination,
         ^(SPKMediaOption *option) {
-            SPKMediaPerformOptionDownload(option, mediaObject, galleryMetadata,
+            SPKMediaPerformOptionDownload(option, analysis, mediaObject, galleryMetadata,
                                           destination, NO, identifier, showProgress,
                                           resolvedPresenter,
                                           (SPKDownloadSourceSurface)sourceSurface);
@@ -2936,7 +2968,7 @@ static void SPKMediaPerformOptionDownload(
 
     SPKMediaOption *resolvedOption = SPKMediaResolveDefaultOption(analysis, nil);
     if (resolvedOption) {
-        SPKMediaPerformOptionDownload(resolvedOption, mediaObject, galleryMetadata,
+        SPKMediaPerformOptionDownload(resolvedOption, analysis, mediaObject, galleryMetadata,
                                       SPKDownloadDestinationClipboard, YES,
                                       identifier, showProgress, resolvedPresenter,
                                       (SPKDownloadSourceSurface)sourceSurface);
@@ -2947,7 +2979,7 @@ static void SPKMediaPerformOptionDownload(
         resolvedPresenter, sourceView, analysis, SPKDownloadDestinationClipboard,
         ^(SPKMediaOption *option) {
             SPKMediaPerformOptionDownload(
-                option, mediaObject, galleryMetadata,
+                option, analysis, mediaObject, galleryMetadata,
                 SPKDownloadDestinationClipboard, YES, identifier, showProgress,
                 resolvedPresenter, (SPKDownloadSourceSurface)sourceSurface);
         },
