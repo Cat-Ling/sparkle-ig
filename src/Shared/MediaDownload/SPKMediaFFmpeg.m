@@ -6,6 +6,7 @@
 #import "../SPKResourceBundle.h"
 #import "../UI/SPKMediaChrome.h"
 #import <AVFoundation/AVFoundation.h>
+#import <CoreMedia/CoreMedia.h>
 #import <dlfcn.h>
 #import <objc/message.h>
 
@@ -497,6 +498,18 @@ static NSArray<NSString *> *SPKFFmpegDefaultMergeArguments(NSURL *videoFileURL,
     return args;
 }
 
+static const FourCharCode kSPKFFmpegVideoCodecHEV1 = 0x68657631; // 'hev1'
+
+static FourCharCode SPKFFmpegVideoCodecSubType(NSURL *videoURL) {
+    if (!videoURL.isFileURL)
+        return 0;
+    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:videoURL
+                                            options:@{AVURLAssetPreferPreciseDurationAndTimingKey : @NO}];
+    AVAssetTrack *track = [asset tracksWithMediaType:AVMediaTypeVideo].firstObject;
+    CMFormatDescriptionRef desc = (__bridge CMFormatDescriptionRef)track.formatDescriptions.firstObject;
+    return desc ? CMFormatDescriptionGetMediaSubType(desc) : 0;
+}
+
 // Advanced DASH merge arguments. Audio is always copied for DASH merges.
 static NSArray<NSString *> *SPKFFmpegAdvancedMergeArguments(NSURL *videoFileURL,
                                                             NSURL *audioFileURL,
@@ -525,89 +538,100 @@ static NSArray<NSString *> *SPKFFmpegAdvancedMergeArguments(NSURL *videoFileURL,
         [args addObjectsFromArray:@[ @"-map", @"0:v:0", @"-an" ]];
     }
 
-    // Optional scale filter
-    NSString *scaleFilter = SPKFFmpegMaxResolutionScaleFilter(width, height);
-    if (scaleFilter.length > 0) {
-        NSString *combined = extraVideoFilter.length > 0 ? [NSString stringWithFormat:@"%@,%@", scaleFilter, extraVideoFilter] : scaleFilter;
-        [args addObjectsFromArray:@[ @"-vf", combined ]];
-    } else if (extraVideoFilter.length > 0) {
-        [args addObjectsFromArray:@[ @"-vf", extraVideoFilter ]];
-    }
-
     // Advanced DASH merge path respects the selected video codec.
     NSString *selectedCodec = codecOverride.length > 0 ? codecOverride : SPKFFmpegStringPref(@"downloads_encoding_vid_codec", @"libx264");
-    BOOL isLibx264 = [selectedCodec isEqualToString:@"libx264"];
-    BOOL isVideoToolbox = [selectedCodec isEqualToString:@"videotoolbox"] || [selectedCodec isEqualToString:@"hevc_videotoolbox"];
-    NSInteger targetBitrate = SPKFFmpegAdvancedTargetBitrateKbps(sourceBitrate, isVideoToolbox);
-    NSString *pixelFormat = SPKFFmpegStringPref(@"downloads_encoding_pixel_format", @"default");
+    BOOL isCopy = [selectedCodec isEqualToString:@"copy"];
 
-    if (isLibx264) {
-        NSString *preset = SPKFFmpegStringPref(@"downloads_encoding_preset", @"medium");
-        NSString *profile = SPKFFmpegStringPref(@"downloads_encoding_h264_profile", @"high");
-        NSString *level = SPKFFmpegStringPref(@"downloads_encoding_h264_level", @"auto");
-        NSString *crf = SPKFFmpegConfiguredCRFOrNil();
-
-        [args addObjectsFromArray:@[
-            @"-c:v",
-            @"libx264",
-            @"-preset",
-            SPKFFmpegPresetForSpeed(preset),
-        ]];
-
-        if (crf) {
-            [args addObjectsFromArray:@[ @"-crf", crf ]];
-        } else {
-            [args addObjectsFromArray:@[ @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
-        }
-
-        if (profile.length > 0 && ![profile isEqualToString:@"auto"]) {
-            [args addObjectsFromArray:@[ @"-profile:v", profile ]];
-        }
-        if (level.length > 0 && ![level isEqualToString:@"auto"]) {
-            [args addObjectsFromArray:@[ @"-level", level ]];
-        }
-    } else if ([selectedCodec isEqualToString:@"libx265"] || [selectedCodec isEqualToString:@"libaom-av1"]) {
-        NSString *preset = SPKFFmpegStringPref(@"downloads_encoding_preset", @"medium");
-        NSString *crf = SPKFFmpegConfiguredCRFOrNil();
-
-        [args addObjectsFromArray:@[ @"-c:v", selectedCodec ]];
-        if ([selectedCodec isEqualToString:@"libx265"]) {
-            [args addObjectsFromArray:@[ @"-preset", SPKFFmpegPresetForSpeed(preset) ]];
+    if (isCopy) {
+        [args addObjectsFromArray:@[ @"-c:v", @"copy" ]];
+        // Tag HEVC streams as hvc1 so iOS AVFoundation and Photos recognize them.
+        FourCharCode subType = SPKFFmpegVideoCodecSubType(videoFileURL);
+        if (subType == kCMVideoCodecType_HEVC || subType == kSPKFFmpegVideoCodecHEV1) {
             [args addObjectsFromArray:@[ @"-tag:v", @"hvc1" ]];
         }
-        
-        if (crf) {
-            [args addObjectsFromArray:@[ @"-crf", crf ]];
-        } else {
-            [args addObjectsFromArray:@[ @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
-        }
-    } else if ([selectedCodec isEqualToString:@"hevc_videotoolbox"]) {
-        [args addObjectsFromArray:@[
-            @"-c:v",
-            @"hevc_videotoolbox",
-            @"-tag:v",
-            @"hvc1",
-            @"-b:v",
-            [NSString stringWithFormat:@"%ldk", (long)targetBitrate],
-        ]];
-        if ([pixelFormat isEqualToString:@"yuv420p10le"]) {
-            [args addObjectsFromArray:@[ @"-profile:v", @"main10" ]];
-        }
     } else {
-        [args addObjectsFromArray:@[
-            @"-c:v",
-            @"h264_videotoolbox",
-            @"-b:v",
-            [NSString stringWithFormat:@"%ldk", (long)targetBitrate],
-        ]];
-    }
+        // Optional scale filter
+        NSString *scaleFilter = SPKFFmpegMaxResolutionScaleFilter(width, height);
+        if (scaleFilter.length > 0) {
+            NSString *combined = extraVideoFilter.length > 0 ? [NSString stringWithFormat:@"%@,%@", scaleFilter, extraVideoFilter] : scaleFilter;
+            [args addObjectsFromArray:@[ @"-vf", combined ]];
+        } else if (extraVideoFilter.length > 0) {
+            [args addObjectsFromArray:@[ @"-vf", extraVideoFilter ]];
+        }
 
-    if (pixelFormat.length > 0 && ![pixelFormat isEqualToString:@"default"]) {
-        [args addObjectsFromArray:@[ @"-pix_fmt", pixelFormat ]];
-    } else {
-        // Always 8-bit 4:2:0: every H.264 profile offered is 8-bit, so passing a
-        // 10-bit HDR source's format through makes libx264 refuse to start.
-        [args addObjectsFromArray:@[ @"-pix_fmt", @"yuv420p" ]];
+        BOOL isLibx264 = [selectedCodec isEqualToString:@"libx264"];
+        BOOL isVideoToolbox = [selectedCodec isEqualToString:@"videotoolbox"] || [selectedCodec isEqualToString:@"hevc_videotoolbox"];
+        NSInteger targetBitrate = SPKFFmpegAdvancedTargetBitrateKbps(sourceBitrate, isVideoToolbox);
+        NSString *pixelFormat = SPKFFmpegStringPref(@"downloads_encoding_pixel_format", @"default");
+
+        if (isLibx264) {
+            NSString *preset = SPKFFmpegStringPref(@"downloads_encoding_preset", @"medium");
+            NSString *profile = SPKFFmpegStringPref(@"downloads_encoding_h264_profile", @"high");
+            NSString *level = SPKFFmpegStringPref(@"downloads_encoding_h264_level", @"auto");
+            NSString *crf = SPKFFmpegConfiguredCRFOrNil();
+
+            [args addObjectsFromArray:@[
+                @"-c:v",
+                @"libx264",
+                @"-preset",
+                SPKFFmpegPresetForSpeed(preset),
+            ]];
+
+            if (crf) {
+                [args addObjectsFromArray:@[ @"-crf", crf ]];
+            } else {
+                [args addObjectsFromArray:@[ @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
+            }
+
+            if (profile.length > 0 && ![profile isEqualToString:@"auto"]) {
+                [args addObjectsFromArray:@[ @"-profile:v", profile ]];
+            }
+            if (level.length > 0 && ![level isEqualToString:@"auto"]) {
+                [args addObjectsFromArray:@[ @"-level", level ]];
+            }
+        } else if ([selectedCodec isEqualToString:@"libx265"] || [selectedCodec isEqualToString:@"libaom-av1"]) {
+            NSString *preset = SPKFFmpegStringPref(@"downloads_encoding_preset", @"medium");
+            NSString *crf = SPKFFmpegConfiguredCRFOrNil();
+
+            [args addObjectsFromArray:@[ @"-c:v", selectedCodec ]];
+            if ([selectedCodec isEqualToString:@"libx265"]) {
+                [args addObjectsFromArray:@[ @"-preset", SPKFFmpegPresetForSpeed(preset) ]];
+                [args addObjectsFromArray:@[ @"-tag:v", @"hvc1" ]];
+            }
+            
+            if (crf) {
+                [args addObjectsFromArray:@[ @"-crf", crf ]];
+            } else {
+                [args addObjectsFromArray:@[ @"-b:v", [NSString stringWithFormat:@"%ldk", (long)targetBitrate] ]];
+            }
+        } else if ([selectedCodec isEqualToString:@"hevc_videotoolbox"]) {
+            [args addObjectsFromArray:@[
+                @"-c:v",
+                @"hevc_videotoolbox",
+                @"-tag:v",
+                @"hvc1",
+                @"-b:v",
+                [NSString stringWithFormat:@"%ldk", (long)targetBitrate],
+            ]];
+            if ([pixelFormat isEqualToString:@"yuv420p10le"]) {
+                [args addObjectsFromArray:@[ @"-profile:v", @"main10" ]];
+            }
+        } else {
+            [args addObjectsFromArray:@[
+                @"-c:v",
+                @"h264_videotoolbox",
+                @"-b:v",
+                [NSString stringWithFormat:@"%ldk", (long)targetBitrate],
+            ]];
+        }
+
+        if (pixelFormat.length > 0 && ![pixelFormat isEqualToString:@"default"]) {
+            [args addObjectsFromArray:@[ @"-pix_fmt", pixelFormat ]];
+        } else {
+            // Always 8-bit 4:2:0: every H.264 profile offered is 8-bit, so passing a
+            // 10-bit HDR source's format through makes libx264 refuse to start.
+            [args addObjectsFromArray:@[ @"-pix_fmt", @"yuv420p" ]];
+        }
     }
 
     // Faststart is handled by a follow-up stream-copy pass; see
@@ -755,6 +779,10 @@ static void SPKFFmpegAppendVideoEncodeOptions(NSMutableArray<NSString *> *args,
     }
 
     NSString *selectedCodec = SPKFFmpegStringPref(@"downloads_encoding_vid_codec", @"libx264");
+    // Trimming applies output-seek and video filters, which cannot stream-copy.
+    if ([selectedCodec isEqualToString:@"copy"]) {
+        selectedCodec = @"libx264";
+    }
     BOOL isLibx264 = [selectedCodec isEqualToString:@"libx264"];
     BOOL isVideoToolbox = [selectedCodec isEqualToString:@"videotoolbox"] || [selectedCodec isEqualToString:@"hevc_videotoolbox"];
     NSInteger targetBitrate = SPKFFmpegAdvancedTargetBitrateKbps(sourceBitrate, isVideoToolbox);
@@ -1914,9 +1942,12 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
         }];
     } else {
         NSString *selectedCodec = SPKFFmpegStringPref(@"downloads_encoding_vid_codec", @"libx264");
+        BOOL isCopy = [selectedCodec isEqualToString:@"copy"];
         BOOL isLibx264 = [selectedCodec isEqualToString:@"libx264"];
+        NSString *codecSlug = isCopy ? @"copy" : (isLibx264 ? @"libx264" : @"videotoolbox");
+        NSString *advancedStage = isCopy ? (audioFileURL ? mergeStage : SPKL(@"MEDIA_DOWNLOAD_QUALITY_FINALIZING_FILE_PROGRESS")) : SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_RE_ENCODING_VIDEO_TEXT");
 
-        NSURL *advancedEncodeURL = SPKFFmpegPreFaststartURL(basename, isLibx264 ? @"advanced-libx264-pre-faststart" : @"advanced-videotoolbox-pre-faststart");
+        NSURL *advancedEncodeURL = SPKFFmpegPreFaststartURL(basename, [NSString stringWithFormat:@"advanced-%@-pre-faststart", codecSlug]);
         [[NSFileManager defaultManager] removeItemAtURL:advancedEncodeURL error:nil];
         NSArray<NSString *> *advancedArgs = SPKFFmpegAdvancedMergeArguments(videoFileURL,
                                                                             audioFileURL,
@@ -1929,8 +1960,8 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
                                                                             nil);
         NSString *advancedCommand = SPKFFmpegCommandStringFromArguments(advancedArgs);
         [attempts addObject:@{
-            @"identifier" : isLibx264 ? @"merge-advanced-libx264-direct" : @"merge-advanced-videotoolbox-direct",
-            @"stage" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_RE_ENCODING_VIDEO_TEXT"),
+            @"identifier" : [NSString stringWithFormat:@"merge-advanced-%@-direct", codecSlug],
+            @"stage" : advancedStage,
             @"command" : advancedCommand,
             @"arguments" : advancedArgs,
             @"mainOutputURL" : advancedEncodeURL,
@@ -1938,9 +1969,9 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
             @"cleanupPaths" : @[ advancedEncodeURL.path ?: @"" ]
         }];
 
-        NSURL *normalizedVideoURL = SPKFFmpegNormalizedVideoURL(basename, isLibx264 ? @"advanced-libx264-normalized" : @"advanced-videotoolbox-normalized");
+        NSURL *normalizedVideoURL = SPKFFmpegNormalizedVideoURL(basename, [NSString stringWithFormat:@"advanced-%@-normalized", codecSlug]);
         [[NSFileManager defaultManager] removeItemAtURL:normalizedVideoURL error:nil];
-        NSURL *normalizedEncodeURL = SPKFFmpegPreFaststartURL(basename, isLibx264 ? @"advanced-libx264-normalized-pre-faststart" : @"advanced-videotoolbox-normalized-pre-faststart");
+        NSURL *normalizedEncodeURL = SPKFFmpegPreFaststartURL(basename, [NSString stringWithFormat:@"advanced-%@-normalized-pre-faststart", codecSlug]);
         [[NSFileManager defaultManager] removeItemAtURL:normalizedEncodeURL error:nil];
         NSArray<NSString *> *normalizedArgs = SPKFFmpegAdvancedMergeArguments(normalizedVideoURL,
                                                                               audioFileURL,
@@ -1952,8 +1983,8 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
                                                                               selectedCodec,
                                                                               nil);
         [attempts addObject:@{
-            @"identifier" : isLibx264 ? @"merge-advanced-libx264-normalized" : @"merge-advanced-videotoolbox-normalized",
-            @"stage" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_RE_ENCODING_VIDEO_TEXT"),
+            @"identifier" : [NSString stringWithFormat:@"merge-advanced-%@-normalized", codecSlug],
+            @"stage" : advancedStage,
             @"arguments" : normalizedArgs,
             @"prepareArguments" : SPKFFmpegNormalizationArguments(videoFileURL, normalizedVideoURL),
             @"prepareOutputURL" : normalizedVideoURL,
@@ -1962,29 +1993,31 @@ static void SPKFFmpegRunMergeAttempts(NSArray<NSDictionary<NSString *, id> *> *a
             @"cleanupPaths" : @[ normalizedVideoURL.path ?: @"", normalizedEncodeURL.path ?: @"" ]
         }];
 
-        NSURL *normalizedSetPTSVideoURL = SPKFFmpegNormalizedVideoURL(basename, isLibx264 ? @"advanced-libx264-setpts" : @"advanced-videotoolbox-setpts");
-        [[NSFileManager defaultManager] removeItemAtURL:normalizedSetPTSVideoURL error:nil];
-        NSURL *normalizedSetPTSEncodeURL = SPKFFmpegPreFaststartURL(basename, isLibx264 ? @"advanced-libx264-setpts-pre-faststart" : @"advanced-videotoolbox-setpts-pre-faststart");
-        [[NSFileManager defaultManager] removeItemAtURL:normalizedSetPTSEncodeURL error:nil];
-        NSArray<NSString *> *normalizedSetPTSArgs = SPKFFmpegAdvancedMergeArguments(normalizedSetPTSVideoURL,
-                                                                                    audioFileURL,
-                                                                                    normalizedSetPTSEncodeURL,
-                                                                                    width,
-                                                                                    height,
-                                                                                    sourceBitrate,
-                                                                                    YES,
-                                                                                    selectedCodec,
-                                                                                    @"setpts=PTS-STARTPTS");
-        [attempts addObject:@{
-            @"identifier" : isLibx264 ? @"merge-advanced-libx264-setpts" : @"merge-advanced-videotoolbox-setpts",
-            @"stage" : SPKL(@"MEDIA_DOWNLOAD_MEDIA_FFMPEG_RE_ENCODING_VIDEO_TEXT"),
-            @"arguments" : normalizedSetPTSArgs,
-            @"prepareArguments" : SPKFFmpegNormalizationArguments(videoFileURL, normalizedSetPTSVideoURL),
-            @"prepareOutputURL" : normalizedSetPTSVideoURL,
-            @"mainOutputURL" : normalizedSetPTSEncodeURL,
-            @"postProcessArguments" : SPKFFmpegFaststartArguments(normalizedSetPTSEncodeURL, outputURL),
-            @"cleanupPaths" : @[ normalizedSetPTSVideoURL.path ?: @"", normalizedSetPTSEncodeURL.path ?: @"" ]
-        }];
+        if (!isCopy) {
+            NSURL *normalizedSetPTSVideoURL = SPKFFmpegNormalizedVideoURL(basename, [NSString stringWithFormat:@"advanced-%@-setpts", codecSlug]);
+            [[NSFileManager defaultManager] removeItemAtURL:normalizedSetPTSVideoURL error:nil];
+            NSURL *normalizedSetPTSEncodeURL = SPKFFmpegPreFaststartURL(basename, [NSString stringWithFormat:@"advanced-%@-setpts-pre-faststart", codecSlug]);
+            [[NSFileManager defaultManager] removeItemAtURL:normalizedSetPTSEncodeURL error:nil];
+            NSArray<NSString *> *normalizedSetPTSArgs = SPKFFmpegAdvancedMergeArguments(normalizedSetPTSVideoURL,
+                                                                                        audioFileURL,
+                                                                                        normalizedSetPTSEncodeURL,
+                                                                                        width,
+                                                                                        height,
+                                                                                        sourceBitrate,
+                                                                                        YES,
+                                                                                        selectedCodec,
+                                                                                        @"setpts=PTS-STARTPTS");
+            [attempts addObject:@{
+                @"identifier" : [NSString stringWithFormat:@"merge-advanced-%@-setpts", codecSlug],
+                @"stage" : advancedStage,
+                @"arguments" : normalizedSetPTSArgs,
+                @"prepareArguments" : SPKFFmpegNormalizationArguments(videoFileURL, normalizedSetPTSVideoURL),
+                @"prepareOutputURL" : normalizedSetPTSVideoURL,
+                @"mainOutputURL" : normalizedSetPTSEncodeURL,
+                @"postProcessArguments" : SPKFFmpegFaststartArguments(normalizedSetPTSEncodeURL, outputURL),
+                @"cleanupPaths" : @[ normalizedSetPTSVideoURL.path ?: @"", normalizedSetPTSEncodeURL.path ?: @"" ]
+            }];
+        }
     }
 
     __block dispatch_block_t currentCancel = nil;

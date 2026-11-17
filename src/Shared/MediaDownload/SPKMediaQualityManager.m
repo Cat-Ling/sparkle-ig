@@ -1783,6 +1783,14 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
     }
 }
 
+- (void)menuChanged:(UICommand *)command {
+    [super menuChanged:command];
+    NSString *defaultsKey = command.propertyList[@"defaultsKey"];
+    if ([defaultsKey isEqualToString:@"downloads_encoding_vid_codec"]) {
+        [self replaceSections:[self buildSections]];
+    }
+}
+
 - (SPKSetting *)advancedEncodingRow {
     return SPKSettingWithHelp([SPKSetting switchCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_ADVANCED_ENCODING_TEXT")
                                                   defaultsKey:@"downloads_adv_encoding"],
@@ -1813,6 +1821,10 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
         return !([c isEqualToString:@"libx264"] || [c isEqualToString:@"libx265"] || [c isEqualToString:@"libaom-av1"]);
     } : nil;
 
+    BOOL (^isCopyCodec)(void) = hideUnused ? ^BOOL {
+        return [[SPKUtils getStringPref:@"downloads_encoding_vid_codec"] isEqualToString:@"copy"];
+    } : nil;
+
     SPKSetting *preset = SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_PRESET_TEXT")
                                                                  subtitle:nil
                                                                      menu:[self presetMenu]],
@@ -1837,11 +1849,12 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
     preset.hiddenProvider = supportsPreset;
     profile.hiddenProvider = h264Only;
     level.hiddenProvider = h264Only;
+    pixelFormat.hiddenProvider = isCopyCodec;
     crf.hiddenProvider = supportsCRF;
 
     // Every group explains its options in an info sheet, even when hiding the
     // software-only rows leaves a single row that would otherwise get a footer.
-    return @[
+    NSMutableArray *sections = [NSMutableArray arrayWithObject:
         SPKTopicSectionWithInfoSheet(SPKTopicSection(SPKL(@"COMMON_MEDIA_TYPE_VIDEO"),
                         @[
                             SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_CODEC_TEXT")
@@ -1850,21 +1863,27 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                                                SPKL(@"MEDIA_ENCODING_VIDEO_CODEC_HELP")),
                             preset, profile, level, pixelFormat
                         ],
-                        nil), YES),
-        SPKTopicSectionWithInfoSheet(SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"),
-                        @[
-                            crf,
-                            SPKSettingWithHelp([SPKSetting textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_BITRATE_TEXT")
-                                                                      placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
-                                                                     keyboardType:UIKeyboardTypeNumberPad
-                                                                      defaultsKey:@"downloads_encoding_vid_bitrate_kbps"],
-                                               SPKL(@"MEDIA_ENCODING_VIDEO_BITRATE_HELP")),
-                            SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MAX_RESOLUTION_TEXT")
-                                                                    subtitle:nil
-                                                                        menu:[self maxResMenu]],
-                                               SPKL(@"MEDIA_ENCODING_MAX_RESOLUTION_HELP"))
-                        ],
-                        nil), YES),
+                        nil), YES)];
+
+    if (!(isCopyCodec && isCopyCodec())) {
+        [sections addObject:
+            SPKTopicSectionWithInfoSheet(SPKTopicSection(SPKL(@"AUTO_SAVE_AUTO_SAVE_SETTINGS_QUALITY_HEADER"),
+                            @[
+                                crf,
+                                SPKSettingWithHelp([SPKSetting textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_VIDEO_BITRATE_TEXT")
+                                                                          placeholder:SPKL(@"VC_PLACEHOLDER_AUTO")
+                                                                         keyboardType:UIKeyboardTypeNumberPad
+                                                                          defaultsKey:@"downloads_encoding_vid_bitrate_kbps"],
+                                                   SPKL(@"MEDIA_ENCODING_VIDEO_BITRATE_HELP")),
+                                SPKSettingWithHelp([SPKSetting menuCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_MAX_RESOLUTION_TEXT")
+                                                                        subtitle:nil
+                                                                            menu:[self maxResMenu]],
+                                                   SPKL(@"MEDIA_ENCODING_MAX_RESOLUTION_HELP"))
+                            ],
+                            nil), YES)];
+    }
+
+    [sections addObject:
         SPKTopicSectionWithInfoSheet(SPKTopicSection(SPKL(@"COMMON_MEDIA_TYPE_AUDIO"),
                         @[
                             SPKSettingWithHelp([SPKSetting textFieldCellWithTitle:SPKL(@"MEDIA_DOWNLOAD_MEDIA_QUALITY_MANAGER_AUDIO_BITRATE_TEXT")
@@ -1877,8 +1896,9 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
                                                                         menu:[self audioChannelsMenu]],
                                                SPKL(@"MEDIA_ENCODING_AUDIO_CHANNELS_HELP"))
                         ],
-                        nil), YES)
-    ];
+                        nil), YES)];
+
+    return sections;
 }
 
 - (SPKSetting *)ffmpegInfoRow {
@@ -1961,6 +1981,7 @@ static NSString *SPKMediaCodecBadge(NSString *codec) {
     return [self
         buildMenuForPref:@"downloads_encoding_vid_codec"
                    items:@[
+                       @{@"value" : @"copy", @"label" : @"Copy (No Re-encode)"}, // SPK_I18N_IGNORE: codec identifier
                        @{@"value" : @"libx264", @"label" : SPKL(@"MEDIA_ENCODING_CODEC_SOFTWARE_LABEL")},
                        @{@"value" : @"videotoolbox", @"label" : SPKL(@"MEDIA_ENCODING_CODEC_HARDWARE_LABEL")},
                        @{@"value" : @"hevc_videotoolbox", @"label" : @"HEVC (VideoToolbox)"}, // SPK_I18N_IGNORE: codec identifier
