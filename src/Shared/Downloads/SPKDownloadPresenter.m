@@ -32,6 +32,8 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
 @property (nonatomic, assign) NSTimeInterval lastProgressUpdate;
 @property (nonatomic, assign) BOOL terminalShownForActiveJob;
 @property (nonatomic, assign) BOOL pillDismissedByUser;
+// Errors-only jobs already reported, since a job posts its terminal state more than once.
+@property (nonatomic, strong) NSMutableSet<NSString *> *reportedErrorsOnlyJobIDs;
 @end
 
 @implementation SPKDownloadPresenter
@@ -107,6 +109,11 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     NSArray<SPKDownloadJob *> *allJobs = [[SPKDownloadService shared] jobsMatchingFilter:SPKDownloadHistoryFilterAll];
     NSMutableArray<SPKDownloadJob *> *activeJobs = [NSMutableArray array];
     for (SPKDownloadJob *job in allJobs) {
+        // Only jobs that asked for the pill count toward it, or a silent job would
+        // keep it open and inflate its "1 of N" count.
+        SPKDownloadPresentationMode mode = job.request.presentationMode;
+        if (mode == SPKDownloadPresentationModeQuiet || mode == SPKDownloadPresentationModeErrorsOnly)
+            continue;
         if ([self jobIsActive:job]) {
             [activeJobs addObject:job];
         }
@@ -130,7 +137,8 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     if (style.length == 0)
         style = @"both";
     if ([style isEqualToString:@"off"]) {
-        return nil;
+        // Off hides the progress figures, not the queue position.
+        return activeCount > 1 ? [NSString stringWithFormat:SPKL(@"COMMON_PROGRESS_FORMAT"), (unsigned long)activeIndex, (unsigned long)activeCount] : nil;
     }
 
     SPKDownloadItem *primary = job.items.firstObject;
@@ -172,9 +180,47 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
     return [parts componentsJoinedByString:@" • "];
 }
 
+- (void)handleErrorsOnlyJobSnapshot:(SPKDownloadJob *)job {
+    if (!SPKDownloadStateIsTerminal(job.state) || job.jobID.length == 0)
+        return;
+    if (!self.reportedErrorsOnlyJobIDs)
+        self.reportedErrorsOnlyJobIDs = [NSMutableSet set];
+    if ([self.reportedErrorsOnlyJobIDs containsObject:job.jobID])
+        return;
+    [self.reportedErrorsOnlyJobIDs addObject:job.jobID];
+
+    NSString *identifier = job.request.notificationIdentifier ?: kSPKNotificationDownloadLibrary;
+    __weak typeof(self) weakSelf = self;
+    switch (job.state) {
+    case SPKDownloadStateSucceeded:
+        if (job.request.finalizeAsBatchShare)
+            [self presentBatchShareForJob:job];
+        else if (job.request.finalizeAsBatchClipboard)
+            [self copyBatchToClipboardForJob:job];
+        SPKNotificationTriggerHaptic(identifier, SPKNotificationToneSuccess);
+        break;
+    case SPKDownloadStateFailed:
+    case SPKDownloadStatePartial: {
+        NSString *message = SPKDownloadErrorDisplayDescription(job.items.firstObject.error) ?: SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
+        NSString *title = job.state == SPKDownloadStatePartial ? SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SOME_DOWNLOADS_FAILED_TEXT") : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
+        SPKNotifyTappable(identifier, title, message, @"error_filled", SPKNotificationToneError, ^{
+            if (weakSelf.openHistoryForJobID)
+                weakSelf.openHistoryForJobID(nil);
+        });
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 - (void)handleJobSnapshot:(SPKDownloadJob *)job {
     if (job.request.presentationMode == SPKDownloadPresentationModeQuiet)
         return;
+    if (job.request.presentationMode == SPKDownloadPresentationModeErrorsOnly) {
+        [self handleErrorsOnlyJobSnapshot:job];
+        return;
+    }
 
     NSArray<SPKDownloadJob *> *activeJobs = [self activeJobsSortedByCreationTime];
 
@@ -192,6 +238,9 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
             self.lastProgressUpdate = now;
 
         if (!self.activePill && !self.pillDismissedByUser) {
+            // A fresh pill has shown no outcome yet, whatever an earlier pill for
+            // the same job did.
+            self.terminalShownForActiveJob = NO;
             __weak typeof(self) weakSelf = self;
             NSString *identifier = focusedJob.request.notificationIdentifier ?: kSPKNotificationDownloadLibrary;
             self.activePill = SPKNotifyProgress(identifier, [self progressTitleForJob:focusedJob], ^{
@@ -247,6 +296,12 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
             }
         }
     } else {
+        // Activity is read from the live jobs, but this snapshot may predate their
+        // current state: a job that fails within moments of starting has its running
+        // snapshot delivered after it already ended. Only the terminal snapshot that
+        // follows carries the outcome and its error, so the pill waits for it.
+        if (!SPKDownloadStateIsTerminal(job.state) && job.state != SPKDownloadStatePartial)
+            return;
         if ([job.jobID isEqualToString:self.activeJobID] && self.activePill && !self.terminalShownForActiveJob) {
             [self showTerminalOnActivePillForJob:job];
             self.terminalShownForActiveJob = YES;
@@ -302,7 +357,9 @@ static NSArray<NSURL *> *SPKDownloadSucceededFileURLsForJob(SPKDownloadJob *job)
         [self copyBatchToClipboardForJob:job];
     }
 
-    if (job.state == SPKDownloadStateFailed || job.state == SPKDownloadStatePartial) {
+    // Anything but a real success or a cancellation is reported as a failure, so a
+    // job that ends without a saved file never claims to have saved one.
+    if (job.state != SPKDownloadStateSucceeded && job.state != SPKDownloadStateCancelled) {
         NSString *message = SPKDownloadErrorDisplayDescription(job.items.firstObject.error) ?: SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
         [self.activePill showErrorWithTitle:job.state == SPKDownloadStatePartial ? SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_SOME_DOWNLOADS_FAILED_TEXT") : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT")
                                    subtitle:message

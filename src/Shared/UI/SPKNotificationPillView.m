@@ -102,6 +102,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 @property (nonatomic, strong) NSLayoutConstraint *progressHeightConstraint;
 @property (nonatomic, strong) NSLayoutConstraint *progressRowHeightConstraint;
 @property (nonatomic, assign) BOOL isErrorState;
+@property (nonatomic, readwrite) BOOL isDismissing;
 
 // --- Dynamic style properties ---
 @property (nonatomic, strong) CAShapeLayer *progressRingTrackLayer;
@@ -137,6 +138,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 - (UIColor *)spk_glowColorForTone:(SPKPillVisualTone)tone;
 - (UIColor *)spk_toneColor:(SPKPillVisualTone)tone;
 - (void)spk_updateDynamicWidthForTitle:(NSString *)title subtitle:(NSString *)subtitle hasButton:(BOOL)hasButton;
+- (CGFloat)spk_dynamicHeightForButton:(BOOL)hasButton;
 - (NSString *)spk_progressSubtitleForProgress:(float)progress;
 - (NSString *)spk_progressSubtitleForProgress:(float)progress bytesWritten:(int64_t)bytesWritten totalBytesExpected:(int64_t)totalBytesExpected;
 - (void)spk_applyAutomaticProgressSubtitleIfNeeded;
@@ -146,6 +148,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 - (void)spk_syncInstagramSkin;
 - (void)spk_layoutInstagramProgressRing;
 - (void)spk_applyInstagramToneTint;
+- (void)spk_layoutInstagramToastOwnTint;
 - (BOOL)spk_instagramRightButtonContainsTap;
 @end
 
@@ -194,6 +197,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     if (!self)
         return nil;
 
+    _cancellable = YES;
     self.layer.cornerRadius = kPillCorner;
     self.clipsToBounds = YES;
     self.layer.cornerCurve = kCACornerCurveContinuous;
@@ -397,6 +401,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     }
     // Update ring path when icon badge bounds change
     [self spk_updateRingPath];
+    [self spk_layoutInstagramToastOwnTint];
     [self spk_layoutInstagramProgressRing];
     [self spk_layoutInstagramLiveSubtitle];
 
@@ -607,6 +612,15 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.iconView.tintColor = [self iconTintForTone:SPKPillVisualToneInfo];
 }
 
+// The subtitle is an arranged subview of the text stack, and UIStackView counts every
+// hidden = YES made inside an animation: hiding an already hidden subtitle twice then
+// takes two shows to bring it back, so the next toasts lost their subtitles. Only a
+// real change is applied.
+- (void)spk_setSubtitleHidden:(BOOL)hidden {
+    if (self.subtitleLabel.hidden != hidden)
+        self.subtitleLabel.hidden = hidden;
+}
+
 - (void)setProgressVisible:(BOOL)visible {
     self.progressRowContainer.hidden = YES;
     self.progressView.hidden = YES;
@@ -663,16 +677,16 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.currentBytesWritten = 0;
     self.currentBytesExpected = 0;
     self.subtitleLabel.text = [self spk_progressSubtitleForProgress:self.currentProgress];
-    self.subtitleLabel.hidden = (self.subtitleLabel.text.length == 0);
+    [self spk_setSubtitleHidden:(self.subtitleLabel.text.length == 0)];
     self.titleLabel.text = SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT");
     self.progressView.progress = 0.0f;
 
-    self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
-    [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:self.subtitleLabel.text hasButton:YES];
+    [self setCloseButtonVisible:self.cancellable];
+    self.heightConstraint.constant = [self spk_dynamicHeightForButton:self.cancellable];
+    [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:self.subtitleLabel.text hasButton:self.cancellable];
     self.progressRingLayer.strokeEnd = 0.0;
 
     [self setProgressVisible:YES];
-    [self setCloseButtonVisible:YES];
 
     [self spk_applyProgressModeInfoIcon];
     [self applyCancelButtonStyle];
@@ -706,10 +720,11 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 
     self.titleLabel.text = title.length ? title : SPKL(@"SETTINGS_WHATS_NEW_DONE_TEXT");
     self.subtitleLabel.text = subtitle;
-    self.subtitleLabel.hidden = (subtitle.length == 0);
+    [self spk_setSubtitleHidden:(subtitle.length == 0)];
     [self updateToastWidthForTitle:self.titleLabel.text subtitle:subtitle];
 
-    self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
+    // A toast has no button; the one from a previous progress state is hidden below.
+    self.heightConstraint.constant = [self spk_dynamicHeightForButton:NO];
     [self setProgressVisible:NO];
     [self setCloseButtonVisible:NO];
 
@@ -730,6 +745,27 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
                      completion:nil];
     [self spk_syncInstagramSkin];
     [self animateIconPulse];
+}
+
+- (void)refreshVisualStyleAnimated:(BOOL)animated {
+    [self applyCurrentVisualStyleAnimated:animated];
+    // Instagram's toast takes its tint and appearance from the skin sync instead.
+    [self spk_syncInstagramSkin];
+}
+
+- (void)updateToastWithTitle:(NSString *)title
+                    subtitle:(NSString *)subtitle
+                        icon:(UIImage *)icon
+                        tone:(SPKNotificationTone)tone {
+    [UIView transitionWithView:self
+                      duration:0.24
+                       options:UIViewAnimationOptionTransitionCrossDissolve | UIViewAnimationOptionAllowAnimatedContent |
+                               UIViewAnimationOptionAllowUserInteraction
+                    animations:^{
+                        [self spk_stopIndeterminateSpin];
+                        [self configureForToastModeWithTitle:title subtitle:subtitle icon:icon tone:tone];
+                    }
+                    completion:nil];
 }
 
 - (void)applyCancelButtonStyle {
@@ -812,8 +848,8 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     }
 
     self.subtitleLabel.text = subtitle;
-    self.subtitleLabel.hidden = (subtitle.length == 0);
-    self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
+    [self spk_setSubtitleHidden:(subtitle.length == 0)];
+    self.heightConstraint.constant = [self spk_dynamicHeightForButton:!self.closeButton.hidden];
     [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:subtitle hasButton:!self.closeButton.hidden];
     [self spk_syncInstagramSkin];
 }
@@ -847,7 +883,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
         [self spk_stopIndeterminateSpin];
         self.usesAutomaticProgressSubtitle = YES;
         [self spk_applyAutomaticProgressSubtitleIfNeeded];
-        self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
+        self.heightConstraint.constant = [self spk_dynamicHeightForButton:!self.closeButton.hidden];
         [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:self.subtitleLabel.text hasButton:!self.closeButton.hidden];
         [self spk_syncInstagramSkin];
         [self layoutIfNeeded];
@@ -857,7 +893,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.indeterminate = YES;
     self.usesAutomaticProgressSubtitle = NO;
     self.subtitleLabel.text = nil;
-    self.subtitleLabel.hidden = YES;
+    [self spk_setSubtitleHidden:YES];
     self.heightConstraint.constant = kDynamicPillHeight;
     [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:nil hasButton:!self.closeButton.hidden];
 
@@ -904,14 +940,16 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.currentBytesExpected = MAX((int64_t)0, totalBytesExpected);
 
     if (self.isErrorState || self.isCompleted) {
+        if (self.onReturnedToProgress)
+            self.onReturnedToProgress();
         self.isErrorState = NO;
         self.isCompleted = NO;
         self.usesAutomaticProgressSubtitle = YES;
         self.titleLabel.text = SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT");
         self.subtitleLabel.text = [self spk_progressSubtitleForProgress:self.currentProgress];
-        self.subtitleLabel.hidden = (self.subtitleLabel.text.length == 0);
-        self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
-        [self setCloseButtonVisible:YES];
+        [self spk_setSubtitleHidden:(self.subtitleLabel.text.length == 0)];
+        [self setCloseButtonVisible:self.cancellable];
+        self.heightConstraint.constant = [self spk_dynamicHeightForButton:self.cancellable];
         [self setProgressVisible:YES];
 
         [self spk_applyProgressModeInfoIcon];
@@ -948,6 +986,8 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
 
     [self spk_stopIndeterminateSpin];
 
+    if ((self.isCompleted || self.isErrorState) && self.onReturnedToProgress)
+        self.onReturnedToProgress();
     self.isCompleted = NO;
     self.isErrorState = NO;
     self.titleLabel.text = title.length > 0 ? title : SPKL(@"MEDIA_TRIM_TRIM_ENTRY_DOWNLOADING_TEXT");
@@ -955,16 +995,16 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.subtitleLabel.text = self.usesAutomaticProgressSubtitle
                                   ? [self spk_progressSubtitleForProgress:self.currentProgress]
                                   : subtitle;
-    self.subtitleLabel.hidden = (subtitle.length == 0);
+    [self spk_setSubtitleHidden:(subtitle.length == 0)];
     if (self.usesAutomaticProgressSubtitle) {
-        self.subtitleLabel.hidden = (self.subtitleLabel.text.length == 0);
+        [self spk_setSubtitleHidden:(self.subtitleLabel.text.length == 0)];
     }
 
-    self.heightConstraint.constant = self.subtitleLabel.hidden ? kDynamicPillHeight : kDynamicTallHeight;
-    [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:self.subtitleLabel.text hasButton:YES];
+    [self setCloseButtonVisible:self.cancellable];
+    self.heightConstraint.constant = [self spk_dynamicHeightForButton:self.cancellable];
+    [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:self.subtitleLabel.text hasButton:self.cancellable];
 
     [self setProgressVisible:YES];
-    [self setCloseButtonVisible:YES];
     [self spk_applyProgressModeInfoIcon];
     [self applyTone:SPKPillVisualToneInfo animated:YES];
     [self applyCancelButtonStyle];
@@ -1010,13 +1050,11 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
                         self.iconView.tintColor = [self iconTintForTone:SPKPillVisualToneSuccess];
                         self.titleLabel.text = title.length ? title : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_COMPLETE_TEXT");
                         self.subtitleLabel.text = subtitle;
-                        self.subtitleLabel.hidden = (subtitle.length == 0);
+                        [self spk_setSubtitleHidden:(subtitle.length == 0)];
                         [self updateToastWidthForTitle:self.titleLabel.text subtitle:subtitle];
                         [self setCloseButtonVisible:NO];
                         [self setProgressVisible:NO];
-                        self.heightConstraint.constant = self.subtitleLabel.hidden
-                                                             ? kDynamicPillHeight
-                                                             : kDynamicTallHeight;
+                        self.heightConstraint.constant = [self spk_dynamicHeightForButton:!self.closeButton.hidden];
                         [self layoutIfNeeded];
                     }
                     completion:nil];
@@ -1061,13 +1099,11 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
                         self.iconView.tintColor = [self iconTintForTone:SPKPillVisualToneError];
                         self.titleLabel.text = title.length ? title : SPKL(@"DOWNLOADS_DOWNLOAD_PRESENTER_DOWNLOAD_FAILED_TEXT");
                         self.subtitleLabel.text = resolvedSubtitle;
-                        self.subtitleLabel.hidden = (resolvedSubtitle.length == 0);
+                        [self spk_setSubtitleHidden:(resolvedSubtitle.length == 0)];
                         [self updateToastWidthForTitle:self.titleLabel.text subtitle:resolvedSubtitle];
                         [self setCloseButtonVisible:YES];
                         [self setProgressVisible:NO];
-                        self.heightConstraint.constant = self.subtitleLabel.hidden
-                                                             ? kDynamicPillHeight
-                                                             : kDynamicTallHeight;
+                        self.heightConstraint.constant = [self spk_dynamicHeightForButton:!self.closeButton.hidden];
                         [self layoutIfNeeded];
                     }
                     completion:nil];
@@ -1102,13 +1138,11 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
                         self.iconView.tintColor = [self iconTintForTone:SPKPillVisualToneInfo];
                         self.titleLabel.text = title.length ? title : SPKL(@"GALLERY_GALLERY_FILE_DETAILS_INFO_TEXT");
                         self.subtitleLabel.text = subtitle;
-                        self.subtitleLabel.hidden = (subtitle.length == 0);
+                        [self spk_setSubtitleHidden:(subtitle.length == 0)];
                         [self updateToastWidthForTitle:self.titleLabel.text subtitle:subtitle];
                         [self setCloseButtonVisible:NO];
                         [self setProgressVisible:NO];
-                        self.heightConstraint.constant = self.subtitleLabel.hidden
-                                                             ? kDynamicPillHeight
-                                                             : kDynamicTallHeight;
+                        self.heightConstraint.constant = [self spk_dynamicHeightForButton:!self.closeButton.hidden];
                         [self layoutIfNeeded];
                     }
                     completion:nil];
@@ -1127,6 +1161,7 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
         return;
     }
 
+    self.isDismissing = YES;
     self.isCompleted = NO;
     self.isErrorState = NO;
     self.onTapWhenCompleted = nil;
@@ -1137,8 +1172,12 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     self.closeButton.transform = CGAffineTransformIdentity;
 
     BOOL isBottom = [[SPKUtils getStringPref:kSPKNotificationPillPositionKey] isEqualToString:@"bottom"];
+    if (self.instagramSkin) {
+        [self spk_dismissInstagramToastFromBottom:isBottom completion:completion];
+        return;
+    }
     if (isBottom) {
-        self.topConstraint.constant = self.heightConstraint.constant + 10.0;
+        self.topConstraint.constant = self.heightConstraint.constant + 10.0 - self.presentationBottomLift;
     } else {
         self.topConstraint.constant = -(self.heightConstraint.constant + 10.0);
     }
@@ -1164,6 +1203,27 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
         }];
 }
 
+// Instagram's own toast leaves the way it came (measured on 453): a 0.3s ease in and
+// out slide past the screen edge, no fade and no scale.
+- (void)spk_dismissInstagramToastFromBottom:(BOOL)isBottom completion:(void (^)(void))completion {
+    UIView *host = self.superview;
+    CGFloat distance = isBottom ? CGRectGetHeight(host.bounds) - CGRectGetMinY(self.frame) : -CGRectGetMaxY(self.frame);
+    CGAffineTransform exitTransform = CGAffineTransformTranslate(self.transform, 0.0, distance);
+    [UIView animateWithDuration:0.3
+        delay:0
+        options:UIViewAnimationOptionCurveEaseInOut
+        animations:^{
+            self.transform = exitTransform;
+        }
+        completion:^(__unused BOOL finished) {
+            [self removeFromSuperview];
+            if (self.onDidDismiss)
+                self.onDidDismiss();
+            if (completion)
+                completion();
+        }];
+}
+
 #pragma mark - Private
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldReceiveTouch:(UITouch *)touch {
@@ -1173,6 +1233,36 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
     }
 
     return YES;
+}
+
+// The close button is drawn at 24pt; Apple's minimum touch target is 44pt. A pill
+// whose width follows its text can shift the button while a download runs, so the
+// target around it is what makes it hittable.
+static CGFloat const kSPKPillCloseButtonHitSide = 44.0;
+
+- (BOOL)spk_closeButtonTakesTouches {
+    UIButton *button = self.closeButton;
+    return button && button.superview && !button.hidden && button.alpha > 0.01 && button.userInteractionEnabled && button.enabled;
+}
+
+- (CGRect)spk_closeButtonHitRect {
+    CGRect frame = [self.closeButton convertRect:self.closeButton.bounds toView:self];
+    CGFloat dx = MIN(0.0, (CGRectGetWidth(frame) - kSPKPillCloseButtonHitSide) / 2.0);
+    CGFloat dy = MIN(0.0, (CGRectGetHeight(frame) - kSPKPillCloseButtonHitSide) / 2.0);
+    return CGRectInset(frame, dx, dy);
+}
+
+- (BOOL)pointInside:(CGPoint)point withEvent:(UIEvent *)event {
+    if ([super pointInside:point withEvent:event])
+        return YES;
+    return [self spk_closeButtonTakesTouches] && CGRectContainsPoint([self spk_closeButtonHitRect], point);
+}
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    if (self.userInteractionEnabled && !self.hidden && self.alpha > 0.01 && [self spk_closeButtonTakesTouches] &&
+        CGRectContainsPoint([self spk_closeButtonHitRect], point))
+        return self.closeButton;
+    return [super hitTest:point withEvent:event];
 }
 
 - (void)handleTap {
@@ -1239,12 +1329,28 @@ typedef NS_ENUM(NSUInteger, SPKPillVisualTone) {
         return;
     }
 
+    if (!self.isCompleted && !self.cancellable)
+        return;
+
     if (!self.isCompleted && self.onCancel) {
         self.onCancel();
         return;
     }
 
     [self dismissWithCompletion:nil];
+}
+
+- (void)setCancellable:(BOOL)cancellable {
+    if (_cancellable == cancellable)
+        return;
+    _cancellable = cancellable;
+    if (self.mode != SPKNotificationPillModeProgress || self.isCompleted || self.isErrorState)
+        return;
+    [self setCloseButtonVisible:cancellable];
+    self.heightConstraint.constant = [self spk_dynamicHeightForButton:cancellable];
+    [self spk_updateDynamicWidthForTitle:self.titleLabel.text subtitle:self.subtitleLabel.hidden ? nil : self.subtitleLabel.text hasButton:cancellable];
+    [self spk_syncInstagramSkin];
+    [self layoutIfNeeded];
 }
 
 #pragma mark - Instagram Style
@@ -1390,18 +1496,89 @@ static Class SPKInstagramToastViewClass(void) {
 }
 
 // Instagram's toast keeps the previous subtitle when a model without one is
-// configured, so dropping the subtitle (a finished download) takes a fresh view.
-- (void)spk_replaceInstagramToastView {
+// configured, so dropping the subtitle (a finished download, a download turning into
+// a lookup) takes a fresh view. Returns the old one, still attached, for
+// -spk_retireInstagramToastView: to hand over without a visible swap.
+- (UIView *)spk_replaceInstagramToastView {
     UIView *fresh = [self spk_makeInstagramToastView];
     if (!fresh)
-        return;
+        return nil;
     UIView *old = self.instagramToastView;
-    [self.instagramTintView removeFromSuperview];
+    // The old view keeps its tint until it leaves; the fresh one gets its own.
+    self.instagramTintView = nil;
     self.instagramUntintedEffect = nil;
     self.instagramConfiguredSignature = nil;
     self.instagramShowsSubtitle = NO;
     [self spk_attachInstagramToastView:fresh];
-    [old removeFromSuperview];
+    return old;
+}
+
+static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastView);
+
+// What changes when a toast's content changes: Instagram's icon, title, subtitle and
+// button, plus the progress ring and live progress line Sparkle draws over them.
+static NSArray<UIView *> *SPKInstagramToastFadingViews(UIView *toastView, NSArray<UIView *> *overlays) {
+    NSMutableArray<UIView *> *views = [NSMutableArray array];
+    for (NSString *name in @[ @"_localThumbnailImageView", @"_titleView", @"_subtitleView", @"_rightButton", @"_rightStyledTextButton" ]) {
+        Ivar ivar = class_getInstanceVariable(object_getClass(toastView), name.UTF8String);
+        id view = ivar ? object_getIvar(toastView, ivar) : nil;
+        if ([view isKindOfClass:UIView.class] && ((UIView *)view).superview)
+            [views addObject:view];
+    }
+    for (UIView *overlay in overlays) {
+        if ([overlay isDescendantOfView:toastView])
+            [views addObject:overlay];
+    }
+    return views;
+}
+
+// Hands over from a replaced toast so it reads as the same toast changing. The
+// fresh one sits on top with its background hidden while the old content fades out
+// under it and the fresh content fades in; then the backgrounds, which look the same,
+// are swapped. Fading either toast whole would blink: glass doesn't take alpha.
+- (void)spk_retireInstagramToastView:(UIView *)old oldTint:(UIView *)oldTint {
+    UIView *fresh = self.instagramToastView;
+    if (!old || old == fresh)
+        return;
+    UIVisualEffectView *freshBackground = SPKInstagramToastBackgroundEffectView(fresh);
+    if (!self.window || !freshBackground || !SPKInstagramToastBackgroundEffectView(old)) {
+        [oldTint removeFromSuperview];
+        [old removeFromSuperview];
+        return;
+    }
+
+    [self insertSubview:fresh aboveSubview:old];
+    NSMutableArray<UIView *> *overlays = [NSMutableArray array];
+    if (self.instagramProgressRing)
+        [overlays addObject:self.instagramProgressRing];
+    if (self.instagramLiveSubtitleLabel)
+        [overlays addObject:self.instagramLiveSubtitleLabel];
+    // The ring and live line are single views that move into whichever toast is
+    // current, so they are never faded out with the old one: a later toast would
+    // inherit them invisible. They only fade in with the fresh one.
+    NSArray<UIView *> *oldContent = SPKInstagramToastFadingViews(old, @[]);
+    NSArray<UIView *> *freshContent = SPKInstagramToastFadingViews(fresh, overlays);
+    NSMutableArray<NSNumber *> *freshAlphas = [NSMutableArray array];
+    for (UIView *view in freshContent) {
+        [freshAlphas addObject:[overlays containsObject:view] ? @1.0 : @(view.alpha)];
+        view.alpha = 0.0;
+    }
+    freshBackground.hidden = YES;
+    [UIView animateWithDuration:0.24
+        delay:0
+        options:UIViewAnimationOptionCurveEaseInOut | UIViewAnimationOptionAllowUserInteraction
+        animations:^{
+            for (UIView *view in oldContent)
+                view.alpha = 0.0;
+            [freshContent enumerateObjectsUsingBlock:^(UIView *view, NSUInteger index, __unused BOOL *stop) {
+                view.alpha = freshAlphas[index].doubleValue;
+            }];
+        }
+        completion:^(__unused BOOL finished) {
+            freshBackground.hidden = NO;
+            [oldTint removeFromSuperview];
+            [old removeFromSuperview];
+        }];
 }
 
 - (void)spk_installInstagramSkinIfNeeded {
@@ -1556,8 +1733,9 @@ static UIUserInterfaceStyle SPKInstagramToastStyleForAppStyle(UIUserInterfaceSty
         subtitle = SPKInstagramStableLayoutText(subtitle);
     }
     self.instagramLiveSubtitleText = liveSubtitle;
-    // Stands in for the pill's close button, which a running pill always shows.
-    NSString *buttonText = running ? SPKL(@"ALERT_ACTION_CANCEL") : nil;
+    // Stands in for the pill's close button, which a running pill shows unless
+    // its work cannot be cancelled.
+    NSString *buttonText = running && self.cancellable ? SPKL(@"ALERT_ACTION_CANCEL") : nil;
 
 
     NSString *(^signatureForStyle)(UIUserInterfaceStyle) = ^NSString *(UIUserInterfaceStyle forStyle) {
@@ -1567,9 +1745,15 @@ static UIUserInterfaceStyle SPKInstagramToastStyleForAppStyle(UIUserInterfaceSty
                                           [SPKUtils getBoolPref:kSPKNotificationPillGlowEnabledKey]];
     };
     NSString *signature = signatureForStyle(style);
+    UIView *replacedToast = nil;
+    UIView *replacedTint = nil;
     if (![signature isEqualToString:self.instagramConfiguredSignature]) {
-        if (self.instagramShowsSubtitle && subtitle.length == 0)
-            [self spk_replaceInstagramToastView];
+        if (self.instagramShowsSubtitle && subtitle.length == 0) {
+            replacedTint = self.instagramTintView;
+            replacedToast = [self spk_replaceInstagramToastView];
+            if (!replacedToast)
+                replacedTint = nil;
+        }
         [self spk_configureInstagramToastWithTitle:title subtitle:subtitle buttonText:buttonText signature:signature];
         // Instagram draws its toast in the opposite appearance to the app's on some
         // builds (a dark toast over a light app). The toast follows the app here, so
@@ -1594,6 +1778,8 @@ static UIUserInterfaceStyle SPKInstagramToastStyleForAppStyle(UIUserInterfaceSty
     }
     [self spk_layoutInstagramLiveSubtitle];
     [self spk_layoutInstagramProgressRing];
+    if (replacedToast)
+        [self spk_retireInstagramToastView:replacedToast oldTint:replacedTint];
 
     // Re-applied on every sync: the pill's own code resets these to its fixed heights.
     CGFloat width = self.instagramContentSize.width;
@@ -1764,21 +1950,58 @@ static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastVi
     return nil;
 }
 
+// The toast's rounding, from the toast or from the full-size view that draws its background.
+static CGFloat SPKInstagramToastCornerRadius(UIView *toastView) {
+    if (toastView.layer.cornerRadius >= 1.0)
+        return toastView.layer.cornerRadius;
+    CGSize size = toastView.bounds.size;
+    for (UIView *subview in toastView.subviews) {
+        if (subview.layer.cornerRadius >= 1.0 && fabs(CGRectGetWidth(subview.frame) - size.width) < 1.0 &&
+            fabs(CGRectGetHeight(subview.frame) - size.height) < 1.0)
+            return subview.layer.cornerRadius;
+    }
+    return MIN(size.height / 2.0, 16.0);
+}
+
+// Puts a tint hosted on the toast itself under its content but above any full-size view
+// the toast draws its background with.
+static void SPKInstagramToastPlaceOwnTint(UIView *toastView, UIView *tintView) {
+    UIView *backdrop = nil;
+    CGSize size = toastView.bounds.size;
+    for (UIView *subview in toastView.subviews) {
+        if (subview == tintView || subview.hidden || subview.subviews.count > 0 || ![subview isMemberOfClass:UIView.class])
+            continue;
+        if (fabs(CGRectGetWidth(subview.frame) - size.width) < 1.0 && fabs(CGRectGetHeight(subview.frame) - size.height) < 1.0)
+            backdrop = subview;
+    }
+    if (tintView.superview != toastView)
+        [tintView removeFromSuperview];
+    if (backdrop)
+        [toastView insertSubview:tintView aboveSubview:backdrop];
+    else
+        [toastView insertSubview:tintView atIndex:0];
+}
+
 // With Glow on, tints Instagram's toast background with the tone colour the pill uses
 // for its icon badge: Glow is the pill's tone colouring, and this is the Instagram
 // style's. Liquid Glass takes the tint on the effect itself; the older material gets a
 // colour layer under the toast's content. Reapplied after every configure, which may
 // rebuild the background.
 - (void)spk_applyInstagramToneTint {
-    UIVisualEffectView *background = SPKInstagramToastBackgroundEffectView(self.instagramToastView);
-    if (!background) {
-        SPKLogMessage(@"Notify", OS_LOG_TYPE_DEFAULT, @"Instagram toast has no background effect view to tint");
+    UIView *toastView = self.instagramToastView;
+    if (!toastView)
         return;
-    }
+    UIVisualEffectView *background = SPKInstagramToastBackgroundEffectView(toastView);
+    // Older builds (410) draw the toast without a live material: the effect view is
+    // missing, hidden or empty, and the visible background is the toast itself. The
+    // tint then goes under the toast's own content instead.
+    if (background && (background.hidden || background.alpha < 0.01 || !background.effect ||
+                       CGRectGetWidth(background.bounds) < 1.0 || CGRectGetHeight(background.bounds) < 1.0))
+        background = nil;
 
     if (![SPKUtils getBoolPref:kSPKNotificationPillGlowEnabledKey]) {
         [self.instagramTintView removeFromSuperview];
-        if (self.instagramUntintedEffect) {
+        if (background && self.instagramUntintedEffect) {
             background.effect = self.instagramUntintedEffect;
             self.instagramUntintedEffect = nil;
         }
@@ -1820,11 +2043,42 @@ static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastVi
         tintView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         self.instagramTintView = tintView;
     }
-    if (tintView.superview != background.contentView) {
-        tintView.frame = background.contentView.bounds;
-        [background.contentView insertSubview:tintView atIndex:0];
+    UIView *host = background ? background.contentView : toastView;
+    if (tintView.superview != host) {
+        if (!background)
+            SPKLogMessage(@"Notify", OS_LOG_TYPE_DEFAULT, @"Instagram toast has no live material, tinting the toast itself");
+        [tintView removeFromSuperview];
+        tintView.frame = host.bounds;
+        if (background)
+            [host insertSubview:tintView atIndex:0];
+        else
+            SPKInstagramToastPlaceOwnTint(toastView, tintView);
+    }
+    if (background) {
+        tintView.layer.cornerRadius = 0.0;
+        tintView.layer.masksToBounds = NO;
+    } else {
+        // The toast keeps its own corners unclipped for its shadow, so the tint
+        // rounds itself to match.
+        tintView.frame = host.bounds;
+        tintView.layer.cornerRadius = SPKInstagramToastCornerRadius(toastView);
+        tintView.layer.cornerCurve = toastView.layer.cornerCurve;
+        tintView.layer.masksToBounds = YES;
     }
     tintView.backgroundColor = tint;
+}
+
+// A tint hosted on the toast itself follows its size and rounding, which Instagram
+// only settles in its own layout.
+- (void)spk_layoutInstagramToastOwnTint {
+    UIView *toastView = self.instagramToastView;
+    UIView *tintView = self.instagramTintView;
+    if (!toastView || tintView.superview != toastView)
+        return;
+    [toastView layoutIfNeeded];
+    tintView.frame = toastView.bounds;
+    tintView.layer.cornerRadius = SPKInstagramToastCornerRadius(toastView);
+    SPKInstagramToastPlaceOwnTint(toastView, tintView);
 }
 
 - (void)spk_layoutInstagramProgressRing {
@@ -1964,6 +2218,38 @@ static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastVi
     return [color resolvedColorWithTraitCollection:traits];
 }
 
+// The pill's height for the text it currently holds. A subtitle too long for one
+// line at the pill's widest wraps onto a second and the pill grows by that line;
+// past two lines it truncates as before. The width follows the text up to its
+// cap, so the subtitle only ever wraps once the pill is already at full width.
+- (CGFloat)spk_dynamicHeightForButton:(BOOL)hasButton {
+    if (self.subtitleLabel.hidden) {
+        self.subtitleLabel.numberOfLines = 1;
+        return kDynamicPillHeight;
+    }
+    // The Instagram style is laid out by Instagram's own toast view.
+    if (self.instagramSkin) {
+        self.subtitleLabel.numberOfLines = 1;
+        return kDynamicTallHeight;
+    }
+
+    UIFont *font = self.subtitleLabel.font ?: [UIFont systemFontOfSize:11.5 weight:UIFontWeightMedium];
+    CGFloat subtitleWidth = ceil([self.subtitleLabel.text ?: @"" boundingRectWithSize:CGSizeMake(CGFLOAT_MAX, font.lineHeight)
+                                                                              options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingUsesFontLeading
+                                                                           attributes:@{NSFontAttributeName : font}
+                                                                              context:nil]
+                                     .size.width);
+    CGFloat fixedWidth = kHorizontalPad + kIconBadgeSize + 10.0 + kHorizontalPad;
+    if (hasButton)
+        fixedWidth += 24.0 + 13.0 + 10.0;
+    CGFloat screenMaxWidth = MAX(kDynamicMinWidth, CGRectGetWidth(UIScreen.mainScreen.bounds) - 24.0);
+    CGFloat widestText = MIN(kDynamicMaxWidth, screenMaxWidth) - fixedWidth;
+
+    BOOL wraps = subtitleWidth > widestText + 0.5;
+    self.subtitleLabel.numberOfLines = wraps ? 2 : 1;
+    return wraps ? kDynamicTallHeight + ceil(font.lineHeight) : kDynamicTallHeight;
+}
+
 - (void)spk_updateDynamicWidthForTitle:(NSString *)title subtitle:(NSString *)subtitle hasButton:(BOOL)hasButton {
     // The Instagram style takes its size from Instagram's toast view instead.
     if (!self.widthConstraint || self.instagramSkin)
@@ -2045,6 +2331,9 @@ static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastVi
             }
         }
         self.center = CGPointMake(self.panOriginCenter.x, self.panOriginCenter.y + yDelta);
+        // Instagram's toast follows the finger without fading.
+        if (self.instagramSkin)
+            break;
 
         // Fade out as it moves towards the dismissal direction
         CGFloat progress = 0.0;
@@ -2096,6 +2385,9 @@ static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastVi
 
 - (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     [super touchesBegan:touches withEvent:event];
+    // Instagram's toast has no press effect.
+    if (self.instagramSkin)
+        return;
 
     [UIView animateWithDuration:0.15
                           delay:0
@@ -2108,6 +2400,9 @@ static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastVi
 
 - (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     [super touchesEnded:touches withEvent:event];
+    // Instagram's toast has no press effect.
+    if (self.instagramSkin)
+        return;
 
     [UIView animateWithDuration:0.3
                           delay:0
@@ -2122,6 +2417,9 @@ static UIVisualEffectView *SPKInstagramToastBackgroundEffectView(UIView *toastVi
 
 - (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
     [super touchesCancelled:touches withEvent:event];
+    // Instagram's toast has no press effect.
+    if (self.instagramSkin)
+        return;
 
     [UIView animateWithDuration:0.3
                           delay:0

@@ -159,6 +159,9 @@ static NSSet<NSString *> *SPKTransferExcludedKeys(void) {
         excluded = [NSSet setWithArray:@[
             @"app_safe_startup",
             @"app_startup_profiling",
+            // Cached server state and a dev-only switch, not user settings.
+            @"profile_account_privacy_cache",
+            @"dev_account_privacy_simulate",
             SPKPreferenceMigrationsCompletedKey
         ]];
     });
@@ -543,6 +546,8 @@ static BOOL SPKWriteStoredZipFromDirectory(NSString *root, NSString *zipPath, NS
     return YES;
 }
 
+const NSInteger SPKZipExpandLimitErrorCode = 2010;
+
 static BOOL SPKIsSafeZipEntryName(NSString *name) {
     if (name.length == 0 || [name hasPrefix:@"/"] || [name containsString:@"\\"])
         return NO;
@@ -555,7 +560,8 @@ static BOOL SPKIsSafeZipEntryName(NSString *name) {
 
 // Inflates a raw DEFLATE blob (`src`, srcLen bytes) into `outputPath`, expecting
 // `expectedOut` bytes. Uses libcompression's zlib (raw) decoder. Returns NO on
-// failure or a length mismatch.
+// failure or a length mismatch, and stops writing the moment the output passes the
+// declared size, so a lying header cannot inflate a small archive into gigabytes.
 static BOOL SPKInflateRawDeflateToFile(const uint8_t *src, size_t srcLen, size_t expectedOut, NSString *outputPath) {
     NSFileManager *fm = [NSFileManager defaultManager];
     [fm createFileAtPath:outputPath contents:nil attributes:nil];
@@ -586,6 +592,10 @@ static BOOL SPKInflateRawDeflateToFile(const uint8_t *src, size_t srcLen, size_t
         stream.dst_size = dstCap;
         compression_status status = compression_stream_process(&stream, COMPRESSION_STREAM_FINALIZE);
         size_t produced = dstCap - stream.dst_size;
+        if (totalOut + produced > expectedOut) {
+            ok = NO;
+            break;
+        }
         if (produced > 0) {
             @autoreleasepool {
                 [out writeData:[NSData dataWithBytesNoCopy:dst length:produced freeWhenDone:NO]];
@@ -603,7 +613,7 @@ static BOOL SPKInflateRawDeflateToFile(const uint8_t *src, size_t srcLen, size_t
     free(dst);
     compression_stream_destroy(&stream);
     [out closeFile];
-    if (ok && expectedOut > 0 && totalOut != expectedOut)
+    if (ok && totalOut != expectedOut)
         ok = NO;
     return ok;
 }
@@ -613,10 +623,13 @@ static BOOL SPKInflateRawDeflateToFile(const uint8_t *src, size_t srcLen, size_t
 // Extracts every entry of a zip (STORED method 0 or DEFLATE method 8, incl. ZIP64) into a fresh
 // temporary directory and returns that directory — a *generic* unzip with no assumptions about the
 // contents. `SPKExpandStoredZipSettingsTransferArchive` layers Sparkle-bundle resolution on top.
-static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
+// Expands into `expandedRoot`. `maxTotalBytes` / `maxEntries` of 0 mean unlimited. Every entry is held
+// to its declared size while it is written, so summing the declared sizes bounds the real output.
+static BOOL SPKExpandZipArchiveIntoDirectory(NSURL *archiveURL, NSString *expandedRoot, unsigned long long maxTotalBytes,
+                                             NSUInteger maxEntries, NSError **error) {
     NSData *zipData = [NSData dataWithContentsOfURL:archiveURL options:NSDataReadingMappedIfSafe error:error];
     if (zipData.length < 22)
-        return nil;
+        return NO;
 
     const uint8_t *bytes = zipData.bytes;
     NSInteger eocdOffset = -1;
@@ -627,28 +640,33 @@ static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
         }
     }
     if (eocdOffset < 0)
-        return nil;
+        return NO;
 
     uint16_t entryCount = SPKReadUInt16LE(bytes, (NSUInteger)eocdOffset + 10);
     uint32_t centralSize = SPKReadUInt32LE(bytes, (NSUInteger)eocdOffset + 12);
     uint32_t centralOffset = SPKReadUInt32LE(bytes, (NSUInteger)eocdOffset + 16);
     if ((NSUInteger)centralOffset + centralSize > zipData.length)
-        return nil;
+        return NO;
 
-    NSString *tempRoot = SPKTemporaryTransferRoot(@"import");
-    NSString *expandedRoot = [tempRoot stringByAppendingPathComponent:@"Expanded"];
+    if (maxEntries > 0 && entryCount > maxEntries) {
+        if (error)
+            *error = [NSError errorWithDomain:@"SparkleSettingsTransfer" code:SPKZipExpandLimitErrorCode userInfo:nil];
+        return NO;
+    }
+
     NSFileManager *fm = [NSFileManager defaultManager];
     [fm createDirectoryAtPath:expandedRoot withIntermediateDirectories:YES attributes:nil error:nil];
 
     NSFileHandle *archiveHandle = [NSFileHandle fileHandleForReadingFromURL:archiveURL error:error];
     if (!archiveHandle)
-        return nil;
+        return NO;
 
     NSUInteger cursor = centralOffset;
+    unsigned long long declaredTotal = 0;
     for (uint16_t i = 0; i < entryCount; i++) {
         if (cursor + 46 > zipData.length || SPKReadUInt32LE(bytes, cursor) != 0x02014b50) {
             [archiveHandle closeFile];
-            return nil;
+            return NO;
         }
 
         uint16_t method = SPKReadUInt16LE(bytes, cursor + 10);
@@ -660,7 +678,7 @@ static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
         uint64_t localOffset = SPKReadUInt32LE(bytes, cursor + 42);
         if (cursor + 46 + nameLen + extraLen + commentLen > zipData.length) {
             [archiveHandle closeFile];
-            return nil;
+            return NO;
         }
 
         // ZIP64: any 32-bit size/offset equal to 0xFFFFFFFF is a sentinel; the real 64-bit value
@@ -701,7 +719,7 @@ static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
         cursor += 46 + nameLen + extraLen + commentLen;
         if (!SPKIsSafeZipEntryName(entryName)) {
             [archiveHandle closeFile];
-            return nil;
+            return NO;
         }
         if ([entryName hasSuffix:@"/"]) {
             [fm createDirectoryAtPath:[expandedRoot stringByAppendingPathComponent:entryName] withIntermediateDirectories:YES attributes:nil error:nil];
@@ -714,18 +732,26 @@ static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
                                          userInfo:@{NSLocalizedDescriptionKey : SPKL(@"SETTINGS_TRANSFER_ZIP_UNSUPPORTED_COMPRESSION_ERROR")}];
             }
             [archiveHandle closeFile];
-            return nil;
+            return NO;
         }
         if ((NSUInteger)localOffset + 30 > zipData.length || SPKReadUInt32LE(bytes, localOffset) != 0x04034b50) {
             [archiveHandle closeFile];
-            return nil;
+            return NO;
         }
         uint16_t localNameLen = SPKReadUInt16LE(bytes, localOffset + 26);
         uint16_t localExtraLen = SPKReadUInt16LE(bytes, localOffset + 28);
         unsigned long long dataOffset = (unsigned long long)localOffset + 30ULL + localNameLen + localExtraLen;
         if (dataOffset + compressedSize > zipData.length) {
             [archiveHandle closeFile];
-            return nil;
+            return NO;
+        }
+
+        declaredTotal += (method == 8) ? uncompressedSize : compressedSize;
+        if (maxTotalBytes > 0 && declaredTotal > maxTotalBytes) {
+            if (error)
+                *error = [NSError errorWithDomain:@"SparkleSettingsTransfer" code:SPKZipExpandLimitErrorCode userInfo:nil];
+            [archiveHandle closeFile];
+            return NO;
         }
 
         NSString *destPath = [expandedRoot stringByAppendingPathComponent:entryName];
@@ -740,7 +766,7 @@ static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
                                              userInfo:@{NSLocalizedDescriptionKey : SPKL(@"SETTINGS_TRANSFER_ZIP_DECOMPRESS_FAILED_ERROR")}];
                 }
                 [archiveHandle closeFile];
-                return nil;
+                return NO;
             }
             continue;
         }
@@ -761,13 +787,27 @@ static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
         [output closeFile];
         if (remaining > 0) {
             [archiveHandle closeFile];
-            return nil;
+            return NO;
         }
     }
 
     [archiveHandle closeFile];
     SPKLog(@"Transfer", @"[unzip] extracted %u entr%@ -> %@", entryCount, entryCount == 1 ? @"y" : @"ies", expandedRoot);
-    return expandedRoot;
+    return YES;
+}
+
+static NSString *SPKExpandZipArchiveLimited(NSURL *archiveURL, unsigned long long maxTotalBytes, NSUInteger maxEntries,
+                                            NSError **error) {
+    NSString *tempRoot = SPKTemporaryTransferRoot(@"import");
+    NSString *expandedRoot = [tempRoot stringByAppendingPathComponent:@"Expanded"];
+    if (SPKExpandZipArchiveIntoDirectory(archiveURL, expandedRoot, maxTotalBytes, maxEntries, error))
+        return expandedRoot;
+    [[NSFileManager defaultManager] removeItemAtPath:tempRoot error:nil];  // never leave a partial expansion behind
+    return nil;
+}
+
+static NSString *SPKExpandZipArchiveRaw(NSURL *archiveURL, NSError **error) {
+    return SPKExpandZipArchiveLimited(archiveURL, 0, 0, error);
 }
 
 // Expands a Sparkle export zip and resolves it to the bundle root (the directory that actually holds
@@ -993,6 +1033,7 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
     [fm createDirectoryAtPath:bundleRoot withIntermediateDirectories:YES attributes:nil error:nil];
 
     SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationSettingsExport, SPKL(@"SETTINGS_TRANSFER_EXPORT_PROGRESS_TITLE"), nil);
+    pill.cancellable = NO;
     void (^setProgress)(float, NSString *) = ^(float fraction, NSString *subtitle) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [pill setProgress:fraction animated:YES];
@@ -1112,6 +1153,16 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
     return SPKExpandZipArchiveRaw(archiveURL, error);
 }
 
++ (NSString *)expandZipArchiveAtURL:(NSURL *)archiveURL
+           maximumUncompressedBytes:(unsigned long long)maximumBytes
+                     maximumEntries:(NSUInteger)maximumEntries
+                              error:(NSError **)error {
+    if (!archiveURL) {
+        return nil;
+    }
+    return SPKExpandZipArchiveLimited(archiveURL, maximumBytes, maximumEntries, error);
+}
+
 - (void)importFromController:(UIViewController *)controller includeSettings:(BOOL)includeSettings includeGallery:(BOOL)includeGallery includeDeletedMessages:(BOOL)includeDeletedMessages includeProfileAnalyzer:(BOOL)includeProfileAnalyzer {
     if (!includeSettings && !includeGallery && !includeDeletedMessages && !includeProfileAnalyzer)
         return;
@@ -1132,11 +1183,7 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
             self.activeDocumentPicker = nil;
             return;
         }
-        [presenter presentViewController:picker
-                                animated:YES
-                              completion:^{
-                                  SPKNotify(kSPKNotificationSettingsImport, SPKL(@"SETTINGS_TRANSFER_CHOOSE_EXPORT_BUNDLE_TOAST"), nil, @"arrow_down", SPKNotificationToneForIconResource(@"arrow_down"));
-                              }];
+        [presenter presentViewController:picker animated:YES completion:nil];
     });
 }
 
@@ -1164,8 +1211,10 @@ static NSString *SPKTransferArchiveFilename(BOOL includeSettings, BOOL includeGa
 
     BOOL scoped = [url startAccessingSecurityScopedResource];
 
-    // Progress pill so unzip + the heavy merges never block the UI.
+    // Progress pill so unzip + the heavy merges never block the UI. Stopping
+    // partway would leave settings half merged, so it offers no cancel.
     SPKNotificationPillView *pill = SPKNotifyProgress(kSPKNotificationSettingsImport, SPKL(@"GALLERY_IMPORT_IMPORTING_PROGRESS"), nil);
+    pill.cancellable = NO;
     void (^setProgress)(float, NSString *) = ^(float fraction, NSString *sub) {
         dispatch_async(dispatch_get_main_queue(), ^{
             [pill setProgress:fraction animated:YES];

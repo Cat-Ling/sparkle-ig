@@ -13,6 +13,14 @@ FOUNDATION_EXPORT void SPKLogMessage(NSString *category,
                                      os_log_type_t type,
                                      NSString *format, ...) NS_FORMAT_FUNCTION(3, 4);
 
+/// How Sparkle treats Instagram's Liquid Glass gates (interface_liquid_glass_mode).
+typedef NS_ENUM(NSInteger, SPKLiquidGlassMode) {
+    /// Instagram's own rollout decides.
+    SPKLiquidGlassModeFollow = 0,
+    SPKLiquidGlassModeOn,
+    SPKLiquidGlassModeOff,
+};
+
 /// Master toggle for per-account preferences (global, default off).
 FOUNDATION_EXPORT NSString *const kSPKPrefPerAccountSettings;
 FOUNDATION_EXPORT NSNotificationName const SPKHideExploreGridPreferenceDidChangeNotification;
@@ -45,6 +53,17 @@ FOUNDATION_EXPORT BOOL SPKPreferenceKeyIsGlobal(NSString *key);
 /// to the result via `%init(Group, IGSundialViewerVerticalUFI = SPKReelsVerticalUFIClass())`.
 FOUNDATION_EXPORT Class _Nullable SPKReelsVerticalUFIClass(void);
 
+/// The story viewer's per-reel section controller. Objective-C under its plain
+/// name through IG 454; IG 455 rewrote it in Swift and folded the 450-454 Swift
+/// twin (`IGStoryFullscreenSectionControllerSwift`) into it, so the plain name no
+/// longer resolves. Hook groups bind to it via
+/// `%init(Group, IGStoryFullscreenSectionController = SPKStoryFullscreenSectionControllerClass())`.
+FOUNDATION_EXPORT Class _Nullable SPKStoryFullscreenSectionControllerClass(void);
+
+/// The story seen reporter (IG 454+). Objective-C on 454, Swift from 455; nil on
+/// builds that report seen items through the viewer controller instead.
+FOUNDATION_EXPORT Class _Nullable SPKStoryViewerItemSeenReporterClass(void);
+
 /// Resolves an IG class whose ObjC runtime name changed between versions. Many
 /// classes that were plain ObjC on IG <=435 became Swift classes on IG 436+, so
 /// their runtime name is now the mangled `_TtC<len><Module><len><Class>` form and a
@@ -53,6 +72,14 @@ FOUNDATION_EXPORT Class _Nullable SPKReelsVerticalUFIClass(void);
 /// `legacy`; returns whichever the runtime currently has (or nil). Hook groups bind
 /// to it via `%init(Group, BareName = SPKResolveIGClass(@"Module.Class", @"BareName"))`.
 FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSString *_Nullable legacy);
+
+/// The Swift DM inbox view controller: IGDirectInboxSwiftViewController on IG 439-451,
+/// renamed to the IGDirectInboxViewController module on 452, where it replaced the
+/// ObjC class outright.
+FOUNDATION_EXPORT Class _Nullable SPKDirectSwiftInboxClass(void);
+/// The legacy ObjC DM inbox view controller, or nil when this build has none. Never
+/// the same class as SPKDirectSwiftInboxClass(), so hooking both cannot double-wrap.
+FOUNDATION_EXPORT Class _Nullable SPKDirectObjCInboxClass(void);
 
 #define SPKLog(category, fmt, ...) SPKLogMessage((category), OS_LOG_TYPE_DEFAULT, (fmt), ##__VA_ARGS__)
 #define SPKWarnLog(category, fmt, ...) SPKLogMessage((category), OS_LOG_TYPE_ERROR, (fmt), ##__VA_ARGS__)
@@ -93,11 +120,13 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 // only present when resolvable; useful for painting identity before any network fetch.
 + (nullable NSDictionary<NSString *, NSString *> *)currentUserIdentity;
 
-/// IGDSLauncherConfig hooks: when Liquid Glass is on, returns YES; otherwise returns `fallback` (stock).
-+ (_Bool)spk_liquidGlassLauncherPrefKey:(NSString *)key orig:(_Bool)fallback;
+/// The Liquid Glass mode in effect this launch. Safe startup mode and the master
+/// kill switch fall back to Follow, so Instagram decides.
++ (SPKLiquidGlassMode)spk_liquidGlassMode;
 
-/// True when Liquid Glass is enabled and runtime suppression is inactive.
-+ (BOOL)spk_isLiquidGlassEffectivelyEnabled;
+/// A Liquid Glass gate's value: forced by the mode, or Instagram's own `fallback`
+/// when the mode is Follow.
++ (BOOL)spk_liquidGlassGateValueWithOrig:(BOOL)fallback;
 
 + (void)cleanCache;
 + (unsigned long long)cacheSizeBytes;
@@ -138,6 +167,13 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 + (void)showSettingsVC:(UIWindow *)window;
 + (void)showSettingsForTopicTitle:(NSString *)title;
 + (void)presentViewControllerInSheet:(UIViewController *)vc;
+// Single-instance screens. A screen tagged with a reveal key is brought back to the
+// front (anything presented over it dismissed, anything pushed on it popped) instead
+// of a second copy being stacked. Returns NO when no tagged screen is on screen.
++ (void)setRevealKey:(nullable NSString *)key forViewController:(UIViewController *)viewController;
++ (BOOL)revealViewControllerWithKey:(NSString *)key;
++ (BOOL)revealViewControllerMatching:(BOOL (^)(UIViewController *viewController))match;
++ (void)presentViewControllerInSheet:(UIViewController *)vc revealKey:(nullable NSString *)revealKey;
 
 // Colours
 + (UIColor *)SPKColor_InstagramBlue;
@@ -169,13 +205,19 @@ FOUNDATION_EXPORT Class _Nullable SPKResolveIGClass(NSString *qualified, NSStrin
 + (BOOL)openInstagramProfileForUser:(nullable id)user pk:(nullable NSString *)pk username:(nullable NSString *)username fromViewController:(nullable UIViewController *)presentingVC;
 // Username -> pk, memoised for the session and showing the transient progress
 // pill while it is in flight. Completion runs on the main thread, with nil when
-// the username could not be resolved. Exposed so a caller that can PERSIST the
+// the username could not be resolved, and not at all when the user cancels the
+// pill. Exposed so a caller that can PERSIST the
 // answer (the gallery) never has to look it up twice.
 //
 // fullName is the display name the handle carries RIGHT NOW, so a caller holding
 // a name from when the media was saved can tell whether the handle still belongs
 // to the same person. It is nil on a memo hit, where the answer is already known.
 + (void)resolvePKForUsername:(NSString *)username
+                  completion:(void (^)(NSString *_Nullable pk, NSString *_Nullable fullName))completion;
+/// As above, with the progress pill's wording chosen by the caller, for a
+/// lookup that is not on its way to opening a profile.
++ (void)resolvePKForUsername:(NSString *)username
+               progressTitle:(NSString *)progressTitle
                   completion:(void (^)(NSString *_Nullable pk, NSString *_Nullable fullName))completion;
 + (BOOL)openInstagramMediaURL:(NSURL *)url;
 /// As above, but `dismiss` NO leaves whatever is presented on screen. Only for

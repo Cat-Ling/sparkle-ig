@@ -12,42 +12,57 @@
 // Every content row is replaced wholesale each release. The keys name the change
 // rather than its English wording, and the previous release's keys are deleted from
 // every catalog, so a stale translation can never be reused for a different row.
+
+// A patch release that extends the previous release's sheet names both versions.
+// Set to nil when a release gets a sheet of its own.
+static NSString *const SPKWhatsNewPreviousVersion = @"v1.6.0";
+
 - (NSArray<SPKPagedSheetPage *> *)buildPages {
+    NSString *intro = SPKWhatsNewPreviousVersion.length
+        ? [NSString stringWithFormat:SPKL(@"SETTINGS_WHATS_NEW_TWO_VERSIONS_VALUE_FORMAT"), SPKWhatsNewPreviousVersion, SPKVersionString]
+        : [NSString stringWithFormat:SPKL(@"SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT"), SPKVersionString];
     return @[
         [SPKPagedSheetPage pageWithTitle:SPKL(@"SETTINGS_WHATS_NEW_NEW_FEATURES_TEXT")
-                                    body:[NSString stringWithFormat:SPKL(@"SETTINGS_WHATS_NEW_WHAT_S_NEW_VALUE_FORMAT"), SPKVersionString]
+                                    body:intro
                                     rows:@[
-                                        @{ @"icon": @"translate", @"text": SPKL(@"SETTINGS_WHATS_NEW_JAPANESE_POLISH_TEXT") },
-                                        @{ @"icon": @"notification", @"text": SPKL(@"SETTINGS_WHATS_NEW_INSTAGRAM_TOAST_STYLE_TEXT") },
-                                        @{ @"icon": @"pin", @"text": SPKL(@"SETTINGS_WHATS_NEW_SHARE_SHEET_PINS_TEXT") },
-                                        @{ @"icon": @"eye", @"text": SPKL(@"SETTINGS_WHATS_NEW_STORIES_SEEN_LOCALLY_TEXT") },
-                                        @{ @"icon": @"visual_search", @"text": SPKL(@"SETTINGS_WHATS_NEW_HIDE_REELS_VISUAL_SEARCH_TEXT") },
-                                        @{ @"icon": @"app", @"text": SPKL(@"SETTINGS_WHATS_NEW_GLASS_APP_ICON_TEXT") },
+                                        @{ @"icon": @"download", @"text": SPKL(@"SETTINGS_WHATS_NEW_UPDATE_CHECKER_TEXT") },
+                                        @{ @"icon": @"moon", @"text": SPKL(@"SETTINGS_WHATS_NEW_OLED_DARK_MODE_TEXT") },
+                                        @{ @"icon": @"pin", @"text": SPKL(@"SETTINGS_WHATS_NEW_SEARCH_PINS_TEXT") },
+                                        @{ @"icon": @"lock", @"text": SPKL(@"SETTINGS_WHATS_NEW_ACCOUNT_PRIVACY_TEXT") },
+                                        @{ @"icon": @"highlights", @"text": SPKL(@"SETTINGS_WHATS_NEW_GALLERY_OPEN_STORIES_TEXT") },
+                                        @{ @"icon": @"instants", @"text": SPKL(@"SETTINGS_WHATS_NEW_INSTANTS_SEEN_USER_LISTS_TEXT") },
+                                        @{ @"icon": @"users", @"text": SPKL(@"SETTINGS_WHATS_NEW_EXACT_FOLLOWER_COUNT_TEXT") },
+                                        @{ @"icon": @"sparkles", @"text": SPKL(@"SETTINGS_WHATS_NEW_LIQUID_GLASS_MODE_TEXT") },
                                     ]],
         [SPKPagedSheetPage pageWithTitle:SPKL(@"SETTINGS_WHATS_NEW_MORE_EXPLORE_TEXT")
                                     body:@""
                                     rows:@[
-                                        @{ @"icon": @"link", @"text": SPKL(@"SETTINGS_WHATS_NEW_SIDELOAD_LINK_HANDOFF_TEXT") },
-                                        @{ @"icon": @"ads", @"text": SPKL(@"SETTINGS_WHATS_NEW_HIDE_META_PROMOTIONS_TEXT") },
-                                        @{ @"icon": @"reactions", @"text": SPKL(@"SETTINGS_WHATS_NEW_HIDE_COMMENT_EMOJI_BAR_TEXT") },
-                                        @{ @"icon": @"autoscroll", @"text": SPKL(@"SETTINGS_WHATS_NEW_REELS_AUTO_SCROLL_TEXT") },
-                                        @{ @"icon": @"meta_ai", @"text": SPKL(@"SETTINGS_WHATS_NEW_HIDE_STORY_AI_BUTTONS_TEXT") },
-                                        @{ @"icon": @"share", @"text": SPKL(@"SETTINGS_WHATS_NEW_EXPORT_LANGUAGE_STRINGS_TEXT") },
+                                        @{ @"icon": @"user_follow", @"text": SPKL(@"SETTINGS_WHATS_NEW_PROFILE_SUGGESTIONS_BUTTON_TEXT") },
+                                        @{ @"icon": @"mention", @"text": SPKL(@"SETTINGS_WHATS_NEW_CLIPBOARD_USERNAME_TEXT") },
+                                        @{ @"icon": @"arrow_cw", @"text": SPKL(@"SETTINGS_WHATS_NEW_CONFIRM_FEED_REFRESH_TEXT") },
+                                        @{ @"icon": @"reels", @"text": SPKL(@"SETTINGS_WHATS_NEW_CONFIRM_REEL_SEND_TEXT") },
+                                        @{ @"icon": @"meta_ai", @"text": SPKL(@"SETTINGS_WHATS_NEW_HIDE_META_AI_SHARE_TEXT") },
+                                        @{ @"icon": @"story", @"text": SPKL(@"SETTINGS_WHATS_NEW_HIDE_STORY_SUGGESTED_ACCOUNTS_TEXT") },
+                                        @{ @"icon": @"notification", @"text": SPKL(@"SETTINGS_WHATS_NEW_NOTIFICATION_GROUPS_TEXT") },
+                                        @{ @"icon": @"sparkle_gallery", @"text": SPKL(@"SETTINGS_WHATS_NEW_GALLERY_HIGHLIGHT_BADGE_TEXT") },
                                         @{ @"text": SPKL(@"SETTINGS_WHATS_NEW_PLENTY_MORE_TEXT") },
                                     ]],
         [SPKPagedSheetPage pageWithTitle:SPKL(@"SETTINGS_WHATS_NEW_FIXES_IMPROVEMENTS_TEXT")
                                     body:@""
                                     rows:@[
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_451_COMPATIBILITY_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_HIDDEN_TABS_SWIPE_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_EYE_EARLIER_STORIES_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_DOWNLOAD_BUSY_FALLBACK_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_PREVIEW_TRIM_QUALITY_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_AV1_FRAME_CAPTURE_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_INLINE_SUGGESTED_REELS_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_NATIVE_ALERT_STYLE_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_FOLLOW_BADGE_ACCOUNTS_TEXT") },
-                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_CLASSIC_BLUE_410_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_FOLLOWING_FEED_CRASH_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_LANGUAGE_PACKS_VPN_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_DOWNLOAD_FAILURE_REPORT_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_NOTIFICATION_DUPLICATES_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_TOAST_410_TINT_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_INSTAGRAM_454_COMPATIBILITY_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_GALLERY_ORIGINALS_KEPT_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_GALLERY_MISSING_FILE_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_EDIT_PHOTO_QUALITY_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_FEED_DOUBLED_AUDIO_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_HIGHLIGHT_STORY_LINK_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_PROGRESS_CANCEL_TEXT") },
+                                        @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_FIX_FASTER_LAUNCH_TAB_TEXT") },
                                         @{ @"icon": @"subtract", @"text": SPKL(@"SETTINGS_WHATS_NEW_OTHER_BUG_FIXES_UI_IMPROVEMENTS_TEXT") },
                                     ]],
     ];
